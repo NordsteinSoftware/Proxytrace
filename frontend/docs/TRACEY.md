@@ -66,7 +66,7 @@ the wire and attributes the call to her agent by name (`X-Proxytrace-Agent` / sa
 | `tracey-chat-context.ts` | Shares the single `TraceyChat` (runtime + state) app-wide. `TraceyChatProvider` mounts in `TraceyHost` around the `Outlet`; `useTraceyChatContext()` reads it from the page. |
 | `tracey-runtime.ts` | `TraceyTransport` — the AI SDK `ChatTransport`. Wires `createOpenAI` at the same-origin base URL, injects the JWT + turn-correlation header per request, windows the history sent to the model (`windowMessages`, UI thread untouched), runs `streamText` with `prepareStep` (progressive tool disclosure) + `stopWhen: stepCountIs(MAX_TURN_STEPS)` (64 — a high infinite-loop **safety backstop**, not a user-facing turn limit), adapts our tools into the SDK `ToolSet` (threading the abort signal), and writes per-turn metadata on finish. |
 | `tracey-tools.ts` | **Composition root** for tools: `createTraceyTools(ctx)` wires every `tools/*` domain factory against a shared artifact store. `TRACEY_TOOLS_META` is the static name+description list for the slash menu (must list every tool). |
-| `tools/` | Per-domain tool factories: `navigation.ts` (navigate, search_docs, load_skill), `agents.ts`, `suites.ts`, `runs.ts`, `proposals.ts`, `stats.ts`, `providers.ts`, `traces.ts`, `display.ts` (show_*, ask_questions), `await.ts` (await_actions). `shared.ts` holds `TraceyToolContext`, the `tool()`/`empty`/`CANCELLED` helpers, and `makeStore`. `poll-until-terminal.ts` backs `await`; `run-analysis.ts` holds the pure failure/comparison derivations behind `get_run_failures`/`compare_runs` (verdicts reuse `features/runs/results.ts`); `trace-transcript.ts` builds `get_trace`'s verbose whole-conversation digest. |
+| `tools/` | Per-domain tool factories: `navigation.ts` (navigate, search_docs, load_skill), `agents.ts`, `suites.ts`, `runs.ts`, `proposals.ts`, `stats.ts`, `providers.ts`, `traces.ts`, `display.ts` (show_*, ask_questions), `await.ts` (await_actions). `shared.ts` holds `TraceyToolContext`, the `tool()`/`empty`/`CANCELLED` helpers, and `makeStore`. `poll-until-terminal.ts` backs `await`; `run-analysis.ts` holds the pure comparison derivation behind `compare_runs` and the shared `clip`; `case-verdict.ts` holds the pure per-case verdicts behind `get_case_results` (both reuse `lib/runResults.ts`); `trace-transcript.ts` builds `get_trace`'s verbose whole-conversation digest. |
 | `tool-access.ts` | **Progressive tool disclosure.** `CORE_TOOL_NAMES` (always active) + `activeToolNamesFor(loadedSkillIds)` (core ∪ the tool bundles of skills loaded this conversation). |
 | `tracey-prompt.ts` | `TRACEY_SYSTEM_PROMPT` — her system prompt (wire source of truth), with the skill catalog appended. |
 | `skills/` | On-demand **skills** — markdown playbooks loaded at runtime via `load_skill`. `registry.ts` parses front-matter (`name`, `description`, optional `tools:` bundle) from every `*.md` via `import.meta.glob`; `types.ts`; one file per skill. |
@@ -203,9 +203,10 @@ column is which bundle activates the tool (`core` = always available).
 | `list_suites` / `get_suite` | read | no | `test-suites-and-runs`, `suite-curation`, `diagnose-agent` | `SuiteListToolUI` / `SuiteCardToolUI` |
 | `create_suite` / `add_to_suite` | write | **yes** | `suite-curation`, `diagnose-agent` | `SuiteCardToolUI` |
 | `remove_test_case` | write | **yes** | `suite-curation` | `SuiteCardToolUI` |
-| `update_expected_output` | write | **yes** | `suite-curation`, `diagnose-agent` | `ToolCallCard` |
+| `update_expected_output` | write | **yes** | `suite-curation`, `diagnose-agent`, `test-driven-improvement` | `ToolCallCard` |
+| `set_suite_evaluators` | write | **yes** | `suite-curation`, `diagnose-agent`, `test-driven-improvement` | `SuiteCardToolUI` |
 | `list_runs` / `get_run` | read | no | `test-suites-and-runs`, `diagnose-agent` | `RunListToolUI` / `RunCardToolUI` |
-| `get_run_failures` | read (analysis) | no | `test-suites-and-runs`, `optimize-agent`, `diagnose-agent` | `RunFailuresToolUI` |
+| `get_case_results` | read (analysis) | no | `test-suites-and-runs`, `optimize-agent`, `diagnose-agent`, `test-driven-improvement` | `CaseResultsToolUI` |
 | `compare_runs` | read (analysis) | no | `test-suites-and-runs`, `optimize-agent` | `RunComparisonToolUI` |
 | `start_test_run` | write | **yes** | `test-suites-and-runs`, `diagnose-agent` | `StartTestRunToolUI` (live) |
 | `cancel_test_run` | write | **yes** | `test-suites-and-runs` | `ToolCallCard` |
@@ -281,6 +282,61 @@ clipping adds a `note` telling it the user's card holds the untouched original.
 The prompt and the `project-insights` / `optimize-agent` / `diagnose-agent` / `suite-curation`
 skills all instruct the model to go verbose whenever the *content* of a call matters and to stay on
 the summary for a metadata glance. Keep those in sync with this behavior.
+
+## Test-driven improvement (the red/green loop)
+
+The `test-driven-improvement` skill turns a defect the user *reports* — "this agent approved a
+refund it should have refused, see trace `5b71…`" — into a failing regression test, then a fix
+proven against that exact case. Its entry point is what the neighbouring skills miss:
+`diagnose-agent` starts from statistical anomalies, and a policy violation is not one (the tokens
+and latency were perfectly normal); `optimize-agent` starts from aggregate run failures. Four
+properties of the surface make the loop work, and each fixes something that was previously wrong:
+
+**A promoted case cannot fail.** `POST /api/test-suites/from-traces` seeds every case's expected
+output with the response the agent actually recorded, so a suite built from a buggy trace asserts
+the bug and passes. `create_suite` / `add_to_suite` therefore take
+`cases: [{ agentCallId, expectedOutput? }]`; supplying `expectedOutput` makes a **correction** — the
+trace's input paired with what the agent *should* have said — which the backend has supported all
+along through `BuildTestCase` and which keeps `SourceAgentCallId` provenance intact. `create_suite`
+posts to the generic `POST /api/test-suites` for this reason; `/from-traces` physically cannot carry
+an expected output. Both writes return `addedCases: [{ caseId, agentCallId, isCorrection }]`, mapped
+by `sourceAgentCallId` rather than array position (the API does not promise request order).
+
+**A case verdict is tri-state, so absence proves nothing.** `resultPass` is `boolean | null` and the
+old `get_run_failures` returned only `=== false` cases, so "my case isn't in the list" silently
+unioned *passed*, *unjudged* and *not in this run* — and since `isEvalPass` is false for an errored
+evaluator, a crashed judge was byte-identical to a real failure. `get_case_results` replaces it:
+given `caseIds` it reports `pass` / `fail` / `unjudged` / `evaluator-error` / `not-in-run` /
+`run-incomplete` per case, checking the error case *before* pass/fail. Only `pass` means passed.
+Called bare it still returns the run's failing cases, so it is a strict superset. The pure
+derivation lives in `tools/case-verdict.ts` and reuses `lib/runResults.ts` rather than re-deriving
+pass semantics. Its optional `expect` argument is presentational only — it labels the card red or
+green so a false narrative sits directly above a contradicting verdict.
+
+**Evaluators replace, they never union.** A case passes only when **every** attached evaluator
+passes (`lib/runResults.ts`), and a suite created without `evaluatorIds` gets a default ExactMatch
+judge. Attaching a behavioral judge *alongside* it would leave a correct prose answer unpassable, so
+`set_suite_evaluators` sets the whole set. `get_suite`'s digest carries `evaluators` and `cases`
+(with each case's id and clipped expected output) to make that safe to do — and to fix a standing
+bug, since the tool's description had always promised per-case ids that `suiteDigest` never shipped,
+leaving `remove_test_case` and `update_expected_output` unreachable from a cold start.
+
+**Green is a case verdict, not a proposal.** `AbTestTheoryValidator` promotes a theory only when the
+two-proportion p-value clears `SignificanceLevel` = 0.05. For exactly one case flipping fail→pass in
+an n-case suite the z-score is `sqrt(2n / (2n - 1))`, which is bounded above by 1.414 — so
+`p >= 0.157` at **every** suite size, and a single-case fix can never spawn a proposal. It takes
+roughly three or four cases moving to clear the bar. The loop survives because
+`TheoryValidationOutcome.Rejected` records `candidateRun.Id` too, so the candidate run exists
+whether the theory won or lost. `await_actions` surfaces it as `abTestRunId` (plus the pass rates
+and p-value) — the only handle to that evidence in the system, since a Tracey-submitted theory
+carries no `evidenceTestRunIds` and the A/B *baseline* run id is never persisted. The playbook
+therefore proves green with `get_case_results({ runId: abTestRunId, caseIds, expect: 'pass' })` and
+tells the user plainly when a genuinely-fixed case still came back `Invalidated`.
+
+Two smaller digest fixes serve the same loop: `await_actions` now names each `runId` (the awaitable
+is a *group* id, and `summarizeRun` used to discard `run.id`, which is why the playbooks had to take
+"the newest run" out of `list_runs` — a race), and `get_trace` reports `agentId` on both branches so
+a pasted trace resolves to its agent without a name match that renames and duplicates break.
 
 ## System agents hidden by default
 
@@ -612,12 +668,13 @@ Current skills (`skills/*.md`):
 
 | Skill (`name`) | Unlocks (`tools:`) |
 |----------------|--------------------|
-| `test-suites-and-runs` | `list_suites`, `get_suite`, `list_runs`, `get_run`, `get_run_failures`, `compare_runs`, `start_test_run`, `cancel_test_run`, `await_actions` |
-| `suite-curation` | `list_suites`, `get_suite`, `find_traces`, `get_trace`, `create_suite`, `add_to_suite`, `remove_test_case`, `update_expected_output` |
+| `test-suites-and-runs` | `list_suites`, `get_suite`, `list_runs`, `get_run`, `get_case_results`, `compare_runs`, `start_test_run`, `cancel_test_run`, `await_actions` |
+| `suite-curation` | `list_suites`, `get_suite`, `find_traces`, `get_trace`, `create_suite`, `add_to_suite`, `remove_test_case`, `update_expected_output`, `list_evaluators`, `create_evaluator`, `set_suite_evaluators` |
 | `review-proposals` | `list_proposals`, `get_proposal`, `set_proposal_status` |
 | `project-insights` | `get_dashboard_stats`, `get_provider`, `find_traces`, `get_trace` |
-| `optimize-agent` | `submit_optimization_theory`, `get_agent_stats`, `list_suites`, `list_runs`, `get_run`, `get_run_failures`, `compare_runs`, `find_traces`, `get_trace`, `list_theories`, `await_actions` |
-| `diagnose-agent` | `get_agent_anomalies`, `get_trace`, `find_traces`, `list_suites`, `get_suite`, `create_suite`, `add_to_suite`, `update_expected_output`, `list_evaluators`, `create_evaluator`, `start_test_run`, `list_runs`, `get_run`, `get_run_failures`, `list_theories`, `submit_optimization_theory`, `await_actions` |
+| `optimize-agent` | `submit_optimization_theory`, `get_agent_stats`, `list_suites`, `list_runs`, `get_run`, `get_case_results`, `compare_runs`, `find_traces`, `get_trace`, `list_theories`, `await_actions` |
+| `diagnose-agent` | `get_agent_anomalies`, `get_trace`, `find_traces`, `list_suites`, `get_suite`, `create_suite`, `add_to_suite`, `update_expected_output`, `list_evaluators`, `create_evaluator`, `set_suite_evaluators`, `start_test_run`, `list_runs`, `get_run`, `get_case_results`, `list_theories`, `submit_optimization_theory`, `await_actions` |
+| `test-driven-improvement` | `get_trace`, `find_traces`, `list_suites`, `get_suite`, `create_suite`, `add_to_suite`, `update_expected_output`, `list_evaluators`, `create_evaluator`, `set_suite_evaluators`, `start_test_run`, `get_case_results`, `compare_runs`, `list_theories`, `submit_optimization_theory`, `await_actions` |
 
 - **Add a skill:** drop a `skills/<name>.md` with YAML front-matter (`name`, `description`, optional
   `tools:` — a comma/space-separated bundle) and the playbook as the body. `registry.ts`

@@ -11,6 +11,19 @@ follow [Semantic Versioning](https://semver.org). Ongoing work is collected unde
 
 ### Added
 
+- **Tracey writes the failing test before she proposes a fix.** Report a defect in a captured call —
+  "the agent in trace `5b71…` approved a refund even though the return window had expired" — and
+  Tracey now works it test-first. She reproduces it from the real conversation (and stops if the
+  trace doesn't show what you described), states the rule that was broken, then turns it into a
+  **test case whose expected answer is what the agent *should* have said** rather than what it did
+  say, attaching an LLM judge that can actually score that rule. She runs the suite and checks that
+  specific case: if it unexpectedly passes, the test doesn't capture your bug and she fixes the
+  test, not the agent; if the evaluator itself errored she says so, because a broken judge is not
+  evidence the agent was wrong. Only with a confirmed failure does she propose a change, and when
+  the background A/B test finishes she checks your case again against the candidate to show it move
+  from failing to passing. Anomaly detection can only flag calls that look *unusual*; this covers
+  the ones that look perfectly normal and are simply wrong.
+
 - **Tracey can read a whole trace.** Asking Tracey about a captured call previously gave her only its
   headline numbers (model, status, tokens, latency, cost) — enough to describe the call, but not to
   read it. She can now pull the **complete trace** instead: every message of the request (system
@@ -76,6 +89,17 @@ follow [Semantic Versioning](https://semver.org). Ongoing work is collected unde
   conversations. Neither header is forwarded upstream.
 
 ### Fixed
+
+- **Tracey could not see a suite's test cases or evaluators.** Her suite tool promised the per-case
+  ids that editing and removing a case require, but only ever returned the case *count* — so those
+  actions were unreachable unless a case id happened to come up some other way. A suite's attached
+  evaluators were invisible to her for the same reason, which meant she could create a judge but not
+  tell whether one already covered the behavior she needed scored. Both are now part of what she
+  reads, and she can change which evaluators a suite scores with.
+
+- **Tracey guessed which test run to look at.** After waiting for a run to finish she had to find it
+  again by listing the agent's runs and taking the newest one — which could pick up a different run
+  that finished in between. A finished run now reports its own id.
 
 - **Tracey now opens a trace you paste by id.** Asking the assistant to look at a specific trace by
   its id ("debug trace `6339237b-…`") made her report that no such trace existed, even though the

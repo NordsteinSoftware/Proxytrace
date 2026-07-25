@@ -249,6 +249,7 @@ Her skills cover:
 | **Project insights** | overall stats/usage/cost, a provider, or finding/inspecting captured traces |
 | **Optimize an agent** | optimizing, improving, or tuning an agent (below) |
 | **Diagnose an agent** | what's wrong with an agent, its anomalies/outliers, or degraded behavior (below) |
+| **Test-driven improvement** | a specific thing an agent got wrong, usually with a trace id (below) |
 
 ## Optimizing an agent
 
@@ -314,6 +315,44 @@ The flow:
 
 Anomalies are statistical, so Tracey won't force a fix out of a one-off spike — if the flagged
 calls don't add up to a repeating, fixable pattern, she says so and stops.
+
+## Reporting a defect: the red/green loop
+
+Anomaly detection catches calls that look *unusual*. It cannot catch a call that looks perfectly
+normal and is simply **wrong** — an agent that approves a refund outside the return window uses
+ordinary tokens and ordinary latency. That one you have to report, and Tracey turns it into a test.
+
+Paste the trace id and say what went wrong:
+
+> "The agent in trace `5b715614-…` approved a refund even though it shouldn't have, because the
+> refund window had already expired. Please look into it."
+
+She then works a test-first loop:
+
+1. **Reproduce.** She opens the trace, reads the whole conversation, and tells you what the agent
+   actually did, quoting it. If the trace doesn't show the behavior you described, she says so and
+   stops rather than inventing a problem.
+2. **State the rule.** She writes the rule that was broken as one sentence — *"a refund must be
+   refused when the request falls outside the return window"*. That sentence becomes both the
+   expected answer and the criterion the evaluator scores against.
+3. **Write a failing test.** She adds the trace to a fitting suite (or creates one) as a **test case
+   whose expected answer is what the agent should have said** — not what it did say. She also makes
+   sure the suite has an evaluator that can actually judge the rule, creating an LLM judge for it if
+   none fits.
+4. **Prove it fails.** She runs the suite and checks *that specific case*. This step is the point of
+   the whole loop. If the case unexpectedly **passes**, the test doesn't capture your bug, and she
+   fixes the test rather than proposing a change. If the evaluator itself errored, she says so — a
+   broken judge is not evidence the agent is wrong.
+5. **Propose a fix and prove it works.** She submits an optimization theory, and when the background
+   A/B test finishes she checks your case again against the candidate — showing it move from failing
+   to passing.
+
+Two things worth knowing about the result. First, Proxytrace only *observes* your agent: it can
+prove a change works, but **a human still has to apply it**. Second, a theory only becomes a formal
+**proposal** when the whole suite improves by more than statistical noise, and a single case moving
+is never enough on its own — so Tracey will often report that your case is fixed while the theory
+itself came back rejected. That is the expected outcome, not a contradiction: the case-level result
+is the proof that the fix addresses what you reported.
 
 ## Conversation history
 
