@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Trans, useLingui } from '@lingui/react/macro';
 import useCurrentProject from '../../hooks/useCurrentProject';
+import { useKiosk } from '../../contexts/KioskContext';
 import { PlayIcon, SearchIcon, TrashIcon } from '../../components/icons';
 import { IconButton } from '../../components/ui/Button';
 import { UnifiedSearch } from '../../components/search/UnifiedSearch';
@@ -26,6 +27,7 @@ import { CompletionStats } from './components/CompletionStats';
 export default function Playground() {
   const { t } = useLingui();
   const { currentProject } = useCurrentProject();
+  const { enabled: kiosk, interactive } = useKiosk();
   const { state, dispatch } = usePlaygroundSession();
   const { showSeed, setShowSeed, seedAnchorRef } = useSeedDropdown();
   const [streamingId, setStreamingId] = useState<string | null>(null);
@@ -127,7 +129,12 @@ export default function Playground() {
     !state.pendingToolRequest &&
     state.messages.length > 0;
 
-  const composerDisabledReason = !state.agentId
+  // The composer is a bare textarea, so it carries no `[data-write]` and the kiosk's dimming never
+  // reached it — its ⌘/Ctrl+Enter shortcut looked live in the read-only demo. Say so instead.
+  const isReadOnly = kiosk && !interactive;
+  const composerDisabledReason = isReadOnly
+    ? t`This is a read-only demo — messages aren't sent.`
+    : !state.agentId
     ? t`Pick an agent on the left to start a conversation.`
     : state.isStreaming
     ? t`Waiting for the model to finish streaming…`
@@ -239,7 +246,7 @@ export default function Playground() {
           </div>
         ) : (
           <ComposeBox
-            disabled={!state.agentId || state.isStreaming}
+            disabled={isReadOnly || !state.agentId || state.isStreaming}
             disabledReason={composerDisabledReason}
             endpointId={state.overrides?.endpointId ?? null}
             defaultEndpointId={agent?.endpointId ?? null}

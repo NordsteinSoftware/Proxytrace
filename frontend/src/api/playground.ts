@@ -1,4 +1,5 @@
 import { getAccessToken, notifyUnauthorized } from '../auth/token';
+import { isWriteBlocked, readOnlyMessage } from './client';
 import type { ModelParametersDto } from './models';
 
 export interface PlaygroundToolArgumentPayload {
@@ -58,6 +59,14 @@ export function streamPlaygroundCompletion(
 
   (async () => {
     try {
+      // This streams over a hand-rolled fetch rather than `api/client.ts`, so it has to apply the
+      // read-only guard itself — the composer's ⌘/Ctrl+Enter shortcut reaches here without ever
+      // touching a `[data-write]` control.
+      if (isWriteBlocked('POST')) {
+        onEvent({ type: 'error', message: readOnlyMessage() });
+        return;
+      }
+
       const token = getAccessToken();
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
@@ -74,8 +83,7 @@ export function streamPlaygroundCompletion(
 
       if (!res.ok || !res.body) {
         if (res.status === 401 && token) notifyUnauthorized();
-        const text = await res.text().catch(() => '');
-        onEvent({ type: 'error', message: `${res.status} ${res.statusText}${text ? ': ' + text : ''}` });
+        onEvent({ type: 'error', message: await errorMessage(res) });
         return;
       }
 
@@ -104,6 +112,23 @@ export function streamPlaygroundCompletion(
   })();
 
   return { abort: () => controller.abort() };
+}
+
+/**
+ * Reads the server's error envelope (`{ error: { message } }`, as `api/client.ts` does) and falls
+ * back to the status line. Deliberately does NOT echo the raw body: it lands verbatim in the
+ * composer's error bar, where a middleware's JSON (`{"kiosk":true,"code":"READ_ONLY",…}`) is
+ * meaningless to the reader and looks broken.
+ */
+async function errorMessage(res: Response): Promise<string> {
+  const fallback = `${res.status} ${res.statusText}`;
+  try {
+    const body = await res.json();
+    const message = body?.error?.message;
+    return typeof message === 'string' && message ? message : fallback;
+  } catch {
+    return fallback;
+  }
 }
 
 function parseFrame(frame: string): PlaygroundStreamEvent | null {

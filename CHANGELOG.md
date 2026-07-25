@@ -67,6 +67,13 @@ follow [Semantic Versioning](https://semver.org). Ongoing work is collected unde
 
 ### Fixed
 
+- **The read-only demo no longer throws errors at visitors who touch a disabled control.** Kiosk
+  mode dimmed every button that would change something, but only against the mouse — tabbing to one
+  and pressing Enter still sent the request, which the server refused, surfacing a red error. The
+  Playground's composer escaped the dimming entirely, so ⌘/Ctrl+Enter reported a raw technical
+  error message. Actions that can't apply are now declined in the browser with a quiet "read-only
+  demo" notice, whatever triggered them, and the composer says why it's disabled. (The server
+  always enforced this; only the demo's manners were wrong.)
 - **No more duplicated traces when the server shuts down mid-ingest.** A captured call is written to
   the database first and everything that follows — the live trace event, the blocked-request
   notification, queueing the call for anomaly review — is bookkeeping around it. If one of those

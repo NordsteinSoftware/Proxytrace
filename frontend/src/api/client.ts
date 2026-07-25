@@ -1,7 +1,58 @@
+import { msg } from '@lingui/core/macro';
 import { getAccessToken, notifyUnauthorized } from '../auth/token';
 import { showToast } from '../components/ui/Toast';
+import { i18n } from '../i18n';
 
 type ErrorMeta = { status: number; stacktrace?: string; type?: string };
+
+/* ── Read-only mode (the kiosk demo) ─────────────────────────────────────────────────────────── */
+
+/** HTTP methods that never mutate server state — mirrors `KioskReadOnlyMiddleware`. */
+const READ_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
+
+const READ_ONLY_MESSAGE = msg`This is a read-only demo — changes aren't saved.`;
+
+let readOnly = false;
+
+/**
+ * Blocks every mutating request at the transport.
+ *
+ * The kiosk's read-only mode used to be gated only by CSS (`body.kiosk [data-write]` in
+ * `index.css`), and `pointer-events: none` suppresses *pointer* hit-testing alone: tagged controls
+ * stayed in the tab order and `Enter`/`Space` still dispatched their `onClick`. Anything that
+ * wasn't a click — a keyboard activation, an effect, a timer, a retry — walked straight past it,
+ * reached the API, and came back 403 as a red error toast on a surface whose whole job is to look
+ * polished. Enforcing here covers every path uniformly, so no call site has to remember.
+ *
+ * The backend (`KioskReadOnlyMiddleware`) remains the actual authority; this only keeps the demo
+ * from asking it questions it will refuse.
+ */
+export function setApiReadOnly(value: boolean) {
+  readOnly = value;
+}
+
+/** True when `method` would mutate and the client is in read-only mode. */
+export function isWriteBlocked(method: string | undefined): boolean {
+  return readOnly && !READ_METHODS.has((method ?? 'GET').toUpperCase());
+}
+
+/** The localized "read-only demo" copy, for callers that surface it themselves. */
+export function readOnlyMessage(): string {
+  return i18n._(READ_ONLY_MESSAGE);
+}
+
+/**
+ * Thrown instead of issuing a mutating request in read-only mode. Distinct type so callers (and
+ * `app/queryClient.ts`) can tell "the demo declined this" from a genuine API failure.
+ */
+export class ReadOnlyModeError extends Error {
+  readonly status = 403;
+
+  constructor(message: string) {
+    super(message);
+    this.name = 'ReadOnlyModeError';
+  }
+}
 
 /** Error types the backend tags on a 402 Payment Required response. */
 export type UpgradeErrorType = 'FeatureNotLicensed' | 'LicenseLimitExceeded';
@@ -44,6 +95,9 @@ export interface RequestOptions {
 }
 
 async function request<T>(url: string, init?: RequestInit, opts?: RequestOptions): Promise<T> {
+  // Refuse before the request leaves the browser, so a read-only demo never earns a 403.
+  if (isWriteBlocked(init?.method)) throw new ReadOnlyModeError(readOnlyMessage());
+
   const token = getAccessToken();
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',

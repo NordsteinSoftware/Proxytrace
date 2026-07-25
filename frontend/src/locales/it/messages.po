@@ -5103,6 +5103,12 @@ msgstr "Questa feature fa parte del piano Proxytrace Enterprise. Aggiorna la tua
 msgid "This installation: {0}"
 msgstr "Questa installation: {0}"
 
+msgid "This is a read-only demo — changes aren't saved."
+msgstr "Questa è una demo di sola lettura — le modifiche non vengono salvate."
+
+msgid "This is a read-only demo — messages aren't sent."
+msgstr "Questa è una demo di sola lettura — i messaggi non vengono inviati."
+
 msgid "This is an Enterprise feature"
 msgstr "Questa è una feature Enterprise"
 

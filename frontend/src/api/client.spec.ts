@@ -8,7 +8,8 @@ const { getAccessToken, notifyUnauthorized, showToast } = vi.hoisted(() => ({
 vi.mock('../auth/token', () => ({ getAccessToken, notifyUnauthorized }));
 vi.mock('../components/ui/Toast', () => ({ showToast }));
 
-import { api } from './client';
+import { api, isWriteBlocked, readOnlyMessage, ReadOnlyModeError, setApiReadOnly } from './client';
+import { i18n } from '../i18n';
 
 /** A minimal ok JSON Response stand-in. */
 const okJson = (body: unknown = { ok: true }) =>
@@ -77,5 +78,62 @@ describe('api request — silentStatuses', () => {
     fetchMock.mockResolvedValue(errorRes(500));
     await expect(api.get('/boom')).rejects.toBeInstanceOf(Error);
     expect(showToast).toHaveBeenCalledOnce();
+  });
+});
+
+/**
+ * The kiosk demo's read-only guard. It used to be `body.kiosk [data-write]` in `index.css` alone,
+ * and `pointer-events: none` suppresses *pointer* hit-testing only — a tagged control stayed in the
+ * tab order and `Enter` still dispatched its `onClick`, so the write reached the API and returned
+ * 403 as a red toast. Anything not driven by a click (an effect, a timer, a retry) bypassed it
+ * outright. These pin that no mutating request now leaves the browser, however it was triggered.
+ */
+describe('api request — read-only mode', () => {
+  beforeEach(() => i18n.loadAndActivate({ locale: 'en', messages: {} }));
+  afterEach(() => setApiReadOnly(false));
+
+  it('is off by default, so a normal install is unaffected', async () => {
+    await api.post('/api/agents', { name: 'a' });
+    expect(fetchMock).toHaveBeenCalledOnce();
+  });
+
+  it('refuses every mutating verb without issuing a request', async () => {
+    setApiReadOnly(true);
+
+    await expect(api.post('/api/agents', {})).rejects.toBeInstanceOf(ReadOnlyModeError);
+    await expect(api.put('/api/agents/1', {})).rejects.toBeInstanceOf(ReadOnlyModeError);
+    await expect(api.patch('/api/notifications/1/read')).rejects.toBeInstanceOf(ReadOnlyModeError);
+    await expect(api.del('/api/agents/1')).rejects.toBeInstanceOf(ReadOnlyModeError);
+
+    // Nothing reached the network — the 403 round-trip is what produced the red toast.
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(showToast).not.toHaveBeenCalled();
+  });
+
+  it('still allows reads, so the demo keeps working', async () => {
+    setApiReadOnly(true);
+
+    await expect(api.get('/api/agents')).resolves.toEqual({ ok: true });
+    expect(fetchMock).toHaveBeenCalledOnce();
+  });
+
+  it('rejects with the localized read-only message', async () => {
+    setApiReadOnly(true);
+
+    await expect(api.post('/api/agents', {})).rejects.toThrow(readOnlyMessage());
+    expect(readOnlyMessage()).toContain('read-only demo');
+  });
+
+  it('classifies methods case-insensitively, treating an absent method as GET', () => {
+    setApiReadOnly(true);
+    expect(isWriteBlocked(undefined)).toBe(false);
+    expect(isWriteBlocked('get')).toBe(false);
+    expect(isWriteBlocked('HEAD')).toBe(false);
+    expect(isWriteBlocked('OPTIONS')).toBe(false);
+    expect(isWriteBlocked('post')).toBe(true);
+    expect(isWriteBlocked('DELETE')).toBe(true);
+
+    setApiReadOnly(false);
+    expect(isWriteBlocked('POST')).toBe(false);
   });
 });
