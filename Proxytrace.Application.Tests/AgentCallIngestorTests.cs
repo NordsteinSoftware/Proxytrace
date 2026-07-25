@@ -1,8 +1,10 @@
 using System.Net;
 using Autofac;
 using AwesomeAssertions;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
+using Proxytrace.Application.CustomAnomaly;
 using Proxytrace.Application.Ingestion;
 using Proxytrace.Application.Ingestion.Internal;
 using Proxytrace.Application.Streaming;
@@ -1119,5 +1121,47 @@ public sealed class AgentCallIngestorTests : BaseTest<Module>
         evt.SessionId.Should().Be(expectedSessionId);
         evt.Id.Should().Be(call.Id);
         evt.ConversationId.Should().Be(call.ConversationId);
+    }
+
+    [TestMethod]
+    public async Task IngestAsync_WhenPostPersistSideEffectIsCancelled_DoesNotThrowAndKeepsTheCall()
+    {
+        // The post-persist tail runs after the call row is committed, so a shutdown-time cancellation
+        // there must not escape: the outer `catch (OperationCanceledException) { throw; }` would fail
+        // the ingest and let a redelivering transport ingest the same trace a second time.
+        var queue = Substitute.For<ICustomAnomalyReviewQueue>();
+        queue.EnqueueAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromCanceled(new CancellationToken(canceled: true)));
+
+        var services = GetServices(builder => builder.RegisterInstance(queue).As<ICustomAnomalyReviewQueue>());
+        var (provider, project) = await GetProviderAndProjectAsync(services);
+        var processor = services.GetRequiredService<AgentCallProcessor>();
+
+        await FluentActions
+            .Invoking(() => processor.IngestAsync(NewJob(provider, project), CancellationToken))
+            .Should().NotThrowAsync();
+
+        (await services.GetRequiredService<IAgentCallRepository>().CountAsync(CancellationToken)).Should().Be(1);
+    }
+
+    [TestMethod]
+    public async Task IngestAsync_WhenPostPersistSideEffectHitsARetryableError_DoesNotThrowAndKeepsTheCall()
+    {
+        // Same window, other exit: a retryable storage error in the tail would match the outer
+        // `when (IsRetryable(ex))` guard and be rethrown for the messaging worker to requeue —
+        // which duplicates the already-committed trace instead of retrying anything useful.
+        var queue = Substitute.For<ICustomAnomalyReviewQueue>();
+        queue.EnqueueAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromException(new DbUpdateException("transient")));
+
+        var services = GetServices(builder => builder.RegisterInstance(queue).As<ICustomAnomalyReviewQueue>());
+        var (provider, project) = await GetProviderAndProjectAsync(services);
+        var processor = services.GetRequiredService<AgentCallProcessor>();
+
+        await FluentActions
+            .Invoking(() => processor.IngestAsync(NewJob(provider, project), CancellationToken))
+            .Should().NotThrowAsync();
+
+        (await services.GetRequiredService<IAgentCallRepository>().CountAsync(CancellationToken)).Should().Be(1);
     }
 }
