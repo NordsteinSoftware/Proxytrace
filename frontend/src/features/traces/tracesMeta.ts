@@ -185,10 +185,17 @@ export function traceListView(rowCount: number, isFetching: boolean, filtered: b
 // ── Column layout (shared between header row and all trace rows) ───────────────
 
 // Minimums are sized so the row still fits a ~900px list (1024px viewport with collapsed
-// sidebar); fixed-ish columns get a minmax upper bound so wide screens keep today's layout.
+// sidebar) with no column gap — the gutters are `pr-*` *inside* each cell, so they're already
+// paid for by these minimums; adding a grid `gap-x` on top would blow the 900px budget.
 // The anomaly indicator is a super-narrow, fixed 36px track for the outlier chip (empty on normal
 // rows). It sits just before the timestamp, between Latency and Time.
-export const COL_WIDTHS = ['minmax(170px,2fr)', 'minmax(96px,1fr)', 'minmax(104px,140px)', '64px', '56px', 'minmax(96px,130px)', 'minmax(64px,84px)', 'minmax(88px,120px)', '36px', '72px'] as const;
+//
+// Only Message is elastic. Agent and Model take a *bounded* max instead of an `fr` share: on a wide
+// screen an `fr` share hands them hundreds of pixels they can't use (an agent name is ~160px), which
+// left a dead gap between the agent name and the model tag while the model tag itself truncated at
+// its old 140px cap. Capping both puts every spare pixel into Message, which is the one column that
+// always has more to show.
+export const COL_WIDTHS = ['minmax(170px,1fr)', 'minmax(96px,180px)', 'minmax(104px,200px)', '64px', '56px', 'minmax(96px,130px)', 'minmax(64px,84px)', 'minmax(88px,120px)', '36px', '72px'] as const;
 export const GRID_TEMPLATE = COL_WIDTHS.join(' ');
 
 // The '' entry is the anomaly column — its header is an icon, not text (see TraceTable), so the

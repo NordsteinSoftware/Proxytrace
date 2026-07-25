@@ -10,6 +10,7 @@ using Proxytrace.Domain.Agent;
 using Proxytrace.Domain.AgentCall;
 using Proxytrace.Domain.AgentVersion;
 using Proxytrace.Domain.Completion;
+using Proxytrace.Domain.Exceptions;
 using Proxytrace.Domain.Prompt;
 using Proxytrace.Domain.Session;
 using Proxytrace.Licensing;
@@ -89,7 +90,12 @@ internal sealed class AgentCallProcessor : IAgentCallProcessor
                 job, cancellationToken);
 
             // ── Resolve version ────────────────────────────────────────────────
-            var promptTemplate = createPromptTemplate("unknown", parsed.SystemMessage.ToString());
+            // GetText(), never ToString(): Message.ToString() renders "{Role}: {text}", so the
+            // template would be stored as "System: You are…". That corrupts what the UI shows and,
+            // worse, makes the version fingerprint disagree with every prompt built from raw text
+            // (seeded agents, agents created in the UI) — so the first ingested call for such an
+            // agent always minted a spurious new version.
+            var promptTemplate = createPromptTemplate("unknown", parsed.SystemMessage.GetText());
 
             IAgentVersion? version;
             if (priorConversationCall is not null
@@ -258,6 +264,17 @@ internal sealed class AgentCallProcessor : IAgentCallProcessor
             {
                 return true;
             }
+            // The domain-level twin of DbUpdateConcurrencyException: the repository's own
+            // concurrency pre-check (AbstractRepository.UpdateCoreAsync) throws this before EF ever
+            // sees the write. Ingestion mutates the agent — endpoint, model parameters, current
+            // version — so a burst of calls for one agent genuinely collides here. It is transient:
+            // a retry re-reads the row and succeeds. Treating it as poison silently discarded every
+            // captured trace that lost such a race. (#450 tracks a stale-cache hazard that can make
+            // these conflicts far more frequent than a true race would.)
+            if (e is OptimisticConcurrencyException)
+            {
+                return true;
+            }
             if (e is DbException)
             {
                 return true;
@@ -284,7 +301,7 @@ internal sealed class AgentCallProcessor : IAgentCallProcessor
         if (agent is null)
         {
             // First call for this name: create the agent + v1 straight from the wire.
-            var namedPrompt = createPromptTemplate(agentName, parsed.SystemMessage.ToString());
+            var namedPrompt = createPromptTemplate(agentName, parsed.SystemMessage.GetText());
             var created = await agentRepository.CreateWithInitialVersionAsync(
                 agentName,
                 namedPrompt,

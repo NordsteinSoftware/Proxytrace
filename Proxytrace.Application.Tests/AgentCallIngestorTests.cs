@@ -7,13 +7,19 @@ using NSubstitute;
 using Proxytrace.Application.CustomAnomaly;
 using Proxytrace.Application.Ingestion;
 using Proxytrace.Application.Ingestion.Internal;
+using Proxytrace.Application.Outliers;
 using Proxytrace.Application.Streaming;
 using Proxytrace.Messaging;
 using Proxytrace.Domain;
 using Proxytrace.Domain.Agent;
 using Proxytrace.Domain.AgentCall;
+using Proxytrace.Domain.AgentVersion;
 using Proxytrace.Domain.CustomAnomaly;
+using Proxytrace.Domain.Exceptions;
+using Proxytrace.Domain.Inference;
+using Proxytrace.Domain.ModelEndpoint;
 using Proxytrace.Domain.ModelProvider;
+using Proxytrace.Domain.Prompt;
 using Proxytrace.Domain.Project;
 using Proxytrace.Domain.Session;
 using Proxytrace.Licensing;
@@ -1164,4 +1170,141 @@ public sealed class AgentCallIngestorTests : BaseTest<Module>
 
         (await services.GetRequiredService<IAgentCallRepository>().CountAsync(CancellationToken)).Should().Be(1);
     }
+
+    // ── Concurrency conflicts are retryable, not poison ──────────────────────────────────
+
+    [TestMethod]
+    public async Task IngestAsync_WhenTheIngestConflictsOnTheAgentRow_RethrowsSoTheTraceIsRetried()
+    {
+        // A concurrency conflict is transient by definition — another writer won the race, and a
+        // re-read succeeds. Ingestion mutates the agent (endpoint / model parameters / current
+        // version), so a burst of calls for one agent can genuinely collide. Classifying the
+        // conflict as poison throws the captured trace away for good: it is the reason every turn
+        // after the first of a multi-turn conversation went missing while turn 1 was ingested.
+        var detector = Substitute.For<IOutlierDetector>();
+        detector
+            .EvaluateAsync(Arg.Any<Guid>(), Arg.Any<OutlierMetrics>(), Arg.Any<CancellationToken>())
+            .Returns<Task<OutlierFlags>>(_ =>
+                throw new OptimisticConcurrencyException(Guid.NewGuid(), typeof(IAgent)));
+
+        var services = GetServices(builder => builder.RegisterInstance(detector).As<IOutlierDetector>());
+        var (provider, project) = await GetProviderAndProjectAsync(services);
+        var processor = services.GetRequiredService<AgentCallProcessor>();
+
+        // Rethrown, so the messaging worker requeues (or retries inline) instead of dropping it.
+        await FluentActions
+            .Invoking(() => processor.IngestAsync(NewJob(provider, project), CancellationToken))
+            .Should().ThrowAsync<OptimisticConcurrencyException>();
+
+        // The conflict happens before the call row is written, so nothing was half-persisted.
+        (await services.GetRequiredService<IAgentCallRepository>().CountAsync(CancellationToken)).Should().Be(0);
+    }
+
+    [TestMethod]
+    public async Task Worker_WhenIngestConflictsOnce_RetriesInlineAndKeepsTheTrace()
+    {
+        // End-to-end companion to the test above: on the in-process transport an unacked envelope is
+        // never redelivered, so the inline retry is the only thing standing between a transient
+        // conflict and a permanently lost trace.
+        var attempts = 0;
+        var detector = Substitute.For<IOutlierDetector>();
+        detector
+            .EvaluateAsync(Arg.Any<Guid>(), Arg.Any<OutlierMetrics>(), Arg.Any<CancellationToken>())
+            .Returns(_ => Interlocked.Increment(ref attempts) == 1
+                ? throw new OptimisticConcurrencyException(Guid.NewGuid(), typeof(IAgent))
+                : Task.FromResult(OutlierFlags.None));
+
+        var services = GetServices(builder => builder.RegisterInstance(detector).As<IOutlierDetector>());
+        var stream = services.GetRequiredService<IIngestionStream>();
+        var worker = services.GetRequiredService<AgentCallIngestionWorker>();
+        var callRepo = services.GetRequiredService<IAgentCallRepository>();
+        var (provider, project) = await GetProviderAndProjectAsync(services);
+
+        await worker.StartAsync(CancellationToken);
+        try
+        {
+            await stream.PublishAsync(
+                new IngestMessage(
+                    provider.Id, project.Id, ChatTurn1RequestBody, ChatTurn1ResponseBody,
+                    DurationMs: 100, HttpStatus: (int)HttpStatusCode.OK, SessionId: null),
+                CancellationToken);
+
+            await WaitUntilAsync(async () => await callRepo.CountAsync(CancellationToken) == 1);
+        }
+        finally
+        {
+            await worker.StopAsync(CancellationToken);
+        }
+
+        (await callRepo.CountAsync(CancellationToken)).Should().Be(1);
+        Volatile.Read(ref attempts).Should().Be(2);
+    }
+
+    // ── System prompt is stored verbatim, without the role prefix ────────────────────────
+
+    [TestMethod]
+    public async Task IngestAsync_StoresTheSystemPromptVerbatimWithoutTheRolePrefix()
+    {
+        // Message.ToString() renders "{Role}: {text}". Feeding that into the prompt template stores
+        // the agent's system prompt as "System: You are…", which is both wrong on screen and makes
+        // the version fingerprint disagree with every prompt created from raw text.
+        var services = GetServices();
+        var (provider, project) = await GetProviderAndProjectAsync(services);
+        var processor = services.GetRequiredService<AgentCallProcessor>();
+
+        await processor.IngestAsync(NewJob(provider, project), CancellationToken);
+
+        var call = (await services.GetRequiredService<IAgentCallRepository>()
+            .GetFilteredAsync(new AgentCallFilter { ProjectId = project.Id }, 1, 10, CancellationToken)).Items.Single();
+
+        call.Version.SystemPrompt.Template.Should().Be(SystemPrompt);
+    }
+
+    [TestMethod]
+    public async Task IngestAsync_ForANamedAgentWhoseVersionHoldsTheRawPrompt_ReusesItInsteadOfAppendingAVersion()
+    {
+        // The regression the prefix causes in practice: an agent created outside ingestion (seeded,
+        // or via the UI) stores its prompt as raw text, so a prefixed fingerprint can never match and
+        // the very first live call mints a spurious v2 — an agent-row write that is exactly the kind
+        // of update the conflict above lands on.
+        var services = GetServices();
+        var (provider, project) = await GetProviderAndProjectAsync(services);
+        var agents = services.GetRequiredService<IAgentRepository>();
+        var versions = services.GetRequiredService<IAgentVersionRepository>();
+        var promptFactory = services.GetRequiredService<IPromptTemplate.Create>();
+        var parameterFactory = services.GetRequiredService<IModelParameters.Create>();
+        var endpoint = await services
+            .GetRequiredService<IDomainEntityGenerator<IModelEndpoint>>()
+            .GetOrCreateAsync(CancellationToken);
+
+        var seeded = await agents.CreateWithInitialVersionAsync(
+            "Support Agent",
+            promptFactory("support-system", SystemPrompt),
+            tools: [],
+            project,
+            endpoint,
+            parameterFactory(),
+            isSystemAgent: false,
+            CancellationToken);
+
+        await IngestNamedCallWithoutToolsAsync(services, provider, project);
+
+        (await versions.GetByAgentAsync(seeded, CancellationToken)).Should().ContainSingle();
+    }
+
+    // Ingests one named-agent call whose request carries the same system prompt and no tools, so the
+    // strict fingerprint must match the seeded v1.
+    private Task IngestNamedCallWithoutToolsAsync(
+        IServiceProvider services, IModelProvider provider, IProject project)
+        => services.GetRequiredService<AgentCallProcessor>().IngestAsync(
+            new IngestJob(
+                Provider: provider,
+                Project: project,
+                RequestBody: ChatTurn2RequestBodyNoTools,
+                ResponseBody: ChatTurn2ResponseBody,
+                Duration: TimeSpan.FromMilliseconds(100),
+                HttpStatus: HttpStatusCode.OK,
+                SessionId: null,
+                AgentName: "Support Agent"),
+            CancellationToken);
 }

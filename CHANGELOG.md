@@ -67,6 +67,41 @@ follow [Semantic Versioning](https://semver.org). Ongoing work is collected unde
 
 ### Fixed
 
+- **Tracey now opens a trace you paste by id.** Asking the assistant to look at a specific trace by
+  its id ("debug trace `6339237b-…`") made her report that no such trace existed, even though the
+  trace was right there. Her instructions told her that ids only ever come from a list and never
+  from what the user typed, so instead of fetching the trace by id she ran a free-text search for
+  it — and that search covers the captured request and response text, not ids, so it always came
+  back empty. A pasted id is now treated as what it is: she fetches that trace (or agent, run,
+  suite, proposal) directly, and only reports it missing if the lookup really finds nothing.
+
+- **Multi-turn conversations no longer lose every turn after the first.** When an agent handled a
+  tool-calling exchange, the follow-up calls — the ones carrying the tool results and the final
+  answer — could vanish from Proxytrace while the opening turn appeared normally, so a conversation
+  that plainly ran to completion in the client showed up as a single trace ending in a pending tool
+  call. Ingestion updates the agent as calls arrive (endpoint, model parameters, current version),
+  and when a rapid burst of calls for one agent collided on that update, the losing call was
+  classified as permanently malformed and thrown away instead of being retried. Such a collision is
+  now retried and the trace is kept.
+- **An agent's system prompt is recorded exactly as sent.** Captured calls stored the prompt with a
+  `System: ` prefix glued to the front, so agent pages showed the wrong text. Because the prefix also
+  changed the prompt's fingerprint, the first live call to an agent created outside ingestion (a
+  seeded demo agent, or one set up in the UI) always appeared to change its prompt and appended a
+  spurious new version. Prompts are now stored verbatim and that phantom version is gone. Existing
+  agents whose prompt was captured with the prefix get one final version on their next call, after
+  which their history stays stable.
+- **Long model names no longer overlap the columns beside them.** On the dashboard's live feed, a
+  model id wider than its column — `deepseek/deepseek-v4-flash` and friends — painted straight over
+  the turn count on its left and the status on its right, leaving all three unreadable. Model tags
+  now shorten with an ellipsis to fit their column and show the full name on hover, and the live
+  feed gives the model column more room to begin with. On the Traces page the same names were cut
+  off mid-character and ran flush into the status dot beside them; that column now has a gutter.
+- **The Traces table uses its width better on a large screen.** The message and agent columns grew
+  with the window while the model column stayed capped, so a wide display showed truncated model
+  names next to a stretch of empty space — and message previews ran into the agent name beside them
+  with nothing between. The agent and model columns now take the width they can actually use (model
+  names fit in full on a wide screen), every spare pixel goes to the message preview, and each
+  column keeps a gutter. Narrow windows are unchanged.
 - **The read-only demo no longer throws errors at visitors who touch a disabled control.** Kiosk
   mode dimmed every button that would change something, but only against the mouse — tabbing to one
   and pressing Enter still sent the request, which the server refused, surfacing a red error. The

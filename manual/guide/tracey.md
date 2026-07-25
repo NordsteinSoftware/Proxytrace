@@ -35,6 +35,11 @@ Tracey fetches live data before answering. If a request is ambiguous (for exampl
 agents match a name) or she needs a few decisions from you before acting, she asks with an
 inline **questions widget** rather than guessing — see *Inline components* below.
 
+You can also point her at one specific item by pasting its **id** — copy it from the page URL or
+from a table and ask "look at trace `6339237b-0757-48ec-88bc-83233a3d29a8`" or "debug this run
+`…`". She opens exactly that item instead of searching for it. Naming something instead
+("the Returns agent") works too; she looks the name up first.
+
 By default Tracey answers about **your own agents**. Proxytrace runs a few internal *system*
 agents — Tracey herself and the evaluators that score your test runs — which make their own model
 calls. She leaves these out of "list my agents", token-usage charts, recent test runs, and trace

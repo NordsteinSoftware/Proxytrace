@@ -488,6 +488,17 @@ describe('tracey entity-fetch tools', () => {
     expect(agentCallsApi.list).not.toHaveBeenCalled();
   });
 
+  it('find_traces redirects a trace id passed as the free-text query to get_trace', async () => {
+    const ctx = makeCtx();
+    const traceId = '6339237b-0757-48ec-88bc-83233a3d29a8';
+    const result = await exec(createTraceyTools(ctx).find_traces, { query: traceId }, ctx);
+
+    // The backend `q` is a fulltext index over message content, so an id matches nothing and the
+    // model would read the empty result as "no such trace" instead of reaching for `get_trace`.
+    expect(result).toEqual({ count: 0, items: [], useInstead: { tool: 'get_trace', traceId } });
+    expect(agentCallsApi.list).not.toHaveBeenCalled();
+  });
+
   it('get_trace stores the full call and returns a curated summary', async () => {
     const call = { id: 't1', model: 'gpt-4o', provider: 'openai', httpStatus: 200, inputTokens: 10, outputTokens: 20, durationMs: 500, costEur: 0.1 };
     agentCallsApi.get.mockResolvedValue(call);

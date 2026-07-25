@@ -545,6 +545,19 @@ anomalies page, dashboard. The prompts carry real entity ids and end with an "id
 app UI" note that matches the app-provided-ids exception in `TRACEY_SYSTEM_PROMPT` — do not
 remove one without the other. Prompts stay untranslated (like `tracey-quick-actions.ts`).
 
+### Ids the user pastes
+
+The prompt's id rule is split in two on purpose: a **name** the user types must be resolved through
+a `list_*` first, but an **id-shaped** value (a GUID) the user pastes is authoritative and goes
+straight to the by-id tool. Users routinely copy a trace id out of a URL or the traces table
+("look at trace `6339…`"), and an earlier blanket "ids never come from the user" rule made Tracey
+route that id into `find_traces`' `query` instead — which is a fulltext index over the captured
+request/response, so it matched nothing and she reported the trace as missing. `find_traces`
+therefore also guards defensively: a `query` that passes `isEntityId` short-circuits to
+`{ count: 0, items: [], useInstead: { tool: 'get_trace', traceId } }` without an API call, so the
+wrong tool names the right one instead of returning a silent empty list. Keep the prompt rule and
+this guard in sync.
+
 ## Skills (on-demand playbooks + tool bundles)
 
 A **skill** is a named markdown playbook the model loads at runtime instead of carrying in the base

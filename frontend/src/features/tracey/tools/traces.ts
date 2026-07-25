@@ -11,7 +11,8 @@ export const createTraceTools: ToolFactory = (ctx, store) => ({
       'or HTTP status — newest first. Use it to ground a tuning hypothesis in what the agent ' +
       'actually said: find failing or suspicious calls, then `get_trace` one for full detail. ' +
       'The matching traces are rendered to the user as a card. Hides traces of internal system ' +
-      'agents (Tracey, evaluators) unless includeSystem is true.',
+      'agents (Tracey, evaluators) unless includeSystem is true. `query` searches message CONTENT, ' +
+      'not ids — to open a trace whose id you already have, call `get_trace` instead.',
     parameters: z.object({
       present: presentArg,
       agentId: z.string().optional().describe('Only traces of this agent.'),
@@ -23,6 +24,13 @@ export const createTraceTools: ToolFactory = (ctx, store) => ({
     }),
     confirm: false,
     execute: async ({ agentId, query, httpStatus, limit, includeSystem }) => {
+      // A user who says "look at trace <guid>" hands over a real id, and the model sometimes routes
+      // it here instead of to `get_trace`. The backend `q` is a fulltext index over the captured
+      // request/response, so an id matches nothing — an empty result the model reads as "that trace
+      // does not exist" rather than "wrong tool". Name the right tool instead of failing silently.
+      if (query && isEntityId(query)) {
+        return { count: 0, items: [], useInstead: { tool: 'get_trace', traceId: query.trim() } };
+      }
       const { items } = await agentCallsApi.list({
         projectId: ctx.projectId,
         agentId,
