@@ -25,7 +25,6 @@ follow [Semantic Versioning](https://semver.org). Ongoing work is collected unde
   sessions (most recently active first, with per-session trace and token counters) and
   `GET /api/sessions/{id}` returns one; sessions are scoped to the projects you can access, exactly
   like traces.
-
 - **Notification details view.** Clicking a notification in the bell inbox now opens a detail drawer
   instead of navigating away: the full, untruncated message, its kind, status, project and
   timestamps, and a live summary of whatever the notification is about (test run, agent, proposal
