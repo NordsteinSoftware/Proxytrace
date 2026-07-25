@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { setAccessToken, setUnauthorizedHandler } from "../token";
 import { localAuthApi } from "./localAuthApi";

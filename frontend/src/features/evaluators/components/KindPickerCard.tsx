@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router';
 import { Trans, useLingui } from '@lingui/react/macro';
 import { cn } from '../../../lib/cn';
 import type { EvaluatorKind } from '../../../api/models';

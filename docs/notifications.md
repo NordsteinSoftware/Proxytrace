@@ -143,10 +143,27 @@ The bell popover (`NotificationsMenu.tsx`) mounts a right-side `Drawer` as a *si
   deliberate soft reference (`INotification.TargetId`), so those queries use
   `silentStatuses: [404]`, `retry: false`, `throwOnError: false` and render a "no longer available"
   state with no CTA.
-- `notificationsMeta.ts`'s `TARGET_ROUTE` is a **`Partial<Record<…>>`**: `NotificationTargetKind`
-  is a backend enum, and a member the frontend build doesn't know must degrade to "no link" rather
-  than throw — the topbar renders outside every route `ErrorBoundary`, so a throw there blanks the
-  whole app.
+- Opening a notification also **clears any page-level drawer** (`?trace=`, `?error=`) in the same
+  history replace. This drawer is global chrome painted over the page, and two live `DetailPanel`s
+  both bind `document` keydown — Esc and the arrows would drive both, and their two
+  `setSearchParams` updaters (each derived from the pre-update URL) would clobber one another.
+  Master/detail `?id=` is a pane, not an overlay, so it is left alone.
+
+### Why the topbar is defensive
+
+Two rules in this feature exist because the bell renders in the masthead, which is a **sibling of
+the router `Outlet`** — a route-level boundary structurally cannot catch a throw there:
+
+- `notificationsMeta.ts`'s `TARGET_ROUTE` is a **`Partial<Record<…>>`**. `NotificationTargetKind` is
+  a backend enum, and a member the frontend build doesn't know must degrade to "no link" rather than
+  throw.
+- `useNotifications` sets **`throwOnError: false`**, overriding the global default in
+  `app/queryClient.ts`. A failing inbox degrades to an empty bell (the error still toasts).
+
+`components/layout/Shell.tsx` now also wraps the rail, the masthead and the page area in their own
+`ErrorBoundary`s (reset on `location.key`), so a future chrome bug degrades one region instead of
+unmounting the React root. See `frontend/docs/BEST_PRACTICES.md` §9.1 — that backstop is for bugs;
+a query that can fail routinely should still not rely on it.
 
 ## Email settings store
 

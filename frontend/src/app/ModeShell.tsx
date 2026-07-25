@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { BrowserRouter } from 'react-router-dom';
+import { BrowserRouter } from 'react-router';
 import { AuthProvider } from 'react-oidc-context';
 import { Trans } from '@lingui/react/macro';
 import { PageLoader } from './PageLoader';

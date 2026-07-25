@@ -26,7 +26,7 @@ import { act, useEffect } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { AssistantRuntimeProvider } from '@assistant-ui/react';
 
-vi.mock('react-router-dom', () => ({ useNavigate: () => vi.fn() }));
+vi.mock('react-router', () => ({ useNavigate: () => vi.fn() }));
 vi.mock('@tanstack/react-query', () => ({
   useQuery: () => ({ data: undefined, status: 'pending' }),
 }));

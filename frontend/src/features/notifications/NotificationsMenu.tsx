@@ -64,7 +64,13 @@ export function NotificationsMenu() {
     // The popover renders above the drawer (z-[80] vs z-50), so it must close for the drawer to
     // be visible. Don't raise the drawer's z-index — every drawer in the app shares it.
     setOpen(false);
-    selectNotification(id);
+    // Close any page-level drawer in the same history replace. This one is global chrome and
+    // paints over the page, and two open `DetailPanel`s both bind document keydown — Esc and the
+    // arrows would drive both, and their two `setSearchParams` updaters (each derived from the
+    // pre-update URL) would clobber one another. `clear` exists for exactly this (see
+    // `useSelectedId`); master/detail `?id=` is a pane, not an overlay, so it is left alone.
+    // eslint-disable-next-line lingui/no-unlocalized-strings -- URL query-param keys
+    selectNotification(id, ['trace', 'error']);
   }
 
   function handleDismiss(id: string) {

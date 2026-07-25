@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react';
-import { Navigate, Route, Routes, useParams } from 'react-router-dom';
+import { Navigate, Route, Routes, useLocation, useParams } from 'react-router';
 import { useQuery } from '@tanstack/react-query';
 import { LocaleSync } from '../i18n/LocaleSync';
 import { Shell } from '../components/layout/Shell';
@@ -26,6 +26,7 @@ import { OutlierSettingsSection } from '../features/settings/sections/OutlierSet
 const Setup = lazy(() => import('../features/setup/Setup'));
 const Dashboard = lazy(() => import('../features/dashboard/Dashboard'));
 const Traces = lazy(() => import('../features/traces/Traces'));
+const SessionView = lazy(() => import('../features/traces/session-view/SessionView'));
 const AnomalyDashboard = lazy(() => import('../features/anomalies/AnomalyDashboard'));
 const TraceyAI = lazy(() => import('../features/tracey/TraceyAI'));
 const Agents = lazy(() => import('../features/agents/Agents'));
@@ -69,14 +70,19 @@ export function AppRoutes() {
   });
   const { data: authMode } = useAuthMode();
   const currentUser = useCurrentUser();
+  const location = useLocation();
 
   if (setupStatus === undefined || authMode === undefined) return <PageLoader />;
 
   // Client-side route gating only — the backend must still enforce admin authorization.
   const isAdmin = authMode.mode === 'local' && currentUser?.role === 'Admin';
 
+  // `resetKeys` on the location: react-router reconciles one boundary instance across route
+  // changes, so without it a caught error stays on screen on every subsequent page until a reload.
   const wrap = (el: React.ReactNode) => (
-    <ErrorBoundary><Suspense fallback={<PageLoader />}>{el}</Suspense></ErrorBoundary>
+    <ErrorBoundary resetKeys={[location.key]}>
+      <Suspense fallback={<PageLoader />}>{el}</Suspense>
+    </ErrorBoundary>
   );
 
   const setupNeeded = !setupStatus.isConfigured || (authMode.mode === 'local' && authMode.setupRequired);
@@ -93,13 +99,24 @@ export function AppRoutes() {
         path="/setup"
         element={setupNeeded ? wrap(<Setup />) : <Navigate to="/dashboard" replace />}
       />
+      {/* The shell's own boundary. `Shell` contains one per chrome region, but `ProjectProvider`
+          sits above it and its projects query inherits the global `throwOnError` — without this,
+          a failed `GET /api/projects` unmounts the React root and blanks the page. Last resort:
+          everything inside has a nearer boundary. */}
       <Route
         path="/"
-        element={setupNeeded ? <Navigate to="/setup" replace /> : <ProjectProvider><Shell /></ProjectProvider>}
+        element={setupNeeded
+          ? <Navigate to="/setup" replace />
+          : (
+            <ErrorBoundary resetKeys={[location.key]}>
+              <ProjectProvider><Shell /></ProjectProvider>
+            </ErrorBoundary>
+          )}
       >
         <Route index element={<Navigate to="/dashboard" replace />} />
         <Route path="dashboard" element={wrap(<Dashboard />)} />
         <Route path="traces" element={wrap(<Traces />)} />
+        <Route path="sessions/:sessionId" element={wrap(<SessionView />)} />
         <Route path="anomalies" element={wrap(<AnomalyDashboard />)} />
         <Route path="tracey-ai" element={wrap(<RequiresFeature feature="Tracey"><TraceyAI /></RequiresFeature>)} />
         <Route path="agents" element={wrap(<Agents />)} />

@@ -23,6 +23,7 @@ function trace(over: Partial<AgentCallListItemDto> & Pick<AgentCallListItemDto, 
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     conversationId: null,
+    sessionId: null,
     outlierFlags: 0,
     ...over,
   };
@@ -144,6 +145,7 @@ describe('hasActiveTraceFilters', () => {
   it('is true when any advanced filter is set', () => {
     for (const patch of [
       { agent: 'agent-1' },
+      { session: 'session-1' },
       { anomaly: 'any' as const },
       { anomaly: 'highLatency' as const },
       { tool: 'web_search' },
@@ -170,6 +172,10 @@ describe('advancedFilterParams', () => {
     expect(advancedFilterParams({
       ...EMPTY_ADVANCED_FILTERS, agent: 'a1', tool: 'web_search', model: 'gpt', statusClass: '5',
     })).toEqual({ agentId: 'a1', toolName: 'web_search', model: 'gpt', httpStatusClass: 5 });
+  });
+
+  it('maps the session slot to the sessionId param', () => {
+    expect(advancedFilterParams({ ...EMPTY_ADVANCED_FILTERS, session: 'sess-1' })).toEqual({ sessionId: 'sess-1' });
   });
 
   it("maps anomaly 'any' to outlierOnly and specific anomalies to their OutlierFlags bit", () => {
@@ -200,6 +206,7 @@ describe('isValidAdvancedFilters', () => {
     expect(isValidAdvancedFilters({ ...EMPTY_ADVANCED_FILTERS, anomaly: 'bogus' })).toBe(false);
     expect(isValidAdvancedFilters({ ...EMPTY_ADVANCED_FILTERS, statusClass: '3' })).toBe(false);
     expect(isValidAdvancedFilters({ ...EMPTY_ADVANCED_FILTERS, minTokens: 100 })).toBe(false);
+    expect(isValidAdvancedFilters({ ...EMPTY_ADVANCED_FILTERS, session: 5 })).toBe(false);
   });
 });
 

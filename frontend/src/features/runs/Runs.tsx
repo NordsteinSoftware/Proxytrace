@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router';
 import { Trans, useLingui } from '@lingui/react/macro';
 import { agentColor } from '../../lib/colors';
 import { cn } from '../../lib/cn';

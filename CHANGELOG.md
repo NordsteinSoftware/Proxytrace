@@ -11,6 +11,20 @@ follow [Semantic Versioning](https://semver.org). Ongoing work is collected unde
 
 ### Added
 
+- **Debugging sessions: group live traces across agents and conversations.** Tag your calls with the
+  `x-proxytrace-session-id` header and Proxytrace collects every trace sharing that key — spanning
+  multiple agents and conversations — into one **session**, the bigger picture around a single app run
+  or user session. Sessions are auto-created on the first trace with an unseen key, work on every
+  license tier, and need no setup. A dedicated **session page** (`/sessions/:sessionId`) shows one session's
+  traces as a live, chronological timeline: header counters (trace and token totals,
+  first-seen/last-activity) and the trace list update in real time as new calls arrive, with a **Live**
+  indicator while the session saw activity in the last five minutes. On the **Traces** page, a new
+  **Session** filter narrows the table (and its timeline) to a single session — pick from the project's
+  recent sessions — and every trace row and the trace detail panel carry a **Session** link to jump
+  straight to the whole session. For the API, `GET /api/sessions?projectId=…` lists a project's recent
+  sessions (most recently active first, with per-session trace and token counters) and
+  `GET /api/sessions/{id}` returns one; sessions are scoped to the projects you can access, exactly
+  like traces.
 - **Notification details view.** Clicking a notification in the bell inbox now opens a detail drawer
   instead of navigating away: the full, untruncated message, its kind, status, project and
   timestamps, and a live summary of whatever the notification is about (test run, agent, proposal
@@ -41,6 +55,16 @@ follow [Semantic Versioning](https://semver.org). Ongoing work is collected unde
   config update, so credential rotations stand out in incident review and compliance reporting.
   The key value itself is never recorded.
 
+### Changed
+
+- **`x-proxytrace-session-id` now names a debugging session, not a conversation.** The header that
+  used to set the conversation/thread key now identifies the broader *session* (see Added), and
+  thread-level grouping moves to the new `x-proxytrace-conversation-id` header. Existing clients need
+  no change: when no `x-proxytrace-conversation-id` is sent, the session key still drives conversation
+  grouping, so calls keep grouping into threads byte-for-byte as before — and now gain a session view
+  on top. Send `x-proxytrace-conversation-id` only when you want one session to hold several distinct
+  conversations. Neither header is forwarded upstream.
+
 ### Fixed
 
 - **The read-only demo no longer throws errors at visitors who touch a disabled control.** Kiosk
@@ -50,12 +74,28 @@ follow [Semantic Versioning](https://semver.org). Ongoing work is collected unde
   error message. Actions that can't apply are now declined in the browser with a quiet "read-only
   demo" notice, whatever triggered them, and the composer says why it's disabled. (The server
   always enforced this; only the demo's manners were wrong.)
-
-- **A notification about a trace no longer blanks the whole app.** Notifications raised for a
-  captured call (a blocked call, or a custom anomaly detector's review) carried a target kind the
-  web UI did not know, and rendering one threw while drawing the top bar — which sits outside every
-  page's error boundary, so the entire app went blank until a reload. Unknown target kinds now
-  degrade to a notification with no link.
+- **No more duplicated traces when the server shuts down mid-ingest.** A captured call is written to
+  the database first and everything that follows — the live trace event, the blocked-request
+  notification, queueing the call for anomaly review — is bookkeeping around it. If one of those
+  steps was interrupted (a graceful shutdown or restart) or hit a transient database error, the
+  whole ingest was reported as failed even though the trace was already stored, so the proxy's
+  delivery guarantee handed the same call over again and it appeared twice in the Traces list. Those
+  follow-up steps are now logged and skipped instead of failing the ingest, so a restart in the
+  middle of ingestion can no longer double up your traces.
+- **A failure in the app's chrome no longer blanks the whole app.** The top bar and nav rail render
+  outside the page's error boundary, so anything that went wrong while drawing them — a
+  notification whose type the UI did not recognise, or simply the notification inbox failing to
+  load because the server was restarting — unmounted the entire interface and left a blank page
+  until a manual reload. The rail, the top bar and the page area are now each contained
+  independently: a broken control degrades to a small notice and everything else stays usable, and
+  navigating clears it. A notification inbox that fails to load now shows an empty bell and an
+  error toast, and a notification pointing at a captured call renders correctly rather than
+  throwing.
+- **A stale error no longer follows you from page to page.** An error caught on one page stayed on
+  screen on every page you navigated to afterwards, and its *Try again* button re-rendered the same
+  failure; navigating away now clears it.
+- **Opening a notification closes the trace or error panel underneath it**, instead of stacking two
+  detail panels whose keyboard shortcuts (Esc, ← →) fought each other.
 - **Opening a notification marks it read**, including when it is opened from a deep link or an
   emailed link; previously the unread badge stayed until you clicked the tick explicitly.
 - **The notification panel no longer closes over the page you navigated to**, and marking one

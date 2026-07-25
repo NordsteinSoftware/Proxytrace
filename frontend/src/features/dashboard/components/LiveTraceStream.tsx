@@ -2,13 +2,13 @@
 
 import { useMemo } from 'react';
 import { Trans, useLingui } from '@lingui/react/macro';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import { Button } from '../../../components/ui/Button';
 import { EmptyState } from '../../../components/ui/EmptyState';
 import { Skeleton } from '../../../components/ui/Skeleton';
 import type { AgentCallListItemDto } from '../../../api/models';
 import { buildRows } from '../../../lib/trace';
-import { useNowTick } from '../hooks/useNowTick';
+import { useNowTick } from '../../../hooks/useNowTick';
 import { LiveStreamRow, LIVE_STREAM_GRID, LIVE_STREAM_GRID_WIDE, LIVE_STREAM_GRID_NARROW, NARROW_HIDDEN } from './LiveStreamRow';
 import { cn } from '../../../lib/cn';
 import { COL_HEADER_CLS } from '../dashboardMeta';

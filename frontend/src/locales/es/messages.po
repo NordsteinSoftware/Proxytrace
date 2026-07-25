@@ -2194,6 +2194,9 @@ msgstr "Finalizar"
 msgid "Finish reason returned by the model"
 msgstr "Razón de finalización devuelta por el modelo"
 
+msgid "First seen"
+msgstr "Primera aparición"
+
 msgid "Fix license"
 msgstr "Corregir licencia"
 
@@ -2561,6 +2564,9 @@ msgid "last 8"
 msgstr "últimos 8"
 
 msgid "Last active"
+msgstr "Activo por última vez"
+
+msgid "Last activity"
 msgstr "Última actividad"
 
 msgid "Last hour"
@@ -3276,6 +3282,9 @@ msgstr "No hay programaciones"
 msgid "No scores yet"
 msgstr "No hay puntuaciones aún"
 
+msgid "No sessions yet"
+msgstr "Aún no hay sesiones"
+
 msgid "No stacktrace captured for this entry."
 msgstr "No se capturó stacktrace para esta entrada."
 
@@ -3481,6 +3490,9 @@ msgstr "Abrir proposals"
 
 msgid "Open run"
 msgstr "Abrir run"
+
+msgid "Open session"
+msgstr "Abrir sesión"
 
 #. placeholder {0}: s.name
 msgid "Open suite \"{0}\""
@@ -4591,6 +4603,12 @@ msgstr "Sensibilidad (desviaciones estándar)"
 msgid "Sensitivity must be above 0, and the sample counts at least 1."
 msgstr "La sensibilidad debe ser mayor que 0, y el número de muestras al menos 1."
 
+msgid "Session"
+msgstr "Sesión"
+
+msgid "Session not found"
+msgstr "Sesión no encontrada"
+
 msgid "Set a password for your account"
 msgstr "Establece una contraseña para tu cuenta"
 
@@ -5112,6 +5130,9 @@ msgstr "Esta licencia se proporcionó mediante la variable de entorno PROXYTRACE
 msgid "this page"
 msgstr "esta página"
 
+msgid "This part of the app didn't load."
+msgstr "Esta parte de la aplicación no se pudo cargar."
+
 msgid "This password reset link is missing or malformed. Request a new one."
 msgstr "Este enlace de restablecimiento de contraseña falta o está mal formado. Solicita uno nuevo."
 
@@ -5126,6 +5147,9 @@ msgstr "Esto elimina el detector y su historial de revisión. Esto no se puede d
 
 msgid "This reset link is invalid or has expired. Request a new one."
 msgstr "Este enlace de restablecimiento no es válido o ha caducado. Solicita uno nuevo."
+
+msgid "This session no longer exists, or the link is no longer valid."
+msgstr "Esta sesión ya no existe o el enlace ya no es válido."
 
 msgid "This stops future runs. Existing runs it produced are kept."
 msgstr "Esto detiene los Runs futuros. Los Runs existentes que generó se conservan."
@@ -5267,6 +5291,9 @@ msgstr "Costo total"
 
 msgid "Total runs"
 msgstr "Total de runs"
+
+msgid "Total tokens"
+msgstr "Tokens totales"
 
 msgid "Trace"
 msgstr "Trace"

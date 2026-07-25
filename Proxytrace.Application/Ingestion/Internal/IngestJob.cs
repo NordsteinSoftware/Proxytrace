@@ -15,4 +15,5 @@ internal sealed record IngestJob(
     string? AgentName = null,
     Guid? BlockedByDetectorId = null,
     string? BlockedDetectorName = null,
-    string? BlockedTriggerPattern = null);
+    string? BlockedTriggerPattern = null,
+    string? ConversationId = null);

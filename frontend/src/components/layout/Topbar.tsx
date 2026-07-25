@@ -1,5 +1,5 @@
 import { useCallback, useRef } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router';
 import { Trans, useLingui } from '@lingui/react/macro';
 import { LanguageMenuItems } from './LanguageMenuItems';
 import { EmailNotificationMenuItems } from './EmailNotificationMenuItems';

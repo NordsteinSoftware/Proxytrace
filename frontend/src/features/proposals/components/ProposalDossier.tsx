@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router';
 import { Trans } from '@lingui/react/macro';
 import { ExternalLinkIcon } from '../../../components/icons';
 import type { OptimizationProposalDto, TheoryDto } from '../../../api/models';

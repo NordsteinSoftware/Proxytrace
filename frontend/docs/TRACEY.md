@@ -94,7 +94,7 @@ the wire and attributes the call to her agent by name (`X-Proxytrace-Agent` / sa
 2. `useChatRuntime` (assistant-ui over the AI SDK adapter) calls `DelegatingTransport.sendMessages`,
    which forwards to the live `TraceyTransport` once the session has resolved.
 3. `TraceyTransport.sendMessages` mints one `crypto.randomUUID()` for the turn, sets it as the
-   `x-proxytrace-session-id` header, and runs `streamText` against
+   `x-proxytrace-conversation-id` header, and runs `streamText` against
    `/api/tracey/{projectId}/openai/v1/chat/completions` with the system prompt, the conversation,
    and the full tool set — but `prepareStep` restricts the **active** tools per step (see
    "Progressive tool disclosure").
@@ -441,10 +441,11 @@ traces. We read tokens straight from the SDK at the client: instant, no polling.
 - `TraceyTransport` writes `metadata.custom = { traceConversationId, usage, durationMs }` on the
   **finish** part only (so the row stays hidden while streaming); `usage` carries
   `inputTokens` / `cachedInputTokens` / `outputTokens` / `totalTokens` from `part.totalUsage`. The
-  same turn id rides every upstream request as `x-proxytrace-session-id`, so the turn's calls
+  same turn id rides every upstream request as `x-proxytrace-conversation-id`, so the turn's calls
   share it.
-- The backend (`TraceyChatController`) reads that header into `IngestMessage.SessionId`, stored as
-  each call's **`ConversationId`** (a GUID is stored verbatim; a non-GUID would be SHA-1 hashed).
+- The backend (`TraceyChatController`) reads that header into `IngestMessage.ConversationId`, stored
+  as each call's **`ConversationId`** (a GUID is stored verbatim; a non-GUID would be SHA-1 hashed).
+  It leaves `SessionId` null on purpose, so a Tracey turn never creates a spurious debugging session.
 - `MessageStatusBar` reads `metadata.custom` once; `message-stats.ts` narrows it to
   `{ inputTokens, cachedInputTokens, outputTokens, totalTokens, durationMs }` + the id; the row
   renders input / output via `fmtTokens` and the cached share via the shared `CachedTokensHint`

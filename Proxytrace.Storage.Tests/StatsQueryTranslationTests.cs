@@ -9,6 +9,7 @@ using Proxytrace.Domain.ModelProvider;
 using Proxytrace.Domain.Security;
 using Proxytrace.Storage.Internal.Entities.AgentCall;
 using Proxytrace.Storage.Internal.Entities.AgentVersion;
+using Proxytrace.Storage.Internal.Entities.Session;
 using Proxytrace.Storage.Internal.Entities.Statistics;
 using Proxytrace.Testing;
 
@@ -146,6 +147,54 @@ public sealed class StatsQueryTranslationTests
 
         sql.Should().Contain("GROUP BY");
         sql.Should().Contain("<> 0");
+    }
+
+    [TestMethod]
+    public void AgentCallsListBySession_FiltersAndOrders_TranslatesToServerSideIndexedQuery()
+    {
+        using IContainer container = BuildPostgresContainer();
+        var context = container.Resolve<StorageDbContext>();
+
+        // The session-detail traces list (AgentCallFilter.SessionId): WHERE SessionId = @id
+        // ORDER BY CreatedAt DESC LIMIT 50, served by the (SessionId, CreatedAt) index. Scalar
+        // projection only — the Request/Response payload columns are never read, and the WHERE /
+        // ORDER BY / LIMIT all translate to SQL rather than materializing the table client-side.
+        Guid sessionId = Guid.NewGuid();
+        string sql = context.Set<AgentCallEntity>()
+            .AsNoTracking()
+            .Where(e => e.SessionId == sessionId)
+            .OrderByDescending(e => e.CreatedAt)
+            .Skip(0)
+            .Take(50)
+            .Select(e => new { e.Id, e.CreatedAt, e.SessionId, e.HttpStatus })
+            .ToQueryString();
+
+        sql.Should().Contain("\"SessionId\" =");
+        sql.Should().Contain("ORDER BY");
+        sql.Should().Contain("LIMIT");
+    }
+
+    [TestMethod]
+    public void SessionsRecent_OrdersByLastActivity_TranslatesToServerSidePagedQuery()
+    {
+        using IContainer container = BuildPostgresContainer();
+        var context = container.Resolve<StorageDbContext>();
+
+        // The GetRecentAsync shape: WHERE ProjectId = @p ORDER BY LastActivityAt DESC LIMIT 50,
+        // served by the descending (ProjectId, LastActivityAt) index. It never aggregates the
+        // high-volume traces table — TraceCount/TotalTokens are denormalized onto the Sessions row.
+        Guid projectId = Guid.NewGuid();
+        string sql = context.Set<SessionEntity>()
+            .AsNoTracking()
+            .Where(e => e.ProjectId == projectId)
+            .OrderByDescending(e => e.LastActivityAt)
+            .Skip(0)
+            .Take(50)
+            .ToQueryString();
+
+        sql.Should().Contain("\"ProjectId\" =");
+        sql.Should().Contain("ORDER BY");
+        sql.Should().Contain("LIMIT");
     }
 
     [TestMethod]

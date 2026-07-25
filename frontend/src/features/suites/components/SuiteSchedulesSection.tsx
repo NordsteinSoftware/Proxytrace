@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import { Trans, useLingui } from '@lingui/react/macro';
 import type { TestRunScheduleDto } from '../../../api/models';
 import { useFeature } from '../../../hooks/useLicense';

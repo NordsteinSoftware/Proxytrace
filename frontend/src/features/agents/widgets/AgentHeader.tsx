@@ -1,5 +1,5 @@
 import { Trans, Plural, useLingui } from '@lingui/react/macro';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import type { AgentDto, AgentOverviewDto } from '../../../api/models';
 import { Button, IconButton } from '../../../components/ui/Button';
 import { PlayFilledIcon, TrashIcon, SparklesIcon } from '../../../components/icons';

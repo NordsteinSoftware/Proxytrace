@@ -2194,6 +2194,9 @@ msgstr "Finish"
 msgid "Finish reason returned by the model"
 msgstr "Finish reason returned by the model"
 
+msgid "First seen"
+msgstr "First seen"
+
 msgid "Fix license"
 msgstr "Fix license"
 
@@ -2562,6 +2565,9 @@ msgstr "last 8"
 
 msgid "Last active"
 msgstr "Last active"
+
+msgid "Last activity"
+msgstr "Last activity"
 
 msgid "Last hour"
 msgstr "Last hour"
@@ -3276,6 +3282,9 @@ msgstr "No schedules"
 msgid "No scores yet"
 msgstr "No scores yet"
 
+msgid "No sessions yet"
+msgstr "No sessions yet"
+
 msgid "No stacktrace captured for this entry."
 msgstr "No stacktrace captured for this entry."
 
@@ -3481,6 +3490,9 @@ msgstr "Open proposals"
 
 msgid "Open run"
 msgstr "Open run"
+
+msgid "Open session"
+msgstr "Open session"
 
 #. placeholder {0}: s.name
 msgid "Open suite \"{0}\""
@@ -4591,6 +4603,12 @@ msgstr "Sensitivity (standard deviations)"
 msgid "Sensitivity must be above 0, and the sample counts at least 1."
 msgstr "Sensitivity must be above 0, and the sample counts at least 1."
 
+msgid "Session"
+msgstr "Session"
+
+msgid "Session not found"
+msgstr "Session not found"
+
 msgid "Set a password for your account"
 msgstr "Set a password for your account"
 
@@ -5112,6 +5130,9 @@ msgstr "This license was supplied via the PROXYTRACE_LICENSE environment variabl
 msgid "this page"
 msgstr "this page"
 
+msgid "This part of the app didn't load."
+msgstr "This part of the app didn't load."
+
 msgid "This password reset link is missing or malformed. Request a new one."
 msgstr "This password reset link is missing or malformed. Request a new one."
 
@@ -5126,6 +5147,9 @@ msgstr "This removes the detector and its review history. This can't be undone."
 
 msgid "This reset link is invalid or has expired. Request a new one."
 msgstr "This reset link is invalid or has expired. Request a new one."
+
+msgid "This session no longer exists, or the link is no longer valid."
+msgstr "This session no longer exists, or the link is no longer valid."
 
 msgid "This stops future runs. Existing runs it produced are kept."
 msgstr "This stops future runs. Existing runs it produced are kept."
@@ -5267,6 +5291,9 @@ msgstr "Total cost"
 
 msgid "Total runs"
 msgstr "Total runs"
+
+msgid "Total tokens"
+msgstr "Total tokens"
 
 msgid "Trace"
 msgstr "Trace"

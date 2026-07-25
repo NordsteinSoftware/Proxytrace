@@ -20,6 +20,7 @@ internal record AgentCallEntity : Entity
     public required string? ErrorMessage { get; init; }
     public required ModelParametersData ModelParameters { get; init; }
     public required Guid? ConversationId { get; init; }
+    public required Guid? SessionId { get; init; }
 
     // Outlier characteristics flagged at ingestion (bitmask). 0 = not an outlier. Persisted as a
     // single byte; a partial index (see AgentCallConfig) serves the "outliers only" trace filter.

@@ -31,6 +31,8 @@ const traceEvent = (projectId: string): TraceCreatedEvent => ({
   model: 'm',
   provider: 'p',
   createdAt: '2024-01-01T00:00:00Z',
+  conversationId: null,
+  sessionId: null,
 });
 
 // Test-harness escape hatch: the spec drives the hook imperatively, so the latest hook result is

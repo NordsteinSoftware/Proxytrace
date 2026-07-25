@@ -31,6 +31,18 @@ export function autoTimeRange(newestTraceIso: string | null, now: number = Date.
 export { buildRows } from '../../lib/trace';
 export type { ConversationGroup, FlatTrace, TraceRow } from '../../lib/trace';
 
+import type { AgentCallListItemDto as _AgentCallListItemDto } from '../../api/models';
+import type { TraceRow as _TraceRow } from '../../lib/trace';
+
+/**
+ * Ungrouped rows: every trace becomes its own flat row, order preserved. Used wherever conversation
+ * grouping is intentionally disabled (a metric sort on the Traces tab, the session timeline) so the
+ * "flat row" shape isn't re-inlined per call site.
+ */
+export function flatRows(traces: _AgentCallListItemDto[]): _TraceRow[] {
+  return traces.map(trace => ({ type: 'flat', trace }));
+}
+
 /**
  * Tool-request count for a trace — the backend precomputes it into the light row
  * ({@link AgentCallListItemDto.toolCount}; 0 when the call produced no response).
@@ -50,6 +62,7 @@ export type TraceStatusClassFilter = '' | '2' | '4' | '5';
  */
 export interface TraceAdvancedFilters {
   agent: string;
+  session: string;
   anomaly: TraceAnomalyFilter;
   tool: string;
   model: string;
@@ -62,6 +75,7 @@ export interface TraceAdvancedFilters {
 
 export const EMPTY_ADVANCED_FILTERS: TraceAdvancedFilters = {
   agent: '',
+  session: '',
   anomaly: '',
   tool: '',
   model: '',
@@ -90,6 +104,7 @@ export function isValidAdvancedFilters(v: unknown): v is TraceAdvancedFilters {
   const f = v as Record<keyof TraceAdvancedFilters, unknown>;
   return (
     typeof f.agent === 'string' &&
+    typeof f.session === 'string' &&
     typeof f.tool === 'string' &&
     typeof f.model === 'string' &&
     typeof f.minTokens === 'string' &&
@@ -114,6 +129,7 @@ export function advancedFilterParams(f: TraceAdvancedFilters): Partial<AgentCall
   const maxLatencyMs = numericParam(f.maxLatencyMs);
   return {
     ...(f.agent ? { agentId: f.agent } : {}),
+    ...(f.session ? { sessionId: f.session } : {}),
     ...(f.anomaly === 'any' ? { outlierOnly: true } : {}),
     ...(f.anomaly && f.anomaly !== 'any' ? { anomalyFlags: ANOMALY_FLAG_BITS[f.anomaly] } : {}),
     ...(f.tool ? { toolName: f.tool } : {}),

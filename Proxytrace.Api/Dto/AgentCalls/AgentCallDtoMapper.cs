@@ -40,6 +40,7 @@ public sealed class AgentCallDtoMapper
         c.CreatedAt,
         c.UpdatedAt,
         c.ConversationId,
+        c.SessionId,
         (int)c.OutlierFlags);
 
     /// <summary>
@@ -65,6 +66,7 @@ public sealed class AgentCallDtoMapper
         c.CreatedAt,
         c.UpdatedAt,
         c.ConversationId,
+        c.SessionId,
         (int)c.OutlierFlags);
 
     /// <summary>
@@ -91,6 +93,7 @@ public sealed class AgentCallDtoMapper
         c.CreatedAt,
         c.UpdatedAt,
         c.ConversationId,
+        c.SessionId,
         (int)c.OutlierFlags);
 
     /// <summary>First user message in the request with collapsed whitespace; null when none/empty.

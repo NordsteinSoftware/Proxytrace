@@ -31,6 +31,7 @@ export default defineConfig({
             { text: 'Two-Factor Authentication', link: '/guide/two-factor-authentication' },
             { text: 'Proxy Setup', link: '/guide/proxy-setup' },
             { text: 'Capturing Traces', link: '/guide/capturing-traces' },
+            { text: 'Sessions', link: '/guide/sessions' },
             { text: 'Finding Outliers', link: '/guide/outliers' },
             { text: 'Anomaly Dashboard', link: '/guide/anomaly-dashboard' },
             { text: 'Agents', link: '/guide/agents' },

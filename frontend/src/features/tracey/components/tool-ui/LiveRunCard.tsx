@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router';
 import { Trans, useLingui } from '@lingui/react/macro';
 import { CheckIcon, PlayIcon, XIcon } from '../../../../components/icons';
 import { Badge } from '../../../../components/ui/Badge';

@@ -3,7 +3,7 @@
 // decomposed into one heartbeat per agent.
 
 import { Trans, Plural, useLingui } from '@lingui/react/macro';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import { Button } from '../../../components/ui/Button';
 import { RowButton } from '../../../components/ui/RowButton';
 import { EmptyState } from '../../../components/ui/EmptyState';
@@ -11,7 +11,7 @@ import { Skeleton } from '../../../components/ui/Skeleton';
 import { SparklesIcon } from '../../../components/icons';
 import { FOCUS_RING } from '../../../lib/constants';
 import { EYEBROW_CLS, COL_HEADER_CLS, type AgentFleetEntry } from '../dashboardMeta';
-import { useNowTick } from '../hooks/useNowTick';
+import { useNowTick } from '../../../hooks/useNowTick';
 import { AgentFleetRow, FLEET_GRID, FLEET_GRID_WIDE, FLEET_GRID_MID, FLEET_GRID_NARROW, FLEET_XL_HIDDEN, FLEET_2XL_HIDDEN } from './AgentFleetRow';
 import { cn } from '../../../lib/cn';
 

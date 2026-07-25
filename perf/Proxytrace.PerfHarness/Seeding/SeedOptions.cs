@@ -8,6 +8,11 @@ internal sealed record SeedOptions(
     int DaysSpread = 90,
     double ErrorRate = 0.05,
     double ConversationRate = 0.30,
+    // Fraction of calls stamped with a SessionId drawn from a pool of debugging sessions, so the
+    // session-filtered traces list (agentCallsListBySession) and the recent-sessions list
+    // (sessionsRecent) measure against realistic cardinality; a matching Sessions row is bulk-inserted
+    // for every pool entry that received at least one call (see SeedAsync).
+    double SessionRate = 0.30,
     // Fraction of calls stamped with a non-zero OutlierFlags bitmask so the partial outlier index
     // and the anomaly aggregates (anomalyTimeline) measure against a realistically small flagged
     // subset; a share of flagged rows also carries the CustomAnomaly bit (see BuildCall).

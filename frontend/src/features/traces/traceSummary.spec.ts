@@ -23,6 +23,7 @@ function trace(over: Partial<AgentCallListItemDto> & Pick<AgentCallListItemDto, 
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     conversationId: null,
+    sessionId: null,
     outlierFlags: 0,
     ...over,
   };

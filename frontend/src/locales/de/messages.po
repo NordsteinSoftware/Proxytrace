@@ -2194,6 +2194,9 @@ msgstr "Beenden"
 msgid "Finish reason returned by the model"
 msgstr "Vom Modell zurückgegebener Beendigungsgrund"
 
+msgid "First seen"
+msgstr "Zuerst gesehen"
+
 msgid "Fix license"
 msgstr "Lizenz korrigieren"
 
@@ -2562,6 +2565,9 @@ msgstr "letzte 8"
 
 msgid "Last active"
 msgstr "Zuletzt aktiv"
+
+msgid "Last activity"
+msgstr "Letzte Aktivität"
 
 msgid "Last hour"
 msgstr "Letzte Stunde"
@@ -3276,6 +3282,9 @@ msgstr "Keine Zeitpläne"
 msgid "No scores yet"
 msgstr "Noch keine Scores"
 
+msgid "No sessions yet"
+msgstr "Noch keine Sessions"
+
 msgid "No stacktrace captured for this entry."
 msgstr "Kein Stacktrace für diesen Eintrag erfasst."
 
@@ -3481,6 +3490,9 @@ msgstr "Proposals öffnen"
 
 msgid "Open run"
 msgstr "Run öffnen"
+
+msgid "Open session"
+msgstr "Session öffnen"
 
 #. placeholder {0}: s.name
 msgid "Open suite \"{0}\""
@@ -4591,6 +4603,12 @@ msgstr "Empfindlichkeit (Standardabweichungen)"
 msgid "Sensitivity must be above 0, and the sample counts at least 1."
 msgstr "Die Empfindlichkeit muss über 0 liegen, und die Stichprobenanzahl mindestens 1 betragen."
 
+msgid "Session"
+msgstr "Session"
+
+msgid "Session not found"
+msgstr "Session nicht gefunden"
+
 msgid "Set a password for your account"
 msgstr "Legen Sie ein Passwort für Ihr Konto fest"
 
@@ -5112,6 +5130,9 @@ msgstr "Diese Lizenz wurde über die Umgebungsvariable PROXYTRACE_LICENSE bereit
 msgid "this page"
 msgstr "diese Seite"
 
+msgid "This part of the app didn't load."
+msgstr "Dieser Teil der App konnte nicht geladen werden."
+
 msgid "This password reset link is missing or malformed. Request a new one."
 msgstr "Dieser Passwort-Reset-Link fehlt oder ist fehlerhaft. Fordern Sie einen neuen an."
 
@@ -5126,6 +5147,9 @@ msgstr "Dadurch werden der Detector und sein Prüfverlauf entfernt. Dies kann ni
 
 msgid "This reset link is invalid or has expired. Request a new one."
 msgstr "Dieser Reset-Link ist ungültig oder abgelaufen. Fordern Sie einen neuen an."
+
+msgid "This session no longer exists, or the link is no longer valid."
+msgstr "Diese Session existiert nicht mehr oder der Link ist nicht mehr gültig."
 
 msgid "This stops future runs. Existing runs it produced are kept."
 msgstr "Dadurch werden zukünftige Runs gestoppt. Bereits erzeugte Runs bleiben erhalten."
@@ -5267,6 +5291,9 @@ msgstr "Gesamtkosten"
 
 msgid "Total runs"
 msgstr "Gesamtläufe"
+
+msgid "Total tokens"
+msgstr "Tokens gesamt"
 
 msgid "Trace"
 msgstr "Trace"

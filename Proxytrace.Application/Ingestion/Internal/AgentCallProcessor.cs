@@ -11,6 +11,7 @@ using Proxytrace.Domain.AgentCall;
 using Proxytrace.Domain.AgentVersion;
 using Proxytrace.Domain.Completion;
 using Proxytrace.Domain.Prompt;
+using Proxytrace.Domain.Session;
 using Proxytrace.Licensing;
 
 namespace Proxytrace.Application.Ingestion.Internal;
@@ -29,6 +30,7 @@ internal sealed class AgentCallProcessor : IAgentCallProcessor
     private readonly IOutlierDetector outlierDetector;
     private readonly ICustomAnomalyReviewQueue anomalyReviewQueue;
     private readonly IBlockedCallRecorder blockedCallRecorder;
+    private readonly ISessionRepository sessionRepository;
     private readonly ILogger<AgentCallProcessor> logger;
 
     public AgentCallProcessor(
@@ -44,6 +46,7 @@ internal sealed class AgentCallProcessor : IAgentCallProcessor
         IOutlierDetector outlierDetector,
         ICustomAnomalyReviewQueue anomalyReviewQueue,
         IBlockedCallRecorder blockedCallRecorder,
+        ISessionRepository sessionRepository,
         ILogger<AgentCallProcessor> logger)
     {
         this.agentCallRepository = agentCallRepository;
@@ -58,6 +61,7 @@ internal sealed class AgentCallProcessor : IAgentCallProcessor
         this.outlierDetector = outlierDetector;
         this.anomalyReviewQueue = anomalyReviewQueue;
         this.blockedCallRecorder = blockedCallRecorder;
+        this.sessionRepository = sessionRepository;
         this.logger = logger;
     }
 
@@ -136,6 +140,15 @@ internal sealed class AgentCallProcessor : IAgentCallProcessor
                 : await DetectOutliersAsync(
                     agent, parsed.Response, isTurn2Plus: priorConversationCall is not null, cancellationToken);
 
+            // Resolve the debugging session from the (truncated) session key. Deriving the id from the
+            // *truncated* key — the same key stored on the row — keeps the stamp and the row consistent.
+            (Guid Id, string Key)? session = null;
+            if (!string.IsNullOrWhiteSpace(job.SessionId))
+            {
+                var key = SessionIdDerivation.TruncateKey(job.SessionId);
+                session = (SessionIdDerivation.Derive(job.Project.Id, key), key);
+            }
+
             var call = createNewCall(
                 agent: agent,
                 version: version,
@@ -147,24 +160,66 @@ internal sealed class AgentCallProcessor : IAgentCallProcessor
                 errorMessage: parsed.ErrorMessage,
                 modelParameters: parsed.ModelParameters,
                 conversationId: conversationId,
+                sessionId: session?.Id,
                 outlierFlags: outlierFlags);
 
             call = await agentCallRepository.AddAsync(call, cancellationToken);
-            traceBroadcaster.Publish(TraceCreatedEvent.Create(call));
 
-            if (job is { BlockedByDetectorId: { } blockedBy, BlockedDetectorName: { } blockedName, BlockedTriggerPattern: { } blockedPattern })
+            // Upsert the session AFTER the call persists: the trace is the source of truth, so this is
+            // best-effort — a failure here logs and is swallowed, never failing or duplicating ingestion
+            // (the call row already exists). TotalTokens mirrors the value AgentCallConfig denormalizes
+            // onto AgentCallEntity.TotalTokens.
+            if (session is { } s)
             {
-                // Proxy-blocked: record attribution + SSE + notification instead of enqueueing the
-                // LLM review — there is no provider response to judge.
-                await blockedCallRecorder.RecordAsync(
-                    call, blockedBy, blockedName, blockedPattern, cancellationToken);
+                try
+                {
+                    var totalTokens = call.Response?.Usage is { } u
+                        ? (long)(u.InputTokenCount + u.OutputTokenCount)
+                        : 0;
+                    await sessionRepository.RecordActivityAsync(
+                        s.Id, s.Key, job.Project.Id, totalTokens, call.CreatedAt, cancellationToken);
+                }
+                catch (Exception e)
+                {
+                    // Deliberately also swallows OperationCanceledException: the call row is already
+                    // committed, so letting a shutdown-time cancellation escape here would fail the
+                    // ingest post-persist and make a redelivering transport ingest the trace a second
+                    // time. The session counters are best-effort; the trace is not.
+                    logger.LogWarning(e, "Session activity upsert failed for session {SessionId}", s.Id);
+                }
             }
-            else if (!agent.IsSystemAgent)
+
+            // The call row is committed, so every side effect below is best-effort and nothing here
+            // may escape: the outer handlers would either rethrow (cancellation) or requeue
+            // (retryable storage errors), and a redelivering transport would then ingest the same
+            // trace a second time. Keep the real token so the I/O still aborts promptly on shutdown,
+            // but log the failure here instead of letting it fail the ingest post-persist.
+            try
             {
-                // Queue the persisted call for custom-anomaly review — a cheap in-process channel
-                // write (the LLM review runs asynchronously in the background worker). System agents'
-                // traffic (evaluator judges, Tracey) is internal plumbing and is not reviewed.
-                await anomalyReviewQueue.EnqueueAsync(call.Id, cancellationToken);
+                traceBroadcaster.Publish(TraceCreatedEvent.Create(call));
+
+                if (job is { BlockedByDetectorId: { } blockedBy, BlockedDetectorName: { } blockedName, BlockedTriggerPattern: { } blockedPattern })
+                {
+                    // Proxy-blocked: record attribution + SSE + notification instead of enqueueing the
+                    // LLM review — there is no provider response to judge.
+                    await blockedCallRecorder.RecordAsync(
+                        call, blockedBy, blockedName, blockedPattern, cancellationToken);
+                }
+                else if (!agent.IsSystemAgent)
+                {
+                    // Queue the persisted call for custom-anomaly review — a cheap in-process channel
+                    // write (the LLM review runs asynchronously in the background worker). System agents'
+                    // traffic (evaluator judges, Tracey) is internal plumbing and is not reviewed.
+                    await anomalyReviewQueue.EnqueueAsync(call.Id, cancellationToken);
+                }
+            }
+            catch (OperationCanceledException e)
+            {
+                logger.LogWarning(e, "Post-persist side effects cancelled for agent call {CallId}", call.Id);
+            }
+            catch (Exception e)
+            {
+                logger.LogWarning(e, "Post-persist side effects failed for agent call {CallId}", call.Id);
             }
         }
         catch (OperationCanceledException)
@@ -353,25 +408,28 @@ internal sealed class AgentCallProcessor : IAgentCallProcessor
         IngestJob job,
         CancellationToken cancellationToken)
     {
-        if (job.SessionId is not { } rawSessionId)
+        // Explicit thread key wins; fall back to the session key so clients from before the
+        // session/conversation split keep byte-identical conversation grouping.
+        var conversationKey = job.ConversationId ?? job.SessionId;
+        if (conversationKey is null)
         {
             return (null, null);
         }
 
-        var sessionGuid = ParseSessionId(rawSessionId);
+        var conversationGuid = ParseCorrelationKey(conversationKey);
         var prior = await agentCallRepository
-            .FindLatestByConversationIdAsync(sessionGuid, job.Project, cancellationToken);
-        return (sessionGuid, prior);
+            .FindLatestByConversationIdAsync(conversationGuid, job.Project, cancellationToken);
+        return (conversationGuid, prior);
     }
 
-    private static Guid ParseSessionId(string sessionId)
+    private static Guid ParseCorrelationKey(string key)
     {
-        if (Guid.TryParse(sessionId, out var guid))
+        if (Guid.TryParse(key, out var guid))
         {
             return guid;
         }
 
-        var hash = SHA1.HashData(Encoding.UTF8.GetBytes(sessionId));
+        var hash = SHA1.HashData(Encoding.UTF8.GetBytes(key));
         return new Guid(hash.AsSpan(0, 16));
     }
 }

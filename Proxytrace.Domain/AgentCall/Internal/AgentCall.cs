@@ -23,6 +23,7 @@ internal record AgentCall : DomainEntity<IAgentCall>, IAgentCall
     public string? ErrorMessage { get; }
     public IModelParameters ModelParameters { get; }
     public Guid? ConversationId { get; }
+    public Guid? SessionId { get; }
     public OutlierFlags OutlierFlags { get; }
     public IProject Project => Agent.Project;
 
@@ -37,6 +38,7 @@ internal record AgentCall : DomainEntity<IAgentCall>, IAgentCall
         string? errorMessage,
         IModelParameters? modelParameters,
         Guid? conversationId,
+        Guid? sessionId,
         OutlierFlags outlierFlags,
         IRepository<IAgentCall> repository) : base(repository)
     {
@@ -50,6 +52,7 @@ internal record AgentCall : DomainEntity<IAgentCall>, IAgentCall
         ErrorMessage = errorMessage;
         ModelParameters = modelParameters ?? Inference.Internal.ModelParameters.Empty;
         ConversationId = conversationId;
+        SessionId = sessionId;
         OutlierFlags = outlierFlags;
     }
 
@@ -65,6 +68,7 @@ internal record AgentCall : DomainEntity<IAgentCall>, IAgentCall
         IModelParameters modelParameters,
         IDomainEntityData existing,
         Guid? conversationId,
+        Guid? sessionId,
         OutlierFlags outlierFlags,
         IRepository<IAgentCall> repository) : base(existing, repository)
     {
@@ -78,6 +82,7 @@ internal record AgentCall : DomainEntity<IAgentCall>, IAgentCall
         ErrorMessage = errorMessage;
         ModelParameters = modelParameters;
         ConversationId = conversationId;
+        SessionId = sessionId;
         OutlierFlags = outlierFlags;
     }
 

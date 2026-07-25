@@ -9,7 +9,7 @@
  */
 import { useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router';
 import { agentsApi } from '../../../api/agents';
 import { agentCallsApi } from '../../../api/agent-calls';
 import { QUERY_KEYS } from '../../../api/query-keys';

@@ -65,6 +65,10 @@ internal class AgentCallConfig : AbstractEntityConfiguration<AgentCallEntity>, I
         builder.Property(e => e.ErrorMessage).HasMaxLength(2048);
         builder.Property(e => e.RequestPreview).HasMaxLength(AgentCallPreview.MaxLength);
         builder.HasIndex(e => e.ConversationId);
+
+        // Composite (SessionId, CreatedAt): the session detail page pages one session's traces
+        // chronologically; the leading column alone also serves the traces-list session filter.
+        builder.HasIndex(e => new { e.SessionId, e.CreatedAt });
         builder.HasIndex(e => e.LatencyMs);
         builder.HasIndex(e => e.TotalTokens);
         builder.HasIndex(e => e.ResponseToolRequestCount);
@@ -135,6 +139,7 @@ internal class AgentCallConfig : AbstractEntityConfiguration<AgentCallEntity>, I
             modelParameters: modelParameters,
             existing: stored,
             conversationId: stored.ConversationId,
+            sessionId: stored.SessionId,
             outlierFlags: stored.OutlierFlags);
     }
 
@@ -155,6 +160,7 @@ internal class AgentCallConfig : AbstractEntityConfiguration<AgentCallEntity>, I
             ErrorMessage = domain.ErrorMessage,
             ModelParameters = AgentConfig.ToData(domain.ModelParameters),
             ConversationId = domain.ConversationId,
+            SessionId = domain.SessionId,
             OutlierFlags = domain.OutlierFlags,
             RequestPreview = AgentCallPreview.Build(domain.Request),
             ResponseToolRequestCount = domain.Response?.Response is AssistantMessage assistant

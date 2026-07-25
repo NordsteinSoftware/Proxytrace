@@ -58,7 +58,8 @@ internal sealed class IngestionExecutor : IIngestionExecutor
             message.AgentName,
             message.BlockedByDetectorId,
             message.BlockedDetectorName,
-            message.BlockedTriggerPattern);
+            message.BlockedTriggerPattern,
+            ConversationId: message.ConversationId);
 
         await processor.IngestAsync(job, cancellationToken);
     }
