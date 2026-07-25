@@ -83,6 +83,14 @@ public class AgentCallsController : ControllerBase
         return false;
     }
 
+    // Truncate a caller-supplied session key and pair it with its derived id, so the seed endpoint
+    // carries both as one value and never has to re-check the key for null.
+    private static (Guid Id, string Key) DeriveSession(Guid projectId, string sessionKey)
+    {
+        string key = SessionIdDerivation.TruncateKey(sessionKey);
+        return (SessionIdDerivation.Derive(projectId, key), key);
+    }
+
     [HttpGet]
     public async Task<PagedResult<AgentCallListItemDto>> GetAll(
         [FromQuery] Guid? projectId = null,
@@ -322,10 +330,9 @@ public class AgentCallsController : ControllerBase
         // id, stamp it on the call, and bump the denormalized session counters — so e2e/dev can create
         // sessioned traces (and exercise the session list / filter) without the ingestion proxy.
         Guid projectId = agent.Project.Id;
-        string? sessionKey = string.IsNullOrWhiteSpace(request.SessionKey)
+        (Guid Id, string Key)? session = string.IsNullOrWhiteSpace(request.SessionKey)
             ? null
-            : SessionIdDerivation.TruncateKey(request.SessionKey);
-        Guid? sessionId = sessionKey is null ? null : SessionIdDerivation.Derive(projectId, sessionKey);
+            : DeriveSession(projectId, request.SessionKey);
 
         IAgentCall call = await repository.AddAsync(
             createCall(
@@ -339,14 +346,14 @@ public class AgentCallsController : ControllerBase
                 errorMessage: null,
                 modelParameters: agent.ModelParameters,
                 conversationId: request.ConversationId,
-                sessionId: sessionId,
+                sessionId: session?.Id,
                 outlierFlags: (OutlierFlags)(request.OutlierFlags ?? 0)),
             cancellationToken);
 
-        if (sessionId is { } sid && sessionKey is not null)
+        if (session is { } stamped)
         {
             await sessionRepository.RecordActivityAsync(
-                sid, sessionKey, projectId,
+                stamped.Id, stamped.Key, projectId,
                 totalTokens: request.InputTokens + request.OutputTokens,
                 lastActivityAt: call.CreatedAt,
                 cancellationToken);

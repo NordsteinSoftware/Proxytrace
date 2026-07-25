@@ -280,9 +280,9 @@ internal class AgentCallRepository : AbstractRepository<IAgentCall, AgentCallEnt
             query = query.Where(e => e.ConversationId == filter.ConversationId.Value);
         }
 
-        if (filter.SessionId.HasValue)
+        if (filter.SessionId is { } sessionId)
         {
-            query = query.Where(e => e.SessionId == filter.SessionId.Value);
+            query = query.Where(e => e.SessionId == sessionId);
         }
 
         if (!string.IsNullOrWhiteSpace(filter.Model))
