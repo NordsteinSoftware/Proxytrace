@@ -90,6 +90,15 @@ follow [Semantic Versioning](https://semver.org). Ongoing work is collected unde
 
 ### Fixed
 
+- **Tracey talked far too much.** A multi-step job turned into a running commentary: a sentence
+  announcing each tool call ("let me load the skill and inspect the trace"), another confirming it
+  worked, her internal checklist mirrored back as "Step 1 / Step 2" headings, and a paragraph per
+  step restating what the cards on screen already showed. She now answers in one short block — a
+  bold lead line plus a few bullets or a small table, with status markers like ✅ ❌ ⚠️ 🔴 🟢 — and
+  writes nothing at all between tool calls, since every call already shows its own row. Ten tool
+  calls end in the same short answer as one. Replies are quicker to read, and cost noticeably less
+  to generate.
+
 - **Tracey could not see a suite's test cases or evaluators.** Her suite tool promised the per-case
   ids that editing and removing a case require, but only ever returned the case *count* — so those
   actions were unreachable unless a case id happened to come up some other way. A suite's attached

@@ -26,6 +26,37 @@ ideal reply is a rendered component plus one short sentence of context, never a 
 numbers. This is enforced by `TRACEY_SYSTEM_PROMPT` (`tracey-prompt.ts`) and by every read tool
 returning only a compact digest to the model while the full payload is rendered to the user.
 
+## The output budget (why the prompt is blunt about length)
+
+"Be concise" did not work. A multi-step turn produced a running commentary — a sentence before
+each tool call ("let me load the skill and inspect the trace"), one after ("good, the skill is
+loaded"), the loaded skill's numbered steps mirrored back as user-facing headings, and a prose
+paragraph per step restating what the cards already showed. Nobody reads that, and output tokens
+are the expensive ones.
+
+So the prompt carries an **OUTPUT BUDGET** section written as six absolute rules rather than an
+adjective, because an adjective is something the model can rationalize around:
+
+1. **No narration of the work** — and specifically, **no text at all between tool calls**. Every
+   call already renders its own row, so announcing one is pure duplication. This is the single
+   biggest volume win.
+2. **No restating instructions.** A skill's numbered steps are the model's checklist, not a report
+   format; mirroring them as "Step 1 / Step 2" headings leaks the playbook into the answer.
+3. **One block per finished turn** — a bold lead line plus at most 3–5 bullets or a small table,
+   target under 80 words, longer only when the user asked to be taught.
+4. **Never repeat what a card shows.** Add the "so what", or say nothing.
+5. **No preamble, recap, or sign-off.**
+6. **No reaction words** ("Perfect!", "Great", "As you can see").
+
+It then gives a formatting palette (bold lead line, bullets, tables, a fixed set of status emoji
+used only as line-leading verdict markers, `code` for ids) and — the part models actually follow —
+a worked **write this / never write that** pair taken from a real over-long turn. A closing line
+notes the limit is on length, not language: she still answers in the user's language.
+
+Two related rules live elsewhere in the prompt: "lead with the component" under *Other behavior*,
+and "a long multi-step job does not earn a long reply — ten tool calls still end in one short
+block". Keep all of these in one place conceptually; if you soften one, the commentary returns.
+
 ## The two planes (the one mental model that matters)
 
 Tracey runs on two independent request paths. Keep them separate in your head:

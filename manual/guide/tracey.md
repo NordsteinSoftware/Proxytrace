@@ -139,6 +139,18 @@ long-running action you started — a test run or an optimization theory — sto
 *waiting*; that action keeps running on the server, and you'll still find its result on the Runs or
 Proposals page.
 
+## How Tracey answers
+
+Tracey is built to be **scanned, not read**. She answers in one short block — a bold headline, then
+a few bullets or a small table, with status markers (✅ ❌ ⚠️ 🔴 🟢 ⏳) as verdicts — and she doesn't
+narrate her own work. You won't see "let me check…" before a step or "that worked" after it,
+because every tool call already shows its own row in the thread, and she won't repeat numbers that
+are already on a card in front of you.
+
+That holds however much work a request takes: a job spanning ten tool calls ends in the same short
+answer as a one-line question. If you *want* the long version, ask her to explain or walk you
+through it and she will.
+
 ## Inline components
 
 Tracey renders rich UI **directly in the chat thread** rather than dumping raw numbers:
