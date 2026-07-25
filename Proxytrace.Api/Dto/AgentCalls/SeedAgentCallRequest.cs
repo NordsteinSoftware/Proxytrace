@@ -19,4 +19,7 @@ public record SeedAgentCallRequest(
     int? OutlierFlags = null,
     // Tool names the assistant response "requested" — populates the per-call tool rows exactly as
     // ingestion would, so e2e can exercise the tool-name filter without a real tool-calling LLM.
-    IReadOnlyList<string>? ToolNames = null);
+    IReadOnlyList<string>? ToolNames = null,
+    // Raw client session key: when set, the seeded call is stamped with the derived session id and
+    // the session's counters are bumped, so e2e can exercise the sessions list / session filter.
+    string? SessionKey = null);

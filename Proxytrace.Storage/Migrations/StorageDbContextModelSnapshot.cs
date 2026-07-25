@@ -137,6 +137,9 @@ namespace Proxytrace.Storage.Migrations
                     b.Property<int>("ResponseToolRequestCount")
                         .HasColumnType("integer");
 
+                    b.Property<Guid?>("SessionId")
+                        .HasColumnType("uuid");
+
                     b.Property<decimal?>("TotalTokens")
                         .HasColumnType("numeric(20,0)");
 
@@ -164,6 +167,8 @@ namespace Proxytrace.Storage.Migrations
                     b.HasIndex("TotalTokens");
 
                     b.HasIndex("AgentVersionId", "CreatedAt");
+
+                    b.HasIndex("SessionId", "CreatedAt");
 
                     b.ToTable("AgentCallEntity");
                 });
@@ -1195,6 +1200,47 @@ namespace Proxytrace.Storage.Migrations
                     b.ToTable("ProjectSearchSettingsEntity");
                 });
 
+            modelBuilder.Entity("Proxytrace.Storage.Internal.Entities.Session.SessionEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ExternalKey")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTimeOffset>("LastActivityAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("ProjectId")
+                        .HasColumnType("uuid");
+
+                    b.Property<long>("TotalTokens")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("TraceCount")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .IsConcurrencyToken()
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProjectId", "ExternalKey")
+                        .IsUnique();
+
+                    b.HasIndex("ProjectId", "LastActivityAt")
+                        .IsDescending(false, true);
+
+                    b.ToTable("SessionEntity");
+                });
+
             modelBuilder.Entity("Proxytrace.Storage.Internal.Entities.Statistics.TestRunStatsEntity", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1898,6 +1944,15 @@ namespace Proxytrace.Storage.Migrations
                     b.HasOne("Proxytrace.Storage.Internal.Entities.Project.ProjectEntity", null)
                         .WithMany()
                         .HasForeignKey("Project")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Proxytrace.Storage.Internal.Entities.Session.SessionEntity", b =>
+                {
+                    b.HasOne("Proxytrace.Storage.Internal.Entities.Project.ProjectEntity", null)
+                        .WithMany()
+                        .HasForeignKey("ProjectId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

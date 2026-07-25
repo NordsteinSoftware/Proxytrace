@@ -75,7 +75,7 @@ export class TraceyTransport implements ChatTransport<UIMessage> {
         // falling back to the cookie — i.e. Tracey gets no response on every post-reload turn.
         if (token) headers.set('Authorization', `Bearer ${token}`);
         else headers.delete('Authorization');
-        if (this.currentTurnId) headers.set('x-proxytrace-session-id', this.currentTurnId);
+        if (this.currentTurnId) headers.set('x-proxytrace-conversation-id', this.currentTurnId);
         return fetch(input, { ...init, headers });
       },
     });

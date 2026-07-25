@@ -24,6 +24,11 @@ public class OpenAiProxyController : ControllerBase
 {
     private const string SessionIdHeader = "x-proxytrace-session-id";
 
+    // Optional: thread-level grouping. Historically x-proxytrace-session-id carried this meaning;
+    // it now names the debugging session (a higher-level grouping), and ingestion falls back to it
+    // for conversation grouping when this header is absent.
+    private const string ConversationIdHeader = "x-proxytrace-conversation-id";
+
     // Hard caps so a single request can't exhaust proxy memory: reject oversized request bodies
     // outright, and bound the in-memory transcript we accumulate for capture (the bytes are still
     // streamed through to the client untruncated — only the captured copy is bounded).
@@ -150,6 +155,10 @@ public class OpenAiProxyController : ControllerBase
             ? sid.ToString()
             : null;
 
+        var conversationId = Request.Headers.TryGetValue(ConversationIdHeader, out var cid)
+            ? cid.ToString()
+            : null;
+
         var agentName = Request.Headers.TryGetValue(AgentNameHeader, out var an)
             ? an.ToString()
             : null;
@@ -162,7 +171,7 @@ public class OpenAiProxyController : ControllerBase
         if (blocked is not null)
         {
             await RejectBlockedRequestAsync(
-                resolved, requestBody, blocked, blockSw.Elapsed, sessionId, agentName, cancellationToken);
+                resolved, requestBody, blocked, blockSw.Elapsed, sessionId, conversationId, agentName, cancellationToken);
             return;
         }
 
@@ -202,11 +211,11 @@ public class OpenAiProxyController : ControllerBase
 
             if (isStreaming)
             {
-                await ProxyStreamingResponseAsync(resolved.Provider, resolved.Project, requestBody, upstreamResponse, sw, sessionId, agentName, cancellationToken);
+                await ProxyStreamingResponseAsync(resolved.Provider, resolved.Project, requestBody, upstreamResponse, sw, sessionId, conversationId, agentName, cancellationToken);
             }
             else
             {
-                await ProxyBufferedResponseAsync(resolved.Provider, resolved.Project, requestBody, upstreamResponse, sw, sessionId, agentName, cancellationToken);
+                await ProxyBufferedResponseAsync(resolved.Provider, resolved.Project, requestBody, upstreamResponse, sw, sessionId, conversationId, agentName, cancellationToken);
             }
         }
     }
@@ -509,6 +518,7 @@ public class OpenAiProxyController : ControllerBase
         HttpResponseMessage upstreamResponse,
         Stopwatch sw,
         string? sessionId,
+        string? conversationId,
         string? agentName,
         CancellationToken cancellationToken)
     {
@@ -552,7 +562,7 @@ public class OpenAiProxyController : ControllerBase
             // Capture is decoupled from the client request lifetime: the upstream call has already
             // completed, so a client disconnect/timeout here must not drop the captured call.
             // Publish with CancellationToken.None rather than the request-aborted token.
-            await EnqueueSafeAsync(provider, project, requestBody, captured.ToString(), sw.Elapsed, upstreamResponse.StatusCode, sessionId, agentName, CancellationToken.None);
+            await EnqueueSafeAsync(provider, project, requestBody, captured.ToString(), sw.Elapsed, upstreamResponse.StatusCode, sessionId, conversationId, agentName, CancellationToken.None);
         }
     }
 
@@ -565,6 +575,7 @@ public class OpenAiProxyController : ControllerBase
         HttpResponseMessage upstreamResponse,
         Stopwatch sw,
         string? sessionId,
+        string? conversationId,
         string? agentName,
         CancellationToken cancellationToken)
     {
@@ -600,7 +611,7 @@ public class OpenAiProxyController : ControllerBase
             // data the proxy exists to capture. Decouple from the request-aborted token with
             // CancellationToken.None so the publish itself isn't cancelled by the same disconnect.
             sw.Stop();
-            await EnqueueSafeAsync(provider, project, requestBody, accumulated.ToString(), sw.Elapsed, upstreamResponse.StatusCode, sessionId, agentName, CancellationToken.None);
+            await EnqueueSafeAsync(provider, project, requestBody, accumulated.ToString(), sw.Elapsed, upstreamResponse.StatusCode, sessionId, conversationId, agentName, CancellationToken.None);
         }
     }
 
@@ -633,6 +644,7 @@ public class OpenAiProxyController : ControllerBase
         TimeSpan duration,
         HttpStatusCode httpStatus,
         string? sessionId,
+        string? conversationId,
         string? agentName,
         CancellationToken cancellationToken,
         BlockedRequestMatch? blocked = null)
@@ -651,7 +663,8 @@ public class OpenAiProxyController : ControllerBase
                     AgentName: agentName,
                     BlockedByDetectorId: blocked?.DetectorId,
                     BlockedDetectorName: blocked?.DetectorName,
-                    BlockedTriggerPattern: blocked?.TriggerPattern),
+                    BlockedTriggerPattern: blocked?.TriggerPattern,
+                    ConversationId: conversationId),
                 cancellationToken);
         }
         catch (Exception ex)
@@ -676,6 +689,7 @@ public class OpenAiProxyController : ControllerBase
         BlockedRequestMatch blocked,
         TimeSpan elapsed,
         string? sessionId,
+        string? conversationId,
         string? agentName,
         CancellationToken cancellationToken)
     {
@@ -698,6 +712,7 @@ public class OpenAiProxyController : ControllerBase
             duration: elapsed,
             httpStatus: HttpStatusCode.Forbidden,
             sessionId: sessionId,
+            conversationId: conversationId,
             agentName: agentName,
             CancellationToken.None,
             blocked: blocked);

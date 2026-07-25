@@ -34,9 +34,11 @@ namespace Proxytrace.Api.Controllers;
 public class TraceyChatController : ControllerBase
 {
     // Per-turn correlation id the browser sends so a Tracey response can deep-link to its captured
-    // trace. Stored as the call's ConversationId via the ingestion SessionId (same convention as the
-    // standalone proxy's x-proxytrace-session-id). Not forwarded upstream.
-    private const string SessionIdHeader = "x-proxytrace-session-id";
+    // trace. It is a conversation/thread key (unique per turn), so it rides the standalone proxy's
+    // x-proxytrace-conversation-id header and is stored as the call's ConversationId — deliberately
+    // NOT the session header, so a turn never spawns a spurious debugging-session row. Not forwarded
+    // upstream.
+    private const string ConversationIdHeader = "x-proxytrace-conversation-id";
 
     private static readonly IReadOnlyCollection<string> ForwardedResponseHeaders = new HashSet<string>(
     [
@@ -93,8 +95,8 @@ public class TraceyChatController : ControllerBase
 
         var provider = project.SystemEndpoint.Provider;
 
-        var sessionId = Request.Headers.TryGetValue(SessionIdHeader, out var sid)
-            ? sid.ToString()
+        var conversationId = Request.Headers.TryGetValue(ConversationIdHeader, out var cid)
+            ? cid.ToString()
             : null;
 
         // Guarantee Tracey's system agent exists and tag the captured call with its name, so
@@ -144,11 +146,11 @@ public class TraceyChatController : ControllerBase
 
         if (isStreaming)
         {
-            await StreamResponseAsync(provider.Id, project.Id, traceyAgent.Name, sessionId, requestBody, upstreamResponse, sw, cancellationToken);
+            await StreamResponseAsync(provider.Id, project.Id, traceyAgent.Name, conversationId, requestBody, upstreamResponse, sw, cancellationToken);
         }
         else
         {
-            await BufferedResponseAsync(provider.Id, project.Id, traceyAgent.Name, sessionId, requestBody, upstreamResponse, sw, cancellationToken);
+            await BufferedResponseAsync(provider.Id, project.Id, traceyAgent.Name, conversationId, requestBody, upstreamResponse, sw, cancellationToken);
         }
     }
 
@@ -156,7 +158,7 @@ public class TraceyChatController : ControllerBase
         Guid providerId,
         Guid projectId,
         string agentName,
-        string? sessionId,
+        string? conversationId,
         string requestBody,
         HttpResponseMessage upstreamResponse,
         Stopwatch sw,
@@ -165,14 +167,14 @@ public class TraceyChatController : ControllerBase
         var responseBody = await upstreamResponse.Content.ReadAsStringAsync(cancellationToken);
         sw.Stop();
         await Response.Body.WriteAsync(Encoding.UTF8.GetBytes(responseBody), cancellationToken);
-        await IngestSafeAsync(providerId, projectId, agentName, sessionId, requestBody, responseBody, sw.Elapsed, upstreamResponse.StatusCode, cancellationToken);
+        await IngestSafeAsync(providerId, projectId, agentName, conversationId, requestBody, responseBody, sw.Elapsed, upstreamResponse.StatusCode, cancellationToken);
     }
 
     private async Task StreamResponseAsync(
         Guid providerId,
         Guid projectId,
         string agentName,
-        string? sessionId,
+        string? conversationId,
         string requestBody,
         HttpResponseMessage upstreamResponse,
         Stopwatch sw,
@@ -199,7 +201,7 @@ public class TraceyChatController : ControllerBase
         }
 
         sw.Stop();
-        await IngestSafeAsync(providerId, projectId, agentName, sessionId, requestBody, accumulated.ToString(), sw.Elapsed, upstreamResponse.StatusCode, cancellationToken);
+        await IngestSafeAsync(providerId, projectId, agentName, conversationId, requestBody, accumulated.ToString(), sw.Elapsed, upstreamResponse.StatusCode, cancellationToken);
     }
 
     // Forwards one streamed line plus its '\n' terminator and flushes so the token reaches the
@@ -225,7 +227,7 @@ public class TraceyChatController : ControllerBase
         Guid providerId,
         Guid projectId,
         string agentName,
-        string? sessionId,
+        string? conversationId,
         string requestBody,
         string responseBody,
         TimeSpan duration,
@@ -236,7 +238,8 @@ public class TraceyChatController : ControllerBase
         {
             // Ingest in-process (no message transport): this controller runs inside the app, so it
             // persists the captured call directly. Done after the response has been sent, so the DB
-            // write never delays Tracey's reply.
+            // write never delays Tracey's reply. The per-turn id is a conversation/thread key, so it
+            // flows through ConversationId (and leaves SessionId null — a turn is not a session).
             await ingestion.IngestAsync(
                 new IngestMessage(
                     ProviderId: providerId,
@@ -245,8 +248,9 @@ public class TraceyChatController : ControllerBase
                     ResponseBody: responseBody,
                     DurationMs: (long)duration.TotalMilliseconds,
                     HttpStatus: (int)httpStatus,
-                    SessionId: sessionId,
-                    AgentName: agentName),
+                    SessionId: null,
+                    AgentName: agentName,
+                    ConversationId: conversationId),
                 cancellationToken);
         }
         catch (Exception ex)

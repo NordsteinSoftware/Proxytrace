@@ -13,8 +13,15 @@ namespace Proxytrace.Messaging;
 /// The <c>Blocked*</c> fields are set when the proxy rejected the call before it reached the
 /// upstream provider (a blocking anomaly detector's trigger matched the request body).
 /// <c>ResponseBody</c> then carries the synthetic error JSON the client received — the request was
-/// never forwarded. All three are trailing optionals so older messages already in the stream keep
-/// deserializing during a rolling deploy.
+/// never forwarded. These, along with <c>ConversationId</c>, are trailing optionals so older messages
+/// already in the stream keep deserializing during a rolling deploy.
+/// </para>
+/// <para>
+/// <c>SessionId</c> carries the client's <c>x-proxytrace-session-id</c> value — the debugging-session
+/// key (one app run / user session, spanning agents and conversations). <c>ConversationId</c> carries
+/// the <c>x-proxytrace-conversation-id</c> value — the thread key. When no conversation id is sent,
+/// ingestion falls back to the session key for conversation grouping (byte-identical to pre-split
+/// clients).
 /// </para>
 /// </summary>
 public sealed record IngestMessage(
@@ -28,4 +35,5 @@ public sealed record IngestMessage(
     string? AgentName = null,
     Guid? BlockedByDetectorId = null,
     string? BlockedDetectorName = null,
-    string? BlockedTriggerPattern = null);
+    string? BlockedTriggerPattern = null,
+    string? ConversationId = null);

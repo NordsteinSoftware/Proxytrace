@@ -77,6 +77,6 @@ public sealed class TraceBroadcasterTests
         r2.Completion.IsCompleted.Should().BeTrue();
     }
 
-    private static TraceCreatedEvent NewEvent()
-        => new(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), "agent", "model", "provider", DateTimeOffset.UtcNow, null);
+    private static TraceCreatedEvent NewEvent(Guid? sessionId = null)
+        => new(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), "agent", "model", "provider", DateTimeOffset.UtcNow, null, sessionId);
 }

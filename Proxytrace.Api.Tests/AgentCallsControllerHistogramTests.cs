@@ -13,6 +13,7 @@ using Proxytrace.Application.Streaming;
 using Proxytrace.Domain.Agent;
 using Proxytrace.Domain.AgentCall;
 using Proxytrace.Domain.Completion;
+using Proxytrace.Domain.Session;
 using Proxytrace.Testing;
 
 namespace Proxytrace.Api.Tests;
@@ -94,6 +95,7 @@ public sealed class AgentCallsControllerHistogramTests : BaseTest<Module>
         return new AgentCallsController(
             repo,
             Substitute.For<IAgentRepository>(),
+            Substitute.For<ISessionRepository>(),
             Substitute.For<IDashboardStatistics>(),
             Substitute.For<ITraceBroadcaster>(),
             new AgentCallDtoMapper(toolDtoMapper),

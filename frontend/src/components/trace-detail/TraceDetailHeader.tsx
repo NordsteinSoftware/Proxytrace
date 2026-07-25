@@ -3,7 +3,7 @@ import type { AgentCallDto, CustomAnomalyHitDto } from '../../api/models';
 import { agentColor, modelColor } from '../../lib/colors';
 import { fmtDateTime } from '../../lib/format';
 import { cn } from '../../lib/cn';
-import { PlusIcon, ChevronRightIcon } from '../icons';
+import { PlusIcon, ChevronRightIcon, KeyIcon } from '../icons';
 import { CopyButton } from '../ui/CopyButton';
 import { ColoredBadge } from '../ui/ColoredBadge';
 import { Button, IconButton } from '../ui/Button';
@@ -97,6 +97,22 @@ export function TraceDetailHeader({ trace, anomalyHits, onClose, onPrev, onNext,
         <CopyButton text={trace.id} label={t`Copy trace ID`} className="shrink-0" />
         <span aria-hidden className="text-body-sm text-muted shrink-0">·</span>
         <span className="mono text-body-sm text-muted whitespace-nowrap shrink-0">{fmtDateTime(trace.createdAt)}</span>
+        {trace.sessionId && (
+          <>
+            <span aria-hidden className="text-body-sm text-muted shrink-0">·</span>
+            <Button
+              variant="link"
+              size="sm"
+              data-testid="trace-session-link"
+              onClick={() => { onClose(); navigate(`/sessions/${trace.sessionId}`); }}
+              title={t`Open session`}
+              leftIcon={<KeyIcon size={12} />}
+              className="text-body-sm shrink-0"
+            >
+              <Trans>Session</Trans>
+            </Button>
+          </>
+        )}
         <span className="flex-1" />
         <div className="flex items-center gap-2 shrink-0">
           <AskTraceyButton

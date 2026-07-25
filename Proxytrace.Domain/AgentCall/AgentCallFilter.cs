@@ -20,4 +20,5 @@ public record AgentCallFilter(
     double? MaxLatencyMs = null,
     string? ToolName = null,
     AgentCallSortField SortBy = AgentCallSortField.CreatedAt,
-    bool SortDescending = true);
+    bool SortDescending = true,
+    Guid? SessionId = null);

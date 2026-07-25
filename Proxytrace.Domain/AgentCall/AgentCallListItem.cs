@@ -25,4 +25,5 @@ public sealed record AgentCallListItem(
     DateTimeOffset CreatedAt,
     DateTimeOffset UpdatedAt,
     Guid? ConversationId,
+    Guid? SessionId,
     OutlierFlags OutlierFlags);

@@ -5,10 +5,11 @@ import type { MessageDescriptor } from '@lingui/core';
 import type { TraceAdvancedFilters, TraceAnomalyFilter } from './tracesMeta';
 
 /** One chip slot in the filter bar; `tokens`/`latency` each own a min+max pair. */
-export type TraceFilterFieldKey = 'agent' | 'anomaly' | 'tool' | 'model' | 'status' | 'tokens' | 'latency';
+export type TraceFilterFieldKey = 'agent' | 'session' | 'anomaly' | 'tool' | 'model' | 'status' | 'tokens' | 'latency';
 
 export const TRACE_FILTER_FIELDS: readonly { key: TraceFilterFieldKey; label: MessageDescriptor }[] = [
   { key: 'agent', label: msg`Agent` },
+  { key: 'session', label: msg`Session` },
   { key: 'anomaly', label: msg`Anomaly` },
   { key: 'tool', label: msg`Tool` },
   { key: 'model', label: msg`Model` },
@@ -29,6 +30,7 @@ export const ANOMALY_OPTION_LABELS: Record<Exclude<TraceAnomalyFilter, ''>, Mess
 export function isFieldActive(field: TraceFilterFieldKey, f: TraceAdvancedFilters): boolean {
   switch (field) {
     case 'agent': return f.agent !== '';
+    case 'session': return f.session !== '';
     case 'anomaly': return f.anomaly !== '';
     case 'tool': return f.tool !== '';
     case 'model': return f.model !== '';
@@ -42,6 +44,7 @@ export function isFieldActive(field: TraceFilterFieldKey, f: TraceAdvancedFilter
 export function clearFieldPatch(field: TraceFilterFieldKey): Partial<TraceAdvancedFilters> {
   switch (field) {
     case 'agent': return { agent: '' };
+    case 'session': return { session: '' };
     case 'anomaly': return { anomaly: '' };
     case 'tool': return { tool: '' };
     case 'model': return { model: '' };

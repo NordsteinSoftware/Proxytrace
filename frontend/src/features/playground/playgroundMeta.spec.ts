@@ -40,6 +40,7 @@ function stubAgentCall(request: MessageDto[], response?: MessageDto): AgentCallD
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     conversationId: null,
+    sessionId: null,
     outlierFlags: 0,
   };
 }

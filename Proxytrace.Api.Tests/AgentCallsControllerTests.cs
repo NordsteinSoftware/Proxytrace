@@ -226,6 +226,78 @@ public sealed class AgentCallsControllerTests : BaseTest<Module>
         names.Should().BeEmpty();
     }
 
+    // ── seed endpoint: session stamping ────────────────────────────────────────
+
+    [TestMethod]
+    public async Task Seed_WithSessionKey_StampsSessionIdAndRecordsSession()
+    {
+        IServiceProvider services = GetServices();
+        var controller = ResolveController(services);
+        var agent = await services.GetRequiredService<IDomainEntityGenerator<IAgent>>().CreateAsync(CancellationToken);
+        var expectedSessionId = Proxytrace.Domain.Session.SessionIdDerivation.Derive(agent.Project.Id, "run-42");
+
+        var result = await controller.Seed(
+            new SeedAgentCallRequest(
+                AgentId: agent.Id,
+                Model: "gpt-4o",
+                UserContent: "hi",
+                AssistantContent: "hello",
+                SystemContent: null,
+                InputTokens: 30,
+                OutputTokens: 10,
+                DurationMs: 100,
+                ConversationId: null,
+                SessionKey: "run-42"),
+            CancellationToken);
+
+        // The seeded trace carries the derived session id …
+        var dto = (result.Result as OkObjectResult)?.Value as AgentCallDto;
+        dto.Should().NotBeNull();
+        dto.SessionId.Should().Be(expectedSessionId);
+
+        // … and the session's denormalized counters were bumped via RecordActivityAsync.
+        var (sessions, _) = await services.GetRequiredService<Proxytrace.Domain.Session.ISessionRepository>()
+            .GetRecentAsync(agent.Project.Id, 1, 50, CancellationToken);
+        var session = sessions.Should().ContainSingle(s => s.Id == expectedSessionId).Subject;
+        session.ExternalKey.Should().Be("run-42");
+        session.TraceCount.Should().Be(1);
+        session.TotalTokens.Should().Be(40);
+    }
+
+    [TestMethod]
+    public async Task GetAll_AsNonAdminBySessionAndProject_ReturnsSessionTraces()
+    {
+        IServiceProvider services = GetServices();
+        var agent = await services.GetRequiredService<IDomainEntityGenerator<IAgent>>().CreateAsync(CancellationToken);
+        Guid projectId = agent.Project.Id;
+        var expectedSessionId = Proxytrace.Domain.Session.SessionIdDerivation.Derive(projectId, "run-77");
+
+        // Seed a session-stamped trace.
+        await ResolveController(services).Seed(
+            new SeedAgentCallRequest(
+                AgentId: agent.Id,
+                Model: "gpt-4o",
+                UserContent: "hi",
+                AssistantContent: "hello",
+                SystemContent: null,
+                InputTokens: 30,
+                OutputTokens: 10,
+                DurationMs: 100,
+                ConversationId: null,
+                SessionKey: "run-77"),
+            CancellationToken);
+
+        // A project-scoped (non-admin) member opens the session timeline: the list request carries
+        // both projectId and sessionId, so the access guard authorizes and the sessionId filter
+        // narrows to the one session. Without the projectId the guard would deny and the timeline
+        // would render empty for every non-admin.
+        var controller = ResolveController(services, ScopedGuard(projectId));
+        var result = await controller.GetAll(
+            projectId: projectId, sessionId: expectedSessionId, cancellationToken: CancellationToken);
+
+        result.Items.Should().ContainSingle(c => c.SessionId == expectedSessionId);
+    }
+
     private async Task<IAgentCall> SeedCallWithToolsAsync(
         IServiceProvider services,
         IAgent agent,
@@ -263,6 +335,18 @@ public sealed class AgentCallsControllerTests : BaseTest<Module>
         return guard;
     }
 
+    // A non-admin scoped to a specific set of projects: the scope set is non-null (not admin) and
+    // contains exactly those projects.
+    private static Proxytrace.Api.Auth.IProjectAccessGuard ScopedGuard(params Guid[] projectIds)
+    {
+        var guard = Substitute.For<Proxytrace.Api.Auth.IProjectAccessGuard>();
+        guard.CanAccessProjectAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+            .Returns(ci => projectIds.Contains(ci.Arg<Guid>()));
+        guard.GetAccessibleProjectIdsAsync(Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<IReadOnlyCollection<Guid>?>(projectIds));
+        return guard;
+    }
+
     private static AgentCallsController ResolveController(IServiceProvider services)
         => ResolveController(services, services.GetRequiredService<Proxytrace.Api.Auth.IProjectAccessGuard>());
 
@@ -270,6 +354,7 @@ public sealed class AgentCallsControllerTests : BaseTest<Module>
         IServiceProvider services, Proxytrace.Api.Auth.IProjectAccessGuard guard) => new(
         services.GetRequiredService<IAgentCallRepository>(),
         services.GetRequiredService<IAgentRepository>(),
+        services.GetRequiredService<Proxytrace.Domain.Session.ISessionRepository>(),
         services.GetRequiredService<IDashboardStatistics>(),
         services.GetRequiredService<ITraceBroadcaster>(),
         services.GetRequiredService<AgentCallDtoMapper>(),

@@ -76,7 +76,7 @@ Records live in `Proxytrace.Application/Streaming/`. Serialized with `ApiJsonOpt
 (camelCase). The client wraps each frame as `{ type: <event-name>, ...payload }`; TypeScript mirrors
 in `frontend/src/api/models.ts`.
 
-- **`TraceCreatedEvent`** — `Id, AgentId, ProjectId, AgentName, Model, Provider, CreatedAt, ConversationId?` (`ProjectId` lets the global `/api/agent-calls/stream` filter each frame to the caller's member projects — see below)
+- **`TraceCreatedEvent`** — `Id, AgentId, ProjectId, AgentName, Model, Provider, CreatedAt, ConversationId?, SessionId?` (`ProjectId` lets the global `/api/agent-calls/stream` filter each frame to the caller's member projects — see below)
 - **Proposal events** (`ProposalEvent` carries `Id`, `AgentId`):
   - `ProposalCreatedEvent` — `+ Kind, Priority, Rationale, CreatedAt`
   - `ProposalStatusChangedEvent` — `+ Kind, Status, AdoptedAt?, AdoptedAgentVersionId?, AdoptedAgentVersionNumber?, AdoptedManually?, UpdatedAt` (published by `ProposalsController.UpdateStatus` and `ProposalAdoptionService`)

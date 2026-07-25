@@ -9,6 +9,8 @@ using Proxytrace.Domain.Completion;
 using Proxytrace.Domain.Inference;
 using Proxytrace.Domain.Message;
 using Proxytrace.Domain.ModelEndpoint;
+using Proxytrace.Domain.Project;
+using Proxytrace.Domain.Session;
 using Proxytrace.PerfHarness.Bootstrap;
 using Proxytrace.PerfHarness.Reporting;
 
@@ -24,6 +26,11 @@ namespace Proxytrace.PerfHarness.Scenarios;
 /// </summary>
 internal static class IngestionThroughputScenario
 {
+    // Fraction of ingested calls that carry a session key (and pay the session upsert), matching the
+    // ~SessionRate the seeder uses. A small fixed key pool keeps the derived session rows bounded.
+    private const double SessionShare = 0.30;
+    private const int ProbeSessionPoolSize = 64;
+
     public static async Task<MetricResult> RunAsync(
         PerfContainer container,
         PerfBudgets budgets,
@@ -36,15 +43,17 @@ internal static class IngestionThroughputScenario
         {
             var agentRepo = scope.Resolve<IRepository<IAgent>>();
             var endpointRepo = scope.Resolve<IRepository<IModelEndpoint>>();
+            var projectRepo = scope.Resolve<IRepository<IProject>>();
             var conversationGenerator = scope.Resolve<IDomainObjectGenerator<Conversation>>();
             var completionGenerator = scope.Resolve<IDomainObjectGenerator<ICompletion>>();
             var modelParametersGenerator = scope.Resolve<IDomainObjectGenerator<IModelParameters>>();
 
             var agents = (await agentRepo.GetAllAsync(cancellationToken)).Where(a => !a.IsSystemAgent).ToList();
             var endpoints = (await endpointRepo.GetAllAsync(cancellationToken)).ToList();
-            if (agents.Count == 0 || endpoints.Count == 0)
+            var project = await projectRepo.FindFirstAsync(cancellationToken);
+            if (agents.Count == 0 || endpoints.Count == 0 || project is null)
             {
-                throw new InvalidOperationException("No seeded agents/endpoints found — run `seed` first.");
+                throw new InvalidOperationException("No seeded agents/endpoints/project found — run `seed` first.");
             }
 
             var conversations = new List<Conversation>();
@@ -57,7 +66,19 @@ internal static class IngestionThroughputScenario
                 modelParameters.Add(await modelParametersGenerator.CreateAsync(cancellationToken));
             }
 
-            return new IngestGraph(agents, endpoints, conversations, completions, modelParameters);
+            // A small fixed pool of probe session keys. ~SessionShare of ingested calls carry one and
+            // pay the session upsert (RecordActivityAsync) in the timed section, exactly as the worker
+            // does. Fixed keys keep the derived session rows a bounded set that upserts (not grows)
+            // across kept-DB iterate runs; they are removed with the probe rows below to restore state.
+            var probeSessions = Enumerable.Range(0, ProbeSessionPoolSize)
+                .Select(i =>
+                {
+                    string key = $"perf-probe-session-{i}";
+                    return new ProbeSession(SessionIdDerivation.Derive(project.Id, key), key);
+                })
+                .ToArray();
+
+            return new IngestGraph(agents, endpoints, conversations, completions, modelParameters, project.Id, probeSessions);
         });
 
         long perWorker = Math.Max(1, ingestCount / concurrency);
@@ -74,6 +95,10 @@ internal static class IngestionThroughputScenario
             var rng = new Random(1000 + workerIndex);
             for (long i = 0; i < perWorker; i++)
             {
+                ProbeSession? session = rng.NextDouble() < SessionShare
+                    ? graph.ProbeSessions[rng.Next(graph.ProbeSessions.Count)]
+                    : null;
+
                 await container.InScopeAsync(async scope =>
                 {
                     var createNew = scope.Resolve<IAgentCall.CreateNew>();
@@ -91,10 +116,24 @@ internal static class IngestionThroughputScenario
                         finishReason: "stop",
                         errorMessage: null,
                         modelParameters: graph.ModelParameters[rng.Next(graph.ModelParameters.Count)],
-                        conversationId: null);
+                        conversationId: null,
+                        sessionId: session?.Id);
 
                     await repository.AddAsync(call, cancellationToken);
                     insertedIds.Add(call.Id);
+
+                    // Mirror the worker: after the call persists, upsert the session (bump activity /
+                    // counters). This is part of the per-envelope DB cost when a session key is present,
+                    // so it belongs inside the timed section.
+                    if (session is { } s)
+                    {
+                        long totalTokens = call.Response?.Usage is { } u
+                            ? (long)(u.InputTokenCount + u.OutputTokenCount)
+                            : 0;
+                        var sessionRepository = scope.Resolve<ISessionRepository>();
+                        await sessionRepository.RecordActivityAsync(
+                            s.Id, s.ExternalKey, graph.ProjectId, totalTokens, call.CreatedAt, cancellationToken);
+                    }
                 });
             }
         }, cancellationToken));
@@ -117,6 +156,12 @@ internal static class IngestionThroughputScenario
         // Deleting them restores the post-seed state for the next iterate run; the AgentCall→tool FK
         // cascades, so each parent's child tool rows go with it.
         await CleanupProbeRowsAsync(container, insertedIds, concurrency, cancellationToken);
+
+        // Also drop the probe session rows this run's upserts created/touched, so the recent-sessions
+        // list (sessionsRecent) measures the post-seed state on the next kept-DB iterate run rather than
+        // a set of freshly-timestamped probe sessions with no surviving traces. The pool is fixed and
+        // small, so deleting every derived id is cheap and idempotent.
+        await CleanupProbeSessionsAsync(container, graph.ProbeSessions, cancellationToken);
 
         return result;
     }
@@ -151,10 +196,34 @@ internal static class IngestionThroughputScenario
         await Task.WhenAll(workers);
     }
 
+    /// <summary>
+    /// Removes the probe session rows the timed loop upserted. Best-effort and outside the timed
+    /// section, so it never affects the reported throughput; a session with no rows simply no-ops.
+    /// </summary>
+    private static async Task CleanupProbeSessionsAsync(
+        PerfContainer container,
+        IReadOnlyCollection<ProbeSession> probeSessions,
+        CancellationToken cancellationToken)
+    {
+        Console.WriteLine($"[ingestion] removing up to {probeSessions.Count:N0} probe session rows…");
+        foreach (ProbeSession session in probeSessions)
+        {
+            await container.InScopeAsync(async scope =>
+            {
+                var repository = scope.Resolve<ISessionRepository>();
+                await repository.RemoveAsync(session.Id, cancellationToken);
+            });
+        }
+    }
+
     private sealed record IngestGraph(
         IReadOnlyList<IAgent> Agents,
         IReadOnlyList<IModelEndpoint> Endpoints,
         IReadOnlyList<Conversation> Conversations,
         IReadOnlyList<ICompletion> Completions,
-        IReadOnlyList<IModelParameters> ModelParameters);
+        IReadOnlyList<IModelParameters> ModelParameters,
+        Guid ProjectId,
+        IReadOnlyList<ProbeSession> ProbeSessions);
+
+    private readonly record struct ProbeSession(Guid Id, string ExternalKey);
 }

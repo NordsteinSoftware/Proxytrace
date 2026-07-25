@@ -1,4 +1,5 @@
-// Re-render pulse for relative timestamps ("12s ago") in the live feed.
+// Shared re-render pulse for time-derived UI (relative timestamps, "live" windows)
+// that must recompute on a timer rather than only on an unrelated re-render.
 // External-sync effect isolated here per BEST_PRACTICES §4.1.
 
 import { useEffect, useState } from 'react';

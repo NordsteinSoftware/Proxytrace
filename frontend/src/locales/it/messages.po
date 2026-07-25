@@ -2194,6 +2194,9 @@ msgstr "Termina"
 msgid "Finish reason returned by the model"
 msgstr "Motivo di fine restituito dal model"
 
+msgid "First seen"
+msgstr "Prima apparizione"
+
 msgid "Fix license"
 msgstr "Correggi license"
 
@@ -2561,6 +2564,9 @@ msgid "last 8"
 msgstr "ultimi 8"
 
 msgid "Last active"
+msgstr "Attivo l'ultima volta"
+
+msgid "Last activity"
 msgstr "Ultima attività"
 
 msgid "Last hour"
@@ -3276,6 +3282,9 @@ msgstr "Nessuna schedulazione"
 msgid "No scores yet"
 msgstr "Nessun score ancora"
 
+msgid "No sessions yet"
+msgstr "Ancora nessuna sessione"
+
 msgid "No stacktrace captured for this entry."
 msgstr "Nessuno stacktrace acquisito per questa voce."
 
@@ -3481,6 +3490,9 @@ msgstr "Apri proposals"
 
 msgid "Open run"
 msgstr "Apri Run"
+
+msgid "Open session"
+msgstr "Apri sessione"
 
 #. placeholder {0}: s.name
 msgid "Open suite \"{0}\""
@@ -4591,6 +4603,12 @@ msgstr "Sensibilità (deviazioni standard)"
 msgid "Sensitivity must be above 0, and the sample counts at least 1."
 msgstr "La sensibilità deve essere maggiore di 0 e i conteggi dei campioni almeno 1."
 
+msgid "Session"
+msgstr "Sessione"
+
+msgid "Session not found"
+msgstr "Sessione non trovata"
+
 msgid "Set a password for your account"
 msgstr "Imposta una password per il tuo account"
 
@@ -5124,6 +5142,9 @@ msgstr "Rimuove il detector e la sua cronologia di revisione. Questa operazione 
 msgid "This reset link is invalid or has expired. Request a new one."
 msgstr "Questo link di reset non è valido o è scaduto. Richiedine uno nuovo."
 
+msgid "This session no longer exists, or the link is no longer valid."
+msgstr "Questa sessione non esiste più o il link non è più valido."
+
 msgid "This stops future runs. Existing runs it produced are kept."
 msgstr "Questo interrompe i run futuri. I run esistenti che ha prodotto vengono mantenuti."
 
@@ -5264,6 +5285,9 @@ msgstr "Costo totale"
 
 msgid "Total runs"
 msgstr "Totale Run"
+
+msgid "Total tokens"
+msgstr "Token totali"
 
 msgid "Trace"
 msgstr "Trace"

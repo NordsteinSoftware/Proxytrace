@@ -3,7 +3,7 @@ import { Pagination } from '../../components/ui/Pagination';
 import { FilterDropdown } from '../../components/ui/FilterDropdown';
 import { TraceDetailPanel as TraceDetail } from '../../components/trace-detail/TraceDetailPanel';
 import type { AgentCallDto } from '../../api/models';
-import { buildRows, hasActiveTraceFilters } from './tracesMeta';
+import { buildRows, flatRows, hasActiveTraceFilters } from './tracesMeta';
 import type { TraceAdvancedFilters, TraceRow, TraceSortField } from './tracesMeta';
 import { useTraceAdvancedFilters } from './hooks/useTraceAdvancedFilters';
 import { TraceFilterBar } from './components/TraceFilterBar';
@@ -95,7 +95,7 @@ export default function Traces() {
   // Conversation grouping only makes sense in time order — under a metric sort, grouping
   // consecutive rows by conversation would silently reorder them, so every trace stays flat.
   const rows = useMemo<TraceRow[]>(
-    () => (sort.field === 'time' ? buildRows(traces) : traces.map(trace => ({ type: 'flat', trace }))),
+    () => (sort.field === 'time' ? buildRows(traces) : flatRows(traces)),
     [traces, sort.field],
   );
   // At-a-glance aggregate of the current page slice (recomputes as page/filter/range changes).

@@ -15,6 +15,7 @@ using Proxytrace.Domain.Model;
 using Proxytrace.Domain.ModelEndpoint;
 using Proxytrace.Domain.ModelProvider;
 using Proxytrace.Domain.Project;
+using Proxytrace.Domain.Session;
 using Proxytrace.Domain.TestCase;
 using Proxytrace.Domain.TestRun;
 using Proxytrace.Domain.TestRunGroup;
@@ -57,6 +58,24 @@ internal sealed class PerfDataSeeder
         int conversationPoolSize = Math.Max(1, (int)(options.TargetCalls * options.ConversationRate / 3));
         var conversationIds = Enumerable.Range(0, conversationPoolSize).Select(_ => Guid.NewGuid()).ToArray();
 
+        // Pool of debugging sessions so ~SessionRate of calls carry a SessionId. The id is derived the
+        // same way ingestion derives it (SessionIdDerivation.Derive over the project + external key), so
+        // the trace's stamped SessionId and the Sessions row we insert below agree. Pool sized like the
+        // conversation pool (~TargetCalls * SessionRate / 3) for comparable per-session cardinality.
+        int sessionPoolSize = Math.Max(1, (int)(options.TargetCalls * options.SessionRate / 3));
+        var sessionPool = new SessionSeed[sessionPoolSize];
+        for (int i = 0; i < sessionPoolSize; i++)
+        {
+            string externalKey = $"perf-session-{i}";
+            sessionPool[i] = new SessionSeed(SessionIdDerivation.Derive(graph.ProjectId, externalKey), externalKey);
+        }
+
+        // Denormalized counters accumulated as calls are assigned to sessions, mirroring what the
+        // ingestion upsert (RecordActivityAsync) maintains. TraceCount/TotalTokens are exact for the
+        // seeded rows; LastActivityAt is the newest member call's CreatedAt. (Approximate only in that
+        // sessions never picked below are skipped — the perf DB only needs realistic cardinality.)
+        var sessionAccumulators = new SessionAccumulator[sessionPoolSize];
+
         long inserted = 0;
         while (inserted < options.TargetCalls)
         {
@@ -71,7 +90,8 @@ internal sealed class PerfDataSeeder
                 var batch = new List<IAgentCall>(batchCount);
                 for (int i = 0; i < batchCount; i++)
                 {
-                    batch.Add(BuildCall(graph, conversationIds, createExisting, createCompletion, rng, start, span, options));
+                    batch.Add(BuildCall(graph, conversationIds, sessionPool, sessionAccumulators,
+                        createExisting, createCompletion, rng, start, span, options));
                 }
 
                 await repository.AddRangeAsync(batch, cancellationToken);
@@ -80,6 +100,10 @@ internal sealed class PerfDataSeeder
             inserted += batchCount;
             Console.WriteLine($"[seed] {inserted:N0}/{options.TargetCalls:N0} calls ({stopwatch.Elapsed:hh\\:mm\\:ss})");
         }
+
+        // Insert the Sessions rows once, after the call loop, for every pool entry that actually received
+        // a call — with the counters accumulated above, so session lists never aggregate the traces table.
+        await SeedSessionsAsync(graph, sessionPool, sessionAccumulators, cancellationToken);
 
         // --- 3. per-run test-run statistics rows (for the suite-scoped TestRunStats query, #253) ---
         await SeedTestRunStatsAsync(graph, options, cancellationToken);
@@ -94,6 +118,60 @@ internal sealed class PerfDataSeeder
             EndpointIds: graph.Endpoints.Select(e => e.Id).ToArray(),
             CallsInserted: inserted,
             Elapsed: stopwatch.Elapsed);
+    }
+
+    /// <summary>
+    /// Bulk-inserts one <c>Sessions</c> row per pool entry that received at least one call, carrying the
+    /// counters accumulated during the call loop (the same denormalized shape the ingestion upsert
+    /// maintains). The id is the one already stamped on the member traces — derived from
+    /// (project, external key) — so the session-filtered traces list and the recent-sessions list both
+    /// hit real, non-empty sessions. Rows go in through the real <see cref="ISessionRepository"/> in
+    /// batches, matching how the high-volume call rows are inserted.
+    /// </summary>
+    private async Task SeedSessionsAsync(
+        SeedGraph graph,
+        SessionSeed[] sessionPool,
+        SessionAccumulator[] sessionAccumulators,
+        CancellationToken cancellationToken)
+    {
+        var populated = Enumerable.Range(0, sessionPool.Length)
+            .Where(i => sessionAccumulators[i].TraceCount > 0)
+            .ToArray();
+        if (populated.Length == 0)
+        {
+            return;
+        }
+
+        Console.WriteLine($"[seed] building {populated.Length:N0} session rows…");
+
+        int batchSize = 10_000;
+        for (int offset = 0; offset < populated.Length; offset += batchSize)
+        {
+            int end = Math.Min(offset + batchSize, populated.Length);
+            await container.InScopeAsync(async scope =>
+            {
+                var createExisting = scope.Resolve<ISession.CreateExisting>();
+                var repository = scope.Resolve<ISessionRepository>();
+
+                var batch = new List<ISession>(end - offset);
+                for (int i = offset; i < end; i++)
+                {
+                    int idx = populated[i];
+                    SessionSeed seed = sessionPool[idx];
+                    SessionAccumulator acc = sessionAccumulators[idx];
+                    var data = new SeedEntityData(seed.Id, acc.LastActivityAt, acc.LastActivityAt);
+                    batch.Add(createExisting(
+                        externalKey: seed.ExternalKey,
+                        projectId: graph.ProjectId,
+                        lastActivityAt: acc.LastActivityAt,
+                        traceCount: acc.TraceCount,
+                        totalTokens: acc.TotalTokens,
+                        existing: data));
+                }
+
+                await repository.AddRangeAsync(batch, cancellationToken);
+            });
+        }
     }
 
     private async Task<SeedGraph> BuildGraphAsync(SeedOptions options, CancellationToken cancellationToken)
@@ -176,6 +254,8 @@ internal sealed class PerfDataSeeder
     private static IAgentCall BuildCall(
         SeedGraph graph,
         Guid[] conversationIds,
+        SessionSeed[] sessionPool,
+        SessionAccumulator[] sessionAccumulators,
         IAgentCall.CreateExisting createExisting,
         ICompletion.Create createCompletion,
         Random rng,
@@ -194,12 +274,16 @@ internal sealed class PerfDataSeeder
             ? conversationIds[rng.Next(conversationIds.Length)]
             : null;
 
+        int? sessionIndex = rng.NextDouble() < options.SessionRate ? rng.Next(sessionPool.Length) : null;
+        Guid? sessionId = sessionIndex is { } si ? sessionPool[si].Id : null;
+
         bool isError = rng.NextDouble() < options.ErrorRate;
 
         ICompletion? response;
         HttpStatusCode status;
         string? finishReason;
         string? errorMessage;
+        long callTokens;
 
         if (isError)
         {
@@ -207,6 +291,7 @@ internal sealed class PerfDataSeeder
             status = rng.NextDouble() < 0.5 ? HttpStatusCode.InternalServerError : HttpStatusCode.TooManyRequests;
             finishReason = null;
             errorMessage = "Upstream provider error";
+            callTokens = 0;
         }
         else
         {
@@ -220,6 +305,19 @@ internal sealed class PerfDataSeeder
             status = HttpStatusCode.OK;
             finishReason = "stop";
             errorMessage = null;
+            // Mirrors the TotalTokens the ingestion upsert denormalizes onto the session (input+output).
+            callTokens = (long)(input + output);
+        }
+
+        if (sessionIndex is { } idx)
+        {
+            ref SessionAccumulator acc = ref sessionAccumulators[idx];
+            acc.TraceCount++;
+            acc.TotalTokens += callTokens;
+            if (createdAt > acc.LastActivityAt)
+            {
+                acc.LastActivityAt = createdAt;
+            }
         }
 
         // ~OutlierRate of calls carry outlier flags: one random statistical bit (occasionally two),
@@ -252,6 +350,7 @@ internal sealed class PerfDataSeeder
             modelParameters: modelParameters,
             existing: data,
             conversationId: conversationId,
+            sessionId: sessionId,
             outlierFlags: outlierFlags);
     }
 
@@ -388,6 +487,17 @@ internal sealed class PerfDataSeeder
         IReadOnlyList<IModelParameters> ModelParameters);
 
     private sealed record TestRunAnchor(Guid AgentId, ITestRunGroup Group);
+
+    /// <summary>One pooled debugging session: its derived id and the external key stored on the row.</summary>
+    private readonly record struct SessionSeed(Guid Id, string ExternalKey);
+
+    /// <summary>Denormalized counters accumulated for a pooled session as calls are assigned to it.</summary>
+    private struct SessionAccumulator
+    {
+        public int TraceCount;
+        public long TotalTokens;
+        public DateTimeOffset LastActivityAt;
+    }
 
     private sealed record SeedEntityData(Guid Id, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt) : IDomainEntityData;
 }

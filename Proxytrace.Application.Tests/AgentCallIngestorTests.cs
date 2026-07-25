@@ -5,12 +5,15 @@ using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using Proxytrace.Application.Ingestion;
 using Proxytrace.Application.Ingestion.Internal;
+using Proxytrace.Application.Streaming;
 using Proxytrace.Messaging;
 using Proxytrace.Domain;
 using Proxytrace.Domain.Agent;
 using Proxytrace.Domain.AgentCall;
+using Proxytrace.Domain.CustomAnomaly;
 using Proxytrace.Domain.ModelProvider;
 using Proxytrace.Domain.Project;
+using Proxytrace.Domain.Session;
 using Proxytrace.Licensing;
 using Proxytrace.Testing;
 
@@ -913,4 +916,208 @@ public sealed class AgentCallIngestorTests : BaseTest<Module>
     // Mirrors AgentCallIngestionWorker.MaxRetryableAttempts — the inline-retry cap on a
     // non-redelivering transport.
     private const int MaxInlineAttempts = 5;
+
+    // ── Session stamping + conversation split (x-proxytrace-session-id → session key,
+    //    x-proxytrace-conversation-id → conversation/thread key) ─────────────────────────
+
+    // Local IngestJob builder mirroring the file's existing construction, adding session/conversation
+    // (and blocked) knobs so the split can be exercised without repeating the full record everywhere.
+    private static IngestJob NewJob(
+        IModelProvider provider,
+        IProject project,
+        string? sessionId = null,
+        string? conversationId = null,
+        Guid? blockedByDetectorId = null,
+        string? blockedDetectorName = null,
+        string? blockedTriggerPattern = null)
+        => new(
+            Provider: provider,
+            Project: project,
+            RequestBody: ChatTurn1RequestBody,
+            ResponseBody: ChatTurn1ResponseBody,
+            Duration: TimeSpan.FromMilliseconds(100),
+            HttpStatus: HttpStatusCode.OK,
+            SessionId: sessionId,
+            ConversationId: conversationId,
+            BlockedByDetectorId: blockedByDetectorId,
+            BlockedDetectorName: blockedDetectorName,
+            BlockedTriggerPattern: blockedTriggerPattern);
+
+    // Replicates the SHA1-string→Guid conversion ingestion uses for a non-GUID correlation key
+    // (same algorithm as AgentCallProcessor.ParseSessionId), so tests can assert the derived
+    // conversation id without reaching into the processor.
+    private static Guid ParseLegacyKey(string key)
+    {
+        if (Guid.TryParse(key, out var guid))
+        {
+            return guid;
+        }
+
+        var hash = System.Security.Cryptography.SHA1.HashData(System.Text.Encoding.UTF8.GetBytes(key));
+        return new Guid(hash.AsSpan(0, 16));
+    }
+
+    [TestMethod]
+    public async Task IngestAsync_SessionHeader_StampsSessionAndUpsertsRow()
+    {
+        var services = GetServices();
+        var (provider, project) = await GetProviderAndProjectAsync(services);
+        var processor = services.GetRequiredService<AgentCallProcessor>();
+        var expectedSessionId = SessionIdDerivation.Derive(project.Id, "run-42");
+
+        await processor.IngestAsync(NewJob(provider, project, sessionId: "run-42"), CancellationToken);
+        await processor.IngestAsync(NewJob(provider, project, sessionId: "run-42"), CancellationToken);
+
+        var calls = (await services.GetRequiredService<IAgentCallRepository>()
+            .GetFilteredAsync(new AgentCallFilter { ProjectId = project.Id }, 1, 10, CancellationToken)).Items;
+        calls.Should().OnlyContain(c => c.SessionId == expectedSessionId);
+
+        var session = await services.GetRequiredService<ISessionRepository>().FindAsync(expectedSessionId, CancellationToken);
+        session.Should().NotBeNull();
+        ArgumentNullException.ThrowIfNull(session);
+        session.TraceCount.Should().Be(2);
+        session.ExternalKey.Should().Be("run-42");
+    }
+
+    [TestMethod]
+    public async Task IngestAsync_SessionHeaderOnly_KeepsLegacyConversationGrouping()
+    {
+        // Backward compat: with no explicit conversation key, the session key still drives
+        // conversation grouping exactly as before the split.
+        var services = GetServices();
+        var (provider, project) = await GetProviderAndProjectAsync(services);
+        var processor = services.GetRequiredService<AgentCallProcessor>();
+
+        await processor.IngestAsync(NewJob(provider, project, sessionId: "run-42"), CancellationToken);
+
+        var calls = (await services.GetRequiredService<IAgentCallRepository>()
+            .GetFilteredAsync(new AgentCallFilter { ProjectId = project.Id }, 1, 10, CancellationToken)).Items;
+        calls.Single().ConversationId.Should().Be(ParseLegacyKey("run-42"));
+    }
+
+    [TestMethod]
+    public async Task IngestAsync_BothHeaders_SessionAndConversationIndependent()
+    {
+        var services = GetServices();
+        var (provider, project) = await GetProviderAndProjectAsync(services);
+        var processor = services.GetRequiredService<AgentCallProcessor>();
+
+        await processor.IngestAsync(
+            NewJob(provider, project, sessionId: "run-42", conversationId: "thread-1"), CancellationToken);
+
+        var call = (await services.GetRequiredService<IAgentCallRepository>()
+            .GetFilteredAsync(new AgentCallFilter { ProjectId = project.Id }, 1, 10, CancellationToken)).Items.Single();
+        call.SessionId.Should().Be(SessionIdDerivation.Derive(project.Id, "run-42"));
+        call.ConversationId.Should().Be(ParseLegacyKey("thread-1"));
+    }
+
+    [TestMethod]
+    public async Task IngestAsync_NoSessionHeader_LeavesSessionNull()
+    {
+        var services = GetServices();
+        var (provider, project) = await GetProviderAndProjectAsync(services);
+        var processor = services.GetRequiredService<AgentCallProcessor>();
+
+        await processor.IngestAsync(NewJob(provider, project, sessionId: null), CancellationToken);
+
+        var call = (await services.GetRequiredService<IAgentCallRepository>()
+            .GetFilteredAsync(new AgentCallFilter { ProjectId = project.Id }, 1, 10, CancellationToken)).Items.Single();
+        call.SessionId.Should().BeNull();
+        (await services.GetRequiredService<ISessionRepository>()
+            .GetRecentAsync(project.Id, 1, 10, CancellationToken)).Total.Should().Be(0);
+    }
+
+    [TestMethod]
+    public async Task IngestAsync_WhitespaceSessionKey_LeavesSessionNullAndCreatesNoRow()
+    {
+        var services = GetServices();
+        var (provider, project) = await GetProviderAndProjectAsync(services);
+        var processor = services.GetRequiredService<AgentCallProcessor>();
+
+        await processor.IngestAsync(NewJob(provider, project, sessionId: "   "), CancellationToken);
+
+        var call = (await services.GetRequiredService<IAgentCallRepository>()
+            .GetFilteredAsync(new AgentCallFilter { ProjectId = project.Id }, 1, 10, CancellationToken)).Items.Single();
+        call.SessionId.Should().BeNull();
+        (await services.GetRequiredService<ISessionRepository>()
+            .GetRecentAsync(project.Id, 1, 10, CancellationToken)).Total.Should().Be(0);
+    }
+
+    [TestMethod]
+    public async Task IngestAsync_SessionKeyOver200Chars_TruncatesKeyThenDerives()
+    {
+        var services = GetServices();
+        var (provider, project) = await GetProviderAndProjectAsync(services);
+        var processor = services.GetRequiredService<AgentCallProcessor>();
+
+        var longKey = new string('k', 500);
+        var truncated = longKey[..ISession.MaxExternalKeyLength];
+        var expectedSessionId = SessionIdDerivation.Derive(project.Id, truncated);
+
+        await processor.IngestAsync(NewJob(provider, project, sessionId: longKey), CancellationToken);
+        await processor.IngestAsync(NewJob(provider, project, sessionId: longKey), CancellationToken);
+
+        // The stored key is truncated, and the derived id is computed from the *truncated* key so the
+        // row and the trace stamp stay consistent; both ingests land in the one session.
+        var session = await services.GetRequiredService<ISessionRepository>().FindAsync(expectedSessionId, CancellationToken);
+        session.Should().NotBeNull();
+        ArgumentNullException.ThrowIfNull(session);
+        session.ExternalKey.Length.Should().Be(ISession.MaxExternalKeyLength);
+        session.TraceCount.Should().Be(2);
+
+        var calls = (await services.GetRequiredService<IAgentCallRepository>()
+            .GetFilteredAsync(new AgentCallFilter { ProjectId = project.Id }, 1, 10, CancellationToken)).Items;
+        calls.Should().OnlyContain(c => c.SessionId == expectedSessionId);
+    }
+
+    [TestMethod]
+    public async Task IngestAsync_BlockedCall_IsStillSessionStamped()
+    {
+        // A proxy-blocked call still ingests (flagged Blocked) and must be session-stamped like any
+        // other trace.
+        var services = GetServices();
+        var (provider, project) = await GetProviderAndProjectAsync(services);
+        var detector = await services.GetRequiredService<IDomainEntityGenerator<ICustomAnomalyDetector>>()
+            .CreateAsync(CancellationToken);
+        var processor = services.GetRequiredService<AgentCallProcessor>();
+        var expectedSessionId = SessionIdDerivation.Derive(project.Id, "run-42");
+
+        await processor.IngestAsync(
+            NewJob(provider, project, sessionId: "run-42",
+                blockedByDetectorId: detector.Id, blockedDetectorName: detector.Name, blockedTriggerPattern: "hunter2"),
+            CancellationToken);
+
+        var call = (await services.GetRequiredService<IAgentCallRepository>()
+            .GetFilteredAsync(new AgentCallFilter { ProjectId = project.Id }, 1, 10, CancellationToken)).Items.Single();
+        call.OutlierFlags.Should().Be(OutlierFlags.Blocked);
+        call.SessionId.Should().Be(expectedSessionId);
+
+        var session = await services.GetRequiredService<ISessionRepository>().FindAsync(expectedSessionId, CancellationToken);
+        session.Should().NotBeNull();
+    }
+
+    [TestMethod]
+    public async Task TraceCreatedEvent_Create_IncludesSessionIdFromCall()
+    {
+        // Verify the TraceCreatedEvent.Create factory includes SessionId from the IAgentCall
+        var services = GetServices();
+        var ingestion = services.GetRequiredService<AgentCallProcessor>();
+        var callRepo = services.GetRequiredService<IAgentCallRepository>();
+        var (provider, project) = await GetProviderAndProjectAsync(services);
+        var expectedSessionId = SessionIdDerivation.Derive(project.Id, "test-session");
+
+        await ingestion.IngestAsync(
+            NewJob(provider, project, sessionId: "test-session"),
+            CancellationToken);
+
+        var call = (await callRepo.GetFilteredAsync(
+            new AgentCallFilter { ProjectId = project.Id }, 1, 10, CancellationToken)).Items.Single();
+
+        // Create the event from the call using the factory
+        var evt = TraceCreatedEvent.Create(call);
+
+        evt.SessionId.Should().Be(expectedSessionId);
+        evt.Id.Should().Be(call.Id);
+        evt.ConversationId.Should().Be(call.ConversationId);
+    }
 }

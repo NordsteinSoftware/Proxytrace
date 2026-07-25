@@ -73,6 +73,26 @@ public sealed class AgentCallListQueryTests : BaseTest<Module>
     }
 
     [TestMethod]
+    public async Task GetFilteredList_FilterBySessionId_ReturnsOnlyStampedCallsAndRoundTripsSessionId()
+    {
+        IServiceProvider services = GetServices();
+        var repo = services.GetRequiredService<IAgentCallRepository>();
+        var (agent, endpoint) = await SeedAgentAsync(services);
+        var sessionId = Guid.NewGuid();
+
+        var stamped = await SeedCallAsync(services, agent, endpoint, new TokenUsage(10, 10), latencyMs: 100, sessionId: sessionId);
+        await SeedCallAsync(services, agent, endpoint, new TokenUsage(10, 10), latencyMs: 100); // no session
+
+        var (items, total) = await repo.GetFilteredListAsync(
+            new AgentCallFilter(SessionId: sessionId), 1, 50, CancellationToken);
+
+        total.Should().Be(1);
+        items.Should().ContainSingle(i => i.Id == stamped.Id);
+        // Round-trips the SessionId through persistence and the list projection (Task 3 carry-forward).
+        items[0].SessionId.Should().Be(sessionId);
+    }
+
+    [TestMethod]
     public async Task GetFilteredList_FiltersByAgent()
     {
         IServiceProvider services = GetServices();
@@ -358,7 +378,8 @@ public sealed class AgentCallListQueryTests : BaseTest<Module>
         double? latencyMs,
         int toolCount = 0,
         DateTimeOffset? createdAt = null,
-        HttpStatusCode? httpStatus = null)
+        HttpStatusCode? httpStatus = null,
+        Guid? sessionId = null)
     {
         var conversationGen = services.GetRequiredService<IDomainObjectGenerator<Conversation>>();
         var createCompletion = services.GetRequiredService<ICompletion.Create>();
@@ -386,7 +407,8 @@ public sealed class AgentCallListQueryTests : BaseTest<Module>
                 finishReason: response is null ? null : "stop",
                 errorMessage: response is null ? "upstream timeout" : null,
                 modelParameters: agent.ModelParameters,
-                existing: new SeededEntityData(Guid.NewGuid(), timestamp, timestamp))
+                existing: new SeededEntityData(Guid.NewGuid(), timestamp, timestamp),
+                sessionId: sessionId)
             : services.GetRequiredService<IAgentCall.CreateNew>()(
                 agent,
                 agent.CurrentVersion,
@@ -394,7 +416,8 @@ public sealed class AgentCallListQueryTests : BaseTest<Module>
                 request,
                 response,
                 httpStatus: resolvedHttpStatus,
-                errorMessage: response is null ? "upstream timeout" : null);
+                errorMessage: response is null ? "upstream timeout" : null,
+                sessionId: sessionId);
 
         var repo = services.GetRequiredService<IRepository<IAgentCall>>();
         return await repo.AddAsync(call, CancellationToken);

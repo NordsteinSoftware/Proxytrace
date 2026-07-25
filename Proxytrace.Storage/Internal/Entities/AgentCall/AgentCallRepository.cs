@@ -104,6 +104,7 @@ internal class AgentCallRepository : AbstractRepository<IAgentCall, AgentCallEnt
                 e.CreatedAt,
                 e.UpdatedAt,
                 e.ConversationId,
+                e.SessionId,
                 e.OutlierFlags))
             .ToListAsync(cancellationToken);
 
@@ -148,6 +149,7 @@ internal class AgentCallRepository : AbstractRepository<IAgentCall, AgentCallEnt
                 CreatedAt: r.CreatedAt,
                 UpdatedAt: r.UpdatedAt,
                 ConversationId: r.ConversationId,
+                SessionId: r.SessionId,
                 OutlierFlags: r.OutlierFlags);
         }).ToArray();
 
@@ -170,6 +172,7 @@ internal class AgentCallRepository : AbstractRepository<IAgentCall, AgentCallEnt
         DateTimeOffset CreatedAt,
         DateTimeOffset UpdatedAt,
         Guid? ConversationId,
+        Guid? SessionId,
         OutlierFlags OutlierFlags);
 
     public async Task<IReadOnlyList<AgentCallHistogramBucket>> GetHistogramAsync(
@@ -275,6 +278,11 @@ internal class AgentCallRepository : AbstractRepository<IAgentCall, AgentCallEnt
         if (filter.ConversationId.HasValue)
         {
             query = query.Where(e => e.ConversationId == filter.ConversationId.Value);
+        }
+
+        if (filter.SessionId.HasValue)
+        {
+            query = query.Where(e => e.SessionId == filter.SessionId.Value);
         }
 
         if (!string.IsNullOrWhiteSpace(filter.Model))

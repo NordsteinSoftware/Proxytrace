@@ -101,6 +101,12 @@ export const QUERY_KEYS = {
 
   traceySession: (projectId?: string) => ['tracey-session', projectId ?? null] as const,
 
+  /** Paged session list for a project. Page/size are part of the key so each page caches
+   * separately (a project-only key would collide across pages). */
+  sessions: (projectId: string, page?: number, pageSize?: number) =>
+    ['sessions', projectId, page ?? null, pageSize ?? null] as const,
+  session: (id: string) => ['session', id] as const,
+
   errorLog: (filter: object) => ['error-log', filter] as const,
   /** A single captured error by id (deep-link target from an error toast). */
   errorLogEntry: (id: string) => ['error-log', 'entry', id] as const,

@@ -94,6 +94,7 @@ export interface AgentCallDto {
   createdAt: string;
   updatedAt: string;
   conversationId: string | null;
+  sessionId: string | null;
   /** Outlier characteristics flagged at ingestion (bitmask; 0 = not an outlier). See {@link lib/outliers}. */
   outlierFlags: number;
 }
@@ -124,6 +125,7 @@ export interface AgentCallListItemDto {
   createdAt: string;
   updatedAt: string;
   conversationId: string | null;
+  sessionId: string | null;
   /** Outlier characteristics flagged at ingestion (bitmask; 0 = not an outlier). See {@link lib/outliers}. */
   outlierFlags: number;
 }
@@ -170,6 +172,17 @@ export interface AgentVersionDto {
   tools: ToolSpecDto[];
   fingerprint: string;
   createdAt: string;
+}
+
+/* ── Sessions ── */
+export interface SessionDto {
+  id: string;
+  projectId: string;
+  externalKey: string;
+  createdAt: string;
+  lastActivityAt: string;
+  traceCount: number;
+  totalTokens: number;
 }
 
 /* ── Statistics ── */
@@ -918,6 +931,7 @@ export interface AgentCallFilter {
   includeSystemAgents?: boolean;
   q?: string;
   conversationId?: string;
+  sessionId?: string;
   /** When true, return only calls flagged as outliers (any {@link AgentCallListItemDto.outlierFlags} bit set). */
   outlierOnly?: boolean;
   /** OutlierFlags bitmask; matches calls with ANY of the requested anomaly bits set. */
@@ -1117,6 +1131,8 @@ export interface TraceCreatedEvent {
   model: string;
   provider: string;
   createdAt: string;
+  conversationId: string | null;
+  sessionId: string | null;
 }
 /** Emitted on `GET /api/anomalies/stream` when a custom detector flags a call (event `anomaly-flagged`). */
 export interface AnomalyFlaggedEvent {

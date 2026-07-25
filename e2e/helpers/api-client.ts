@@ -612,6 +612,12 @@ export class ProxytraceApiClient {
     outlierFlags?: number;
     /** Tool names the seeded response "requested" — populates the tool-name filter rows. */
     toolNames?: string[];
+    /**
+     * Raw client session key. When set, the seed derives the deterministic session id, stamps it on
+     * the call and bumps the session's counters — exactly as the ingestion proxy does for
+     * `x-proxytrace-session-id`. Lets no-LLM specs exercise the sessions list / detail / filter.
+     */
+    sessionKey?: string;
   }): Promise<{ id: string; agentId: string | null }> {
     const res = await this.request.post('/api/agent-calls/seed', {
       headers: this.headers(),
@@ -627,10 +633,24 @@ export class ProxytraceApiClient {
         conversationId: opts.conversationId ?? null,
         outlierFlags: opts.outlierFlags ?? null,
         toolNames: opts.toolNames ?? null,
+        sessionKey: opts.sessionKey ?? null,
       },
     });
     if (!res.ok()) throw new Error(`seed agent-call failed: ${res.status()} ${await res.text()}`);
     return res.json();
+  }
+
+  // ── Sessions ───────────────────────────────────────────────────────────────
+  // GET /api/sessions?projectId= lists a project's recent sessions (newest first), each with its
+  // denormalized counters. `externalKey` is the (truncated) client session key the seed stamps.
+  async listSessions(
+    projectId: string,
+    params: { page?: number; pageSize?: number } = {},
+  ): Promise<{
+    total: number;
+    items: Array<{ id: string; externalKey: string; traceCount: number; totalTokens: number }>;
+  }> {
+    return this.getList('/api/sessions', { projectId, ...params });
   }
 
   // ── Test suites / cases ────────────────────────────────────────────────────

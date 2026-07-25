@@ -24,6 +24,7 @@ public record AgentCallDto(
     DateTimeOffset CreatedAt,
     DateTimeOffset UpdatedAt,
     Guid? ConversationId,
+    Guid? SessionId,
     int OutlierFlags);
 
 public record AgentCallMessageDto(string Role, string Content, IReadOnlyList<AgentCallToolRequestDto> ToolRequests, string? ToolCallId = null);
@@ -56,4 +57,5 @@ public record AgentCallListItemDto(
     DateTimeOffset CreatedAt,
     DateTimeOffset UpdatedAt,
     Guid? ConversationId,
+    Guid? SessionId,
     int OutlierFlags);

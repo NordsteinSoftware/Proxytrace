@@ -4,6 +4,7 @@ using Proxytrace.Application.Statistics;
 using Proxytrace.Domain;
 using Proxytrace.Domain.AgentCall;
 using Proxytrace.Domain.Project;
+using Proxytrace.Domain.Session;
 using Proxytrace.PerfHarness.Bootstrap;
 using Proxytrace.PerfHarness.Reporting;
 
@@ -28,6 +29,7 @@ internal static class QueryLatencyScenario
         var statsReader = scope.Resolve<IAgentCallStatsReader>();
         var agentStats = scope.Resolve<IAgentStatistics>();
         var callRepo = scope.Resolve<IAgentCallRepository>();
+        var sessionRepo = scope.Resolve<ISessionRepository>();
         var projectRepo = scope.Resolve<IRepository<IProject>>();
 
         var lastCalls = await callRepo.GetLastCallTimesAsync(cancellationToken);
@@ -100,6 +102,27 @@ internal static class QueryLatencyScenario
             // denormalised onto the tool row, so this stays a single-table index-only DISTINCT.
             await Measure("agentCallToolNamesByAgent",
                 () => callRepo.GetToolNamesAsync(toolProjectId, agentId, cancellationToken));
+        }
+
+        // Session paths — the session-filtered traces list (session detail page) rides the
+        // (SessionId, CreatedAt) index; the recent-sessions list rides (ProjectId, LastActivityAt desc)
+        // and never aggregates the traces table (counters are denormalized on the Sessions row).
+        if (projectId is { } sessionProjectId)
+        {
+            var (recentSessions, _) = await sessionRepo.GetRecentAsync(sessionProjectId, 1, 50, cancellationToken);
+            if (recentSessions.Count > 0)
+            {
+                Guid sessionId = recentSessions[0].Id;
+                await Measure("agentCallsListBySession",
+                    () => callRepo.GetFilteredListAsync(new AgentCallFilter(SessionId: sessionId), 1, 50, cancellationToken));
+            }
+            else
+            {
+                Console.WriteLine("[db-layer] no sessions seeded — skipping agentCallsListBySession");
+            }
+
+            await Measure("sessionsRecent",
+                () => sessionRepo.GetRecentAsync(sessionProjectId, 1, 50, cancellationToken));
         }
 
         // Dashboard statistics aggregations.

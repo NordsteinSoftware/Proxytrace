@@ -16,6 +16,7 @@ using Proxytrace.Domain.AuditLog;
 using Proxytrace.Domain.Completion;
 using Proxytrace.Domain.Message;
 using Proxytrace.Domain.Paging;
+using Proxytrace.Domain.Session;
 using Proxytrace.Domain.Usage;
 
 namespace Proxytrace.Api.Controllers;
@@ -27,6 +28,7 @@ public class AgentCallsController : ControllerBase
 {
     private readonly IAgentCallRepository repository;
     private readonly IAgentRepository agentRepository;
+    private readonly ISessionRepository sessionRepository;
     private readonly IDashboardStatistics statistics;
     private readonly ITraceBroadcaster traceBroadcaster;
     private readonly AgentCallDtoMapper agentCallDtoMapper;
@@ -39,6 +41,7 @@ public class AgentCallsController : ControllerBase
     public AgentCallsController(
         IAgentCallRepository repository,
         IAgentRepository agentRepository,
+        ISessionRepository sessionRepository,
         IDashboardStatistics statistics,
         ITraceBroadcaster traceBroadcaster,
         AgentCallDtoMapper agentCallDtoMapper,
@@ -50,6 +53,7 @@ public class AgentCallsController : ControllerBase
     {
         this.repository = repository;
         this.agentRepository = agentRepository;
+        this.sessionRepository = sessionRepository;
         this.statistics = statistics;
         this.traceBroadcaster = traceBroadcaster;
         this.agentCallDtoMapper = agentCallDtoMapper;
@@ -91,6 +95,7 @@ public class AgentCallsController : ControllerBase
         [FromQuery] bool includeSystemAgents = true,
         [FromQuery] string? q = null,
         [FromQuery] Guid? conversationId = null,
+        [FromQuery] Guid? sessionId = null,
         [FromQuery] bool outlierOnly = false,
         [FromQuery] OutlierFlags? anomalyFlags = null,
         [FromQuery] int? httpStatusClass = null,
@@ -128,7 +133,8 @@ public class AgentCallsController : ControllerBase
             MaxLatencyMs: maxLatencyMs,
             ToolName: toolName,
             SortBy: sortBy,
-            SortDescending: sortDesc);
+            SortDescending: sortDesc,
+            SessionId: sessionId);
         var (items, total) = await repository.GetFilteredListAsync(filter, page, pageSize, cancellationToken);
         return new PagedResult<AgentCallListItem>(items, total, page, pageSize).Map(agentCallDtoMapper.ToListItemDto);
     }
@@ -167,6 +173,7 @@ public class AgentCallsController : ControllerBase
         [FromQuery] bool includeSystemAgents = true,
         [FromQuery] string? q = null,
         [FromQuery] Guid? conversationId = null,
+        [FromQuery] Guid? sessionId = null,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 50,
         CancellationToken cancellationToken = default)
@@ -174,7 +181,7 @@ public class AgentCallsController : ControllerBase
         (page, pageSize) = Paging.Clamp(page, pageSize);
         if (!await CanListAsync(projectId, agentId, cancellationToken))
             return new PagedResult<AgentCallDto>([], 0, page, pageSize);
-        var filter = new AgentCallFilter(agentId, projectId, endpointId, model, from, to, httpStatus, includeSystemAgents, q, conversationId);
+        var filter = new AgentCallFilter(agentId, projectId, endpointId, model, from, to, httpStatus, includeSystemAgents, q, conversationId, SessionId: sessionId);
         var (items, total) = await repository.GetFilteredAsync(filter, page, pageSize, cancellationToken);
         return new PagedResult<IAgentCall>(items, total, page, pageSize).Map(agentCallDtoMapper.ToDto);
     }
@@ -228,6 +235,7 @@ public class AgentCallsController : ControllerBase
         [FromQuery] bool includeSystemAgents = true,
         [FromQuery] string? q = null,
         [FromQuery] Guid? conversationId = null,
+        [FromQuery] Guid? sessionId = null,
         [FromQuery] bool outlierOnly = false,
         [FromQuery] OutlierFlags? anomalyFlags = null,
         [FromQuery] int? httpStatusClass = null,
@@ -262,7 +270,8 @@ public class AgentCallsController : ControllerBase
             MaxTokens: maxTokens,
             MinLatencyMs: minLatencyMs,
             MaxLatencyMs: maxLatencyMs,
-            ToolName: toolName);
+            ToolName: toolName,
+            SessionId: sessionId);
         var result = await repository.GetHistogramAsync(filter, buckets, cancellationToken);
         return result.Select(b => new TraceHistogramBucketDto(b.Start, b.Total, b.Errors)).ToList();
     }
@@ -309,6 +318,15 @@ public class AgentCallsController : ControllerBase
             usage,
             TimeSpan.FromMilliseconds(request.DurationMs));
 
+        // Mirror ingestion's session handling: when a session key is sent, derive its deterministic
+        // id, stamp it on the call, and bump the denormalized session counters — so e2e/dev can create
+        // sessioned traces (and exercise the session list / filter) without the ingestion proxy.
+        Guid projectId = agent.Project.Id;
+        string? sessionKey = string.IsNullOrWhiteSpace(request.SessionKey)
+            ? null
+            : SessionIdDerivation.TruncateKey(request.SessionKey);
+        Guid? sessionId = sessionKey is null ? null : SessionIdDerivation.Derive(projectId, sessionKey);
+
         IAgentCall call = await repository.AddAsync(
             createCall(
                 agent: agent,
@@ -321,8 +339,18 @@ public class AgentCallsController : ControllerBase
                 errorMessage: null,
                 modelParameters: agent.ModelParameters,
                 conversationId: request.ConversationId,
+                sessionId: sessionId,
                 outlierFlags: (OutlierFlags)(request.OutlierFlags ?? 0)),
             cancellationToken);
+
+        if (sessionId is { } sid && sessionKey is not null)
+        {
+            await sessionRepository.RecordActivityAsync(
+                sid, sessionKey, projectId,
+                totalTokens: request.InputTokens + request.OutputTokens,
+                lastActivityAt: call.CreatedAt,
+                cancellationToken);
+        }
 
         // Publish to the trace SSE broadcaster exactly as the ingestion pipeline does, so
         // dashboard/traces SSE clients receive the seeded trace.
