@@ -67,6 +67,14 @@ follow [Semantic Versioning](https://semver.org). Ongoing work is collected unde
 
 ### Fixed
 
+- **No more duplicated traces when the server shuts down mid-ingest.** A captured call is written to
+  the database first and everything that follows — the live trace event, the blocked-request
+  notification, queueing the call for anomaly review — is bookkeeping around it. If one of those
+  steps was interrupted (a graceful shutdown or restart) or hit a transient database error, the
+  whole ingest was reported as failed even though the trace was already stored, so the proxy's
+  delivery guarantee handed the same call over again and it appeared twice in the Traces list. Those
+  follow-up steps are now logged and skipped instead of failing the ingest, so a restart in the
+  middle of ingestion can no longer double up your traces.
 - **A failure in the app's chrome no longer blanks the whole app.** The top bar and nav rail render
   outside the page's error boundary, so anything that went wrong while drawing them — a
   notification whose type the UI did not recognise, or simply the notification inbox failing to

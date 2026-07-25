@@ -189,21 +189,37 @@ internal sealed class AgentCallProcessor : IAgentCallProcessor
                 }
             }
 
-            traceBroadcaster.Publish(TraceCreatedEvent.Create(call));
+            // The call row is committed, so every side effect below is best-effort and nothing here
+            // may escape: the outer handlers would either rethrow (cancellation) or requeue
+            // (retryable storage errors), and a redelivering transport would then ingest the same
+            // trace a second time. Keep the real token so the I/O still aborts promptly on shutdown,
+            // but log the failure here instead of letting it fail the ingest post-persist.
+            try
+            {
+                traceBroadcaster.Publish(TraceCreatedEvent.Create(call));
 
-            if (job is { BlockedByDetectorId: { } blockedBy, BlockedDetectorName: { } blockedName, BlockedTriggerPattern: { } blockedPattern })
-            {
-                // Proxy-blocked: record attribution + SSE + notification instead of enqueueing the
-                // LLM review — there is no provider response to judge.
-                await blockedCallRecorder.RecordAsync(
-                    call, blockedBy, blockedName, blockedPattern, cancellationToken);
+                if (job is { BlockedByDetectorId: { } blockedBy, BlockedDetectorName: { } blockedName, BlockedTriggerPattern: { } blockedPattern })
+                {
+                    // Proxy-blocked: record attribution + SSE + notification instead of enqueueing the
+                    // LLM review — there is no provider response to judge.
+                    await blockedCallRecorder.RecordAsync(
+                        call, blockedBy, blockedName, blockedPattern, cancellationToken);
+                }
+                else if (!agent.IsSystemAgent)
+                {
+                    // Queue the persisted call for custom-anomaly review — a cheap in-process channel
+                    // write (the LLM review runs asynchronously in the background worker). System agents'
+                    // traffic (evaluator judges, Tracey) is internal plumbing and is not reviewed.
+                    await anomalyReviewQueue.EnqueueAsync(call.Id, cancellationToken);
+                }
             }
-            else if (!agent.IsSystemAgent)
+            catch (OperationCanceledException e)
             {
-                // Queue the persisted call for custom-anomaly review — a cheap in-process channel
-                // write (the LLM review runs asynchronously in the background worker). System agents'
-                // traffic (evaluator judges, Tracey) is internal plumbing and is not reviewed.
-                await anomalyReviewQueue.EnqueueAsync(call.Id, cancellationToken);
+                logger.LogWarning(e, "Post-persist side effects cancelled for agent call {CallId}", call.Id);
+            }
+            catch (Exception e)
+            {
+                logger.LogWarning(e, "Post-persist side effects failed for agent call {CallId}", call.Id);
             }
         }
         catch (OperationCanceledException)
