@@ -5124,6 +5124,9 @@ msgstr "Cette licence a été fournie via la variable d’environnement PROXYTRA
 msgid "this page"
 msgstr "cette page"
 
+msgid "This part of the app didn't load."
+msgstr "Cette partie de l'application n'a pas pu être chargée."
+
 msgid "This password reset link is missing or malformed. Request a new one."
 msgstr "Ce lien de réinitialisation du mot de passe est manquant ou mal formé. Demandez-en un nouveau."
 

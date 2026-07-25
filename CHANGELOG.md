@@ -67,11 +67,20 @@ follow [Semantic Versioning](https://semver.org). Ongoing work is collected unde
 
 ### Fixed
 
-- **A notification about a trace no longer blanks the whole app.** Notifications raised for a
-  captured call (a blocked call, or a custom anomaly detector's review) carried a target kind the
-  web UI did not know, and rendering one threw while drawing the top bar — which sits outside every
-  page's error boundary, so the entire app went blank until a reload. Unknown target kinds now
-  degrade to a notification with no link.
+- **A failure in the app's chrome no longer blanks the whole app.** The top bar and nav rail render
+  outside the page's error boundary, so anything that went wrong while drawing them — a
+  notification whose type the UI did not recognise, or simply the notification inbox failing to
+  load because the server was restarting — unmounted the entire interface and left a blank page
+  until a manual reload. The rail, the top bar and the page area are now each contained
+  independently: a broken control degrades to a small notice and everything else stays usable, and
+  navigating clears it. A notification inbox that fails to load now shows an empty bell and an
+  error toast, and a notification pointing at a captured call renders correctly rather than
+  throwing.
+- **A stale error no longer follows you from page to page.** An error caught on one page stayed on
+  screen on every page you navigated to afterwards, and its *Try again* button re-rendered the same
+  failure; navigating away now clears it.
+- **Opening a notification closes the trace or error panel underneath it**, instead of stacking two
+  detail panels whose keyboard shortcuts (Esc, ← →) fought each other.
 - **Opening a notification marks it read**, including when it is opened from a deep link or an
   emailed link; previously the unread badge stayed until you clicked the tick explicitly.
 - **The notification panel no longer closes over the page you navigated to**, and marking one

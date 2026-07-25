@@ -2,12 +2,21 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { notificationsApi } from '../../../api/notifications';
 import { QUERY_KEYS } from '../../../api/query-keys';
 
-/** Non-dismissed notifications for the current project scope (newest first). */
+/**
+ * Non-dismissed notifications for the current project scope (newest first).
+ *
+ * `throwOnError: false` overrides the global default (`app/queryClient.ts`). The bell renders in
+ * the topbar on every route, so a rethrown fetch error would unmount the whole app — a failed
+ * inbox has to degrade to an empty bell instead. `api/client.ts` still raises the error toast, so
+ * the failure is not silent. (The chrome `ErrorBoundary` in `Shell` is the backstop, not the
+ * mechanism: a query that can fail routinely should not be trading on it.)
+ */
 export function useNotifications(projectId?: string, enabled = true) {
   return useQuery({
     queryKey: QUERY_KEYS.notifications(projectId),
     queryFn: () => notificationsApi.list({ projectId, includeRead: true }),
     enabled,
+    throwOnError: false,
   });
 }
 

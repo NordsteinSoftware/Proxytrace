@@ -5124,6 +5124,9 @@ msgstr "Questa license è stata fornita tramite la variabile di ambiente PROXYTR
 msgid "this page"
 msgstr "questa pagina"
 
+msgid "This part of the app didn't load."
+msgstr "Questa parte dell'app non è stata caricata."
+
 msgid "This password reset link is missing or malformed. Request a new one."
 msgstr "Questo link di reset della password manca o non è valido. Richiedine uno nuovo."
 
