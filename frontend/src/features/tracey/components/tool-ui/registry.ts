@@ -18,7 +18,7 @@ import { DashboardStatsToolUI } from './DashboardStatsToolUI';
 import { AgentStatsToolUI } from './AgentStatsToolUI';
 import { TheoryToolUI } from './TheoryToolUI';
 import { AwaitActionsToolUI } from './AwaitActionsToolUI';
-import { RunFailuresToolUI } from './RunFailuresToolUI';
+import { CaseResultsToolUI } from './CaseResultsToolUI';
 import { RunComparisonToolUI } from './RunComparisonToolUI';
 import { TraceListToolUI } from './TraceListToolUI';
 import { AnomalyListToolUI } from './AnomalyListToolUI';
@@ -70,7 +70,7 @@ export const TRACEY_TOOL_UI: Record<string, ToolCallMessagePartComponent> = {
   list_theories: presentGate(TheoryListToolUI),
   get_dashboard_stats: presentGate(DashboardStatsToolUI),
   get_agent_stats: presentGate(AgentStatsToolUI),
-  get_run_failures: presentGate(RunFailuresToolUI),
+  get_case_results: presentGate(CaseResultsToolUI),
   compare_runs: presentGate(RunComparisonToolUI),
   find_traces: presentGate(TraceListToolUI),
   get_agent_anomalies: presentGate(AnomalyListToolUI),

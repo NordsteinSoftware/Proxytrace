@@ -1,7 +1,7 @@
 ---
 name: optimize-agent
 description: Theorize a concrete improvement to an agent and A/B-test it. Use when the user asks to optimize, improve, or tune an agent.
-tools: submit_optimization_theory, get_agent_stats, list_suites, list_runs, get_run, get_run_failures, compare_runs, find_traces, get_trace, list_theories, await_actions
+tools: submit_optimization_theory, get_agent_stats, list_suites, list_runs, get_run, get_case_results, compare_runs, find_traces, get_trace, list_theories, await_actions
 ---
 
 # Skill: Optimize an agent
@@ -39,7 +39,7 @@ Don't guess. Look at how the agent is actually doing before proposing a change. 
 investigative reads for YOUR reasoning — keep them silent (no `present`); the user doesn't need a
 card for every lookup, just your grounded conclusion and the theory card at the end:
 
-- `list_runs({ agentId })` → pick the latest completed run, then `get_run_failures` — the failing cases with
+- `list_runs({ agentId })` → pick the latest completed run, then `get_case_results` — the failing cases with
   each evaluator's verdict and reasoning. This is your primary evidence: read the actual
   responses and the reasoning, and name the failure pattern (wrong format? ignored constraint?
   missing knowledge? tone?).

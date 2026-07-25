@@ -301,11 +301,11 @@ msgstr "{0} no-2xx"
 msgid "{0} of {1} attached"
 msgstr "{0} de {1} adjuntos"
 
-#. placeholder {0}: data.failures.length
+#. placeholder {0}: data.cases.length
 #. placeholder {1}: data.totalCases
 #. placeholder {2}: fmtPct100(data.passRate)
-msgid "{0} of {1} cases failing · <0>{2}</0> pass rate"
-msgstr "{0} de {1} casos fallando · <0>{2}</0> de tasa de aprobación"
+msgid "{0} of {1} cases · <0>{2}</0> pass rate"
+msgstr ""
 
 #. placeholder {0}: traces.length
 #. placeholder {1}: allTraces.length
@@ -986,9 +986,6 @@ msgstr "Ya existe una Theory o Proposal idéntica para este Agent."
 msgid "An unexpected error occurred."
 msgstr "Ocurrió un error inesperado."
 
-msgid "Analyzing run…"
-msgstr "Analizando Run…"
-
 msgid "Anomalies"
 msgstr "Anomalías"
 
@@ -1265,6 +1262,13 @@ msgstr "Clúster de Trace fallidas capturadas"
 
 msgid "Case · reason"
 msgstr "Caso · motivo"
+
+msgid "Case results"
+msgstr ""
+
+#. placeholder {0}: data.suiteName ?? data.agentName
+msgid "Case results · {0}"
+msgstr ""
 
 msgid "Cases"
 msgstr "Casos"
@@ -2038,6 +2042,9 @@ msgstr "Evaluator creado"
 msgid "Evaluator Deleted"
 msgstr "Evaluator eliminado"
 
+msgid "evaluator error"
+msgstr ""
+
 msgid "Evaluator error"
 msgstr "Error de Evaluator"
 
@@ -2135,6 +2142,9 @@ msgstr "Fallar"
 msgid "FAIL"
 msgstr "FALLAR"
 
+msgid "failed"
+msgstr ""
+
 msgid "Failed"
 msgstr "Fallado"
 
@@ -2159,13 +2169,6 @@ msgstr "Error al guardar"
 
 msgid "Failing"
 msgstr "Fallando"
-
-msgid "Failing cases"
-msgstr "Casos con fallos"
-
-#. placeholder {0}: data.suiteName ?? data.agentName
-msgid "Failing cases · {0}"
-msgstr "Casos con fallos · {0}"
 
 msgid "Failure"
 msgstr "Fallo"
@@ -3387,8 +3390,14 @@ msgstr "Aún no está adjunto a ninguna Suite."
 msgid "Not enough data"
 msgstr "No hay suficientes datos"
 
+msgid "not in this run"
+msgstr ""
+
 msgid "Not now"
 msgstr "Ahora no"
+
+msgid "not scored"
+msgstr ""
 
 msgid "Not scored"
 msgstr "Sin puntuación"
@@ -3633,6 +3642,9 @@ msgstr "tasa de aprobación después del cambio"
 
 msgid "Pass rate trend"
 msgstr "Tendencia de la tasa de aprobación"
+
+msgid "passed"
+msgstr ""
 
 msgid "Passed"
 msgstr "Aprobado"
@@ -3981,6 +3993,9 @@ msgstr "Recalificado · editado"
 msgid "Read"
 msgstr "Leído"
 
+msgid "Reading the run…"
+msgstr ""
+
 msgid "Reasoning"
 msgstr "Razonamiento"
 
@@ -4261,6 +4276,9 @@ msgstr "Ejecuta este Suite con una cadencia recurrente."
 
 msgid "Run this suite to build up a history. Each run shows up here, newest first."
 msgstr "Ejecuta este Suite para generar historial. Cada ejecución aparece aquí, la más reciente primero."
+
+msgid "run unfinished"
+msgstr ""
 
 msgid "running"
 msgstr "ejecutando"
@@ -5407,6 +5425,9 @@ msgstr "Deshacer"
 
 msgid "Undo remove"
 msgstr "Deshacer eliminación"
+
+msgid "unexpected"
+msgstr ""
 
 msgid "Unknown"
 msgstr "Desconocido"

@@ -9,15 +9,16 @@ import type {
   EvaluatorDetailDto,
   OptimizationProposalDto,
   ProviderDto,
-  TestResultDto,
   TestRunDto,
   TestRunGroupDto,
   TestSuiteDto,
   TestSuiteListItemDto,
   TheoryDto,
 } from '../../api/models';
+import type { TestRunStatus } from '../../api/models';
 import type { ChartArtifact, TableArtifact, TextArtifact } from './tracey-artifacts';
 import type { RunComparison } from './tools/run-analysis';
+import type { CaseResult } from './tools/case-verdict';
 
 /** The payload `get_agent_stats` stores: the 30-day summary plus the agent's entity counts. */
 export interface AgentStatsArtifact {
@@ -25,14 +26,21 @@ export interface AgentStatsArtifact {
   counts: AgentEntityCountsDto;
 }
 
-/** The payload `get_run_failures` stores: the run's identity plus its failing case results. */
-export interface RunFailuresArtifact {
+/**
+ * The payload `get_case_results` stores: the run's identity plus a verdict per case. Named for
+ * *cases*, not failures — with `caseIds` it reports passing cases too, which is what a green
+ * assertion needs and what the old failures-only shape could not express.
+ */
+export interface CaseResultsArtifact {
   runId: string;
   suiteName: string | null;
   agentName: string;
+  runStatus: TestRunStatus;
   passRate: number;
   totalCases: number;
-  failures: TestResultDto[];
+  /** What the caller expected these cases to do — labels the card red/green. Null when unstated. */
+  expect: 'pass' | 'fail' | null;
+  cases: CaseResult[];
 }
 
 /**
@@ -50,7 +58,7 @@ export interface ArtifactPayloads {
   suite: TestSuiteDto;
   'run-list': TestRunDto[];
   run: TestRunDto;
-  'run-failures': RunFailuresArtifact;
+  'case-results': CaseResultsArtifact;
   'run-comparison': RunComparison;
   'test-run-group': TestRunGroupDto;
   'trace-list': AgentCallListItemDto[];

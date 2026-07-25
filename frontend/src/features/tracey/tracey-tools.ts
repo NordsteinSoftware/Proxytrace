@@ -56,7 +56,7 @@ export const TRACEY_TOOLS_META: { name: string; description: string }[] = [
   { name: 'cancel_test_run', description: 'Cancel an in-progress test run (confirm).' },
   { name: 'list_runs', description: 'List recent test runs.' },
   { name: 'get_run', description: 'Get one test run by id.' },
-  { name: 'get_run_failures', description: "Analyze a run's failing cases (evaluator verdicts)." },
+  { name: 'get_case_results', description: "How cases fared in a run (verdict + evaluator reasoning)." },
   { name: 'compare_runs', description: 'Compare two runs case by case (fixed vs regressed).' },
   { name: 'list_proposals', description: 'List optimization proposals.' },
   { name: 'get_proposal', description: 'Get one proposal by id.' },

@@ -4,7 +4,8 @@ import { testSuitesApi } from '../../../api/test-suites';
 import { testRunsApi } from '../../../api/test-runs';
 import { testRunGroupsApi } from '../../../api/test-run-groups';
 import { type ToolFactory, tool, CANCELLED, ignore404, isEntityId, listDigest, presentArg, includeSystemArg } from './shared';
-import { clip, compareRuns, failingResults } from './run-analysis';
+import { clip, compareRuns } from './run-analysis';
+import { caseResults } from './case-verdict';
 import { isRunTerminal } from './await';
 
 export const createRunTools: ToolFactory = (_ctx, store) => ({
@@ -50,47 +51,70 @@ export const createRunTools: ToolFactory = (_ctx, store) => ({
       });
     },
   }),
-  get_run_failures: tool({
+  get_case_results: tool({
     description:
-      "Get a run's FAILING test cases with each case's actual response and per-evaluator " +
-      'verdicts (score + reasoning). This is the primary evidence tool for tuning: read it ' +
-      'before forming a hypothesis about why an agent fails. The failing cases are rendered to ' +
-      'the user as a card.',
+      "Get how test cases fared in a run: each case's verdict, its actual response, and every " +
+      "evaluator's score and reasoning. Pass `caseIds` to ask about particular cases — this is how " +
+      'you verify that a regression case FAILED before a fix and PASSED after one. Omit `caseIds` ' +
+      "to get the run's failing cases, the primary evidence for forming a tuning hypothesis. " +
+      'A verdict is never inferred from absence: `evaluator-error` means a judge crashed (NOT that ' +
+      'the agent was wrong), `unjudged` means nothing scored the case, `not-in-run` means the case ' +
+      'is not part of that run, and `run-incomplete` means the run has not finished. None of those ' +
+      'mean "passed" — only `pass` does. The results are rendered to the user as a card.',
     parameters: z.object({
       present: presentArg,
-      runId: z.string().describe('The id of the test run to analyze.'),
+      runId: z.string().describe(
+        "The id of the test run to read. For an A/B candidate run, use the theory's abTestRunId.",
+      ),
+      caseIds: z.array(z.string()).optional().describe(
+        "Test case ids to report on (from get_suite, or a suite write's addedCases). Omit for the " +
+        "run's failing cases.",
+      ),
+      expect: z.enum(['pass', 'fail']).optional().describe(
+        'What you expect these cases to do. Presentational only — it labels the card red or green ' +
+        'for the user; it does not change any verdict.',
+      ),
       limit: z.number().int().min(1).max(20).optional()
-        .describe('Max failing cases in the digest (default 8); the card always shows all of them.'),
+        .describe('Max cases in the digest (default 8); the card always shows all of them.'),
     }),
     confirm: false,
-    execute: async ({ runId, limit }) => {
+    execute: async ({ runId, caseIds, expect, limit }) => {
       const run = await ignore404(() => testRunsApi.get(runId, { silentStatuses: [404] }));
       if (!run) return { notFound: runId };
-      const failures = failingResults(run);
-      return store('run-failures', {
+      const cases = caseResults(run, caseIds);
+      const max = limit ?? 8;
+      return store('case-results', {
         runId: run.id,
         suiteName: run.suiteName,
         agentName: run.agentName,
+        runStatus: run.status,
         passRate: run.passRate,
         totalCases: run.totalCases,
-        failures,
+        expect: expect ?? null,
+        cases,
       }, {
         runId: run.id,
         suiteName: run.suiteName,
         agentName: run.agentName,
+        runStatus: run.status,
         passRate: run.passRate,
-        failedCases: failures.length,
         totalCases: run.totalCases,
-        failures: failures.slice(0, limit ?? 8).map((r) => ({
-          case: clip(r.testCaseSummary, 160),
-          actual: clip(r.actualResponse, 280),
-          evaluations: r.evaluations.map((e) => ({
+        ...(expect ? { expect } : {}),
+        cases: cases.slice(0, max).map((c) => ({
+          testCaseId: c.testCaseId,
+          verdict: c.verdict,
+          case: c.result ? clip(c.result.testCaseSummary, 160) : null,
+          actual: c.result ? clip(c.result.actualResponse, 280) : null,
+          evaluations: (c.result?.evaluations ?? []).map((e) => ({
             evaluator: e.evaluatorName,
             score: e.score,
             reasoning: e.reasoning ? clip(e.reasoning, 200) : null,
             ...(e.errorMessage ? { error: clip(e.errorMessage, 120) } : {}),
           })),
         })),
+        ...(cases.length > max
+          ? { note: `Digest shows the first ${max} of ${cases.length}; the user sees all of them.` }
+          : {}),
       });
     },
   }),
@@ -117,11 +141,13 @@ export const createRunTools: ToolFactory = (_ctx, store) => ({
       ];
       if (!baseline || !candidate) return { notFound: missing };
       const comparison = compareRuns(baseline, candidate);
+      // Keep the case id alongside the summary: a moved case has to stay addressable, so a caller
+      // can hand it straight to get_case_results instead of matching on a clipped string.
       const summaries = (movement: 'fixed' | 'regressed') =>
         comparison.cases
           .filter((c) => c.movement === movement)
           .slice(0, 10)
-          .map((c) => clip(c.summary, 120));
+          .map((c) => ({ testCaseId: c.testCaseId, summary: clip(c.summary, 120) }));
       return store('run-comparison', comparison, {
         suiteName: comparison.suiteName,
         baseline: comparison.baseline,

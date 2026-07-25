@@ -91,6 +91,16 @@ describe('caseResults', () => {
     ]);
   });
 
+  it('still reports what is failing so far when no case was asked about', () => {
+    // "show me what's going wrong" is answerable mid-run; only an assertion about a named case
+    // needs the run to have settled.
+    const runIt = run({
+      status: TestRunStatus.Running,
+      results: [result({ evaluations: [evaluation({ score: EvaluationScore.Terrible })] })],
+    });
+    expect(caseResults(runIt).map((c) => c.verdict)).toEqual(['fail']);
+  });
+
   it('answers in the order asked, so a caller can zip results back to its own ids', () => {
     const runIt = run({
       results: [result({ id: 'r1', testCaseId: 'c1' }), result({ id: 'r2', testCaseId: 'c2' })],

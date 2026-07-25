@@ -368,9 +368,10 @@ describe('tracey entity-fetch tools', () => {
     expect(result.summary.items[0]).toMatchObject({ id: 't1', error: 'upstream exploded', tokens: 15 });
   });
 
-  it('get_run_failures keeps only judged failures and digests evaluator verdicts', async () => {
+  it('get_case_results keeps only judged failures and digests evaluator verdicts', async () => {
     testRunsApi.get.mockResolvedValue({
       id: 'r1', suiteName: 'Suite', agentName: 'Alpha', passRate: 50, totalCases: 2,
+      status: 'Completed',
       results: [
         {
           id: 'res1', testCaseId: 'c1', testCaseSummary: 'failing case', actualResponse: 'wrong answer',
@@ -386,15 +387,15 @@ describe('tracey entity-fetch tools', () => {
     });
     const ctx = makeCtx();
 
-    const result = await exec(createTraceyTools(ctx).get_run_failures, { runId: 'r1' }, ctx) as {
+    const result = await exec(createTraceyTools(ctx).get_case_results, { runId: 'r1' }, ctx) as {
       kind: string;
-      summary: { failedCases: number; failures: { case: string; evaluations: { evaluator: string; score: string }[] }[] };
+      summary: { cases: { testCaseId: string; verdict: string; case: string; evaluations: { evaluator: string; score: string }[] }[] };
     };
 
-    expect(result.kind).toBe('run-failures');
-    expect(result.summary.failedCases).toBe(1);
-    expect(result.summary.failures[0].case).toBe('failing case');
-    expect(result.summary.failures[0].evaluations[0]).toMatchObject({ evaluator: 'Exact', score: 'Bad' });
+    expect(result.kind).toBe('case-results');
+    expect(result.summary.cases).toHaveLength(1);
+    expect(result.summary.cases[0]).toMatchObject({ testCaseId: 'c1', verdict: 'fail', case: 'failing case' });
+    expect(result.summary.cases[0].evaluations[0]).toMatchObject({ evaluator: 'Exact', score: 'Bad' });
   });
 
   it('compare_runs fetches both runs and digests the case movements', async () => {
@@ -418,12 +419,15 @@ describe('tracey entity-fetch tools', () => {
     const result = await exec(createTraceyTools(ctx).compare_runs,
       { baselineRunId: 'old', candidateRunId: 'new' },
       ctx,
-    ) as { kind: string; summary: { fixed: number; regressed: number; fixedCases: string[] } };
+    ) as {
+      kind: string;
+      summary: { fixed: number; regressed: number; fixedCases: { testCaseId: string; summary: string }[] };
+    };
 
     expect(result.kind).toBe('run-comparison');
     expect(result.summary.fixed).toBe(1);
     expect(result.summary.regressed).toBe(0);
-    expect(result.summary.fixedCases).toEqual(['was failing']);
+    expect(result.summary.fixedCases).toEqual([{ testCaseId: 'c1', summary: 'was failing' }]);
   });
 
   it('list_theories returns the tried theories with their A/B outcomes', async () => {

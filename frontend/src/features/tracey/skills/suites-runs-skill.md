@@ -1,7 +1,7 @@
 ---
 name: test-suites-and-runs
 description: Inspect test suites and runs, and start or cancel a test run. Load when the user asks about their suites, test runs, results/pass rates, or wants to run a suite against an agent.
-tools: list_suites, get_suite, list_runs, get_run, get_run_failures, compare_runs, start_test_run, cancel_test_run, await_actions
+tools: list_suites, get_suite, list_runs, get_run, get_case_results, compare_runs, start_test_run, cancel_test_run, await_actions
 ---
 
 # Skill: Test suites & runs
@@ -14,7 +14,7 @@ Work with the project's benchmark suites and their executions.
 - `list_runs` — recent runs; `get_run` for a single run's per-case results and pass rate. It hides
   internal A/B validation (system) runs by default; pass `includeSystem: true` only if the user
   asks to see those.
-- `get_run_failures` — a run's FAILING cases with each evaluator's verdict + reasoning. Reach for
+- `get_case_results` — a run's FAILING cases with each evaluator's verdict + reasoning. Reach for
   this whenever the user asks *why* a run failed — don't stop at the pass rate.
 - `compare_runs` — case-by-case movement between two runs (fixed / regressed / unchanged). Use it
   for any before/after question ("did the change help?").

@@ -1,7 +1,7 @@
 ---
 name: diagnose-agent
 description: Investigate an agent's flagged anomalies end to end — analyze the outlier calls, benchmark them in a suite, and validate a fix with an A/B test. Use when the user asks what's wrong with an agent, about its anomalies/outliers, or to diagnose degraded behavior.
-tools: get_agent_anomalies, get_trace, find_traces, list_suites, get_suite, create_suite, add_to_suite, update_expected_output, list_evaluators, create_evaluator, start_test_run, list_runs, get_run, get_run_failures, list_theories, submit_optimization_theory, await_actions
+tools: get_agent_anomalies, get_trace, find_traces, list_suites, get_suite, create_suite, add_to_suite, update_expected_output, list_evaluators, create_evaluator, start_test_run, list_runs, get_run, get_case_results, list_theories, submit_optimization_theory, await_actions
 ---
 
 # Skill: Diagnose an agent
@@ -71,7 +71,7 @@ response itself is wrong or bloated.
 
 `start_test_run` on the suite — the app forces your next step to be `await_actions`, so start
 everything you need in the same step. After the wait, fetch the run's failures: `list_runs({
-agentId })`, take the newest run, then `get_run_failures` with that **run id** (NOT the group id
+agentId })`, take the newest run, then `get_case_results` with that **run id** (NOT the group id
 from the awaitable). Read the evaluator verdicts and connect them back to the anomaly reasons.
 
 ## 6. Theorize a fix and A/B-validate it

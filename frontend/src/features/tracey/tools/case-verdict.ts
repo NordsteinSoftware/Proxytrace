@@ -52,15 +52,17 @@ function verdictOf(result: TestResultDto): CaseVerdict {
  * `run-incomplete` — never `not-in-run`, which would wrongly read as "your case isn't in this suite".
  */
 export function caseResults(run: TestRunDto, caseIds?: string[]): CaseResult[] {
-  if (run.status !== TestRunStatus.Completed) {
-    return (caseIds ?? []).map((testCaseId) => ({
-      testCaseId,
-      verdict: 'run-incomplete' as const,
-      result: null,
-    }));
-  }
-
   if (caseIds) {
+    // An unfinished run cannot answer "did MY case pass?": a case with no result yet is not absent
+    // from the suite, and one judged so far may still be re-run. Refuse the whole question rather
+    // than hand back a verdict that would be read as settled.
+    if (run.status !== TestRunStatus.Completed) {
+      return caseIds.map((testCaseId) => ({
+        testCaseId,
+        verdict: 'run-incomplete' as const,
+        result: null,
+      }));
+    }
     const byCase = new Map(run.results.map((r) => [r.testCaseId, r]));
     return caseIds.map((testCaseId) => {
       const result = byCase.get(testCaseId);
@@ -70,6 +72,9 @@ export function caseResults(run: TestRunDto, caseIds?: string[]): CaseResult[] {
     });
   }
 
+  // Nothing specific was asked about, so this is "show me what is going wrong" — answer it for a
+  // running run too. The caller reports `runStatus` alongside, which is what carries the caveat
+  // that more cases may yet fail.
   return run.results
     .map((result) => ({ testCaseId: result.testCaseId, verdict: verdictOf(result), result }))
     .filter((c) => c.verdict !== 'pass');
