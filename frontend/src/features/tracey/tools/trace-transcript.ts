@@ -50,6 +50,8 @@ export interface TranscriptToolSpec {
 
 export interface TraceTranscript {
   id: string;
+  /** The owning agent by id — a name cannot be passed where an id is due. */
+  agentId: string | null;
   agentName: string | null;
   model: string;
   provider: string;
@@ -164,6 +166,7 @@ export function traceTranscript(call: AgentCallDto): TraceTranscript {
 
   return {
     id: call.id,
+    agentId: call.agentId,
     agentName: call.agentName,
     model: call.model,
     provider: call.provider,

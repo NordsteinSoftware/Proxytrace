@@ -134,6 +134,10 @@ export const createTraceTools: ToolFactory = (ctx, store) => ({
       // model itself receives, from metadata to the full transcript.
       return store('trace', call, verbose ? traceTranscript(call) : {
         id: call.id,
+        // The agent this call belongs to, by id — a pasted trace is often the only thing the user
+        // gives you, and a name would have to be matched back through list_agents to be usable.
+        agentId: call.agentId,
+        agentName: call.agentName,
         model: call.model,
         provider: call.provider,
         httpStatus: call.httpStatus,

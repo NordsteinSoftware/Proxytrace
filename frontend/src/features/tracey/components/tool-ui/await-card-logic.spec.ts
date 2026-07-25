@@ -11,7 +11,7 @@ function run(overrides: Partial<RunAwaitResult> = {}): RunAwaitResult {
     timedOut: false,
     suiteName: 'Suite',
     agentName: 'Agent',
-    runs: [{ agentName: 'Agent', status: TestRunStatus.Completed, passed: 3, failed: 1, total: 4, passRate: 75 }],
+    runs: [{ runId: 'run1', agentName: 'Agent', status: TestRunStatus.Completed, passed: 3, failed: 1, total: 4, passRate: 75 }],
     ...overrides,
   };
 }
@@ -24,6 +24,10 @@ function theory(overrides: Partial<TheoryAwaitResult> = {}): TheoryAwaitResult {
     timedOut: false,
     agentName: 'Agent',
     resultingProposalId: null,
+    abTestRunId: null,
+    baselinePassRate: null,
+    projectedPassRate: null,
+    pValue: null,
     ...overrides,
   };
 }
@@ -78,8 +82,8 @@ describe('runCaseSummary', () => {
   it('aggregates counts across runs', () => {
     const r = run({
       runs: [
-        { agentName: 'A', status: TestRunStatus.Completed, passed: 3, failed: 1, total: 4, passRate: 75 },
-        { agentName: 'B', status: TestRunStatus.Completed, passed: 2, failed: 2, total: 4, passRate: 50 },
+        { runId: 'runA', agentName: 'A', status: TestRunStatus.Completed, passed: 3, failed: 1, total: 4, passRate: 75 },
+        { runId: 'runB', agentName: 'B', status: TestRunStatus.Completed, passed: 2, failed: 2, total: 4, passRate: 50 },
       ],
     });
     expect(runCaseSummary(r)).toEqual({ passed: 5, failed: 3, total: 8 });

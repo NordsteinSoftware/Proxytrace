@@ -82,6 +82,12 @@ describe('traceTranscript', () => {
     });
   });
 
+  it('carries the agent id, so a trace resolves to its agent without a name match', () => {
+    // A name is not an id — resolving one by matching against list_agents breaks on renamed or
+    // duplicate-named agents, and the prompt rightly forbids passing a name where an id is due.
+    expect(traceTranscript(call({ agentId: 'a1' }))).toMatchObject({ agentId: 'a1' });
+  });
+
   it('keeps tool requests and tool-result correlation ids', () => {
     const transcript = traceTranscript(call({
       request: [
