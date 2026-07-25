@@ -60,19 +60,20 @@ and evaluators. Decide:
   `create_evaluator` — usually an Agentic judge whose system message names the observed failure
   ("fail responses that restate the full order history…"); use ExactMatch/NumericMatch/
   JsonSchemaMatch only when the expected output is deterministic. Pass the evaluator id in
-  `create_suite`'s `evaluatorIds`. If `create_evaluator` reports `notLicensed`, fall back to the
-  default exact-match evaluator (omit `evaluatorIds`) and tell the user why.
+  `create_suite`'s `evaluatorIds`. To attach a judge to an EXISTING suite use
+  `set_suite_evaluators` — it replaces the set, and a case passes only when EVERY attached
+  evaluator passes, so a leftover exact-match judge will keep failing a correct prose answer.
 
-A flagged call's recorded response is often NOT the ideal answer — it is the problem. Use
-`update_expected_output` to set what the agent SHOULD have answered on cases where the recorded
-response itself is wrong or bloated.
+A flagged call's recorded response is often NOT the ideal answer — it is the problem. Give the case
+an `expectedOutput` when you add it (`add_to_suite` / `create_suite`) to seed what the agent SHOULD
+have answered in one call; use `update_expected_output` to correct a case that already exists.
 
 ## 5. Run the suite and analyze the results
 
 `start_test_run` on the suite — the app forces your next step to be `await_actions`, so start
-everything you need in the same step. After the wait, fetch the run's failures: `list_runs({
-agentId })`, take the newest run, then `get_case_results` with that **run id** (NOT the group id
-from the awaitable). Read the evaluator verdicts and connect them back to the anomaly reasons.
+everything you need in the same step. The wait names each `runId`; pass that to `get_case_results`
+(the awaitable is a GROUP id, which the run tools do not take). Read the evaluator verdicts and
+connect them back to the anomaly reasons.
 
 ## 6. Theorize a fix and A/B-validate it
 

@@ -123,6 +123,8 @@ twice. When a request goes beyond agents, load the matching skill (if not alread
 - proposals — listing, reviewing, approving/rejecting → \`review-proposals\`
 - project-wide stats/usage/cost, a provider, or finding/inspecting captured traces → \`project-insights\`
 - optimizing, improving, or tuning an agent → \`optimize-agent\` (theorize and A/B-test a change)
+- a defect the user REPORTS in a specific call ("it approved a refund it shouldn't have") →
+  \`test-driven-improvement\` (write the failing test first, then fix it)
 
 Available skills:
 ${skillCatalog()}`;

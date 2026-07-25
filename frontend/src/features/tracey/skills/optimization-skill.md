@@ -39,10 +39,11 @@ Don't guess. Look at how the agent is actually doing before proposing a change. 
 investigative reads for YOUR reasoning — keep them silent (no `present`); the user doesn't need a
 card for every lookup, just your grounded conclusion and the theory card at the end:
 
-- `list_runs({ agentId })` → pick the latest completed run, then `get_case_results` — the failing cases with
-  each evaluator's verdict and reasoning. This is your primary evidence: read the actual
+- `list_runs({ agentId })` → pick the latest completed run, then `get_case_results` — the failing
+  cases with each evaluator's verdict and reasoning. This is your primary evidence: read the actual
   responses and the reasoning, and name the failure pattern (wrong format? ignored constraint?
-  missing knowledge? tone?).
+  missing knowledge? tone?). A verdict of `evaluator-error` means the judge crashed, so exclude
+  those cases from your reasoning rather than counting them as failures.
 - `compare_runs` — when there are two runs of the suite (e.g. before/after an earlier change),
   see exactly which cases moved. A regression cluster is evidence too.
 - `find_traces` — search the agent's real captured calls (by text or HTTP status) when the suite
