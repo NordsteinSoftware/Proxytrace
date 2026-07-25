@@ -5085,6 +5085,12 @@ msgstr "Diese Funktion ist Teil der Proxytrace Enterprise-Stufe. Aktualisieren S
 msgid "This installation: {0}"
 msgstr "Diese Installation: {0}"
 
+msgid "This is a read-only demo — changes aren't saved."
+msgstr "Dies ist eine schreibgeschützte Demo — Änderungen werden nicht gespeichert."
+
+msgid "This is a read-only demo — messages aren't sent."
+msgstr "Dies ist eine schreibgeschützte Demo — Nachrichten werden nicht gesendet."
+
 msgid "This is an Enterprise feature"
 msgstr "Dies ist eine Enterprise-Funktion"
 

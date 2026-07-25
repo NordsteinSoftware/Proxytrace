@@ -10,6 +10,7 @@ import { oidcConfig } from '../auth/oidcConfig';
 import { LocalAuthProvider } from '../auth/local/LocalAuthProvider';
 import { CurrentUserContext } from '../auth/useCurrentUser';
 import { KioskContext } from '../contexts/KioskContext';
+import { setApiReadOnly } from '../api/client';
 import { useAppConfig } from '../hooks/useAppConfig';
 import { useAuthMode } from '../auth/authMode';
 import { cn } from '../lib/cn';
@@ -22,12 +23,18 @@ function KioskShell({ interactive }: { interactive: boolean }) {
     void dynamicActivate(DEFAULT_LOCALE);
   }, []);
   useEffect(() => {
-    // The `kiosk` body class drives the read-only [data-write] kill-switch (index.css). Only
-    // apply it for a read-only kiosk; an interactive kiosk leaves write controls live.
+    // Two halves of the same switch, and they must stay together: `setApiReadOnly` is the
+    // enforcement (every mutating request is refused at the transport — see `api/client.ts`), the
+    // `kiosk` body class is the affordance that dims write controls (index.css). Only for a
+    // read-only kiosk; an interactive one is a normal single-user instance.
     if (interactive) return;
+    setApiReadOnly(true);
     const kioskClass = cn('kiosk');
     document.body.classList.add(kioskClass);
-    return () => document.body.classList.remove(kioskClass);
+    return () => {
+      setApiReadOnly(false);
+      document.body.classList.remove(kioskClass);
+    };
   }, [interactive]);
   return (
     <KioskContext.Provider value={{ enabled: true, interactive }}>

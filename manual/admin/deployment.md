@@ -80,6 +80,12 @@ Without a `.env` (or with credentials omitted) the stack starts in **read-only d
 API and UI boot normally but the OpenAI proxy route is not mounted (requests to `/openai/v1/*`
 return `404`) and the sample client idles — useful for passive walkthroughs of the pre-seeded data.
 
+In read-only mode the UI dims every control that would change something, and the app declines
+those actions in the browser rather than letting them fail against the server — so a visitor who
+clicks or tabs onto a disabled button gets a quiet "read-only demo" notice instead of an error.
+The server enforces this independently, so the mode is not something the browser can talk its way
+out of.
+
 **Demo API key.** When a live endpoint is configured, the kiosk mints a fixed API key
 (`pk-kiosk-demo` by default, overridable via `KIOSK_DEMO_API_KEY` in `.env`) shared by the
 API and the sample client. Both containers read the same variable, so they stay in sync

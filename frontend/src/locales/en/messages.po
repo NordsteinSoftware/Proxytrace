@@ -5085,6 +5085,12 @@ msgstr "This feature is part of the Proxytrace Enterprise tier. Upgrade your lic
 msgid "This installation: {0}"
 msgstr "This installation: {0}"
 
+msgid "This is a read-only demo — changes aren't saved."
+msgstr "This is a read-only demo — changes aren't saved."
+
+msgid "This is a read-only demo — messages aren't sent."
+msgstr "This is a read-only demo — messages aren't sent."
+
 msgid "This is an Enterprise feature"
 msgstr "This is an Enterprise feature"
 

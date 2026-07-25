@@ -84,6 +84,12 @@ component  →  feature query hook (useXxx)  →  api/<service>.ts  →  api/cli
 ```
 
 - **`api/<service>.ts`** — thin typed functions returning DTOs. One per resource (see `api/agents.ts`). No React, no query logic. New endpoints get a function here first.
+  - **Every request goes through `api/client.ts`.** It is not just a `fetch` wrapper — it owns the
+    auth header, the 401 handling, the error toast, `silentStatuses`, the 402 upgrade routing, and
+    the kiosk **read-only guard** that refuses mutating verbs before they leave the browser. A
+    hand-rolled `fetch` silently opts out of all of it. If you genuinely need one (a streaming
+    endpoint the typed helpers can't express — `api/playground.ts` is the only case), call
+    `isWriteBlocked()` yourself and never echo the raw response body into user-visible text.
 - **Query hooks** — wrap `useQuery`/`useMutation`. Page/feature components must not call `useQuery`/`useMutation` raw — that couples them to query keys, stale times, and invalidation. The repo now keeps these in `use*` hooks (the raw-in-pages debt that this section once called out has been extracted); keep new ones there too.
 
 ```ts

@@ -5085,6 +5085,12 @@ msgstr "Cette fonctionnalité fait partie du niveau Proxytrace Enterprise. Passe
 msgid "This installation: {0}"
 msgstr "Cette installation : {0}"
 
+msgid "This is a read-only demo — changes aren't saved."
+msgstr "Ceci est une démo en lecture seule — les modifications ne sont pas enregistrées."
+
+msgid "This is a read-only demo — messages aren't sent."
+msgstr "Ceci est une démo en lecture seule — les messages ne sont pas envoyés."
+
 msgid "This is an Enterprise feature"
 msgstr "C’est une fonctionnalité Enterprise"
 

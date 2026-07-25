@@ -1,5 +1,6 @@
 import { MutationCache, QueryCache, QueryClient } from '@tanstack/react-query';
-import { UpgradeRequiredError } from '../api/client';
+import { ReadOnlyModeError, UpgradeRequiredError } from '../api/client';
+import { showToast } from '../components/ui/Toast';
 import { showUpgradeModal } from '../components/license/UpgradeModal';
 import { fetchAuthMode } from '../auth/authMode';
 import { configApi } from '../api/config';
@@ -16,10 +17,25 @@ function handleUpgradeError(error: unknown): boolean {
   return false;
 }
 
+// A mutation refused by read-only mode is an expected outcome of the kiosk demo, not a failure:
+// tell the user in a neutral toast rather than the red error one. Only on the mutation cache —
+// mutations are user-initiated, so this cannot fire for a background query.
+function handleReadOnlyError(error: unknown): boolean {
+  if (error instanceof ReadOnlyModeError) {
+    showToast(error.message, 'info');
+    return true;
+  }
+  return false;
+}
+
 export const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, staleTime: 30_000, throwOnError: true } },
   queryCache: new QueryCache({ onError: handleUpgradeError }),
-  mutationCache: new MutationCache({ onError: handleUpgradeError }),
+  mutationCache: new MutationCache({
+    onError: error => {
+      if (!handleUpgradeError(error)) handleReadOnlyError(error);
+    },
+  }),
 });
 
 // Prefetch auth-mode + app config so children can render synchronously.

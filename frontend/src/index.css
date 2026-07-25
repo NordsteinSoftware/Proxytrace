@@ -602,7 +602,11 @@ html, body, #root {
   letter-spacing: 0.04em;
 }
 
-/* ── kiosk read-only: disable write actions (every write control emits data-write) ── */
+/* ── kiosk read-only: dim write actions (every write control emits data-write) ──
+   Affordance only. `pointer-events` suppresses pointer hit-testing and nothing else — a tagged
+   control stays in the tab order, and Enter/Space still fire its onClick — so this never was a
+   guard. Enforcement is `setApiReadOnly` in api/client.ts, which refuses every mutating request
+   at the transport regardless of how it was triggered. */
 body.kiosk [data-write] {
   opacity: 0.4 !important;
   pointer-events: none !important;
