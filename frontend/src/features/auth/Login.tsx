@@ -1,4 +1,4 @@
-import { Navigate } from 'react-router-dom';
+import { Navigate } from 'react-router';
 import { useAuthMode } from '../../auth/authMode';
 import { LegacyClaim } from './components/LegacyClaim';
 import { LocalLogin } from './components/LocalLogin';

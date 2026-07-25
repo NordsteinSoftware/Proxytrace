@@ -1,5 +1,5 @@
 import { Trans, useLingui } from '@lingui/react/macro';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import { statusColor } from '../../../lib/colors';
 import { fmtRelative, fmtDuration } from '../../../lib/format';
 import { tracePreview } from '../../../lib/trace';

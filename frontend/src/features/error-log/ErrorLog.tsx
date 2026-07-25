@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Plural, useLingui } from '@lingui/react/macro';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router';
 import { SearchIcon } from '../../components/icons';
 import { Input } from '../../components/ui/Input';
 import { SegmentedControl, type Segment } from '../../components/ui/SegmentedControl';

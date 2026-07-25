@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react';
 import { Trans, useLingui } from '@lingui/react/macro';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import { Button } from '../../../components/ui/Button';
 import { EmptyState } from '../../../components/ui/EmptyState';
 import { Skeleton } from '../../../components/ui/Skeleton';

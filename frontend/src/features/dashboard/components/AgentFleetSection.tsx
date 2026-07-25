@@ -3,7 +3,7 @@
 // decomposed into one heartbeat per agent.
 
 import { Trans, Plural, useLingui } from '@lingui/react/macro';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import { Button } from '../../../components/ui/Button';
 import { RowButton } from '../../../components/ui/RowButton';
 import { EmptyState } from '../../../components/ui/EmptyState';

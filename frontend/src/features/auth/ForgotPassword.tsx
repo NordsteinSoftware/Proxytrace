@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Trans, useLingui } from '@lingui/react/macro';
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router';
 import { localAuthApi } from '../../auth/local/localAuthApi';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';

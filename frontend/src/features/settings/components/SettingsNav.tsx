@@ -1,4 +1,4 @@
-import { NavLink } from 'react-router-dom';
+import { NavLink } from 'react-router';
 import { msg } from '@lingui/core/macro';
 import { useLingui } from '@lingui/react/macro';
 import type { MessageDescriptor } from '@lingui/core';

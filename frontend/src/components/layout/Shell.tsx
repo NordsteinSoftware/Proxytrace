@@ -1,5 +1,5 @@
 import { useState, lazy, Suspense } from 'react';
-import { Outlet, useLocation } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router';
 import { Trans } from '@lingui/react/macro';
 import { ErrorBoundary } from '../ErrorBoundary';
 import { ChromeErrorFallback } from './ChromeErrorFallback';

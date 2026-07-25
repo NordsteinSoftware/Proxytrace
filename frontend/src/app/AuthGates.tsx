@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect } from 'react';
-import { Navigate, useLocation } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router';
 import { useAuth } from 'react-oidc-context';
 import { Trans } from '@lingui/react/macro';
 import { PageLoader } from './PageLoader';

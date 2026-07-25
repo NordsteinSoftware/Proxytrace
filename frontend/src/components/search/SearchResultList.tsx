@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router';
 import { Trans } from '@lingui/react/macro';
 import type { SearchHit, SearchKind } from '../../api/search';
 import { RowButton } from '../ui/RowButton';

@@ -1,5 +1,5 @@
 import { useLingui } from '@lingui/react/macro';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import { Menu } from '../../../components/ui/Menu';
 import { IconButton } from '../../../components/ui/Button';
 import { MoreHorizontalIcon, PlayIcon, ActivityIcon, SparklesIcon } from '../../../components/icons';

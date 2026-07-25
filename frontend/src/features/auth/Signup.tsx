@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Trans, useLingui } from '@lingui/react/macro';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router';
 import { localAuthApi } from '../../auth/local/localAuthApi';
 import { useInvitePreview } from './hooks/useInvitePreview';
 import { PasswordRequirements } from '../../components/auth/PasswordRequirements';

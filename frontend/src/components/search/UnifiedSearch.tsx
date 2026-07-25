@@ -1,7 +1,7 @@
 import {
   forwardRef, useCallback, useImperativeHandle, useRef, useState,
 } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import { Trans, Plural, useLingui } from '@lingui/react/macro';
 import type { SearchHit, SearchKind } from '../../api/search';
 import { searchHitToHref } from '../../lib/search-routes';

@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import { Trans, Plural, useLingui } from '@lingui/react/macro';
 import { Avatar } from '../ui/Avatar';
 import { Menu } from '../ui/Menu';
