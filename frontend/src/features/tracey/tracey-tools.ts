@@ -53,6 +53,7 @@ export const TRACEY_TOOLS_META: { name: string; description: string }[] = [
   { name: 'add_to_suite', description: 'Add captured traces to a suite as test cases (confirm).' },
   { name: 'remove_test_case', description: 'Remove a test case from a suite (confirm).' },
   { name: 'update_expected_output', description: "Set a test case's expected output (confirm)." },
+  { name: 'set_suite_evaluators', description: "Replace a suite's evaluator set (confirm)." },
   { name: 'cancel_test_run', description: 'Cancel an in-progress test run (confirm).' },
   { name: 'list_runs', description: 'List recent test runs.' },
   { name: 'get_run', description: 'Get one test run by id.' },

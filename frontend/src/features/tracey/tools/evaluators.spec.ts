@@ -32,6 +32,27 @@ function makeCtx(confirmValue = true): TraceyToolContext {
 beforeEach(() => vi.clearAllMocks());
 
 describe('list_evaluators', () => {
+  it("carries a clipped system message so a judge can be matched to a behavior", async () => {
+    const ctx = makeCtx();
+    evaluatorsApi.list.mockResolvedValue([
+      {
+        id: 'e1', kind: EvaluatorKind.Agentic, name: 'Policy judge',
+        systemMessage: 'Fail responses that approve a refund outside the return window.',
+      },
+      { id: 'e2', kind: EvaluatorKind.ExactMatch, name: 'Exact match', systemMessage: null },
+    ]);
+
+    const result = await run(createEvaluatorTools(ctx, store).list_evaluators, {}, ctx) as {
+      items: Record<string, unknown>[];
+    };
+
+    expect(result.items[0]).toMatchObject({
+      id: 'e1',
+      systemMessage: 'Fail responses that approve a refund outside the return window.',
+    });
+    expect(result.items[1]).not.toHaveProperty('systemMessage');
+  });
+
   it('lists the project evaluators and returns a compact digest', async () => {
     const ctx = makeCtx();
     evaluatorsApi.list.mockResolvedValue([

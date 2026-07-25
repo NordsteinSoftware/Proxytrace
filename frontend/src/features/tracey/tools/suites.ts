@@ -2,15 +2,30 @@ import { z } from 'zod';
 import { agentsApi } from '../../../api/agents';
 import { testSuitesApi } from '../../../api/test-suites';
 import { testCasesApi } from '../../../api/test-cases';
+import type { TestSuiteDto } from '../../../api/models';
 import { type ToolFactory, tool, CANCELLED, ignore404, isEntityId, listDigest, presentArg } from './shared';
+import { clip } from './run-analysis';
 
-/** The compact suite digest returned by the read + curation tools (the card shows everything). */
-const suiteDigest = (suite: { id: string; name: string; agentName: string; testCases: unknown[]; passRate: number | null }) => ({
+/**
+ * The compact suite digest returned by the read + curation tools (the card shows everything).
+ *
+ * It carries the evaluator set and the cases on purpose. A case passes only when EVERY attached
+ * evaluator passes, so the whole set has to be visible before anyone changes it; and the case ids
+ * are what `remove_test_case`, `update_expected_output` and `get_case_results` all take.
+ */
+const suiteDigest = (suite: TestSuiteDto) => ({
   id: suite.id,
   name: suite.name,
+  agentId: suite.agentId,
   agentName: suite.agentName,
   caseCount: suite.testCases.length,
   passRate: suite.passRate,
+  evaluators: suite.evaluators.map((evaluator) => ({ id: evaluator.id, kind: evaluator.kind })),
+  cases: listDigest(suite.testCases, 25, (testCase) => ({
+    id: testCase.id,
+    sourceAgentCallId: testCase.sourceAgentCallId ?? null,
+    expected: clip(testCase.expectedOutput.content, 120),
+  })),
 });
 
 /** One trace to turn into a test case, optionally with the answer the agent SHOULD have given. */
@@ -210,6 +225,29 @@ export const createSuiteTools: ToolFactory = (ctx, store) => {
         );
         if (!updated) return { notFound: caseId };
         return { caseId: updated.id, status: 'updated' };
+      },
+    }),
+    set_suite_evaluators: tool({
+      description:
+        'Set which evaluators a suite scores its cases with. Requires confirmation. This REPLACES ' +
+        'the current set, so pass every evaluator id you want attached — read the existing ones ' +
+        'from get_suite first. A case passes only when EVERY attached evaluator passes, so leaving ' +
+        'a strict exact-match evaluator next to a behavioral judge makes a prose answer unpassable ' +
+        'no matter how correct it is. Returns the updated suite as a card.',
+      parameters: z.object({
+        suiteId: z.string().describe('The id of the suite to configure.'),
+        evaluatorIds: z.array(z.string()).min(1)
+          .describe('The COMPLETE set of evaluator ids to attach (from list_evaluators / create_evaluator).'),
+      }),
+      confirm: true,
+      execute: async ({ suiteId, evaluatorIds }, c) => {
+        const existing = await ignore404(() => testSuitesApi.get(suiteId, { silentStatuses: [404] }));
+        if (!existing) return { notFound: suiteId };
+        const n = evaluatorIds.length;
+        const ok = await c.confirm(`Set ${n} evaluator${n === 1 ? '' : 's'} on suite "${existing.name}"?`);
+        if (!ok) return CANCELLED;
+        const suite = await testSuitesApi.updateEvaluators(suiteId, evaluatorIds);
+        return store('suite', suite, suiteDigest(suite));
       },
     }),
   };

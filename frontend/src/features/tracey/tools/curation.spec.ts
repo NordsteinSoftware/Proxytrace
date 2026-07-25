@@ -39,8 +39,16 @@ function makeCtx(confirmValue = true): TraceyToolContext {
   };
 }
 
+/** A test case as the API returns it — every case carries an expected output. */
+const tc = (id: string, over: Record<string, unknown> = {}) => ({
+  id,
+  expectedOutput: { role: 'assistant', content: `expected ${id}` },
+  ...over,
+});
+
 const suite = (over: Record<string, unknown> = {}) => ({
-  id: 's1', name: 'My suite', agentName: 'A', testCases: [{ id: 'c1' }, { id: 'c2' }], passRate: 50, ...over,
+  id: 's1', name: 'My suite', agentId: 'a1', agentName: 'A', evaluators: [{ id: 'e1', kind: 'ExactMatch' }],
+  testCases: [tc('c1'), tc('c2')], passRate: 50, ...over,
 });
 
 beforeEach(() => vi.clearAllMocks());
@@ -49,7 +57,7 @@ describe('create_suite', () => {
   it('confirms, creates from traces, and returns a compact digest', async () => {
     const ctx = makeCtx();
     agentsApi.get.mockResolvedValue({ id: 'a1', name: 'A' });
-    testSuitesApi.createWithCases.mockResolvedValue(suite({ testCases: [{ id: 'c1', sourceAgentCallId: 'call1' }] }));
+    testSuitesApi.createWithCases.mockResolvedValue(suite({ testCases: [tc('c1', { sourceAgentCallId: 'call1' })] }));
 
     const tool = createSuiteTools(ctx, store).create_suite;
     const result = await run(
@@ -100,7 +108,7 @@ describe('correction cases', () => {
     const ctx = makeCtx();
     agentsApi.get.mockResolvedValue({ id: 'a1', name: 'A' });
     testSuitesApi.createWithCases.mockResolvedValue(suite({
-      testCases: [{ id: 'c9', sourceAgentCallId: 'call1' }],
+      testCases: [tc('c9', { sourceAgentCallId: 'call1' })],
     }));
 
     const tool = createSuiteTools(ctx, store).create_suite;
@@ -121,9 +129,9 @@ describe('correction cases', () => {
 
   it('add_to_suite passes the correction through and diffs out the new case id', async () => {
     const ctx = makeCtx();
-    testSuitesApi.get.mockResolvedValue(suite({ testCases: [{ id: 'c1' }] }));
+    testSuitesApi.get.mockResolvedValue(suite({ testCases: [tc('c1')] }));
     testSuitesApi.addTestCase.mockResolvedValue(suite({
-      testCases: [{ id: 'c1' }, { id: 'c2', sourceAgentCallId: 'call1' }],
+      testCases: [tc('c1'), tc('c2', { sourceAgentCallId: 'call1' })],
     }));
 
     const tool = createSuiteTools(ctx, store).add_to_suite;
@@ -140,7 +148,7 @@ describe('correction cases', () => {
     agentsApi.get.mockResolvedValue({ id: 'a1', name: 'A' });
     // The API is under no obligation to return the cases in request order.
     testSuitesApi.createWithCases.mockResolvedValue(suite({
-      testCases: [{ id: 'cB', sourceAgentCallId: 'callB' }, { id: 'cA', sourceAgentCallId: 'callA' }],
+      testCases: [tc('cB', { sourceAgentCallId: 'callB' }), tc('cA', { sourceAgentCallId: 'callA' })],
     }));
 
     const tool = createSuiteTools(ctx, store).create_suite;
@@ -156,13 +164,65 @@ describe('correction cases', () => {
   });
 });
 
+describe('get_suite digest', () => {
+  it('exposes the evaluators and the case ids the other tools need', async () => {
+    const ctx = makeCtx();
+    testSuitesApi.get.mockResolvedValue(suite({
+      evaluators: [{ id: 'e1', kind: 'ExactMatch' }, { id: 'e2', kind: 'Agentic' }],
+      testCases: [tc('c1', { sourceAgentCallId: 'call1' })],
+    }));
+
+    const tool = createSuiteTools(ctx, store).get_suite;
+    const result = await run(tool, { suiteId: 's1' }, ctx);
+
+    expect(result).toMatchObject({
+      agentId: 'a1',
+      evaluators: [{ id: 'e1', kind: 'ExactMatch' }, { id: 'e2', kind: 'Agentic' }],
+      cases: { count: 1, items: [{ id: 'c1', sourceAgentCallId: 'call1', expected: 'expected c1' }] },
+    });
+  });
+});
+
+describe('set_suite_evaluators', () => {
+  it('confirms, then replaces the suite evaluator set', async () => {
+    const ctx = makeCtx();
+    testSuitesApi.get.mockResolvedValue(suite());
+    testSuitesApi.updateEvaluators.mockResolvedValue(suite({ evaluators: [{ id: 'e2', kind: 'Agentic' }] }));
+
+    const tool = createSuiteTools(ctx, store).set_suite_evaluators;
+    const result = await run(tool, { suiteId: 's1', evaluatorIds: ['e2'] }, ctx);
+
+    expect(ctx.confirm).toHaveBeenCalledOnce();
+    expect(testSuitesApi.updateEvaluators).toHaveBeenCalledWith('s1', ['e2']);
+    expect(result).toMatchObject({ evaluators: [{ id: 'e2', kind: 'Agentic' }] });
+  });
+
+  it('returns notFound for a missing suite and never mutates', async () => {
+    const ctx = makeCtx();
+    testSuitesApi.get.mockResolvedValue(null);
+
+    const tool = createSuiteTools(ctx, store).set_suite_evaluators;
+    expect(await run(tool, { suiteId: 'bad', evaluatorIds: ['e2'] }, ctx)).toEqual({ notFound: 'bad' });
+    expect(testSuitesApi.updateEvaluators).not.toHaveBeenCalled();
+  });
+
+  it('returns CANCELLED on decline and never mutates', async () => {
+    const ctx = makeCtx(false);
+    testSuitesApi.get.mockResolvedValue(suite());
+
+    const tool = createSuiteTools(ctx, store).set_suite_evaluators;
+    expect(await run(tool, { suiteId: 's1', evaluatorIds: ['e2'] }, ctx)).toBe(CANCELLED);
+    expect(testSuitesApi.updateEvaluators).not.toHaveBeenCalled();
+  });
+});
+
 describe('add_to_suite', () => {
   it('adds each trace as a case and returns the final suite digest', async () => {
     const ctx = makeCtx();
     testSuitesApi.get.mockResolvedValue(suite());
     testSuitesApi.addTestCase
-      .mockResolvedValueOnce(suite({ testCases: [{ id: 'c1' }, { id: 'c2' }, { id: 'c3' }] }))
-      .mockResolvedValueOnce(suite({ testCases: [{ id: 'c1' }, { id: 'c2' }, { id: 'c3' }, { id: 'c4' }] }));
+      .mockResolvedValueOnce(suite({ testCases: [tc('c1'), tc('c2'), tc('c3')] }))
+      .mockResolvedValueOnce(suite({ testCases: [tc('c1'), tc('c2'), tc('c3'), tc('c4')] }));
 
     const tool = createSuiteTools(ctx, store).add_to_suite;
     const result = await run(tool, { suiteId: 's1', cases: [{ agentCallId: 'call3' }, { agentCallId: 'call4' }] }, ctx);
@@ -186,7 +246,7 @@ describe('add_to_suite', () => {
     const ctx = makeCtx();
     testSuitesApi.get.mockResolvedValue(suite());
     testSuitesApi.addTestCase
-      .mockResolvedValueOnce(suite({ testCases: [{ id: 'c1' }, { id: 'c2' }, { id: 'c3' }] }))
+      .mockResolvedValueOnce(suite({ testCases: [tc('c1'), tc('c2'), tc('c3')] }))
       .mockRejectedValueOnce(new Error('stale trace'));
 
     const tool = createSuiteTools(ctx, store).add_to_suite;
@@ -204,7 +264,7 @@ describe('remove_test_case', () => {
   it('confirms and removes the case, returning the updated suite digest', async () => {
     const ctx = makeCtx();
     testSuitesApi.get.mockResolvedValue(suite());
-    testSuitesApi.removeTestCase.mockResolvedValue(suite({ testCases: [{ id: 'c1' }] }));
+    testSuitesApi.removeTestCase.mockResolvedValue(suite({ testCases: [tc('c1')] }));
 
     const tool = createSuiteTools(ctx, store).remove_test_case;
     const result = await run(tool, { suiteId: 's1', caseId: 'c2' }, ctx);
@@ -235,7 +295,7 @@ describe('remove_test_case', () => {
 describe('update_expected_output', () => {
   it('updates the case with an assistant message and reports updated', async () => {
     const ctx = makeCtx();
-    testCasesApi.update.mockResolvedValue({ id: 'c1' });
+    testCasesApi.update.mockResolvedValue(tc('c1'));
     const tool = createSuiteTools(ctx, store).update_expected_output;
     const result = await run(tool, { caseId: 'c1', content: 'the right answer' }, ctx);
 

@@ -52,6 +52,7 @@ export const TRACEY_TOOL_UI: Record<string, ToolCallMessagePartComponent> = {
   create_suite: SuiteCardToolUI,
   add_to_suite: SuiteCardToolUI,
   remove_test_case: SuiteCardToolUI,
+  set_suite_evaluators: SuiteCardToolUI,
   start_test_run: StartTestRunToolUI,
   submit_optimization_theory: TheoryToolUI,
   await_actions: AwaitActionsToolUI,

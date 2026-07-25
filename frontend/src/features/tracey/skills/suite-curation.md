@@ -1,7 +1,7 @@
 ---
 name: suite-curation
 description: Build and edit benchmark test suites from captured traces. Load when the user wants to create a suite, turn traces into test cases, or add/remove/edit a suite's cases.
-tools: list_suites, get_suite, find_traces, get_trace, create_suite, add_to_suite, remove_test_case, update_expected_output
+tools: list_suites, get_suite, find_traces, get_trace, create_suite, add_to_suite, remove_test_case, update_expected_output, list_evaluators, create_evaluator, set_suite_evaluators
 ---
 
 # Skill: Suite curation

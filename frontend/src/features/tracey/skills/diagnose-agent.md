@@ -1,7 +1,7 @@
 ---
 name: diagnose-agent
 description: Investigate an agent's flagged anomalies end to end — analyze the outlier calls, benchmark them in a suite, and validate a fix with an A/B test. Use when the user asks what's wrong with an agent, about its anomalies/outliers, or to diagnose degraded behavior.
-tools: get_agent_anomalies, get_trace, find_traces, list_suites, get_suite, create_suite, add_to_suite, update_expected_output, list_evaluators, create_evaluator, start_test_run, list_runs, get_run, get_case_results, list_theories, submit_optimization_theory, await_actions
+tools: get_agent_anomalies, get_trace, find_traces, list_suites, get_suite, create_suite, add_to_suite, update_expected_output, list_evaluators, create_evaluator, set_suite_evaluators, start_test_run, list_runs, get_run, get_case_results, list_theories, submit_optimization_theory, await_actions
 ---
 
 # Skill: Diagnose an agent
