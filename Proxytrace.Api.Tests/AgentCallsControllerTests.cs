@@ -251,8 +251,8 @@ public sealed class AgentCallsControllerTests : BaseTest<Module>
             CancellationToken);
 
         // The seeded trace carries the derived session id …
-        var dto = (result.Result as OkObjectResult)?.Value as AgentCallDto;
-        dto.Should().NotBeNull();
+        var ok = result.Result.Should().BeOfType<OkObjectResult>().Subject;
+        var dto = ok.Value.Should().BeOfType<AgentCallDto>().Subject;
         dto.SessionId.Should().Be(expectedSessionId);
 
         // … and the session's denormalized counters were bumped via RecordActivityAsync.
