@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router';
 import { Trans, useLingui } from '@lingui/react/macro';
 import type { TestRunGroupDto } from '../../api/models';
 import { Card } from '../../components/ui/Card';

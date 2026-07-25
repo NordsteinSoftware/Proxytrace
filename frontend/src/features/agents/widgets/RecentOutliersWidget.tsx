@@ -1,5 +1,5 @@
 import { Trans, useLingui } from '@lingui/react/macro';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import { fmtRelative } from '../../../lib/format';
 import { tracePreview } from '../../../lib/trace';
 import { OUTLIER_FLAG_LABEL, outlierFlagKeys } from '../../../lib/outliers';

@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import type { AgentCallDto, CustomAnomalyHitDto } from '../../api/models';
 import { agentColor, modelColor } from '../../lib/colors';
 import { fmtDateTime } from '../../lib/format';

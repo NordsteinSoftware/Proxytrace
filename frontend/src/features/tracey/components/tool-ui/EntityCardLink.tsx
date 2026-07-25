@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router';
 import { ArrowUpRightIcon } from '../../../../components/icons';
 import { ToolUIFrame } from './ToolUIFrame';
 import type { ToolUIState } from './tool-ui-state';

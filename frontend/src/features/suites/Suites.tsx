@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router';
 import { Trans, useLingui } from '@lingui/react/macro';
 import type { EvaluatorDetailDto, TestSuiteListItemDto } from '../../api/models';
 import type { FilterDropdownOption } from '../../components/ui/FilterDropdown';

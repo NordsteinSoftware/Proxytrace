@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router';
 import { useLingui } from '@lingui/react/macro';
 import { CrownIcon, SparklesIcon } from '../icons';
 import { cn } from '../../lib/cn';

@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react';
-import { Navigate, Route, Routes, useLocation, useParams } from 'react-router-dom';
+import { Navigate, Route, Routes, useLocation, useParams } from 'react-router';
 import { useQuery } from '@tanstack/react-query';
 import { LocaleSync } from '../i18n/LocaleSync';
 import { Shell } from '../components/layout/Shell';

@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router';
 import { agentCallsApi } from '../../../api/agent-calls';
 import type { AgentCallDto } from '../../../api/models';
 

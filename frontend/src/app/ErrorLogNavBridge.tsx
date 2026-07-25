@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import { setErrorLogNavigator } from '../lib/errorLogNav';
 
 // Registers a deep-link navigator (used by error toasts to jump to the captured error in the

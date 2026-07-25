@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams } from 'react-router';
 import { Trans, useLingui } from '@lingui/react/macro';
 import { Pagination } from '../../../components/ui/Pagination';
 import { Skeleton, SkeletonList } from '../../../components/ui/Skeleton';

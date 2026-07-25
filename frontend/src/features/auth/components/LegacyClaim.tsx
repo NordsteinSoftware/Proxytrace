@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Trans, useLingui } from '@lingui/react/macro';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import { localAuthApi } from '../../../auth/local/localAuthApi';
 import { passwordIsValid } from '../../../auth/password';
 import { PasswordRequirements } from '../../../components/auth/PasswordRequirements';

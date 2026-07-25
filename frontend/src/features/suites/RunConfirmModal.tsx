@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import { Trans, Plural, useLingui } from '@lingui/react/macro';
 import type { ModelEndpointDto, TestSuiteListItemDto } from '../../api/models';
 import { agentColor } from '../../lib/colors';

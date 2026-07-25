@@ -1,5 +1,5 @@
 import { Trans, Plural, useLingui } from '@lingui/react/macro';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import type { AgentSuitePassRateDto } from '../../../api/models';
 import { fmtRelative } from '../../../lib/format';
 import { RowButton } from '../../../components/ui/RowButton';

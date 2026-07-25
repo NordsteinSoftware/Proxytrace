@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import type { AgentCallDto, MessageDto } from '../../api/models';
 import { useAgentSuites } from './usePromoteTrace';
 import { fmtLatency, fmtTokens, cachedPct } from '../../lib/format';

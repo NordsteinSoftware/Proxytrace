@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router';
 import { Trans, Plural } from '@lingui/react/macro';
 import { ChevronRightIcon, ExternalLinkIcon } from '../../../components/icons';
 import { cn } from '../../../lib/cn';
