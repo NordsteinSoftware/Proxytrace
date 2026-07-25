@@ -3,7 +3,10 @@ import { TestRunStatus } from '../../../api/models';
 
 const { agentsApi, testSuitesApi, testCasesApi, testRunGroupsApi } = vi.hoisted(() => ({
   agentsApi: { get: vi.fn() },
-  testSuitesApi: { get: vi.fn(), create: vi.fn(), addTestCase: vi.fn(), removeTestCase: vi.fn() },
+  testSuitesApi: {
+    get: vi.fn(), create: vi.fn(), createWithCases: vi.fn(),
+    addTestCase: vi.fn(), removeTestCase: vi.fn(), updateEvaluators: vi.fn(),
+  },
   testCasesApi: { update: vi.fn() },
   testRunGroupsApi: { get: vi.fn(), cancel: vi.fn() },
 }));
@@ -46,28 +49,30 @@ describe('create_suite', () => {
   it('confirms, creates from traces, and returns a compact digest', async () => {
     const ctx = makeCtx();
     agentsApi.get.mockResolvedValue({ id: 'a1', name: 'A' });
-    testSuitesApi.create.mockResolvedValue(suite({ testCases: [{ id: 'c1' }] }));
+    testSuitesApi.createWithCases.mockResolvedValue(suite({ testCases: [{ id: 'c1', sourceAgentCallId: 'call1' }] }));
 
     const tool = createSuiteTools(ctx, store).create_suite;
     const result = await run(
-      tool, { name: 'My suite', agentId: 'a1', agentCallIds: ['call1'] }, ctx,
+      tool, { name: 'My suite', agentId: 'a1', cases: [{ agentCallId: 'call1' }] }, ctx,
     );
 
     expect(ctx.confirm).toHaveBeenCalledOnce();
-    expect(testSuitesApi.create).toHaveBeenCalledWith({ name: 'My suite', agentId: 'a1', agentCallIds: ['call1'] });
+    expect(testSuitesApi.createWithCases).toHaveBeenCalledWith({
+      name: 'My suite', agentId: 'a1', testCases: [{ fromAgentCallId: 'call1' }],
+    });
     expect(result).toMatchObject({ id: 's1', name: 'My suite', caseCount: 1 });
   });
 
   it('passes explicit evaluator ids through to the API', async () => {
     const ctx = makeCtx();
     agentsApi.get.mockResolvedValue({ id: 'a1', name: 'A' });
-    testSuitesApi.create.mockResolvedValue(suite());
+    testSuitesApi.createWithCases.mockResolvedValue(suite());
 
     const tool = createSuiteTools(ctx, store).create_suite;
-    await run(tool, { name: 'My suite', agentId: 'a1', agentCallIds: ['call1'], evaluatorIds: ['e1', 'e2'] }, ctx);
+    await run(tool, { name: 'My suite', agentId: 'a1', cases: [{ agentCallId: 'call1' }], evaluatorIds: ['e1', 'e2'] }, ctx);
 
-    expect(testSuitesApi.create).toHaveBeenCalledWith({
-      name: 'My suite', agentId: 'a1', agentCallIds: ['call1'], evaluatorIds: ['e1', 'e2'],
+    expect(testSuitesApi.createWithCases).toHaveBeenCalledWith({
+      name: 'My suite', agentId: 'a1', testCases: [{ fromAgentCallId: 'call1' }], evaluatorIds: ['e1', 'e2'],
     });
   });
 
@@ -75,18 +80,79 @@ describe('create_suite', () => {
     const ctx = makeCtx();
     agentsApi.get.mockResolvedValue(null);
     const tool = createSuiteTools(ctx, store).create_suite;
-    const result = await run(tool, { name: 'x', agentId: 'bad', agentCallIds: ['c'] }, ctx);
+    const result = await run(tool, { name: 'x', agentId: 'bad', cases: [{ agentCallId: 'c' }] }, ctx);
     expect(result).toEqual({ notFound: 'bad' });
-    expect(testSuitesApi.create).not.toHaveBeenCalled();
+    expect(testSuitesApi.createWithCases).not.toHaveBeenCalled();
   });
 
   it('returns CANCELLED on decline and never creates', async () => {
     const ctx = makeCtx(false);
     agentsApi.get.mockResolvedValue({ id: 'a1', name: 'A' });
     const tool = createSuiteTools(ctx, store).create_suite;
-    const result = await run(tool, { name: 'x', agentId: 'a1', agentCallIds: ['c'] }, ctx);
+    const result = await run(tool, { name: 'x', agentId: 'a1', cases: [{ agentCallId: 'c' }] }, ctx);
     expect(result).toBe(CANCELLED);
-    expect(testSuitesApi.create).not.toHaveBeenCalled();
+    expect(testSuitesApi.createWithCases).not.toHaveBeenCalled();
+  });
+});
+
+describe('correction cases', () => {
+  it('create_suite posts the corrected expected output and reports the new case id', async () => {
+    const ctx = makeCtx();
+    agentsApi.get.mockResolvedValue({ id: 'a1', name: 'A' });
+    testSuitesApi.createWithCases.mockResolvedValue(suite({
+      testCases: [{ id: 'c9', sourceAgentCallId: 'call1' }],
+    }));
+
+    const tool = createSuiteTools(ctx, store).create_suite;
+    const result = await run(tool, {
+      name: 'Refund policy', agentId: 'a1',
+      cases: [{ agentCallId: 'call1', expectedOutput: 'Refund refused.' }],
+      evaluatorIds: ['e1'],
+    }, ctx);
+
+    expect(testSuitesApi.createWithCases).toHaveBeenCalledWith({
+      name: 'Refund policy', agentId: 'a1', evaluatorIds: ['e1'],
+      testCases: [{ fromAgentCallId: 'call1', expectedOutput: { role: 'assistant', content: 'Refund refused.' } }],
+    });
+    expect(result).toMatchObject({
+      addedCases: [{ caseId: 'c9', agentCallId: 'call1', isCorrection: true }],
+    });
+  });
+
+  it('add_to_suite passes the correction through and diffs out the new case id', async () => {
+    const ctx = makeCtx();
+    testSuitesApi.get.mockResolvedValue(suite({ testCases: [{ id: 'c1' }] }));
+    testSuitesApi.addTestCase.mockResolvedValue(suite({
+      testCases: [{ id: 'c1' }, { id: 'c2', sourceAgentCallId: 'call1' }],
+    }));
+
+    const tool = createSuiteTools(ctx, store).add_to_suite;
+    const result = await run(tool, {
+      suiteId: 's1', cases: [{ agentCallId: 'call1', expectedOutput: 'Refund refused.' }],
+    }, ctx);
+
+    expect(testSuitesApi.addTestCase).toHaveBeenCalledWith('s1', 'call1', { role: 'assistant', content: 'Refund refused.' });
+    expect(result).toMatchObject({ addedCases: [{ caseId: 'c2', agentCallId: 'call1', isCorrection: true }] });
+  });
+
+  it('maps each created case by provenance, not by array position', async () => {
+    const ctx = makeCtx();
+    agentsApi.get.mockResolvedValue({ id: 'a1', name: 'A' });
+    // The API is under no obligation to return the cases in request order.
+    testSuitesApi.createWithCases.mockResolvedValue(suite({
+      testCases: [{ id: 'cB', sourceAgentCallId: 'callB' }, { id: 'cA', sourceAgentCallId: 'callA' }],
+    }));
+
+    const tool = createSuiteTools(ctx, store).create_suite;
+    const result = await run(tool, {
+      name: 'S', agentId: 'a1',
+      cases: [{ agentCallId: 'callA', expectedOutput: 'right' }, { agentCallId: 'callB' }],
+    }, ctx) as { addedCases: { caseId: string; agentCallId: string; isCorrection: boolean }[] };
+
+    expect(result.addedCases).toEqual([
+      { caseId: 'cA', agentCallId: 'callA', isCorrection: true },
+      { caseId: 'cB', agentCallId: 'callB', isCorrection: false },
+    ]);
   });
 });
 
@@ -99,11 +165,11 @@ describe('add_to_suite', () => {
       .mockResolvedValueOnce(suite({ testCases: [{ id: 'c1' }, { id: 'c2' }, { id: 'c3' }, { id: 'c4' }] }));
 
     const tool = createSuiteTools(ctx, store).add_to_suite;
-    const result = await run(tool, { suiteId: 's1', agentCallIds: ['call3', 'call4'] }, ctx);
+    const result = await run(tool, { suiteId: 's1', cases: [{ agentCallId: 'call3' }, { agentCallId: 'call4' }] }, ctx);
 
     expect(testSuitesApi.addTestCase).toHaveBeenCalledTimes(2);
-    expect(testSuitesApi.addTestCase).toHaveBeenNthCalledWith(1, 's1', 'call3');
-    expect(testSuitesApi.addTestCase).toHaveBeenNthCalledWith(2, 's1', 'call4');
+    expect(testSuitesApi.addTestCase).toHaveBeenNthCalledWith(1, 's1', 'call3', undefined);
+    expect(testSuitesApi.addTestCase).toHaveBeenNthCalledWith(2, 's1', 'call4', undefined);
     expect(result).toMatchObject({ id: 's1', caseCount: 4 });
   });
 
@@ -111,7 +177,7 @@ describe('add_to_suite', () => {
     const ctx = makeCtx();
     testSuitesApi.get.mockResolvedValue(null);
     const tool = createSuiteTools(ctx, store).add_to_suite;
-    const result = await run(tool, { suiteId: 'bad', agentCallIds: ['c'] }, ctx);
+    const result = await run(tool, { suiteId: 'bad', cases: [{ agentCallId: 'c' }] }, ctx);
     expect(result).toEqual({ notFound: 'bad' });
     expect(testSuitesApi.addTestCase).not.toHaveBeenCalled();
   });
@@ -124,7 +190,7 @@ describe('add_to_suite', () => {
       .mockRejectedValueOnce(new Error('stale trace'));
 
     const tool = createSuiteTools(ctx, store).add_to_suite;
-    const result = await run(tool, { suiteId: 's1', agentCallIds: ['good', 'bad'] }, ctx) as {
+    const result = await run(tool, { suiteId: 's1', cases: [{ agentCallId: 'good' }, { agentCallId: 'bad' }] }, ctx) as {
       caseCount: number; failed?: { id: string; error: string }[];
     };
 
