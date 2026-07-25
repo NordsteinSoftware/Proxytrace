@@ -36,6 +36,9 @@ REFACTORING-TODO.md
 *.local.json
 **/__pycache__/*
 sample-client/.env
+# Docker Compose reads a repo-root .env automatically, so one exists on most dev machines and
+# holds real provider credentials. It was not ignored — a `git add -A` would have committed it.
+/.env
 
 # Local databases
 **/*.db-*

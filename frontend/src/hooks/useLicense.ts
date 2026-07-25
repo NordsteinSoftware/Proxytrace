@@ -16,6 +16,10 @@ export function useLicense() {
     queryFn: licenseApi.get,
     staleTime: 60 * 60 * 1000,
     refetchOnWindowFocus: false,
+    // Rendered in masthead chrome (the three license banners) — a routine license-endpoint
+    // failure must degrade the banner in place, not rethrow and collapse the whole top bar via
+    // the chrome boundary (BEST_PRACTICES §9.1), matching sibling useNotifications/useUpdateStatus.
+    throwOnError: false,
   });
 }
 

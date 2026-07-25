@@ -205,8 +205,31 @@ Every async view ships all three (DESIGN.md §3.5 owns the visuals; the code mec
 
 - **Loading:** render `Skeleton` shaped like the final layout (reserve height to prevent layout jump). `Spinner` only for inline/button loading. Drive off Query's `isLoading`/`isPending`.
 - **Empty:** `EmptyState` when `data` is empty (distinct from loading). Never show an empty grid as if loaded-with-nothing is the same as loading.
-- **Error:** Query's `isError` → inline `text-danger` near the control, or `EmptyState` danger variant for full-page. App-level crashes are caught by `components/ErrorBoundary.tsx` — keep one at the route boundary; don't let a render throw blank the app.
+- **Error:** Query's `isError` → inline `text-danger` near the control, or `EmptyState` danger variant for full-page. App-level crashes are caught by `components/ErrorBoundary.tsx` — don't let a render throw blank the app.
 - The global `api/client.ts` already surfaces API errors as toasts. Don't double-report; let a mutation's `onError` add context only when it adds value.
+
+### 9.1 Nothing may blank the app
+
+`app/queryClient.ts` sets **`throwOnError: true` globally**, so any unhandled query error is rethrown
+during render. That is the right default for a page — the boundary turns it into a message — but it
+makes *where* a component renders load-bearing:
+
+- **Every region gets a boundary.** `wrap()` in `app/AppRoutes.tsx` covers route elements, but the
+  router `Outlet` is only part of the tree. `Shell` renders the nav rail, the license/update banners
+  and the masthead as **siblings** of the `Outlet`, so a route-level boundary structurally cannot
+  catch a throw in them — `Shell` wraps each of those regions in its own `ErrorBoundary`. Per-region,
+  not one at the root: a root boundary replaces the router too, so the user cannot navigate away
+  from the failure. If you add a new region outside the `Outlet`, it needs its own boundary.
+- **A query rendered in app chrome sets `throwOnError: false`.** The boundary is a backstop for
+  *bugs*; a fetch that fails routinely (the API restarts, a session expires) must degrade in place —
+  an empty bell, a hidden badge — not take out the masthead. `features/notifications/hooks/useNotifications.ts`
+  is the worked example.
+- **Pass `resetKeys={[location.key]}`.** React reconciles one boundary instance across route
+  changes, so without it a caught error follows the user to every subsequent page until a full
+  reload — and "Try again" alone just re-renders the same children, so a deterministic error returns
+  instantly. Use `key`, not `pathname`: several selections live in the query string.
+- **Give a chrome boundary a `fallback` shaped like its slot.** The default is a full-height block;
+  in a 48px bar it wrecks the layout. `components/layout/ChromeErrorFallback.tsx` is the shared one.
 
 ---
 

@@ -5124,6 +5124,9 @@ msgstr "Esta licencia se proporcionó mediante la variable de entorno PROXYTRACE
 msgid "this page"
 msgstr "esta página"
 
+msgid "This part of the app didn't load."
+msgstr "Esta parte de la aplicación no se pudo cargar."
+
 msgid "This password reset link is missing or malformed. Request a new one."
 msgstr "Este enlace de restablecimiento de contraseña falta o está mal formado. Solicita uno nuevo."
 
