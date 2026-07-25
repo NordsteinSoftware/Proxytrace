@@ -34,8 +34,10 @@ broader trends).
 
 Investigative reads for YOUR reasoning — keep them silent (no `present`):
 
-- `get_trace` 2–4 representative anomalies (cover the dominant reasons in `byReason`) and read the
-  actual prompt/response.
+- `get_trace` with `verbose: true` on 2–4 representative anomalies (cover the dominant reasons in
+  `byReason`) and read the actual conversation — every message, the tool calls, the response.
+  Without `verbose` you get only metadata (tokens, latency, status), which cannot tell you WHY the
+  call went wrong.
 - `find_traces` for broader context when the flagged calls alone don't explain it (e.g. compare
   against normal calls of the same agent).
 

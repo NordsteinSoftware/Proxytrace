@@ -21,9 +21,13 @@ Cross-cutting reads that aren't tied to a single agent or suite.
   while you're hunting; pass `present: true` only when the matching list itself is the answer. It
   hides traces of internal system agents (Tracey, evaluators) — pass `includeSystem: true` only
   when the user explicitly wants a system agent's calls.
-- `get_trace` — a single captured trace (agent call) with model, status, token usage, latency, and
-  cost (pass `present: true` to render its clickable card). Use it to inspect one specific call
-  (often one `find_traces` surfaced).
+- `get_trace` — a single captured trace (agent call). By default a metadata summary: model, status,
+  token usage, latency, cost. Pass `verbose: true` to get the WHOLE trace instead — every request
+  message (system, user, assistant, tool results) with its tool calls, the full response, the tool
+  schema and the model parameters. Use it to inspect one specific call (often one `find_traces`
+  surfaced); go verbose whenever the question is about what was actually said or why the call
+  behaved that way, and stay on the summary for a "how big / how slow / how much" glance.
+  (Pass `present: true` to render its clickable card.)
 
 Never invent ids or numbers — fetch them first. Reads are silent by default; pass `present: true`
 only on the call whose card is the answer, and lead with that one component.

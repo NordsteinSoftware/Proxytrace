@@ -66,7 +66,7 @@ the wire and attributes the call to her agent by name (`X-Proxytrace-Agent` / sa
 | `tracey-chat-context.ts` | Shares the single `TraceyChat` (runtime + state) app-wide. `TraceyChatProvider` mounts in `TraceyHost` around the `Outlet`; `useTraceyChatContext()` reads it from the page. |
 | `tracey-runtime.ts` | `TraceyTransport` — the AI SDK `ChatTransport`. Wires `createOpenAI` at the same-origin base URL, injects the JWT + turn-correlation header per request, windows the history sent to the model (`windowMessages`, UI thread untouched), runs `streamText` with `prepareStep` (progressive tool disclosure) + `stopWhen: stepCountIs(MAX_TURN_STEPS)` (64 — a high infinite-loop **safety backstop**, not a user-facing turn limit), adapts our tools into the SDK `ToolSet` (threading the abort signal), and writes per-turn metadata on finish. |
 | `tracey-tools.ts` | **Composition root** for tools: `createTraceyTools(ctx)` wires every `tools/*` domain factory against a shared artifact store. `TRACEY_TOOLS_META` is the static name+description list for the slash menu (must list every tool). |
-| `tools/` | Per-domain tool factories: `navigation.ts` (navigate, search_docs, load_skill), `agents.ts`, `suites.ts`, `runs.ts`, `proposals.ts`, `stats.ts`, `providers.ts`, `traces.ts`, `display.ts` (show_*, ask_questions), `await.ts` (await_actions). `shared.ts` holds `TraceyToolContext`, the `tool()`/`empty`/`CANCELLED` helpers, and `makeStore`. `poll-until-terminal.ts` backs `await`; `run-analysis.ts` holds the pure failure/comparison derivations behind `get_run_failures`/`compare_runs` (verdicts reuse `features/runs/results.ts`). |
+| `tools/` | Per-domain tool factories: `navigation.ts` (navigate, search_docs, load_skill), `agents.ts`, `suites.ts`, `runs.ts`, `proposals.ts`, `stats.ts`, `providers.ts`, `traces.ts`, `display.ts` (show_*, ask_questions), `await.ts` (await_actions). `shared.ts` holds `TraceyToolContext`, the `tool()`/`empty`/`CANCELLED` helpers, and `makeStore`. `poll-until-terminal.ts` backs `await`; `run-analysis.ts` holds the pure failure/comparison derivations behind `get_run_failures`/`compare_runs` (verdicts reuse `features/runs/results.ts`); `trace-transcript.ts` builds `get_trace`'s verbose whole-conversation digest. |
 | `tool-access.ts` | **Progressive tool disclosure.** `CORE_TOOL_NAMES` (always active) + `activeToolNamesFor(loadedSkillIds)` (core ∪ the tool bundles of skills loaded this conversation). |
 | `tracey-prompt.ts` | `TRACEY_SYSTEM_PROMPT` — her system prompt (wire source of truth), with the skill catalog appended. |
 | `skills/` | On-demand **skills** — markdown playbooks loaded at runtime via `load_skill`. `registry.ts` parses front-matter (`name`, `description`, optional `tools:` bundle) from every `*.md` via `import.meta.glob`; `types.ts`; one file per skill. |
@@ -215,7 +215,7 @@ column is which bundle activates the tool (`core` = always available).
 | `get_dashboard_stats` | read | no | `project-insights` | `DashboardStatsToolUI` |
 | `get_provider` | read | no | `project-insights` | `ProviderCardToolUI` |
 | `find_traces` | read (search) | no | `project-insights`, `optimize-agent`, `diagnose-agent` | `TraceListToolUI` |
-| `get_trace` | read | no | `project-insights`, `optimize-agent`, `diagnose-agent` | `TraceCardToolUI` |
+| `get_trace` | read (`verbose` opt-in) | no | `project-insights`, `optimize-agent`, `diagnose-agent` | `TraceCardToolUI` |
 | `get_agent_anomalies` | read | no | `diagnose-agent` | `AnomalyListToolUI` |
 | `list_evaluators` | read | no | `diagnose-agent` | `EvaluatorListToolUI` |
 | `create_evaluator` | write | **yes** | `diagnose-agent` | `ToolCallCard` |
@@ -241,6 +241,46 @@ is unit-tested. The prompt's "card economy" rules tell the model to keep reads s
 **writes** (`create_suite`/`add_to_suite`/`remove_test_case`) — a mutation result is a real event,
 so `get_suite` is gated while those writes (same `SuiteCardToolUI`) are not. The gate is applied
 per registry entry, so the same component is gated for a read yet full for a write.
+
+## Verbose reads: the whole trace (`get_trace`)
+
+Every read tool digests its payload down for the model (see the artifact store below), which is
+right for lists and entities but was **wrong for a trace**: the digest carried metadata only
+(model, status, tokens, latency, cost), so the model could describe a call it had never read. It
+could not quote a prompt, explain a failure, or judge whether a trace was worth capturing as a test
+case — the card showed the conversation to the *user*, but nothing reached the *model*.
+
+So `get_trace` takes an opt-in **`verbose: boolean`**. With it, the digest is the full transcript
+built by the pure `tools/trace-transcript.ts`:
+
+- every **request message** in order (role, content, `toolCallId`) with its **tool requests**
+  (id, name, raw arguments), then the **response** message the same way,
+- the **tool schema** the agent was offered (name, clipped description, argument name/type/required
+  /enum values), the **set** model parameters (nulls dropped), plus `cachedInputTokens`,
+  `finishReason`, `errorMessage`, the conversation/session ids, and the decoded outlier reasons.
+
+`verbose` is model-facing only: the stored artifact and the `TraceCardToolUI` card are identical
+either way, and `present` still decides whether a card renders at all. The two flags are
+orthogonal — verbose widens what the *model* sees, `present` widens what the *user* sees.
+
+**Sizing — two ceilings.** A captured call has no size limit, so an unbounded transcript could
+swallow a turn's context in one read. `traceTranscript` clips every message (and every tool-call
+argument string) at `min(MESSAGE_CHAR_MAX, fairShareCap(…))`:
+
+- **`MESSAGE_CHAR_MAX`** (20k chars ≈ 5k tokens) is a hard per-message ceiling that **always**
+  applies. Without it a call whose single message is enormous stays under the total budget and
+  hands the model the whole thing.
+- **`TRANSCRIPT_CHAR_BUDGET`** (100k chars ≈ 25k tokens) bounds the conversation as a whole, split
+  by a **fair-share (water-filling)** rule (`fairShareCap`, unit-tested): the largest per-string cap
+  whose `sum(min(length, cap))` fits the budget. Short messages therefore always survive whole and
+  only the outsized ones (a giant tool result, a pasted document) pay.
+
+**No message is ever dropped** — the model always sees the true shape of the conversation — and any
+clipping adds a `note` telling it the user's card holds the untouched original.
+
+The prompt and the `project-insights` / `optimize-agent` / `diagnose-agent` / `suite-curation`
+skills all instruct the model to go verbose whenever the *content* of a call matters and to stay on
+the summary for a metadata glance. Keep those in sync with this behavior.
 
 ## System agents hidden by default
 
@@ -286,7 +326,8 @@ adapter. Each domain factory also receives a `StoreFn` bound to the artifact sto
   card always shows everything), and
   `get_dashboard_stats` includes `byAgent`/`byModel` usage breakdowns so a cross-agent usage chart
   needs one read, not `get_agent_stats` per agent (the prompt's "card economy" rules lean on
-  this).
+  this). `get_trace` additionally takes `verbose: true` to return the whole captured conversation
+  instead of the metadata digest — see "Verbose reads" above.
 - **Write tools** (`start_test_run`, `cancel_test_run`, `set_proposal_status`,
   `submit_optimization_theory`, and the suite-curation writes `create_suite` / `add_to_suite` /
   `remove_test_case` / `update_expected_output`) set `confirm: true`. They call `ctx.confirm(summary)`

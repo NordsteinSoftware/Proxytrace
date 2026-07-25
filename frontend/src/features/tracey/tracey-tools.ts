@@ -63,7 +63,7 @@ export const TRACEY_TOOLS_META: { name: string; description: string }[] = [
   { name: 'list_theories', description: 'List past optimization theories and their A/B outcomes.' },
   { name: 'get_provider', description: 'Get one model provider by id.' },
   { name: 'find_traces', description: 'Search captured traces (agent, text, status).' },
-  { name: 'get_trace', description: 'Get one captured trace by id.' },
+  { name: 'get_trace', description: 'Get one captured trace by id (verbose: the whole conversation).' },
   { name: 'get_agent_anomalies', description: "Recent anomaly-flagged (outlier) calls of an agent." },
   { name: 'list_evaluators', description: "List the project's evaluators." },
   { name: 'create_evaluator', description: 'Create an evaluator to score suites with (confirm).' },

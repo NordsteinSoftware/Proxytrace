@@ -40,6 +40,20 @@ from a table and ask "look at trace `6339237b-0757-48ec-88bc-83233a3d29a8`" or "
 `…`". She opens exactly that item instead of searching for it. Naming something instead
 ("the Returns agent") works too; she looks the name up first.
 
+### Reading a whole trace
+
+When you ask about a captured call, Tracey can read the **entire trace** — not just its headline
+numbers. Ask her to explain, review, summarize, or debug a trace ("why did this call fail?", "what
+was this agent told?", "summarize trace `…`") and she pulls the **full conversation**: every
+message in the request (the system prompt, the user turns, the assistant's replies, tool calls and
+their results), the model's final response, the tool schema the agent was offered, and the model
+parameters (temperature, max tokens, …) the call ran with. That is what lets her quote the prompt,
+point at the exact turn that went wrong, and turn a trace into a test case.
+
+For a quick "how big, how slow, how much" question she stays on the trace's summary — model,
+status, tokens, latency and cost — so the answer is fast and cheap. Either way the trace itself
+renders as a card you can click through to the full detail view.
+
 By default Tracey answers about **your own agents**. Proxytrace runs a few internal *system*
 agents — Tracey herself and the evaluators that score your test runs — which make their own model
 calls. She leaves these out of "list my agents", token-usage charts, recent test runs, and trace

@@ -12,8 +12,10 @@ Turn real captured traces into a benchmark suite — the product's core loop. Th
 ## Find the traces
 
 A suite is seeded from captured traces. Use `find_traces` (search by agent, text, or status) to
-locate the interactions worth capturing — typically failures or notable cases — and `get_trace` to
-inspect one. You need their agent-call ids for the write tools below.
+locate the interactions worth capturing — typically failures or notable cases — and `get_trace`
+with `verbose: true` to read one in full (its whole conversation and response), which is what tells
+you whether it is worth locking in as a case. You need their agent-call ids for the write tools
+below.
 
 ## Build or extend
 

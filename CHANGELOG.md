@@ -11,6 +11,16 @@ follow [Semantic Versioning](https://semver.org). Ongoing work is collected unde
 
 ### Added
 
+- **Tracey can read a whole trace.** Asking Tracey about a captured call previously gave her only its
+  headline numbers (model, status, tokens, latency, cost) — enough to describe the call, but not to
+  read it. She can now pull the **complete trace** instead: every message of the request (system
+  prompt, user turns, assistant replies, tool calls and their results), the full response, the tool
+  schema the agent was offered, and the model parameters the call ran with. So "why did this call
+  fail?", "what was this agent actually told?" and "summarize this trace" are answered from the real
+  conversation rather than from metadata, and trace-driven work — diagnosing anomalies, grounding an
+  optimization theory, curating a suite from traces — is based on what was really said. She keeps
+  using the quick summary for "how big / how slow / how much" questions.
+
 - **Debugging sessions: group live traces across agents and conversations.** Tag your calls with the
   `x-proxytrace-session-id` header and Proxytrace collects every trace sharing that key — spanning
   multiple agents and conversations — into one **session**, the bigger picture around a single app run

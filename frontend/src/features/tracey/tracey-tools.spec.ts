@@ -510,7 +510,46 @@ describe('tracey entity-fetch tools', () => {
     expect(agentCallsApi.get).toHaveBeenCalledWith('t1', { silentStatuses: [404] });
     expect(result.kind).toBe('trace');
     expect(result.summary).toMatchObject({ id: 't1', model: 'gpt-4o', httpStatus: 200 });
+    // Without `verbose` the model gets metadata only — no conversation.
+    expect(result.summary).not.toHaveProperty('messages');
     expect(await getArtifact(result.artifactRef)).toEqual(call);
+  });
+
+  it('get_trace with verbose returns the whole conversation, not just the metadata summary', async () => {
+    const call = {
+      id: 't1', agentName: 'Returns', model: 'gpt-4o', provider: 'openai', httpStatus: 200,
+      inputTokens: 10, outputTokens: 20, cachedInputTokens: 4, durationMs: 500, costEur: 0.1,
+      finishReason: 'stop', createdAt: '2026-06-01T00:00:00Z', outlierFlags: 0,
+      request: [
+        { role: 'system', content: 'Be terse.', toolRequests: [], toolCallId: null },
+        { role: 'user', content: 'Refund order 42?', toolRequests: [], toolCallId: null },
+      ],
+      response: { role: 'assistant', content: 'Refunded.', toolRequests: [], toolCallId: null },
+      tools: [{ name: 'refund', description: 'Refund an order.', arguments: [] }],
+      modelParameters: { temperature: 0.2 },
+    };
+    agentCallsApi.get.mockResolvedValue(call);
+    const ctx = makeCtx();
+    const result = await exec(createTraceyTools(ctx).get_trace, { traceId: 't1', verbose: true }, ctx) as {
+      artifactRef: string; kind: string;
+      summary: { messageCount: number; messages: { role: string; content: string }[]; response: { content: string } };
+    };
+
+    expect(result.summary.messageCount).toBe(2);
+    expect(result.summary.messages).toEqual([
+      { role: 'system', content: 'Be terse.' },
+      { role: 'user', content: 'Refund order 42?' },
+    ]);
+    expect(result.summary.response).toEqual({ role: 'assistant', content: 'Refunded.' });
+    // The card resolves the same untouched artifact either way.
+    expect(await getArtifact(result.artifactRef)).toEqual(call);
+  });
+
+  it('get_trace with verbose still answers a missing trace with notFound', async () => {
+    agentCallsApi.get.mockRejectedValue(Object.assign(new Error('gone'), { status: 404 }));
+    const ctx = makeCtx();
+    expect(await exec(createTraceyTools(ctx).get_trace, { traceId: 't9', verbose: true }, ctx))
+      .toEqual({ notFound: 't9' });
   });
 });
 

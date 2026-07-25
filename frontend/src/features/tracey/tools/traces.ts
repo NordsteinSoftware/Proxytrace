@@ -3,13 +3,15 @@ import { agentCallsApi } from '../../../api/agent-calls';
 import { outlierFlagKeys, type OutlierFlagKey } from '../../../lib/outliers';
 import { type ToolFactory, tool, ignore404, isEntityId, presentArg, includeSystemArg } from './shared';
 import { clip } from './run-analysis';
+import { traceTranscript } from './trace-transcript';
 
 export const createTraceTools: ToolFactory = (ctx, store) => ({
   find_traces: tool({
     description:
       'Search the captured traces (real LLM calls) of this project — by agent, free-text query, ' +
       'or HTTP status — newest first. Use it to ground a tuning hypothesis in what the agent ' +
-      'actually said: find failing or suspicious calls, then `get_trace` one for full detail. ' +
+      'actually said: find failing or suspicious calls, then `get_trace` one with `verbose: true` ' +
+      'to read its whole conversation. ' +
       'The matching traces are rendered to the user as a card. Hides traces of internal system ' +
       'agents (Tracey, evaluators) unless includeSystem is true. `query` searches message CONTENT, ' +
       'not ids — to open a trace whose id you already have, call `get_trace` instead.',
@@ -62,7 +64,8 @@ export const createTraceTools: ToolFactory = (ctx, store) => ({
       'at ingestion — each call sits far outside the agent\'s own recent baseline (mean ± sigma). ' +
       'Flag reasons: HighTokens (token count / cost spike), HighLatency, LowCacheHit (prompt-cache ' +
       'hit rate collapsed), ManyToolCalls (tool-call loop). Use this to diagnose what is wrong with ' +
-      'an agent, then `get_trace` a few flagged calls for full detail. The matching calls are ' +
+      'an agent, then `get_trace` a few flagged calls with `verbose: true` to read them in full. ' +
+      'The matching calls are ' +
       'rendered to the user as a card with the flagged reasons.',
     parameters: z.object({
       present: presentArg,
@@ -107,14 +110,29 @@ export const createTraceTools: ToolFactory = (ctx, store) => ({
   }),
   get_trace: tool({
     description:
-      'Get a single captured trace (agent call) by id. Returns a curated summary (model, status, ' +
-      'token usage, latency, cost) plus a reference; the full trace is rendered to the user as a card.',
-    parameters: z.object({ present: presentArg, traceId: z.string().describe('The id of the trace / agent call to fetch.') }),
+      'Get a single captured trace (agent call) by id. By default returns only a metadata summary ' +
+      '(model, status, token usage, latency, cost) — enough to describe the call, NOT to read it. ' +
+      'Set `verbose: true` to also get the WHOLE conversation: every request message (system, user, ' +
+      'assistant, tool results) with its tool calls, the full response, the tool schema the agent ' +
+      'was offered, and the model parameters. Use verbose whenever you need to reason about what ' +
+      'the agent actually said or did. Either way the full trace is rendered to the user as a card.',
+    parameters: z.object({
+      present: presentArg,
+      traceId: z.string().describe('The id of the trace / agent call to fetch.'),
+      verbose: z.boolean().optional().describe(
+        'Return the complete trace — the whole conversation (all messages + tool calls), the ' +
+        'response, the tool schema and model parameters — instead of the metadata summary. ' +
+        'Set true whenever the CONTENT of the call matters (diagnosing a failure, quoting the ' +
+        'prompt, building a test case); it costs context, so leave it off for a metadata glance.',
+      ),
+    }),
     confirm: false,
-    execute: async ({ traceId }) => {
+    execute: async ({ traceId, verbose }) => {
       const call = await ignore404(() => agentCallsApi.get(traceId, { silentStatuses: [404] }));
       if (!call) return { notFound: traceId };
-      return store('trace', call, {
+      // The card resolves the same stored artifact either way — `verbose` only widens what the
+      // model itself receives, from metadata to the full transcript.
+      return store('trace', call, verbose ? traceTranscript(call) : {
         id: call.id,
         model: call.model,
         provider: call.provider,

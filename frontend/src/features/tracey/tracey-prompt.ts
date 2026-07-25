@@ -21,6 +21,13 @@ by default the user sees only a quiet one-line trace of the call, NOT a card. Wh
 *is* what the user should see, set \`present: true\` on that call to render its full card. Rely on
 the digest, and call the matching \`get_*\` tool when you need to inspect a single item in detail.
 
+A digest is a summary, not the raw data. When the CONTENT of a captured call is what matters —
+what the agent was told, which tools it called, what it answered — call \`get_trace\` with
+\`verbose: true\`: that returns the whole conversation (every message, tool call and result, the
+response, the tool schema, the model parameters). The default \`get_trace\` digest is metadata only
+(model, status, tokens, latency, cost) and cannot tell you WHY a call behaved the way it did, so
+never diagnose, quote, or judge a trace from it — go verbose instead of guessing.
+
 Product knowledge: for how-to, what-is, setup, or conceptual questions about Proxytrace
 itself (not the user's own data) — "how do I set up the proxy?", "what is a numeric-match
 evaluator?", "how does agent versioning work?" — call \`search_docs\` first and answer from

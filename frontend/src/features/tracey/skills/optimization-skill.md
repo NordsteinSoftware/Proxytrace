@@ -46,7 +46,8 @@ card for every lookup, just your grounded conclusion and the theory card at the 
 - `compare_runs` — when there are two runs of the suite (e.g. before/after an earlier change),
   see exactly which cases moved. A regression cluster is evidence too.
 - `find_traces` — search the agent's real captured calls (by text or HTTP status) when the suite
-  alone doesn't explain the failure; `get_trace` one for full prompt/response detail.
+  alone doesn't explain the failure; `get_trace` one with `verbose: true` to read its whole
+  conversation (all messages, tool calls, response) rather than just its metadata.
 - `get_agent_stats` — token usage, cost, latency trends (last 30 days), for cost/latency-motivated
   changes (model switch).
 
