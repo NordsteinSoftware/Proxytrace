@@ -5,6 +5,7 @@ using Proxytrace.Domain;
 using Proxytrace.Domain.Agent;
 using Proxytrace.Domain.AgentCall;
 using Proxytrace.Domain.AgentVersion;
+using Proxytrace.Domain.Session;
 using Proxytrace.Domain.Events;
 using Proxytrace.Domain.ModelEndpoint;
 using Proxytrace.Domain.Project;
@@ -540,6 +541,39 @@ internal class AgentCallRepository : AbstractRepository<IAgentCall, AgentCallEnt
         context.Set<AgentCallEntity>().RemoveRange(toRemove);
         await context.SaveChangesAsync(cancellationToken);
         return toRemove.Count;
+    }
+
+    public async Task<IReadOnlyList<SessionTraceRemoval>> GetSessionRemovalsOlderThanAsync(
+        DateTimeOffset cutoffDate,
+        CancellationToken cancellationToken = default)
+    {
+        // Same predicate as RemoveOlderThanAsync, plus the session filter — one indexed CreatedAt
+        // range, aggregated server-side into one row per session. TotalTokens is the denormalized
+        // column ingestion also bumps the session by, so the delta is an exact reversal; a call with
+        // no usage stored contributes 0 rather than dropping out of the count.
+        var grouped = await contextFactory()
+            .Set<AgentCallEntity>()
+            .AsNoTracking()
+            .Where(e => e.CreatedAt <= cutoffDate && e.SessionId != null)
+            .GroupBy(e => e.SessionId)
+            .Select(g => new
+            {
+                SessionId = g.Key,
+                TraceCount = g.Count(),
+                TotalTokens = g.Sum(e => (long)(e.TotalTokens ?? 0)),
+            })
+            .ToListAsync(cancellationToken);
+
+        var removals = new List<SessionTraceRemoval>(grouped.Count);
+        foreach (var row in grouped)
+        {
+            // The grouping key is nullable because the column is; the WHERE above already excluded
+            // the null group, so this only ever skips nothing.
+            if (row.SessionId is { } sessionId)
+                removals.Add(new SessionTraceRemoval(sessionId, row.TraceCount, row.TotalTokens));
+        }
+
+        return removals;
     }
 
     public async Task SetOutlierFlagAsync(Guid id, OutlierFlags flag, CancellationToken cancellationToken = default)

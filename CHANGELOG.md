@@ -16,6 +16,27 @@ follow [Semantic Versioning](https://semver.org). Ongoing work is collected unde
   traces, so the row you were sent to was never highlighted or brought into view. The older the
   trace, the more likely it was. The list now loads until it reaches the linked trace and scrolls it
   into the middle of the view, with the surrounding traces around it.
+- **A session's trace and token counters now go down when traces are deleted.** They were only ever
+  incremented, so deleting a trace — by hand, or because it passed the retention window — left the
+  session header claiming more traces than its timeline could show, permanently. Both retention and
+  the delete action now give back exactly what the removed traces contributed.
+
+- **Sessions no longer accumulate forever.** Session rows outlived their traces indefinitely, so a
+  client that mints a fresh session key per run grew the table without bound — including sessions
+  whose traces were long gone. The nightly trace cleanup now removes sessions whose last activity has
+  passed the same retention window, which by definition means every trace they grouped is already
+  gone. Sessions with recent traces are never touched.
+
+- **Edits to an agent no longer fail for minutes after a busy save.** Under concurrent traffic — an
+  agent being updated while its traces were still arriving and the UI was open — the in-process entity
+  cache could refill with the *pre-save* version of a row and keep serving it for up to five minutes.
+  Every write attempted against that stale copy was rejected as a conflict, so ingestion retried and
+  saves failed for no visible reason. Cached entries are now dropped again once the save commits, so
+  the stale copy cannot outlive the write that replaced it.
+
+- **The proxy logs each upstream request once, not four times.** Every call your agents made through
+  the proxy emitted four identical sets of HTTP client log lines, quadrupling the volume on the
+  busiest path in the system and making proxy logs hard to read during an incident.
 
 - **Proxytrace is documented as source-available, consistently.** The Docker Hub overview still
   declared the product *Proprietary*, contradicting the Elastic License 2.0 relicense in 1.5.0 — the
