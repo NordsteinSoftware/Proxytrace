@@ -12,6 +12,8 @@
     "agentCallsListByAgent": 40,
     "agentCallsListByTimeRange": 80,
     "agentCallsHistogram": 150,
+    "agentCallsSummary": 1200,
+    "agentCallsSummaryByTimeRange": 200,
     "agentCallsListSortLatency": 550,
     "agentCallsListSortTokens": 600,
     "agentCallsListSortToolCount": 450,

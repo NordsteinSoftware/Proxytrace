@@ -370,10 +370,6 @@ msgstr "{0} tokens"
 msgid "{0} tools"
 msgstr "{0} Tools"
 
-#. placeholder {0}: total.toLocaleString()
-msgid "{0} total"
-msgstr "{0} total"
-
 #. placeholder {0}: Math.round(v)
 msgid "{0} traces"
 msgstr "{0} traces"
@@ -386,6 +382,12 @@ msgstr "{0} traces por mes, conservados {1} días"
 #. placeholder {0}: limits.TraceRetentionDays ?? 365
 msgid "{0}-day trace retention"
 msgstr "retención de traces de {0} días"
+
+#. placeholder {0}: first.toLocaleString()
+#. placeholder {1}: last.toLocaleString()
+#. placeholder {2}: total.toLocaleString()
+msgid "{0}–{1} of {2}"
+msgstr ""
 
 #. placeholder {0}: m.name
 #. placeholder {1}: fmtTokens(m.tokens)
@@ -1970,6 +1972,9 @@ msgstr "Activar programación"
 msgid "Enabled"
 msgstr "Activado"
 
+msgid "End of results"
+msgstr ""
+
 msgid "End-to-end latency"
 msgstr "Latencia de extremo a extremo"
 
@@ -2810,6 +2815,9 @@ msgstr "Coincide con \"{0}\" — {1}"
 msgid "matched <0>“{0}”</0>"
 msgstr "coincidió con <0>“{0}”</0>"
 
+msgid "matching filters"
+msgstr ""
+
 msgid "Matching requests are rejected at the proxy before reaching the provider"
 msgstr "Las solicitudes coincidentes se rechazan en el proxy antes de llegar al proveedor"
 
@@ -3045,6 +3053,9 @@ msgstr "Nuevo horario"
 
 msgid "New suite"
 msgstr "Nuevo suite"
+
+msgid "New traces available. Scroll to the top to refresh."
+msgstr ""
 
 msgid "Next"
 msgstr "Siguiente"
@@ -3461,9 +3472,6 @@ msgstr "ok"
 
 msgid "OK"
 msgstr "OK"
-
-msgid "on this page"
-msgstr "en esta página"
 
 msgid "One of the regex triggers is not a valid pattern."
 msgstr "Uno de los triggers de regex no es un patrón válido."
@@ -5156,9 +5164,6 @@ msgstr "Esta licencia se activó desde la UI y se almacena en la base de datos. 
 
 msgid "This license was supplied via the PROXYTRACE_LICENSE environment variable. A key activated here is stored in the database and takes precedence over it."
 msgstr "Esta licencia se proporcionó mediante la variable de entorno PROXYTRACE_LICENSE. Una key activada aquí se almacena en la base de datos y tiene prioridad sobre ella."
-
-msgid "this page"
-msgstr "esta página"
 
 msgid "This part of the app didn't load."
 msgstr "Esta parte de la aplicación no se pudo cargar."

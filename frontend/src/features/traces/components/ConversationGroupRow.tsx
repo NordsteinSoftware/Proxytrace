@@ -37,7 +37,10 @@ export function ConversationGroupRow({ group, expanded, onToggle, selectedId, on
   const groupFlags = turns.reduce((acc, t) => acc | t.outlierFlags, 0);
 
   return (
-    <>
+    // One wrapping element, not a fragment: the list virtualizer measures a single node per item,
+    // and an expanding group has to re-measure as one. Deliberately unstyled — the header and turn
+    // rows below already own their own dividers and padding.
+    <div>
       {/* Header row */}
       <div
         role="row"
@@ -130,6 +133,6 @@ export function ConversationGroupRow({ group, expanded, onToggle, selectedId, on
           <span className="text-muted text-body-sm whitespace-nowrap text-right">{fmtRelative(turn.createdAt)}</span>
         </div>
       ))}
-    </>
+    </div>
   );
 }

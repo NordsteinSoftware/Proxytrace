@@ -5,13 +5,22 @@ export const QUERY_KEYS = {
   agent: (id: string | null) => ['agent', id ?? null] as const,
   agentVersions: (agentId: string) => ['agent', agentId, 'versions'] as const,
   agentVersion: (versionId: string) => ['agent-version', versionId] as const,
-  agentCalls: (filter: object) => ['agent-calls', filter] as const,
+  /** A paged/infinite trace list. The 'list' segment keeps it resettable without touching the
+   * aggregates — the traces stream resets the list on a live arrival, and resetting the overview,
+   * histogram and summary alongside it would flash the whole page back to its loading state. */
+  agentCalls: (filter: object) => ['agent-calls', 'list', filter] as const,
   /** A single trace fetched by id (detail-panel deep-link). 'detail' segment lets list-cache invalidation exclude it. */
   agentCall: (id?: string) => ['agent-calls', 'detail', id ?? null] as const,
   /** Prefix matching every agent-calls query — use for invalidation. */
   agentCallsRoot: ['agent-calls'] as const,
+  /** Prefix matching only the trace lists — use to reset them without disturbing the aggregates. */
+  agentCallsListRoot: ['agent-calls', 'list'] as const,
   agentCallsOverview: (from?: string, agentId?: string, projectId?: string) => ['agent-calls', 'overview', from, agentId, projectId ?? null] as const,
+  agentCallsOverviewRoot: ['agent-calls', 'overview'] as const,
   agentCallsHistogram: (filter: object) => ['agent-calls', 'histogram', filter] as const,
+  agentCallsHistogramRoot: ['agent-calls', 'histogram'] as const,
+  agentCallsSummary: (filter: object) => ['agent-calls', 'summary', filter] as const,
+  agentCallsSummaryRoot: ['agent-calls', 'summary'] as const,
   agentCallToolNames: (projectId?: string, agentId?: string) => ['agent-calls', 'tool-names', projectId ?? null, agentId ?? null] as const,
   agentCallsForSuiteCreate: (agentId: string, from?: string) => ['agent-calls', 'suite-create', agentId, from ?? null] as const,
   agentCallsForSuiteEdit: (agentId?: string) => ['agent-calls', 'suite-edit', agentId] as const,
