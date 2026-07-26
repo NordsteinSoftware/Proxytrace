@@ -4,7 +4,7 @@ import { SkeletonList } from '../../../components/ui/Skeleton';
 import type { AgentCallListItemDto } from '../../../api/models';
 import { GRID_TEMPLATE, GRID_TEMPLATE_NARROW, traceListView } from '../tracesMeta';
 import type { TraceRow, TraceSort, TraceSortField } from '../tracesMeta';
-import type { TraceListRow } from '../traceDayDividers';
+import { listRowKey, type TraceListRow } from '../traceDayDividers';
 import { FlatTraceRow } from './FlatTraceRow';
 import { ConversationGroupRow } from './ConversationGroupRow';
 import { TracesEmptyState } from './TracesEmptyState';
@@ -65,13 +65,6 @@ interface Props {
   scrollToTraceId?: string | null;
   onScrolledToTrace?: () => void;
 }
-
-/* eslint-disable lingui/no-unlocalized-strings -- React reconciliation keys, not UI copy */
-function rowKey(item: TraceListRow): string {
-  if (item.kind === 'divider') return `divider-${item.dayKey}`;
-  return item.row.type === 'flat' ? item.row.trace.id : `conv-${item.row.conversationId}`;
-}
-/* eslint-enable lingui/no-unlocalized-strings */
 
 function renderRow(row: TraceRow, selection: TraceSelectionProps, freshIds: ReadonlySet<string>) {
   if (row.type === 'flat') {
@@ -204,7 +197,7 @@ export function TraceTable({
               if (!item) return null;
               return (
                 <div
-                  key={rowKey(item)}
+                  key={listRowKey(item)}
                   data-index={virtualItem.index}
                   ref={virtualizer.measureElement}
                   className="absolute top-0 left-0 w-full"

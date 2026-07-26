@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { rowTimestamp, spansMultipleDays, withDayDividers } from './traceDayDividers';
+import { listRowKey, rowTimestamp, spansMultipleDays, withDayDividers } from './traceDayDividers';
 import type { TraceRow } from './tracesMeta';
 import type { AgentCallListItemDto } from '../../api/models';
 
@@ -113,6 +113,44 @@ describe('withDayDividers', () => {
     const kept = withDayDividers(rows, true).filter(r => r.kind === 'row').map(r => r.row);
 
     expect(kept).toEqual(rows);
+  });
+});
+
+describe('listRowKey', () => {
+  it('identifies a flat row by its trace id', () => {
+    expect(listRowKey({ kind: 'row', row: flat('a', at(26, 10)) })).toBe('a');
+  });
+
+  it('identifies a conversation group by its conversation id, not its turns', () => {
+    expect(listRowKey({ kind: 'row', row: group('c1', at(26, 10), at(26, 9)) })).toBe('conv-c1');
+  });
+
+  it('distinguishes a divider from a row that shares its day', () => {
+    const rows = withDayDividers([flat('a', at(26, 10)), flat('b', at(25, 22))], true);
+
+    expect(new Set(rows.map(listRowKey)).size).toBe(rows.length);
+  });
+
+  /**
+   * The invariant the virtualizer depends on. Its measured-height cache is keyed by this function,
+   * so a key that moved with list position would attribute an expanded group's height to whichever
+   * row later occupies that index — which is exactly how live arrivals made expanded rows overlap
+   * the rows beneath them.
+   */
+  it('holds a row identity steady when live arrivals shift its index', () => {
+    const expanded = group('c1', at(26, 10), at(26, 9));
+    const before = withDayDividers([flat('a', at(26, 12)), expanded], false);
+    // Two traces land at the head, as mergeHeadChunk splices them in.
+    const after = withDayDividers(
+      [flat('new1', at(26, 14)), flat('new2', at(26, 13)), flat('a', at(26, 12)), expanded],
+      false,
+    );
+
+    const indexBefore = before.findIndex(item => listRowKey(item) === 'conv-c1');
+    const indexAfter = after.findIndex(item => listRowKey(item) === 'conv-c1');
+
+    expect(indexAfter).not.toBe(indexBefore);
+    expect(listRowKey(after[indexAfter])).toBe(listRowKey(before[indexBefore]));
   });
 });
 

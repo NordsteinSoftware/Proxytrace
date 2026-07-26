@@ -11,6 +11,13 @@ follow [Semantic Versioning](https://semver.org). Ongoing work is collected unde
 
 ### Fixed
 
+- **Expanded multi-turn conversations no longer overlap the rows beneath them.** Opening a
+  conversation's turns while new traces were streaming in left the expanded turns painted on top of
+  the following rows, with the text of both stacked on itself. The table measured each row by its
+  position in the list, so an arriving trace — which shifts every row below it down a slot — handed
+  an expanded group's height to whichever row inherited its old position. Rows are now measured by
+  identity, so they keep their own height however the list shifts around them.
+
 - **A newly captured trace no longer redraws the whole Traces table.** While you watched the list at
   the top, every arriving call blanked the table back to loading skeletons and rebuilt it — a flicker
   on every request your agents made, and it threw away the rows you had already scrolled in. Arrivals
