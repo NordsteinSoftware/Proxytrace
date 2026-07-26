@@ -80,6 +80,8 @@ Typical things you can do:
   shift under you mid-read. A small pulsing dot beside the position count means new traces are
   waiting; scroll back to the top and the list refreshes with them.
 
+![Scrolling back through the trace list: day markers label each run of traces, the header keeps a running "1–15 of 16" count, and an "End of results" rule closes the list.](/screenshots/traces/day-markers.png)
+
 ### Sorting the table
 
 Click a column header to sort the table by that column: **Latency**, **Tokens**, **Tools**
