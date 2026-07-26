@@ -370,10 +370,6 @@ msgstr "{0} tokens"
 msgid "{0} tools"
 msgstr "{0} tools"
 
-#. placeholder {0}: total.toLocaleString()
-msgid "{0} total"
-msgstr "{0} total"
-
 #. placeholder {0}: Math.round(v)
 msgid "{0} traces"
 msgstr "{0} traces"
@@ -386,6 +382,12 @@ msgstr "{0} traces per month, kept {1} days"
 #. placeholder {0}: limits.TraceRetentionDays ?? 365
 msgid "{0}-day trace retention"
 msgstr "{0}-day trace retention"
+
+#. placeholder {0}: first.toLocaleString()
+#. placeholder {1}: last.toLocaleString()
+#. placeholder {2}: total.toLocaleString()
+msgid "{0}–{1} of {2}"
+msgstr "{0}–{1} of {2}"
 
 #. placeholder {0}: m.name
 #. placeholder {1}: fmtTokens(m.tokens)
@@ -1970,6 +1972,9 @@ msgstr "Enable schedule"
 msgid "Enabled"
 msgstr "Enabled"
 
+msgid "End of results"
+msgstr "End of results"
+
 msgid "End-to-end latency"
 msgstr "End-to-end latency"
 
@@ -2810,6 +2815,9 @@ msgstr "Matched \"{0}\" — {1}"
 msgid "matched <0>“{0}”</0>"
 msgstr "matched <0>“{0}”</0>"
 
+msgid "matching filters"
+msgstr "matching filters"
+
 msgid "Matching requests are rejected at the proxy before reaching the provider"
 msgstr "Matching requests are rejected at the proxy before reaching the provider"
 
@@ -3045,6 +3053,9 @@ msgstr "New schedule"
 
 msgid "New suite"
 msgstr "New suite"
+
+msgid "New traces available. Scroll to the top to refresh."
+msgstr "New traces available. Scroll to the top to refresh."
 
 msgid "Next"
 msgstr "Next"
@@ -3461,9 +3472,6 @@ msgstr "ok"
 
 msgid "OK"
 msgstr "OK"
-
-msgid "on this page"
-msgstr "on this page"
 
 msgid "One of the regex triggers is not a valid pattern."
 msgstr "One of the regex triggers is not a valid pattern."
@@ -5156,9 +5164,6 @@ msgstr "This license was activated from the UI and is stored in the database. It
 
 msgid "This license was supplied via the PROXYTRACE_LICENSE environment variable. A key activated here is stored in the database and takes precedence over it."
 msgstr "This license was supplied via the PROXYTRACE_LICENSE environment variable. A key activated here is stored in the database and takes precedence over it."
-
-msgid "this page"
-msgstr "this page"
 
 msgid "This part of the app didn't load."
 msgstr "This part of the app didn't load."

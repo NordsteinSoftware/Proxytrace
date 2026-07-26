@@ -98,7 +98,7 @@ time** as new calls arrive: the counters climb and fresh traces stream in withou
 
 ## Filtering traces by session
 
-On the [Traces page](/guide/capturing-traces#filtering-search-and-paging), add a **Session**
+On the [Traces page](/guide/capturing-traces#filtering-search-and-scrolling), add a **Session**
 filter from the **+ Filter** button. Pick from the project's recent sessions (most recently
 active first) and the trace table — and its timeline — narrow to that one session. It composes
 with every other filter, search, and the time range, just like the other filter chips.

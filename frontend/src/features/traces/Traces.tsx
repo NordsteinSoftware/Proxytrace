@@ -1,6 +1,4 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
-import { Pagination } from '../../components/ui/Pagination';
-import { FilterDropdown } from '../../components/ui/FilterDropdown';
 import { TraceDetailPanel as TraceDetail } from '../../components/trace-detail/TraceDetailPanel';
 import type { AgentCallDto } from '../../api/models';
 import { buildRows, flatRows, hasActiveTraceFilters } from './tracesMeta';
@@ -9,32 +7,24 @@ import { useTraceAdvancedFilters } from './hooks/useTraceAdvancedFilters';
 import { TraceFilterBar } from './components/TraceFilterBar';
 import { TraceFilterPicker } from './components/TraceFilterPicker';
 import { ALL_TIME, resolveRange, nowMs, type TimeRange } from '../../lib/timeRange';
-import { PAGE_SIZE, PAGE_SIZE_OPTIONS } from './hooks/useTraceQueries';
 import { useTraceQueries } from './hooks/useTraceQueries';
-import { useLocalStorageState } from '../../hooks/useLocalStorageState';
+import { useTraceSummary } from './hooks/useTraceSummary';
 import { useTraceFilters } from './hooks/useTraceFilters';
 import { useFocusTrace } from './hooks/useFocusTrace';
 import { useSelectedTrace } from '../../hooks/useSelectedTrace';
-import { useScrollToTrace } from './hooks/useScrollToTrace';
 import { useTraceSseStream } from './hooks/useTraceSseStream';
+import { spansMultipleDays, withDayDividers } from './traceDayDividers';
 import { TraceToolbar } from './components/TraceToolbar';
 import { TraceSummary } from './components/TraceSummary';
-import { summarizeTraces } from './traceSummary';
 import { TraceTable } from './components/TraceTable';
 import { TraceTimeline } from '../../components/charts/TraceTimeline';
 import { useTraceHistogram } from './hooks/useTraceHistogram';
 import { useAutoDefaultRange } from './hooks/useAutoDefaultRange';
 import useCurrentProject from '../../hooks/useCurrentProject';
 import { useDebounce } from '../../hooks/useDebounce';
-import { Trans, useLingui } from '@lingui/react/macro';
 
 export default function Traces() {
-  const { t } = useLingui();
   const { currentProjectId } = useCurrentProject();
-  const [page, setPage] = useState(1);
-  const [storedPageSize, setStoredPageSize] = useLocalStorageState<number>('traces.pageSize', PAGE_SIZE);
-  // Guard against a stale/garbage stored value — only accept a known option.
-  const pageSize = (PAGE_SIZE_OPTIONS as readonly number[]).includes(storedPageSize) ? storedPageSize : PAGE_SIZE;
   // Toolbar state persists across refresh / navigation; the composable filter-bar state is
   // project-scoped and owned by its own hook.
   const { timeRange, setTimeRange, search, setSearch, showSystem, setShowSystem, sort, setSort, rangeWasRestored } =
@@ -61,16 +51,15 @@ export default function Traces() {
   // user has no saved window, so a restored range is never clobbered.
   useAutoDefaultRange(currentProjectId !== null && !rangeWasRestored, currentProjectId ?? undefined, setTimeRange);
 
-  const { traces, total, isFetching, allAgents, agentBreakdown } = useTraceQueries({
-    page,
-    pageSize,
-    advanced,
-    debouncedSearch,
-    showSystem,
-    from,
-    to,
-    sort,
-  });
+  const traceQueryArgs = useMemo(
+    () => ({ advanced, debouncedSearch, showSystem, from, to, sort }),
+    [advanced, debouncedSearch, showSystem, from, to, sort],
+  );
+
+  const { traces, total, isFetching, isFetchingNextPage, hasNextPage, fetchNextPage, allAgents, agentBreakdown } =
+    useTraceQueries(traceQueryArgs);
+  // Whole filtered set, aggregated server-side — the list scrolls, so there is no page to summarize.
+  const { summary } = useTraceSummary(traceQueryArgs);
 
   // Histogram spans the active window and respects every filter; brushing it zooms the window.
   const { buckets } = useTraceHistogram({ from, to, advanced, debouncedSearch, showSystem });
@@ -98,8 +87,12 @@ export default function Traces() {
     () => (sort.field === 'time' ? buildRows(traces) : flatRows(traces)),
     [traces, sort.field],
   );
-  // At-a-glance aggregate of the current page slice (recomputes as page/filter/range changes).
-  const summary = useMemo(() => summarizeTraces(traces), [traces]);
+  // Day markers only make sense in time order, and only once the loaded rows straddle a boundary —
+  // inside a one-day window every marker would say the same thing.
+  const items = useMemo(
+    () => withDayDividers(rows, sort.field === 'time' && spansMultipleDays(rows)),
+    [rows, sort.field],
+  );
 
   // Flat list of all individual traces for prev/next navigation in the drawer
   const flatTraces = rows.flatMap(r => r.type === 'flat' ? [r.trace] : r.turns);
@@ -127,7 +120,6 @@ export default function Traces() {
     clearAdvanced();
     setSearch('');
     setShowSystem(true);
-    setPage(1);
   }, [selectTrace, setTimeRange, clearAdvanced, setSearch, setShowSystem]);
 
   useFocusTrace({
@@ -135,14 +127,10 @@ export default function Traces() {
     onExpandConversation: handleExpandConversation,
   });
 
-  useScrollToTrace(
-    pendingScrollId,
-    useCallback(() => setPendingScrollId(null), []),
-    rows,
-    expandedConvs,
-  );
+  const handleScrolledToTrace = useCallback(() => setPendingScrollId(null), []);
 
-  useTraceSseStream();
+
+  const { markAtTop, pendingRefresh } = useTraceSseStream();
 
   function toggleConv(id: string) {
     setExpandedConvs(prev => {
@@ -155,28 +143,24 @@ export default function Traces() {
 
   function handleAdvancedChange(patch: Partial<TraceAdvancedFilters>) {
     setAdvanced(patch);
-    setPage(1);
   }
 
   function handleClearAdvanced() {
     clearAdvanced();
     // The system-traces view toggle now reads as a filter chip, so "Clear all" drops it too.
     setShowSystem(false);
-    setPage(1);
   }
 
   // Picking from the time-range picker is a fresh context — drop any zoom history.
   function handleTimeRangeChange(range: TimeRange) {
     setTimeRange(range);
     setZoomStack([]);
-    setPage(1);
   }
 
   // Drag-select on the timeline: remember the current window, then zoom into the selection.
   function handleZoom(range: { from: number; to: number }) {
     setZoomStack(s => [...s, timeRange]);
     setTimeRange({ kind: 'absolute', from: new Date(range.from).toISOString(), to: new Date(range.to).toISOString() });
-    setPage(1);
   }
 
   // Double-click the timeline: step back one zoom level.
@@ -184,12 +168,10 @@ export default function Traces() {
     if (zoomStack.length === 0) return;
     setTimeRange(zoomStack[zoomStack.length - 1]);
     setZoomStack(zoomStack.slice(0, -1));
-    setPage(1);
   }
 
   function handleSearchChange(v: string) {
     setSearch(v);
-    setPage(1);
   }
 
   function handleShowSystemChange(v: boolean) {
@@ -199,19 +181,12 @@ export default function Traces() {
       setAdvanced({ agent: '' });
     }
     setShowSystem(v);
-    setPage(1);
-  }
-
-  function handlePageSizeChange(v: number) {
-    setStoredPageSize(v);
-    setPage(1);
   }
 
   // A new column sorts descending (the "big values first" read a metric column implies);
   // clicking the active column toggles direction.
   function handleSortChange(field: TraceSortField) {
     setSort(sort.field === field ? { field, desc: !sort.desc } : { field, desc: true });
-    setPage(1);
   }
 
   return (
@@ -259,32 +234,28 @@ export default function Traces() {
       <TraceSummary stats={summary} />
 
       <TraceTable
-        rows={rows}
-        isFetching={isFetching}
+        items={items}
+        paging={{
+          total,
+          isFetching,
+          isFetchingNextPage,
+          hasNextPage,
+          onLoadMore: fetchNextPage,
+          pendingRefresh,
+          onAtTopChange: markAtTop,
+        }}
+        selection={{
+          selectedId: selectedTrace?.id ?? null,
+          expandedConvs,
+          onSelectTrace: t => selectTrace(t.id),
+          onToggleConv: toggleConv,
+        }}
         filtered={hasActiveTraceFilters({ search: debouncedSearch, timeRangeActive: from != null, advanced })}
-        selectedId={selectedTrace?.id ?? null}
-        expandedConvs={expandedConvs}
         sort={sort}
         onSortChange={handleSortChange}
-        onSelectTrace={t => selectTrace(t.id)}
-        onToggleConv={toggleConv}
+        scrollToTraceId={pendingScrollId}
+        onScrolledToTrace={handleScrolledToTrace}
       />
-
-      {total > 0 && (
-        <div data-testid="trace-pagination" className="flex items-center justify-between gap-3 shrink-0">
-          <FilterDropdown
-            label={t`Per page:`}
-            value={String(pageSize)}
-            active
-            direction="up"
-            options={PAGE_SIZE_OPTIONS.map(n => ({ key: String(n), label: String(n) }))}
-            onChange={key => handlePageSizeChange(Number(key))}
-            width={110}
-          />
-          <Pagination page={page} total={total} pageSize={pageSize} onChange={setPage} />
-          <span className="text-caption text-muted whitespace-nowrap"><Trans>{total.toLocaleString()} total</Trans></span>
-        </div>
-      )}
 
       {selectedTrace && (
         <TraceDetail

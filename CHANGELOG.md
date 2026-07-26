@@ -85,6 +85,24 @@ follow [Semantic Versioning](https://semver.org). Ongoing work is collected unde
 
 ### Changed
 
+- **Trace lists scroll instead of paging.** The Traces table and a session's trace list no longer
+  have page buttons or a "per page" picker — keep scrolling and the next batch loads, until an
+  **End of results** marker says there is nothing further. The column header keeps a running
+  `1–16 of 4,208` count so you always know where you are. Scrolling back through time now shows
+  **day markers** between rows (when sorted by Time), so a list thousands of rows deep still tells
+  you which day you are looking at. Long lists stay fast because only the visible rows are drawn.
+
+- **Trace stats describe your filters, not the page.** The band above the trace table (traces,
+  tokens, cost, average latency, error rate) now covers **every trace matching your current
+  filters** rather than the twenty on screen, so the figures hold still while you scroll and answer
+  "what does this slice of traffic cost?" directly. Cost reads as "—" rather than 0 when no matching
+  trace has a known price.
+
+- **Live traces no longer move the list while you read it.** New captures pause while you are
+  scrolled down — a pulsing dot beside the position count shows some are waiting — and arrive when
+  you scroll back to the top. In a session with more than one batch of traces, a new call now
+  appears in the list instead of silently landing on a page you were not looking at.
+
 - **`x-proxytrace-session-id` now names a debugging session, not a conversation.** The header that
   used to set the conversation/thread key now identifies the broader *session* (see Added), and
   thread-level grouping moves to the new `x-proxytrace-conversation-id` header. Existing clients need

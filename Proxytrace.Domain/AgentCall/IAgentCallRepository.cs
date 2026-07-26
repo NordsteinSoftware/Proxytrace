@@ -40,6 +40,17 @@ public interface IAgentCallRepository : IRepository<IAgentCall>
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Aggregates every call matching <paramref name="filter"/> into the traces KPI summary — counts,
+    /// token sums, cost, latency mean/standard deviation, and error count. Unpaged by design: the
+    /// traces table scrolls rather than pages, so its KPI band describes the whole filtered set.
+    /// Runs as a single grouped aggregate (one row per endpoint, because cost is priced per
+    /// endpoint), so it stays O(endpoints) over the wire no matter how many calls match.
+    /// </summary>
+    Task<AgentCallSummary> GetSummaryAsync(
+        AgentCallFilter filter,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Returns the timestamp of the most recent call for each agent, keyed by agent ID.
     /// Agents with no calls are omitted.
     /// </summary>

@@ -60,6 +60,29 @@ capped at 50). All four budgets are **uncalibrated placeholders** — set conser
 full run lands. (`StatsQueryTranslationTests` in the unit suite additionally locks these aggregate
 shapes to server-side Npgsql translation via `ToQueryString`, without a live database.)
 
+### Filtered-set summary (`agentCallsSummary`, `agentCallsSummaryByTimeRange`)
+
+The traces KPI band (traces / tokens / cost / avg latency / error rate) is a **server-side aggregate
+over every trace matching the filter**, not over the rows on screen — the list scrolls continuously,
+so there is no page to summarize and a slice-scoped figure would climb as the reader scrolled.
+
+That makes it the one trace query with no `LIMIT`, so it earns its own budgets: the unfiltered case
+(`agentCallsSummary`) is a full-table aggregate at any size, and the time-ranged case
+(`agentCallsSummaryByTimeRange`) is the state the UI actually opens in.
+
+Its shape is the thing to protect. Cost is priced **per endpoint** (`ModelEndpoint.CalculateCost`),
+so it cannot be a flat SQL `SUM`; the query instead `GROUP BY`s `EndpointId` and the domain layer
+prices each group and folds them (`AgentCallSummary.Fold`). That is exact rather than approximate
+because `CalculateCost` is linear in each token count. Latency likewise comes back as
+sum + sum-of-squares + count so the standard deviation is derived in the domain layer — EF cannot
+translate `stddev_samp`.
+
+The consequence worth remembering: **what crosses the wire is O(endpoints), never O(rows)**.
+`EXPLAIN` shows a `HashAggregate` over the scan emitting one row per endpoint, with `width=42` on the
+scan — only the narrow scalar columns are read, never the request/response JSON. Measured p95 on a 1M
+dev seed (2026-07) was 276.9ms / 170.6ms; budgets sit ~45% above. A jump toward seconds means either
+the per-endpoint fold started round-tripping or the planner lost its statistics (see #246 below).
+
 ### Proxy credential resolution (`Scenarios/ApiKeyResolutionScenario.cs`)
 
 The proxy resolves inbound credentials from storage on **every** proxied request (no positive

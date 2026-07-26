@@ -928,6 +928,25 @@ export interface TraceHistogramBucket {
 }
 
 /* ── Filters ── */
+/**
+ * Aggregate over every trace matching the traces filter — backs the KPI band above the trace list.
+ * Unpaged by design: the list scrolls, so the band describes the whole filtered set, not a slice.
+ */
+export interface AgentCallSummaryDto {
+  count: number;
+  inputTokens: number;
+  outputTokens: number;
+  /** Cached subset of {@link inputTokens} across the filtered set. */
+  cachedInputTokens: number;
+  /** Null when no matching trace had a known price — distinct from a genuine 0 EUR. */
+  totalCostEur: number | null;
+  avgLatencyMs: number;
+  /** Population standard deviation of latency — the "±" divergence. */
+  latencyStdDevMs: number;
+  /** Traces whose HTTP status is not 2xx. */
+  errorCount: number;
+}
+
 export interface AgentCallFilter {
   projectId?: string;
   agentId?: string;

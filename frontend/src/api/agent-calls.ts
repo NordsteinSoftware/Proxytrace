@@ -1,5 +1,5 @@
 import { api, qs, type RequestOptions } from './client';
-import type { AgentCallDto, AgentCallListItemDto, AgentCallFilter, PagedResult, TracesOverviewDto, TraceHistogramBucket } from './models';
+import type { AgentCallDto, AgentCallListItemDto, AgentCallFilter, AgentCallSummaryDto, PagedResult, TracesOverviewDto, TraceHistogramBucket } from './models';
 
 export const agentCallsApi = {
   list: (filter?: AgentCallFilter) =>
@@ -11,6 +11,10 @@ export const agentCallsApi = {
     api.get<PagedResult<AgentCallDto>>(`/api/agent-calls/full${qs((filter ?? {}) as Record<string, unknown>)}`),
   overview: (params?: { projectId?: string; agentId?: string; from?: string }) =>
     api.get<TracesOverviewDto>(`/api/agent-calls/overview${qs(params ?? {})}`),
+  /** Aggregate over every trace matching the filter — backs the traces KPI band. Unpaged by design:
+   * the list scrolls, so the band describes the whole filtered set rather than a slice. */
+  summary: (filter?: AgentCallFilter) =>
+    api.get<AgentCallSummaryDto>(`/api/agent-calls/summary${qs((filter ?? {}) as Record<string, unknown>)}`),
   histogram: (filter: AgentCallFilter & { buckets?: number }) =>
     api.get<TraceHistogramBucket[]>(`/api/agent-calls/histogram${qs(filter as Record<string, unknown>)}`),
   /** Distinct tool names requested by any trace in the project — backs the tool filter's picker.

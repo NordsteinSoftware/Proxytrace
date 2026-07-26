@@ -68,6 +68,17 @@ internal static class QueryLatencyScenario
         await Measure("agentCallsHistogram",
             () => callRepo.GetHistogramAsync(new AgentCallFilter(AgentId: agentId), 50, cancellationToken));
 
+        // Filtered-set summary — the traces KPI band. The list scrolls rather than pages, so this
+        // aggregate spans EVERY matching row, not a page: at 1M rows the unfiltered case is a full
+        // scan, which is the worst case worth budgeting. It groups by endpoint (cost is priced per
+        // endpoint and cannot be summed in SQL), so the wire cost stays O(endpoints) regardless.
+        await Measure("agentCallsSummary",
+            () => callRepo.GetSummaryAsync(new AgentCallFilter(ProjectId: projectId), cancellationToken));
+        // The default UI state: a bounded window on the indexed CreatedAt, which should resolve to
+        // an index range scan rather than the full-table aggregate above.
+        await Measure("agentCallsSummaryByTimeRange",
+            () => callRepo.GetSummaryAsync(new AgentCallFilter(From: recent, To: now, ProjectId: projectId), cancellationToken));
+
         // Sorted list paths — server-side ORDER BY on the denormalised columns, worst case (no
         // narrowing filter, whole-table top-50). CreatedAt is the default already covered above.
         await Measure("agentCallsListSortLatency",

@@ -165,38 +165,64 @@ test.describe('Traces', () => {
     ).toBe(2);
   });
 
-  test('pagination shows the next page of traces', async ({ page, request }) => {
+  test('scrolling the trace list loads more traces', async ({ page, request }) => {
     const client = await makeClient(request);
 
-    // PAGE_SIZE is 20; seed 25 calls for a single agent → two pages.
-    const agentName = uniqueName('Paging Agent');
+    // TRACE_CHUNK_SIZE is 50; seed 60 for one agent so a second chunk exists.
+    const agentName = uniqueName('Scrolling Agent');
     const { id: agentId } = await client.createAgent({ name: agentName, endpointId });
-    for (let i = 0; i < 25; i++) {
-      await client.seedAgentCall({ agentId, userContent: `page trace ${i}`, assistantContent: `r${i}` });
+    for (let i = 0; i < 60; i++) {
+      await client.seedAgentCall({ agentId, userContent: `scroll trace ${i}`, assistantContent: `r${i}` });
     }
 
     await page.goto('/traces', { waitUntil: 'load' });
-    // Filter to this agent so exactly 25 traces drive the pagination.
+    // Filter to this agent so exactly 60 traces drive the scrolling.
     await selectAgentFilter(page, agentId);
     await expect(page.getByTestId('trace-table')).toBeVisible();
 
-    // Pagination control is present (total 25 > pageSize 20).
-    const pager = page.getByTestId('trace-pagination');
-    await expect(pager).toBeVisible();
+    // The readout is the reliable witness: the list is virtualized, so the DOM only ever holds the
+    // visible window — counting rows would measure the viewport, not what has been loaded.
+    const readout = page.getByTestId('trace-position-readout');
+    await expect(readout).toContainText('60', { timeout: 10_000 });
 
-    // Page 1 shows 20 rows for this agent.
-    await expect.poll(
-      async () => page.locator('[data-testid^="trace-row-"]').count(),
-      { timeout: 10_000, message: 'page 1 should show a full page of rows' },
-    ).toBe(20);
+    const scroller = page.getByTestId('trace-scroll');
 
-    // Advance to page 2 (the "→" next button).
-    await pager.getByRole('button', { name: '→' }).click();
+    // Every distinct trace seen across the whole scroll.
+    const seen = new Set<string>();
+    // Reads the currently-mounted rows and folds them in, asserting that no single snapshot ever
+    // holds the same trace twice — a duplicated row inside one window means the chunk boundary
+    // drifted under offset paging.
+    const collect = async () => {
+      const ids = await page.locator('[data-testid^="trace-row-"]').evaluateAll(
+        els => els.map(el => el.getAttribute('data-testid') ?? ''),
+      );
+      expect(new Set(ids).size, 'a trace was rendered twice in one window').toBe(ids.length);
+      for (const id of ids) seen.add(id);
+    };
 
-    // Page 2 shows the remaining 5 rows.
-    await expect.poll(
-      async () => page.locator('[data-testid^="trace-row-"]').count(),
-      { timeout: 10_000, message: 'page 2 should show the remaining rows' },
-    ).toBe(5);
+    await collect();
+    const firstScreenCount = seen.size;
+    expect(firstScreenCount).toBeGreaterThan(0);
+    // Virtualization is doing its job: the DOM holds a window, not all 60 rows.
+    expect(firstScreenCount).toBeLessThan(60);
+
+    // Walk to the bottom a screen at a time, collecting as we go — a single jump to the end would
+    // skip the rows that are only ever mounted mid-scroll.
+    for (let step = 0; step < 30; step++) {
+      await scroller.evaluate(el => { el.scrollTop += el.clientHeight; });
+      await page.waitForTimeout(150);
+      await collect();
+      const atEnd = await scroller.evaluate(el => el.scrollTop + el.clientHeight >= el.scrollHeight - 4);
+      if (atEnd) break;
+    }
+
+    // The second chunk was fetched and rendered.
+    expect(seen.size).toBeGreaterThan(firstScreenCount);
+    // Every seeded trace was reachable exactly once: no skips across the chunk boundary, and no
+    // trace served by both chunks.
+    expect(seen.size, 'every seeded trace should be reachable exactly once').toBe(60);
+
+    // The list ends explicitly rather than simply stopping.
+    await expect(page.getByTestId('trace-list-end')).toBeVisible({ timeout: 10_000 });
   });
 });

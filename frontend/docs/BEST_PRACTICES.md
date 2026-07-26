@@ -200,7 +200,10 @@ DESIGN.md owns *which* tokens to use. This section owns *how* you apply them in 
 - **Stable, meaningful `key`s** on lists — entity ids, never array index for dynamic/reorderable lists.
 - **`React.memo` only on presentational leaves that re-render hot** (list rows, chart cells) and receive stable props. Pointless on containers.
 - **Don't create new object/array/function literals in props** of memoized children — that defeats the memo. This is the usual reason a `memo` "doesn't work."
-- **Long lists must virtualize or paginate.** High-volume scrolling lists (traces, runs) follow the `trace-row`/`DataTable` pattern (DESIGN.md §3.4) and use `Pagination`; don't render thousands of rows.
+- **Long lists must virtualize or paginate.** Never render thousands of rows. Which of the two depends on whether the list is *bounded*:
+  - **Unbounded, continuously read** (the trace lists) → **virtualize**. `TraceTable` pairs `useInfiniteQuery` with `@tanstack/react-virtual`: one virtual item per row, dynamic `measureElement` (conversation groups change height when expanded), and the next chunk fetched off the virtualizer's last rendered index rather than a separate `IntersectionObserver`. A virtualized list needs a **bounded** scroll container at *every* breakpoint — if it grows to its content height, every row counts as visible and the load-more trigger never stops firing (DESIGN.md §4).
+  - **Bounded, or read a page at a time** (audit log, error log, users) → `Pagination` is still correct.
+  - Either way the row layout follows the `trace-row`/`DataTable` pattern (DESIGN.md §3.4).
 - **Charts:** reuse `components/charts/*` and `chart-math.ts`. Don't compute SVG paths inline in a feature.
 
 ---

@@ -157,6 +157,39 @@ Practical rules:
 - **Keep a single page's distinct long-lived streams comfortably under six.** Adding a fifth or
   sixth *different* stream type to one view is the warning sign; reuse an existing one or reconsider.
 
+## The trace stream is gated on scroll position
+
+The Traces list is an **infinite** query, which changes what a `trace-created` event is allowed to
+do. `useTraceSseStream` routes every arrival through a pure policy in
+`features/traces/traceStreamGate.ts`:
+
+| Reader is… | List | Aggregates (overview / histogram / summary) |
+|---|---|---|
+| at the top | **reset** to a single fresh chunk | refreshed, coalesced |
+| scrolled down | **withheld**; the arrival is marked pending | refreshed, coalesced |
+| returning to the top | pending arrival flushed (reset) | — |
+
+Three things are load-bearing here:
+
+- **Withholding while scrolled** is not an optimization. Under offset paging, inserting rows at the
+  top shifts every subsequent offset, so a refetch mid-read makes rows jump and can duplicate or skip
+  traces across a chunk boundary. Freezing sidesteps that without needing keyset pagination.
+- **Reset, not invalidate.** `invalidateQueries` on an infinite query refetches *every* loaded chunk —
+  a reader twenty chunks deep would fire twenty requests. `resetQueries` drops back to one fresh
+  chunk, which is invisible precisely because it only ever happens at the top.
+- **The list key is namespaced** (`QUERY_KEYS.agentCallsListRoot` → `['agent-calls','list']`) so the
+  reset does not also drop the overview, histogram and summary and flash the whole page to loading.
+
+Aggregate refreshes are coalesced to at most one per `SUMMARY_COALESCE_MS` (5s) because each is a
+whole-table query; a busy proxy would otherwise emit one per trace. The withheld state is surfaced in
+the list header as a pulsing accent dot plus an `aria-live` status — a frozen list that says nothing
+reads as a broken one.
+
+This remains a documented deviation from BEST_PRACTICES §3.2 ("SSE patches the cache; it does not
+trigger refetches"): `TraceCreatedEvent` carries only partial data, so a `setQueryData` patch would
+need a per-event GET. It is narrower than the previous blanket invalidation of the whole
+`['agent-calls']` prefix.
+
 ## Adding a new SSE stream
 
 1. Add an event `record` + broadcaster interface in `Proxytrace.Application/Streaming/` (mirror
