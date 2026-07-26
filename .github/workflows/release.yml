@@ -103,7 +103,7 @@ jobs:
         uses: docker/metadata-action@v6
         with:
           images: |
-            ghcr.io/proxytrace/proxytrace
+            ghcr.io/syntaktikeu/proxytrace
             docker.io/${{ env.DOCKERHUB_USERNAME }}/proxytrace
           tags: |
             type=semver,pattern={{version}}

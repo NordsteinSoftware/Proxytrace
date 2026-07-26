@@ -13,6 +13,16 @@ follow [Semantic Versioning](https://semver.org). Ongoing work is collected unde
 
 ### Fixed
 
+- **The documented image address works again.** Every published reference to the container image —
+  the compose file shipped in the release artifact, the one-line `docker run` in the README, the
+  installation, deployment and upgrade pages of the manual — pointed at
+  `ghcr.io/proxytrace/proxytrace`, a GitHub Container Registry owner that stopped existing when the
+  organisation was renamed to `SyntaktikEU`. Pulls against it fail with `owner not found`, so a new
+  operator following the quick start got a registry error instead of a running Proxytrace. All of
+  them now name the canonical `ghcr.io/syntaktikeu/proxytrace`, which is where the images have
+  actually been published. The Docker Hub address, `proxytrace/proxytrace`, is unchanged and was
+  never affected.
+
 - **A test run no longer hangs forever because one case failed.** A case whose model call threw was
   deliberately skipped so the rest of the run could continue — but the run counted results to decide
   it was finished, and the skipped case never produced one. The run therefore sat at **Running** for

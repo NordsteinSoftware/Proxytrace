@@ -39,7 +39,7 @@ You need Docker. One container includes the web UI, API, ingestion proxy, Postgr
 docker run -d --name proxytrace \
   -p 5101:80 -p 5102:8081 \
   -v proxytrace:/data \
-  ghcr.io/proxytrace/proxytrace
+  ghcr.io/syntaktikeu/proxytrace
 ```
 
 1. Open [http://localhost:5101](http://localhost:5101).

@@ -48,7 +48,7 @@ Prereleases (`X.Y.Z-rc.N`) publish only their exact version.
 
 **Platforms:** `linux/amd64`, `linux/arm64`.
 
-The same image is published to GitHub Container Registry as `ghcr.io/proxytrace/proxytrace` —
+The same image is published to GitHub Container Registry as `ghcr.io/syntaktikeu/proxytrace` —
 identical digests, same tags. GHCR has no anonymous pull-rate limit.
 
 ## License

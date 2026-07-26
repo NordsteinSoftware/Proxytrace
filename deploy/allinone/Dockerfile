@@ -3,7 +3,7 @@
 # The single released image: the whole product in one container.
 #
 #   docker run -d --name proxytrace -p 5101:80 -p 5102:8081 -v proxytrace:/data \
-#     ghcr.io/proxytrace/proxytrace
+#     ghcr.io/syntaktikeu/proxytrace
 #
 # It supervises five processes: PostgreSQL, Redis, the API, the ingestion proxy, and the
 # nginx that serves the SPA + the manual and reverse-proxies /api. Postgres and Redis are

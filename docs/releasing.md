@@ -66,7 +66,7 @@ Propagation:
    apt install) with `APP_VERSION` injected, and pushes that one build to **both registries**
    with an identical tag set — `X.Y.Z`, `X.Y`, `X`, and `latest` (rolling tags suppressed for
    prereleases):
-   - `ghcr.io/proxytrace/proxytrace` — **canonical**; what `deploy/docker-compose.yml`, the
+   - `ghcr.io/syntaktikeu/proxytrace` — **canonical**; what `deploy/docker-compose.yml`, the
      README and the manual pin. No anonymous pull-rate limit.
    - `docker.io/proxytrace/proxytrace` — Docker Hub, for discoverability. Same digests (one
      build, two push targets). A final `peter-evans/dockerhub-description` step syncs
@@ -126,7 +126,7 @@ and cache. The in-repo copy tracks `latest`; the released zip is fully pinned. K
 from a bare directory containing only the three artifact files — it must never reference repo
 paths (which is why `frontend/nginx.conf` is baked into the image).
 
-The simpler shape — `docker run … ghcr.io/proxytrace/proxytrace` with the embedded database —
+The simpler shape — `docker run … ghcr.io/syntaktikeu/proxytrace` with the embedded database —
 needs no artifact at all; it is what the README, the website and the Hub page lead with.
 
 ## Changelog discipline

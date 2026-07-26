@@ -1,12 +1,12 @@
 # Proxytrace — Docker Compose deployment
 
 Runs Proxytrace with its database and Redis as separate, backup-able containers. The
-application image (`ghcr.io/proxytrace/proxytrace`, also on Docker Hub as
+application image (`ghcr.io/syntaktikeu/proxytrace`, also on Docker Hub as
 `proxytrace/proxytrace`) contains the web UI, the API and the ingestion proxy; nothing is
 built locally.
 
 The same image also runs standalone with an embedded PostgreSQL — `docker run -d -p 5101:80
--p 5102:8081 -v proxytrace:/data ghcr.io/proxytrace/proxytrace` — which is the quickest way
+-p 5102:8081 -v proxytrace:/data ghcr.io/syntaktikeu/proxytrace` — which is the quickest way
 to evaluate it. Use *this* compose file when you want the database on its own, so it can be
 backed up, tuned and upgraded independently. It's the same image either way: setting
 `ConnectionStrings__Default` (as this file does) is what keeps the embedded database off.

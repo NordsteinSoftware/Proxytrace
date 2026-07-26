@@ -130,8 +130,8 @@ API won't list it yet:
 
 ```bash
 gh release view vX.Y.Z                                        # Draft: true, notes + zip asset attached
-docker manifest inspect ghcr.io/proxytrace/proxytrace:X.Y.Z   # image exists
-docker manifest inspect ghcr.io/proxytrace/proxytrace:latest  # rolling tag moved (not for rc)
+docker manifest inspect ghcr.io/syntaktikeu/proxytrace:X.Y.Z   # image exists
+docker manifest inspect ghcr.io/syntaktikeu/proxytrace:latest  # rolling tag moved (not for rc)
 docker manifest inspect proxytrace/proxytrace:X.Y.Z           # Docker Hub got it too
 ```
 

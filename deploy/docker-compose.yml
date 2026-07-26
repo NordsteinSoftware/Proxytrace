@@ -4,7 +4,7 @@
 #   docker compose up -d
 #   open http://localhost:5101
 #
-# Same image as `docker run ghcr.io/proxytrace/proxytrace` — the difference is that this file
+# Same image as `docker run ghcr.io/syntaktikeu/proxytrace` — the difference is that this file
 # runs Postgres and Redis as their own containers and points the app at them. The app image
 # only starts its embedded Postgres/Redis when ConnectionStrings__Default / Redis__ConnectionString
 # are absent, so setting them here is what switches the database out. Prefer this shape for
@@ -55,7 +55,7 @@ services:
   # The whole application: web UI + manual (nginx on :80), REST API, test runner, optimizer,
   # ingestion consumer, and the OpenAI-compatible ingestion proxy (:8081).
   proxytrace:
-    image: ghcr.io/proxytrace/proxytrace:${PROXYTRACE_VERSION:-latest}
+    image: ghcr.io/syntaktikeu/proxytrace:${PROXYTRACE_VERSION:-latest}
     restart: unless-stopped
     depends_on:
       postgres:

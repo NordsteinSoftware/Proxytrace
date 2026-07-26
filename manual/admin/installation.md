@@ -22,7 +22,7 @@ PostgreSQL, no Redis, no runtime to install.
 docker run -d --name proxytrace \
   -p 5101:80 -p 5102:8081 \
   -v proxytrace:/data \
-  ghcr.io/proxytrace/proxytrace
+  ghcr.io/syntaktikeu/proxytrace
 ```
 
 That's the whole install. The container starts PostgreSQL, Redis, the API, the ingestion proxy
@@ -49,7 +49,7 @@ docker run -d --name proxytrace \
   -v proxytrace:/data \
   -e PROXYTRACE_PUBLIC_URL=https://proxytrace.example.com \
   -e PROXYTRACE_PROXY_PUBLIC_URL=https://ingest.proxytrace.example.com \
-  ghcr.io/proxytrace/proxytrace
+  ghcr.io/syntaktikeu/proxytrace
 ```
 
 `PROXYTRACE_PROXY_PUBLIC_URL` is what the UI advertises to clients as their OpenAI base URL
@@ -97,7 +97,7 @@ docker run -d --name proxytrace \
   -p 5101:80 -p 5102:8081 -v proxytrace:/data \
   -e "ConnectionStrings__Default=Host=db.internal;Port=5432;Database=proxytrace;Username=proxytrace;Password=…" \
   -e Redis__ConnectionString=redis.internal:6379 \
-  ghcr.io/proxytrace/proxytrace
+  ghcr.io/syntaktikeu/proxytrace
 ```
 
 ## What runs inside the container
@@ -124,7 +124,7 @@ tags (`X.Y.Z`, `X.Y`, `X`, `latest`), identical digests, both `linux/amd64` and 
 
 | Registry | Image | Notes |
 |---|---|---|
-| GitHub Container Registry | `ghcr.io/proxytrace/proxytrace` | **Default.** What the shipped compose file pins. No anonymous pull-rate limit. |
+| GitHub Container Registry | `ghcr.io/syntaktikeu/proxytrace` | **Default.** What the shipped compose file pins. No anonymous pull-rate limit. |
 | Docker Hub | `proxytrace/proxytrace` | Same image. Note Docker Hub rate-limits anonymous pulls per IP. |
 
 Pin the exact `X.Y.Z` tag in production; `latest` is a convenience for evaluation.
