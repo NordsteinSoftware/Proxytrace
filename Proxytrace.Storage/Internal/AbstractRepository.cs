@@ -50,11 +50,40 @@ internal abstract class AbstractRepository<TDomainEntity, TStoredEntity> : IRepo
     }
 
     /// <summary>
-    /// Invalidate a single cached entity. Use after bypass writes that do not go through
-    /// the standard Add/Update path.
+    /// Invalidate a single cached entity — now, and again once the outermost transaction commits.
+    /// Use after any write, including bypass writes that do not go through the standard Add/Update
+    /// path.
     /// </summary>
-    protected void InvalidateCacheEntry(Guid id) 
-        => cache?.Invalidate(id);
+    /// <remarks>
+    /// Invalidating only inside the transaction leaves a window. <see cref="CanUseCache"/> suppresses
+    /// the cache for the *writing* flow only — <c>ambient.IsActive</c> is <c>AsyncLocal</c> — so
+    /// between the invalidation and the commit a concurrent reader on another flow can miss the
+    /// cache, read the still **pre-commit** row and <c>Set()</c> it back. Nothing invalidated again
+    /// afterwards, so that stale entity was served until the 5-minute TTL expired. It carries a stale
+    /// <c>UpdatedAt</c>, which is the optimistic-concurrency token, so every write made against it in
+    /// the meantime failed the pre-check in <see cref="UpdateCoreAsync"/> — turning a millisecond
+    /// race into minutes of failing writes on hot, cached, ingest-mutated entities like
+    /// <c>IAgent</c> (#450). Repeating the invalidation after the commit closes the window.
+    /// </remarks>
+    protected void InvalidateCacheEntry(Guid id)
+    {
+        cache?.Invalidate(id);
+
+        if (ambient.IsActive)
+            ambient.RegisterPostCommit(() => cache?.Invalidate(id));
+    }
+
+    /// <summary>
+    /// Drop the whole cache — now, and again once the outermost transaction commits, for the reason
+    /// described on <see cref="InvalidateCacheEntry"/>.
+    /// </summary>
+    protected void InvalidateCache()
+    {
+        cache?.InvalidateAll();
+
+        if (ambient.IsActive)
+            ambient.RegisterPostCommit(() => cache?.InvalidateAll());
+    }
 
     // The cache must never be read from or populated while an ambient transaction is active:
     // values read inside a transaction can reflect uncommitted writes, and populating from a
@@ -285,7 +314,7 @@ internal abstract class AbstractRepository<TDomainEntity, TStoredEntity> : IRepo
         TStoredEntity stored = await mapper.Map(entity, cancellationToken);
         EntityEntry<TStoredEntity> entry = context.Set<TStoredEntity>().Add(stored);
         await context.SaveChangesAsync(cancellationToken);
-        cache?.Invalidate(entity.Id);
+        InvalidateCacheEntry(entity.Id);
         return await mapper.Map(entry.Entity, cancellationToken);
     }
 
@@ -332,7 +361,7 @@ internal abstract class AbstractRepository<TDomainEntity, TStoredEntity> : IRepo
 
         foreach (TDomainEntity entity in entities)
         {
-            cache?.Invalidate(entity.Id);
+            InvalidateCacheEntry(entity.Id);
             Notify(entity.Id, EntityChangeType.Added);
         }
     }
@@ -417,7 +446,7 @@ internal abstract class AbstractRepository<TDomainEntity, TStoredEntity> : IRepo
         {
             throw new OptimisticConcurrencyException(entity.Id, typeof(TDomainEntity), ex);
         }
-        cache?.Invalidate(entity.Id);
+        InvalidateCacheEntry(entity.Id);
 
         return await this.GetAsync(entity.Id, cancellationToken);
     }
@@ -454,7 +483,7 @@ internal abstract class AbstractRepository<TDomainEntity, TStoredEntity> : IRepo
                 // matches the version we loaded — treat it as "not removed by us" rather than throwing.
                 return false;
             }
-            cache?.Invalidate(id);
+            InvalidateCacheEntry(id);
             return true;
         });
 
@@ -474,7 +503,7 @@ internal abstract class AbstractRepository<TDomainEntity, TStoredEntity> : IRepo
             Guid[] ids = await set.AsNoTracking().Select(e => e.Id).ToArrayAsync(cancellationToken);
             set.RemoveRange(set);
             await context.SaveChangesAsync(cancellationToken);
-            cache?.InvalidateAll();
+            InvalidateCache();
             return ids;
         });
 
