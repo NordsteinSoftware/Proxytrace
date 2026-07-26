@@ -20,8 +20,10 @@ docker compose up -d
 That's it — no `.env` required. Open http://localhost:5101 and follow the first-run
 setup. The user & operator manual is served at http://localhost:5101/docs.
 
-Point your agents' OpenAI base URL at the ingestion proxy to start capturing traces:
-`http://localhost:5102/openai/v1`
+To start capturing traces, point your agents' OpenAI base URL at the project-scoped
+endpoint the setup wizard hands you: `http://localhost:5102/{project-slug}/openai/v1`.
+The project segment is what attributes the call when the client keeps using your
+upstream provider key.
 
 ## Configuration (optional)
 

@@ -33,9 +33,12 @@ and nginx, applies the database migrations, and comes up ready.
 - `/data` → **everything that must survive**: the database, the generated session signing key
   and secret-encryption key ring, and the search index. Back up this volume.
 
-Open `http://localhost:5101` and follow the first-run setup to create the admin account. Then
-point your agents' OpenAI base URL at `http://localhost:5102/openai/v1` to start capturing
-traces — see [Capturing Traces](/guide/capturing-traces).
+Open `http://localhost:5101` and follow the first-run setup to create the admin account, the
+provider and the first project. The wizard ends with the **project-scoped endpoint** —
+`http://localhost:5102/{project-slug}/openai/v1` — plus ready-to-paste client snippets; point
+your agents' OpenAI base URL at that to start capturing traces. Keep the project segment: it is
+what attributes calls when the client keeps using your **upstream provider key**. See
+[Capturing Traces](/guide/capturing-traces) and [Proxy Setup](/guide/proxy-setup).
 
 To override configuration, pass environment variables (`-e`). The two you are most likely to
 need are the public URLs, once you serve Proxytrace on anything other than `localhost`:
