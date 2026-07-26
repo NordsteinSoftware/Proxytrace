@@ -29,6 +29,8 @@ complete interaction, and makes it available as an inspectable trace. From there
 anomalies, turn production failures into regression tests, compare agent versions, and automate the
 workflow through its REST API or MCP server.
 
+<img src="docs/assets/readme/hero-band.png" width="900" alt="Proxytrace dashboard showing live agent traffic, token throughput, errors, and recent traces" />
+
 ## Install in 30 seconds
 
 You need Docker. One container includes the web UI, API, ingestion proxy, PostgreSQL, and Redis:
@@ -95,6 +97,28 @@ providers, and additional routing options.
 Proxytrace supports OpenAI, Azure OpenAI, and OpenAI-compatible providers on `linux/amd64` and
 `linux/arm64`. Feature availability varies by plan; see [proxytrace.dev](https://proxytrace.dev) for
 the current feature matrix.
+
+## See the workflow
+
+### Turn a trace into a regression test
+
+Promote a production interaction as-is or correct the expected answer before adding it to a suite.
+
+<img src="docs/assets/readme/add-test.gif" width="900" alt="Converting a captured trace into a test case and adding it to a suite" />
+
+### Compare candidates side by side
+
+Run one suite against multiple agent or model candidates and inspect every score, failure, latency,
+and cost difference.
+
+<img src="docs/assets/readme/runs-matrix.png" width="900" alt="A test run comparing baseline and candidate results in a case-by-case matrix" />
+
+### Review improvements backed by evidence
+
+Optimization proposals connect a concrete prompt change to the failures that motivated it and the
+A/B test that validated it.
+
+<img src="docs/assets/readme/proposals.png" width="900" alt="An optimization proposal with a prompt diff, rationale, and A/B test evidence" />
 
 ## Develop locally
 
