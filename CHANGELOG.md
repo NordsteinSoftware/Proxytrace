@@ -11,6 +11,11 @@ follow [Semantic Versioning](https://semver.org). Ongoing work is collected unde
 
 ### Fixed
 
+- **Opening a trace from a link now scrolls the list to it.** Following a trace link — from an
+  anomaly, a notification, or Tracey — opened the detail drawer but left the list showing the newest
+  traces, so the row you were sent to was never highlighted or brought into view. The older the
+  trace, the more likely it was. The list now loads until it reaches the linked trace and scrolls it
+  into the middle of the view, with the surrounding traces around it.
 - **A session's trace and token counters now go down when traces are deleted.** They were only ever
   incremented, so deleting a trace — by hand, or because it passed the retention window — left the
   session header claiming more traces than its timeline could show, permanently. Both retention and
