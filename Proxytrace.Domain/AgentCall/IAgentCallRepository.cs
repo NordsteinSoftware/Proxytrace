@@ -1,4 +1,5 @@
 using Proxytrace.Domain.Project;
+using Proxytrace.Domain.Session;
 
 namespace Proxytrace.Domain.AgentCall;
 
@@ -66,6 +67,20 @@ public interface IAgentCallRepository : IRepository<IAgentCall>
         CancellationToken cancellationToken = default);
 
     Task<int> RemoveOlderThanAsync(DateTimeOffset cutoffDate, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Per-session totals of the calls <see cref="RemoveOlderThanAsync"/> would delete at the same
+    /// cutoff — the deltas retention hands to <c>ISessionRepository.RecordTraceRemovalsAsync</c> so
+    /// the denormalized session counters stay honest. Must be read *before* the delete; afterwards
+    /// the rows are gone.
+    ///
+    /// Aggregated in the database (a <c>GROUP BY SessionId</c> over the same indexed
+    /// <c>CreatedAt</c> range the delete uses), so what crosses the wire is O(sessions in the
+    /// window), never O(rows). Calls with no session are excluded.
+    /// </summary>
+    Task<IReadOnlyList<SessionTraceRemoval>> GetSessionRemovalsOlderThanAsync(
+        DateTimeOffset cutoffDate,
+        CancellationToken cancellationToken = default);
 
     /// <summary>
     /// ORs <paramref name="flag"/> into the call's <see cref="IAgentCall.OutlierFlags"/> bitmask,
