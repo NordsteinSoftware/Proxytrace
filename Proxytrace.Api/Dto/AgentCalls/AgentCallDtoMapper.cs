@@ -122,4 +122,19 @@ public sealed class AgentCallDtoMapper
 
     private static decimal? ComputeCost(IAgentCall c)
         => c.Response?.Usage is { } usage ? c.Endpoint.CalculateCost(usage) : null;
+
+    /// <summary>
+    /// Maps the filtered-set aggregate behind the traces KPI band. Token counts widen to
+    /// <see cref="long"/> because the JSON contract is consumed by TypeScript, which has no
+    /// unsigned integer type.
+    /// </summary>
+    public AgentCallSummaryDto ToSummaryDto(AgentCallSummary summary) => new(
+        summary.Count,
+        (long)summary.InputTokens,
+        (long)summary.OutputTokens,
+        (long)summary.CachedInputTokens,
+        summary.TotalCost is { } cost ? (double)cost : null,
+        summary.AvgLatencyMs,
+        summary.LatencyStdDevMs,
+        summary.ErrorCount);
 }

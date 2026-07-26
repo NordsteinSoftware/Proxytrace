@@ -284,6 +284,62 @@ public class AgentCallsController : ControllerBase
         return result.Select(b => new TraceHistogramBucketDto(b.Start, b.Total, b.Errors)).ToList();
     }
 
+    /// <summary>
+    /// Aggregate over every trace matching the filter — the traces KPI band. Deliberately unpaged:
+    /// the trace list scrolls rather than pages, so its KPIs describe the whole filtered set.
+    /// Takes the same filter parameters as <see cref="GetAll"/> so the band and the table can never
+    /// describe different sets; paging and sorting are omitted because neither affects an aggregate.
+    /// </summary>
+    [HttpGet("summary")]
+    public async Task<AgentCallSummaryDto> GetSummary(
+        [FromQuery] Guid? projectId = null,
+        [FromQuery] Guid? agentId = null,
+        [FromQuery] Guid? endpointId = null,
+        [FromQuery] string? model = null,
+        [FromQuery] DateTimeOffset? from = null,
+        [FromQuery] DateTimeOffset? to = null,
+        [FromQuery] int? httpStatus = null,
+        [FromQuery] bool includeSystemAgents = true,
+        [FromQuery] string? q = null,
+        [FromQuery] Guid? conversationId = null,
+        [FromQuery] Guid? sessionId = null,
+        [FromQuery] bool outlierOnly = false,
+        [FromQuery] OutlierFlags? anomalyFlags = null,
+        [FromQuery] int? httpStatusClass = null,
+        [FromQuery] ulong? minTokens = null,
+        [FromQuery] ulong? maxTokens = null,
+        [FromQuery] double? minLatencyMs = null,
+        [FromQuery] double? maxLatencyMs = null,
+        [FromQuery] string? toolName = null,
+        CancellationToken cancellationToken = default)
+    {
+        if (!await CanListAsync(projectId, agentId, cancellationToken))
+            return agentCallDtoMapper.ToSummaryDto(AgentCallSummary.Empty);
+
+        var filter = new AgentCallFilter(
+            AgentId: agentId,
+            ProjectId: projectId,
+            EndpointId: endpointId,
+            Model: model,
+            From: from,
+            To: to,
+            HttpStatus: httpStatus,
+            IncludeSystemAgents: includeSystemAgents,
+            Query: q,
+            ConversationId: conversationId,
+            OutlierOnly: outlierOnly,
+            AnomalyFlags: anomalyFlags,
+            HttpStatusClass: httpStatusClass,
+            MinTokens: minTokens,
+            MaxTokens: maxTokens,
+            MinLatencyMs: minLatencyMs,
+            MaxLatencyMs: maxLatencyMs,
+            ToolName: toolName,
+            SessionId: sessionId);
+
+        return agentCallDtoMapper.ToSummaryDto(await repository.GetSummaryAsync(filter, cancellationToken));
+    }
+
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<AgentCallDto>> Get(Guid id, CancellationToken cancellationToken)
     {
