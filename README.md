@@ -120,27 +120,6 @@ A/B test that validated it.
 
 <img src="docs/assets/readme/proposals.png" width="900" alt="An optimization proposal with a prompt diff, rationale, and A/B test evidence" />
 
-## Develop locally
-
-Local development requires the [.NET 10 SDK](https://dotnet.microsoft.com/download), Node.js 24 or
-newer, and npm:
-
-```bash
-./dev.sh
-```
-
-This starts the web app at [http://localhost:4201](http://localhost:4201) and the API at
-`http://localhost:5001`, with demo data seeded on first run. To run the standalone ingestion proxy
-with Docker-hosted PostgreSQL and Redis:
-
-```bash
-SPLIT=1 ./dev.sh
-```
-
-The split-mode proxy listens on `http://localhost:5002`. See the
-[architecture](docs/architecture.md), [commands](docs/commands.md), and
-[contribution policy](CONTRIBUTING.md) before changing the codebase.
-
 ## Learn more
 
 - [Get started with the product](manual/guide/getting-started.md)
