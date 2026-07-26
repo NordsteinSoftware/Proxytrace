@@ -114,8 +114,38 @@ to a high-volume table. See `_comment_proxyResolve` in `perf/perf-budgets.json`.
 The single source of absolute budgets, shared by all three scopes (the DB-layer runner and benchmarks
 read it directly; k6 maps `httpP95Ms` onto its `thresholds`, which set the process exit code). A scope
 exits non-zero on any breach. The committed values are **placeholders** — calibrate on the first full
-~1M run, then set each budget ~20–30% above the observed p95/mean. A missing entry means "measure but
-never fail", so a new scenario runs before its budget exists.
+~1M run. A missing entry means "measure but never fail", so a new scenario runs before its budget exists.
+
+### Sizing a budget (#372)
+
+Budget above a metric's run-to-run **spread**, not above a single observed sample — and know what the
+reported number already is. `PerfReport.MeasureLatencyAsync` runs `--iterations` timed reps (default
+**10**) after `--warmup` (default 2), and `Percentile(…, 0.95)` takes rank `ceil(0.95 × 10) = 10`: at
+the default iteration count **the reported "p95" is the slowest of the ten samples**, so it already
+carries every scheduling hiccup and background autovacuum pass that run happened to hit. Pass
+`--iterations 50` when you want a genuine percentile to calibrate against.
+
+The right multiplier therefore depends on the *size* of the metric, because host jitter is roughly
+absolute while the budget is relative:
+
+| Metric size | Headroom over observed p95 | Why |
+|-------------|----------------------------|-----|
+| Heavy aggregates (hundreds of ms) | ~20–30% | Jitter is a few percent of the cost — `statsCallTrends` measured 729.6 / 735.2 ms on two runs, `statsLatencyPercentiles` 840.1 / 800.2 ms |
+| Short queries (sub-100 ms) | **3–4×** | The same absolute hiccup is a large fraction of the cost — a ~50 ms query doubles on a busy host while an ~800 ms one moves 5% |
+| Sub-millisecond index reads | fixed 25–40 ms floor | Pure small-number/CI-jitter headroom (`agentCallsListBySession`, `statsPulse`, `agentCallToolNamesByAgent`) |
+
+`anomalyTimeline` is the cautionary case: it was sized by the percentage rule (85 ms ≈ 1.3× an observed
+64.8 ms) despite being a ~50 ms query. Two runs on 2026-07-17 measured 101.4 / 101.1 ms and went red;
+four runs on the **same host** on 2026-07-26 measured 50.3 / 61.3 / 55.2 ms (and 52.9 ms over 50
+iterations), with p50 pinned at 47.7–52.0 ms throughout. The elevated state is run-session-scoped —
+host load or cache state, stable within a session and gone by the next — rather than a permanently
+slower machine: the heavy aggregates measured identically on both days and `agentOverview` sits back
+inside its reference band. The plan never changed and the p50 never moved; only the budget was wrong.
+Recalibrated 2026-07-26 to
+150 ms, in family with `agentCallsHistogram` (same bucketed-`GROUP BY` shape, same cost band, same
+budget). Widening it costs no detection power: the regression it guards against is the loss of the
+partial outlier index, which turns a ~30k-row index scan into a 1M-row full scan and lands in
+full-window-aggregate territory (~270 ms+), far above the budget either way.
 
 ## Running
 
