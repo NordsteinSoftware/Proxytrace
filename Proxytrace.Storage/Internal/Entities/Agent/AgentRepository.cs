@@ -169,8 +169,21 @@ internal class AgentRepository : ArchivableRepository<IAgent, AgentEntity>, IAge
         });
 
         InvalidateCacheEntry(agentId);
-        versionCache?.InvalidateAll();
+        InvalidateVersionCache();
         return await this.GetAsync(agentId, cancellationToken);
+    }
+
+    /// <summary>
+    /// Drops the agent-version cache now and again after the outermost transaction commits — the
+    /// window described on <see cref="AbstractRepository{TDomainEntity,TStoredEntity}.InvalidateCacheEntry"/>
+    /// applies to this second cache too when the write is nested in a larger logical unit.
+    /// </summary>
+    private void InvalidateVersionCache()
+    {
+        versionCache?.InvalidateAll();
+
+        if (ambient.IsActive)
+            ambient.RegisterPostCommit(() => versionCache?.InvalidateAll());
     }
 
     private Task SetCurrentVersionIdAsync(Guid agentId, Guid versionId, CancellationToken cancellationToken)

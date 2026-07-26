@@ -329,6 +329,28 @@ Two precision details (see `ConcurrencyTokenExtensions`):
 > own value-equality concurrency-token check on save, which is why the microsecond realignment above
 > must be skipped on the in-memory provider. Like the `Restrict`/`Cascade` FK semantics above, treat
 > lost-update enforcement as Postgres-only.
+
+## Entity cache invalidation happens twice: in the write, and after the commit
+
+`[Cacheable]` domain types get an `IEntityCache<T>` (5-minute TTL, write-through invalidation) that
+`AbstractRepository` reads through. `CanUseCache` refuses to read from — or populate — the cache while
+an ambient transaction is active, because a value read mid-transaction may reflect uncommitted writes.
+That suppression is **per async flow**: `ambient.IsActive` is backed by an `AsyncLocal`, so it applies
+only to the flow that opened the transaction.
+
+Invalidation therefore cannot be a single call inside the write. Between an in-transaction
+`Invalidate` and the commit, a reader on any *other* flow sees no ambient transaction, misses the
+cache, reads the still **pre-commit** row and `Set()`s it back — and nothing invalidated afterwards, so
+that stale entity was served for up to the full TTL. The stale copy carries a stale `UpdatedAt`, which
+is the optimistic-concurrency token, so every write attempted against it failed the pre-check above:
+a millisecond-wide race turned into minutes of failing writes on hot, cached, ingest-mutated entities
+like `IAgent` (#450).
+
+`AbstractRepository.InvalidateCacheEntry` / `InvalidateCache` therefore invalidate **now and again on
+commit**, queuing the second call through `AmbientDbContext.RegisterPostCommit` — the same deferral
+`Notify` uses for change events. Every write path (add, add-range, update, upsert, remove,
+remove-all, archive/unarchive, and bypass writes such as `AgentRepository.SetCurrentVersionIdAsync`)
+goes through those two helpers; do not call `cache?.Invalidate(...)` directly.
 The `AddEmailSettings` migration adds the `EmailSettingsEntity` table: the single-row operator
 SMTP/email configuration (mirrors the `StoredLicenseEntity` single-row pattern). Columns: `Id` uuid
 PK, `Enabled` boolean, `SmtpHost` / `FromAddress` / `FromName` non-nullable text, `SmtpPort`

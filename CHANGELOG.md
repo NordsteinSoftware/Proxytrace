@@ -11,6 +11,17 @@ follow [Semantic Versioning](https://semver.org). Ongoing work is collected unde
 
 ### Fixed
 
+- **Edits to an agent no longer fail for minutes after a busy save.** Under concurrent traffic — an
+  agent being updated while its traces were still arriving and the UI was open — the in-process entity
+  cache could refill with the *pre-save* version of a row and keep serving it for up to five minutes.
+  Every write attempted against that stale copy was rejected as a conflict, so ingestion retried and
+  saves failed for no visible reason. Cached entries are now dropped again once the save commits, so
+  the stale copy cannot outlive the write that replaced it.
+
+- **The proxy logs each upstream request once, not four times.** Every call your agents made through
+  the proxy emitted four identical sets of HTTP client log lines, quadrupling the volume on the
+  busiest path in the system and making proxy logs hard to read during an incident.
+
 - **Proxytrace is documented as source-available, consistently.** The Docker Hub overview still
   declared the product *Proprietary*, contradicting the Elastic License 2.0 relicense in 1.5.0 — the
   first licensing statement most evaluators read. It now states the ELv2 terms, the README carries a
