@@ -107,6 +107,23 @@ agent's endpoint mid-demo).
 
 See `sample-client/README.md` for the demo script and walk-through.
 
+## Manual toolchain (VitePress) — the Vite override
+
+`manual/package.json` carries an `overrides` entry pinning **Vite ≥ 6.4.3**. VitePress 1.6.4 (the
+current latest) still depends on `vite ^5.4.14`, and every Vite at or below **6.4.2** carries
+[GHSA-fx2h-pf6j-xcff](https://github.com/advisories/GHSA-fx2h-pf6j-xcff) (path traversal in the dev
+server's optimized-deps `.map` handling) plus two moderate advisories and the transitive esbuild one
+— so `npm audit` in `manual/` reported one high and two moderates with **no automatic fix available**
+([#373](https://github.com/SyntaktikEU/Proxytrace/issues/373)). The exposure is the preview server a
+contributor runs locally, not the shipped output (the manual builds to static HTML), but it should
+not sit there indefinitely.
+
+The override resolves VitePress 1.6.4 onto Vite 6.4.3 / esbuild 0.25.12; `npm run docs:build`,
+`npm run docs:dev` and a clean `npm ci` (what both Dockerfiles do) all pass on it, and `npm audit`
+reports **0 vulnerabilities**. Drop the override once a VitePress release depends on a patched Vite
+on its own — check with `npm view vitepress dependencies`, then delete the `overrides` block, run
+`npm install`, and confirm `npm audit` is still clean.
+
 ## Manual screenshots (Playwright + kiosk stack)
 Add or refresh screenshots in the VitePress manual with the `manual-screenshots` skill
 (`.claude/skills/manual-screenshots/SKILL.md`). It boots the self-seeded, login-free kiosk stack
