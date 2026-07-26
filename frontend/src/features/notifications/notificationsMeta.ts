@@ -18,6 +18,7 @@ const SEVERITY_LABEL: Record<NotificationSeverity, MessageDescriptor> = {
 const KIND_LABEL: Record<NotificationKind, MessageDescriptor> = {
   [NotificationKind.Anomaly]: msg`Anomaly`,
   [NotificationKind.ProposalReady]: msg`Proposal ready`,
+  [NotificationKind.CostBudget]: msg`Cost budget`,
 };
 
 const STATUS_LABEL: Record<NotificationStatus, MessageDescriptor> = {

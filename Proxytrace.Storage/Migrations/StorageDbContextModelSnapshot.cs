@@ -17,7 +17,7 @@ namespace Proxytrace.Storage.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.9")
+                .HasAnnotation("ProductVersion", "10.0.10")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -422,6 +422,91 @@ namespace Proxytrace.Storage.Migrations
                     b.HasIndex("ProjectId");
 
                     b.ToTable("AuditLogEntryEntity");
+                });
+
+            modelBuilder.Entity("Proxytrace.Storage.Internal.Entities.CostLimit.CostLimitEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("Agent")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("Enabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<decimal?>("HardLimitEur")
+                        .HasPrecision(18, 6)
+                        .HasColumnType("numeric(18,6)");
+
+                    b.Property<Guid>("Project")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal?>("SoftLimitEur")
+                        .HasPrecision(18, 6)
+                        .HasColumnType("numeric(18,6)");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .IsConcurrencyToken()
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Agent");
+
+                    b.HasIndex("Enabled");
+
+                    b.HasIndex("Project")
+                        .IsUnique()
+                        .HasDatabaseName("IX_CostLimitEntity_Project_ProjectScope")
+                        .HasFilter("\"Agent\" IS NULL");
+
+                    b.HasIndex("Project", "Agent")
+                        .IsUnique()
+                        .HasDatabaseName("IX_CostLimitEntity_Project_Agent_AgentScope")
+                        .HasFilter("\"Agent\" IS NOT NULL");
+
+                    b.ToTable("CostLimitEntity");
+                });
+
+            modelBuilder.Entity("Proxytrace.Storage.Internal.Entities.CostLimitBreach.CostLimitBreachEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CostLimit")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset>("MonthStart")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<decimal>("SpendEur")
+                        .HasPrecision(18, 6)
+                        .HasColumnType("numeric(18,6)");
+
+                    b.Property<int>("Threshold")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .IsConcurrencyToken()
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MonthStart");
+
+                    b.HasIndex("CostLimit", "MonthStart", "Threshold")
+                        .IsUnique();
+
+                    b.ToTable("CostLimitBreachEntity");
                 });
 
             modelBuilder.Entity("Proxytrace.Storage.Internal.Entities.CustomAnomalyDetector.CustomAnomalyDetectorAgentEntity", b =>
@@ -1777,6 +1862,29 @@ namespace Proxytrace.Storage.Migrations
                     b.HasOne("Proxytrace.Storage.Internal.Entities.ModelProvider.ModelProviderEntity", null)
                         .WithMany()
                         .HasForeignKey("Provider")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Proxytrace.Storage.Internal.Entities.CostLimit.CostLimitEntity", b =>
+                {
+                    b.HasOne("Proxytrace.Storage.Internal.Entities.Agent.AgentEntity", null)
+                        .WithMany()
+                        .HasForeignKey("Agent")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.HasOne("Proxytrace.Storage.Internal.Entities.Project.ProjectEntity", null)
+                        .WithMany()
+                        .HasForeignKey("Project")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Proxytrace.Storage.Internal.Entities.CostLimitBreach.CostLimitBreachEntity", b =>
+                {
+                    b.HasOne("Proxytrace.Storage.Internal.Entities.CostLimit.CostLimitEntity", null)
+                        .WithMany()
+                        .HasForeignKey("CostLimit")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

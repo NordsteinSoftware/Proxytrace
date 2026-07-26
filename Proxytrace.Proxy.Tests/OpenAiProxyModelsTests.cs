@@ -90,6 +90,7 @@ public sealed class OpenAiProxyModelsTests
             Substitute.For<IIngestionStream>(),
             ResolverFor(key),
             Substitute.For<IRequestBlocker>(),
+            Substitute.For<IBudgetBlocker>(),
             new KioskOptions(),
             new KioskEndpointOptions(),
             NullLogger<OpenAiProxyController>.Instance);

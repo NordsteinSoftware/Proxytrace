@@ -53,6 +53,14 @@ producer knows nothing about persistence) and:
    active notification already exists for that target. If one does, the request is dropped before
    anything is created or delivered.
 
+   > **Producers whose alerts must not swallow each other omit the target entirely.** The check is
+   > target-scoped but **kind-insensitive**, so an unacknowledged notification for a target
+   > suppresses *every* later notification about it, whatever its kind or severity. Cost-budget
+   > alerts (`NotificationKind.CostBudget`) therefore carry no `TargetKind`/`TargetId`: an active
+   > soft-limit warning would otherwise swallow the hard-limit alert for the same budget. Their
+   > fire-once guarantee comes from the persisted breach row instead — see
+   > [`cost-controls.md`](cost-controls.md).
+
 2. **Creates** — builds the entity via the `INotification.CreateNew` factory delegate and persists
    it with `INotificationRepository.AddAsync`. Creation previously lived in
    `DashboardNotificationChannel`, which meant the email channel had no id to link to.

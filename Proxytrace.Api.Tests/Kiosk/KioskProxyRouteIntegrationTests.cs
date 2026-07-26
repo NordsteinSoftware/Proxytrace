@@ -93,6 +93,7 @@ public sealed class KioskProxyRouteIntegrationTests
             .Returns((ResolvedApiKey?)null);
         builder.Services.AddSingleton(resolver);
         builder.Services.AddSingleton(Substitute.For<IRequestBlocker>());
+        builder.Services.AddSingleton(Substitute.For<IBudgetBlocker>());
 
         builder.Services.AddSingleton(new KioskOptions { Enabled = kioskEnabled });
         builder.Services.AddSingleton(endpointConfigured

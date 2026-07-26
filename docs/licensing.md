@@ -20,7 +20,7 @@ public interface ILicenseService
 - **Gate every premium capability through `ILicenseService`.** Before exposing or executing a gated
   feature, check `IsFeatureEnabled(...)` / `GetLimit(...)`. Current gated features:
   `OptimizationProposals`, `AgenticEvaluators`, `CustomEvaluators`, `SsoOidc`, `AuditLog`, `Tracey`,
-  `ScheduledTestRuns`, `CustomAnomalyDetectors`.
+  `ScheduledTestRuns`, `CustomAnomalyDetectors`, `CostControls`.
 - **`Current` is never null** and defaults to the **Free** tier — write code that degrades to Free,
   never code that assumes a paid tier or null-guards the snapshot.
 - **Treat `long.MaxValue` from `GetLimit` as unlimited** — do not cap or special-case it elsewhere.
@@ -125,3 +125,12 @@ JWT carries one extra claim, `offline` (a JSON boolean), and the server emits it
   polling `ProxyStoredLicenseService` (~5 min, configurable `Licensing:StoredLicensePollSeconds`);
   accepted consequence: a revoked-but-unexpired license keeps blocking active in the proxy until it
   expires or the stored key is removed.
+- **`CostControls`** (Enterprise) gates **changing** a monthly cost budget, not seeing one. The Costs
+  page, `GET /api/statistics/cost-overview` and `GET /api/cost-limits` are ungated so the page reads
+  identically on every tier; only `POST`/`PUT`/`DELETE /api/cost-limits` carry
+  `[RequiresFeature(LicenseFeature.CostControls)]` (**402**) on top of the `Admin` role. At use time
+  both enforcement paths degrade: `CostBudgetGuard` returns early and `CachedBudgetBlockProvider`
+  reports no blocks, so an unlicensed install keeps its budget configuration, fires nothing and
+  blocks nothing — re-licensing restores enforcement on the next guard tick without re-entering
+  anything (mirroring `ScheduledTestRuns` / `CustomAnomalyDetectors`). See
+  [`cost-controls.md`](cost-controls.md).

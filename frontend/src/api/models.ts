@@ -1186,7 +1186,7 @@ export type TestRunEvent =
   | GroupRunCompleteEvent;
 
 /* ── Notifications ── */
-export enum NotificationKind { Anomaly = 'Anomaly', ProposalReady = 'ProposalReady' }
+export enum NotificationKind { Anomaly = 'Anomaly', ProposalReady = 'ProposalReady', CostBudget = 'CostBudget' }
 export enum NotificationSeverity { Info = 'Info', Warning = 'Warning', Critical = 'Critical' }
 export enum NotificationStatus { Unread = 'Unread', Read = 'Read', Dismissed = 'Dismissed' }
 export enum NotificationTargetKind {
@@ -1331,6 +1331,11 @@ export enum AuditAction {
   CustomAnomalyDetectorUpdated = 'CustomAnomalyDetectorUpdated',
   CustomAnomalyDetectorDeleted = 'CustomAnomalyDetectorDeleted',
   ProviderUpstreamKeyRotated = 'ProviderUpstreamKeyRotated',
+  CostLimitCreated = 'CostLimitCreated',
+  CostLimitUpdated = 'CostLimitUpdated',
+  CostLimitDeleted = 'CostLimitDeleted',
+  CostBudgetSoftLimitReached = 'CostBudgetSoftLimitReached',
+  CostBudgetHardLimitReached = 'CostBudgetHardLimitReached',
 }
 
 export enum AuditActorType {

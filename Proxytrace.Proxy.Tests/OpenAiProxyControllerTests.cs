@@ -424,6 +424,7 @@ public sealed class OpenAiProxyControllerTests
             stream,
             resolver,
             Substitute.For<IRequestBlocker>(),
+            Substitute.For<IBudgetBlocker>(),
             new KioskOptions(),
             new KioskEndpointOptions(),
             NullLogger<OpenAiProxyController>.Instance);

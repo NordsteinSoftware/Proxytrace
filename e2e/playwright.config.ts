@@ -60,6 +60,7 @@ export default defineConfig({
         '**/theories.spec.ts',
         '**/cancel.spec.ts',
         '**/cost.spec.ts',
+        '**/cost-budgets.spec.ts',
         '**/search.spec.ts',
         '**/tenancy.spec.ts',
         '**/delete-cascade.spec.ts',

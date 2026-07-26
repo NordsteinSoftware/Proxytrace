@@ -13,6 +13,7 @@ export const FEATURE_LABELS: Record<LicenseFeature, MessageDescriptor> = {
   Tracey: msg`Tracey AI assistant`,
   ScheduledTestRuns: msg`Scheduled test runs`,
   CustomAnomalyDetectors: msg`Custom anomaly detectors`,
+  CostControls: msg`Cost budgets & alerting`,
 };
 
 /**

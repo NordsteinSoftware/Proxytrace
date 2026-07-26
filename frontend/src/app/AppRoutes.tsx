@@ -28,6 +28,7 @@ const Dashboard = lazy(() => import('../features/dashboard/Dashboard'));
 const Traces = lazy(() => import('../features/traces/Traces'));
 const SessionView = lazy(() => import('../features/traces/session-view/SessionView'));
 const AnomalyDashboard = lazy(() => import('../features/anomalies/AnomalyDashboard'));
+const Costs = lazy(() => import('../features/costs/Costs'));
 const TraceyAI = lazy(() => import('../features/tracey/TraceyAI'));
 const Agents = lazy(() => import('../features/agents/Agents'));
 const Suites = lazy(() => import('../features/suites/Suites'));
@@ -118,6 +119,7 @@ export function AppRoutes() {
         <Route path="traces" element={wrap(<Traces />)} />
         <Route path="sessions/:sessionId" element={wrap(<SessionView />)} />
         <Route path="anomalies" element={wrap(<AnomalyDashboard />)} />
+        <Route path="costs" element={wrap(<Costs />)} />
         <Route path="tracey-ai" element={wrap(<RequiresFeature feature="Tracey"><TraceyAI /></RequiresFeature>)} />
         <Route path="agents" element={wrap(<Agents />)} />
         <Route path="suites" element={wrap(<Suites />)} />

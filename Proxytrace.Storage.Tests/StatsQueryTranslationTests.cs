@@ -213,4 +213,90 @@ public sealed class StatsQueryTranslationTests
 
         sql.Should().Contain("GROUP BY");
     }
+
+    [TestMethod]
+    public void CostByProjectAndAgentAggregate_JoinedOnAgentVersion_TranslatesToServerSideGroupBy()
+    {
+        using IContainer container = BuildPostgresContainer();
+        var context = container.Resolve<StorageDbContext>();
+
+        // The GetCostByProjectAndAgentAsync shape (the cost-budget guard's month-to-date input): an
+        // AgentCall carries no project, so the grouping keys come from a join onto AgentVersion.
+        // Only token sums cross the wire — pricing happens in C# — so the result is
+        // O(projects × agents × endpoints), never O(calls).
+        string sql = context.Set<AgentCallEntity>()
+            .AsNoTracking()
+            .Join(
+                context.Set<AgentVersionEntity>().AsNoTracking(),
+                c => c.AgentVersionId,
+                v => v.Id,
+                (c, v) => new { Call = c, Version = v })
+            .GroupBy(x => new { x.Version.Project, x.Version.AgentId, x.Call.EndpointId })
+            .Select(g => new
+            {
+                g.Key.Project,
+                g.Key.AgentId,
+                g.Key.EndpointId,
+                Input = g.Sum(x => (long?)x.Call.InputTokens ?? 0L),
+                Output = g.Sum(x => (long?)x.Call.OutputTokens ?? 0L),
+                Cached = g.Sum(x => (long?)x.Call.CachedInputTokens ?? 0L),
+            })
+            .ToQueryString();
+
+        sql.Should().Contain("GROUP BY");
+        sql.Should().ContainEquivalentOf("sum(");
+    }
+
+    [TestMethod]
+    public void CostSeriesByAgentAggregate_BucketedAndJoined_TranslatesToServerSideGroupBy()
+    {
+        using IContainer container = BuildPostgresContainer();
+        var context = container.Resolve<StorageDbContext>();
+
+        // The GetCostSeriesByAgentAsync shape: the same join, additionally keyed by the integer
+        // epoch bucket so the cost-over-time chart stays O(buckets × agents × endpoints).
+        const double widthMs = 86_400_000d;
+        string sql = context.Set<AgentCallEntity>()
+            .AsNoTracking()
+            .Join(
+                context.Set<AgentVersionEntity>().AsNoTracking(),
+                c => c.AgentVersionId,
+                v => v.Id,
+                (c, v) => new { Call = c, Version = v })
+            .GroupBy(x => new
+            {
+                Bucket = (int)Math.Floor((x.Call.CreatedAt - DateTimeOffset.UnixEpoch).TotalMilliseconds / widthMs),
+                x.Version.AgentId,
+                x.Call.EndpointId,
+            })
+            .Select(g => new
+            {
+                g.Key.Bucket,
+                g.Key.AgentId,
+                g.Key.EndpointId,
+                Input = g.Sum(x => (long?)x.Call.InputTokens ?? 0L),
+                Output = g.Sum(x => (long?)x.Call.OutputTokens ?? 0L),
+                Cached = g.Sum(x => (long?)x.Call.CachedInputTokens ?? 0L),
+            })
+            .ToQueryString();
+
+        sql.Should().Contain("GROUP BY");
+    }
+
+    [TestMethod]
+    public void UnpricedEndpointProbe_DistinctThenAny_TranslatesToServerSideQuery()
+    {
+        using IContainer container = BuildPostgresContainer();
+        var context = container.Resolve<StorageDbContext>();
+
+        // The HasUnpricedEndpointsAsync shape: the window's DISTINCT endpoint ids (one row per
+        // endpoint, not per call) then a single indexed price lookup.
+        string sql = context.Set<AgentCallEntity>()
+            .AsNoTracking()
+            .Select(c => c.EndpointId)
+            .Distinct()
+            .ToQueryString();
+
+        sql.Should().Contain("DISTINCT");
+    }
 }

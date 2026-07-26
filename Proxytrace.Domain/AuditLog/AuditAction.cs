@@ -118,4 +118,13 @@ public enum AuditAction
     // ProviderConfigUpdated so security review can find rotations without diffing configurations.
     // The key value itself is never recorded.
     ProviderUpstreamKeyRotated = 70,
+
+    // Monthly cost-budget configuration (admin-initiated) and the guard's threshold crossings
+    // (System actor). The crossings are audited in addition to the notification so the record
+    // survives notification acknowledgement/retention.
+    CostLimitCreated = 71,
+    CostLimitUpdated = 72,
+    CostLimitDeleted = 73,
+    CostBudgetSoftLimitReached = 74,
+    CostBudgetHardLimitReached = 75,
 }

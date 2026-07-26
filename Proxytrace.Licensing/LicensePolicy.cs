@@ -31,6 +31,7 @@ public static class LicensePolicy
             LicenseFeature.Tracey,
             LicenseFeature.ScheduledTestRuns,
             LicenseFeature.CustomAnomalyDetectors,
+            LicenseFeature.CostControls,
         },
         new Dictionary<LicenseLimit, long>
         {

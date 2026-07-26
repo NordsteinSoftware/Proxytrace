@@ -158,6 +158,14 @@ internal static class QueryLatencyScenario
             () => statsReader.GetModelBreakdownAsync(filter, cancellationToken));
         await Measure("statsCostEstimate",
             () => statsReader.GetCostEstimateAsync(filter, cancellationToken));
+        // Cost-budget guard input: month-to-date spend grouped by (project, agent). The
+        // AgentVersion join is what makes it distinct from statsCostEstimate — the guard has to see
+        // every project in one pass, and the grouping keys only exist on the version row.
+        await Measure("statsCostByAgent",
+            () => statsReader.GetCostByProjectAndAgentAsync(filter, cancellationToken));
+        // The Costs page's cost-over-time chart: the same join, additionally keyed by time bucket.
+        await Measure("statsCostSeriesByAgent",
+            () => statsReader.GetCostSeriesByAgentAsync(filter, StatisticsBucket.Daily, cancellationToken));
         await Measure("statsCallTrends",
             () => statsReader.GetCallTrendsAsync(filter, 20, from, now, cancellationToken));
         await Measure("statsPulse",

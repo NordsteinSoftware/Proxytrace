@@ -17,6 +17,13 @@ namespace Proxytrace.Messaging;
 /// already in the stream keep deserializing during a rolling deploy.
 /// </para>
 /// <para>
+/// <c>BlockedByBudget</c> marks the other pre-upstream rejection: the project (or the named agent)
+/// had already crossed its hard monthly cost budget. The trace is still recorded — flagged blocked,
+/// carrying the 403 body — but it is deliberately not attributed to a detector, and since the call
+/// never reached the provider it contributes ~no tokens and so cannot inflate the very spend figure
+/// that blocked it.
+/// </para>
+/// <para>
 /// <c>SessionId</c> carries the client's <c>x-proxytrace-session-id</c> value — the debugging-session
 /// key (one app run / user session, spanning agents and conversations). <c>ConversationId</c> carries
 /// the <c>x-proxytrace-conversation-id</c> value — the thread key. When no conversation id is sent,
@@ -36,4 +43,5 @@ public sealed record IngestMessage(
     Guid? BlockedByDetectorId = null,
     string? BlockedDetectorName = null,
     string? BlockedTriggerPattern = null,
-    string? ConversationId = null);
+    string? ConversationId = null,
+    bool BlockedByBudget = false);

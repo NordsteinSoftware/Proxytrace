@@ -264,6 +264,7 @@ public sealed class OpenAiProxyPassthroughTests
             Substitute.For<IIngestionStream>(),
             ResolverFor(ApiKey(new Uri("http://upstream.test/v1"))),
             Substitute.For<IRequestBlocker>(),
+            Substitute.For<IBudgetBlocker>(),
             new KioskOptions { Enabled = true },
             new KioskEndpointOptions(),
             NullLogger<OpenAiProxyController>.Instance);
@@ -285,6 +286,7 @@ public sealed class OpenAiProxyPassthroughTests
             stream,
             resolver,
             Substitute.For<IRequestBlocker>(),
+            Substitute.For<IBudgetBlocker>(),
             new KioskOptions(),
             new KioskEndpointOptions(),
             NullLogger<OpenAiProxyController>.Instance);

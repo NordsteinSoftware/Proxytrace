@@ -24,6 +24,28 @@ public interface IAgentCallStatsReader
 
     Task<IReadOnlyList<CostEstimateStat>> GetCostEstimateAsync(StatisticsFilter filter, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Derived spend grouped by (project, agent) over the filtered window. The existing
+    /// <see cref="GetCostEstimateAsync"/> answers a different question (per-endpoint totals for one
+    /// filter), so budget evaluation — which must see every project in one pass — needs its own
+    /// aggregate. Cost stays derived: tokens are summed per (project, agent, endpoint) in SQL and
+    /// priced in C#, so a price change reprices history.
+    /// </summary>
+    Task<IReadOnlyList<ProjectAgentCostStat>> GetCostByProjectAndAgentAsync(StatisticsFilter filter, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Derived spend per (bucket, agent) over the filtered window — the Costs page's
+    /// cost-over-time series.
+    /// </summary>
+    Task<IReadOnlyList<AgentCostPoint>> GetCostSeriesByAgentAsync(StatisticsFilter filter, StatisticsBucket bucket, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Whether any call in the filtered window was served by an endpoint with no configured price.
+    /// Those calls contribute nothing to derived spend, so budgets and the Costs page undercount —
+    /// the flag lets the UI say so instead of presenting an incomplete estimate as exact.
+    /// </summary>
+    Task<bool> HasUnpricedEndpointsAsync(StatisticsFilter filter, CancellationToken cancellationToken = default);
+
     Task<IReadOnlyList<AgentTokenUsageStat>> GetTokenUsageByAgentAsync(StatisticsFilter filter, StatisticsBucket bucket, CancellationToken cancellationToken = default);
 
     /// <summary>

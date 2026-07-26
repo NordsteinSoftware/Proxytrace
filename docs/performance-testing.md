@@ -109,6 +109,20 @@ cost the proxy pays. The point of the budget is flatness: resolution is a handfu
 lookups independent of `AgentCall` volume, and a breach signals a lost index or an accidental join
 to a high-volume table. See `_comment_proxyResolve` in `perf/perf-budgets.json`.
 
+### Cost aggregates (`statsCostByAgent`, `statsCostSeriesByAgent`)
+
+The cost-budget guard and the Costs page each add a windowed aggregate over `AgentCallEntity`.
+Both are the `statsCostEstimate` shape plus an **INNER JOIN onto `AgentVersionEntity`** — an
+`AgentCall` carries no project of its own, so the `(project, agent)` grouping keys only exist on the
+version row. Grouping additionally by `EndpointId` keeps cost derived (it is never persisted per
+call; `CalculateCost` folds the token sums in C#), so the wire carries
+`O(projects × agents × endpoints)` and `O(buckets × agents × endpoints)` rows respectively — never
+`O(calls)`. Their committed budgets are **placeholders in the `statsCostEstimate` class, marked
+RECALIBRATE**: measure the real p95 on your hardware with `perf/run.sh --size 1000000` and set them
+to that + ~30-45%. Regression signature: a climb toward seconds means the join stopped translating
+and version rows are being materialised per call, or planner statistics went stale after a bulk
+seed. See [`cost-controls.md`](cost-controls.md).
+
 ## Budgets (`perf/perf-budgets.json`)
 
 The single source of absolute budgets, shared by all three scopes (the DB-layer runner and benchmarks

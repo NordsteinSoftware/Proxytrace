@@ -94,6 +94,7 @@ public class OpenAiProxyController : ControllerBase
     private readonly IIngestionStream stream;
     private readonly IApiKeyResolver apiKeyResolver;
     private readonly IRequestBlocker requestBlocker;
+    private readonly IBudgetBlocker budgetBlocker;
     private readonly KioskOptions kioskOptions;
     private readonly KioskEndpointOptions kioskEndpoint;
     private readonly ILogger<OpenAiProxyController> logger;
@@ -103,6 +104,7 @@ public class OpenAiProxyController : ControllerBase
         IIngestionStream stream,
         IApiKeyResolver apiKeyResolver,
         IRequestBlocker requestBlocker,
+        IBudgetBlocker budgetBlocker,
         KioskOptions kioskOptions,
         KioskEndpointOptions kioskEndpoint,
         ILogger<OpenAiProxyController> logger)
@@ -111,6 +113,7 @@ public class OpenAiProxyController : ControllerBase
         this.stream = stream;
         this.apiKeyResolver = apiKeyResolver;
         this.requestBlocker = requestBlocker;
+        this.budgetBlocker = budgetBlocker;
         this.kioskOptions = kioskOptions;
         this.kioskEndpoint = kioskEndpoint;
         this.logger = logger;
@@ -162,6 +165,20 @@ public class OpenAiProxyController : ControllerBase
         var agentName = Request.Headers.TryGetValue(AgentNameHeader, out var an)
             ? an.ToString()
             : null;
+
+        // Monthly cost budget: checked before the detectors because it needs no body inspection —
+        // if the project has already spent its hard limit, no further upstream contact is wanted at
+        // any price. Like a detector block the call is rejected but still recorded as a trace, and
+        // since it never reaches the provider it adds ~no tokens to the spend that blocked it.
+        var budgetSw = Stopwatch.StartNew();
+        BudgetBlockMatch? budgetBlocked = await budgetBlocker.EvaluateAsync(
+            resolved.Project.Id, agentName, cancellationToken);
+        if (budgetBlocked is not null)
+        {
+            await RejectBudgetBlockedRequestAsync(
+                resolved, requestBody, budgetBlocked, budgetSw.Elapsed, sessionId, conversationId, agentName, cancellationToken);
+            return;
+        }
 
         // Real-time blocking detectors: evaluate the raw request body before any upstream contact.
         // On a match the call is rejected (never forwarded) but still recorded as a blocked trace.
@@ -647,7 +664,8 @@ public class OpenAiProxyController : ControllerBase
         string? conversationId,
         string? agentName,
         CancellationToken cancellationToken,
-        BlockedRequestMatch? blocked = null)
+        BlockedRequestMatch? blocked = null,
+        bool blockedByBudget = false)
     {
         try
         {
@@ -664,7 +682,8 @@ public class OpenAiProxyController : ControllerBase
                     BlockedByDetectorId: blocked?.DetectorId,
                     BlockedDetectorName: blocked?.DetectorName,
                     BlockedTriggerPattern: blocked?.TriggerPattern,
-                    ConversationId: conversationId),
+                    ConversationId: conversationId,
+                    BlockedByBudget: blockedByBudget),
                 cancellationToken);
         }
         catch (Exception ex)
@@ -716,6 +735,60 @@ public class OpenAiProxyController : ControllerBase
             agentName: agentName,
             CancellationToken.None,
             blocked: blocked);
+    }
+
+    private async Task RejectBudgetBlockedRequestAsync(
+        ResolvedApiKey resolved,
+        string requestBody,
+        BudgetBlockMatch blocked,
+        TimeSpan elapsed,
+        string? sessionId,
+        string? conversationId,
+        string? agentName,
+        CancellationToken cancellationToken)
+    {
+        logger.LogInformation(
+            "Blocked request to project {ProjectId} by exhausted monthly cost budget {CostLimitId}",
+            resolved.Project.Id, blocked.CostLimitId);
+
+        var errorJson = BuildBudgetBlockedErrorJson();
+
+        Response.StatusCode = StatusCodes.Status403Forbidden;
+        Response.ContentType = "application/json";
+        await Response.WriteAsync(errorJson, cancellationToken);
+
+        // CancellationToken.None: a client disconnect right after the 403 must not drop the record.
+        await EnqueueSafeAsync(
+            resolved.Provider,
+            resolved.Project,
+            requestBody,
+            responseBody: errorJson,
+            duration: elapsed,
+            httpStatus: HttpStatusCode.Forbidden,
+            sessionId: sessionId,
+            conversationId: conversationId,
+            agentName: agentName,
+            CancellationToken.None,
+            blockedByBudget: true);
+    }
+
+    private static string BuildBudgetBlockedErrorJson()
+    {
+        // Deliberately amount-free: an ingestion API key does not imply entitlement to the
+        // organisation's spend figures or configured budgets, so the client is told that a budget
+        // stopped the call and nothing more. Operators see the numbers on the Costs page.
+        var payload = new
+        {
+            error = new
+            {
+                message = "Request blocked: the monthly cost budget for this project has been reached. "
+                    + "Contact your Proxytrace administrator.",
+                type = "invalid_request_error",
+                param = (string?)null,
+                code = "proxytrace_budget_exceeded",
+            },
+        };
+        return System.Text.Json.JsonSerializer.Serialize(payload);
     }
 
     private static string BuildBlockedErrorJson(string detectorName)

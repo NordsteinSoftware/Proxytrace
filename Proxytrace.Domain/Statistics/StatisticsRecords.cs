@@ -138,6 +138,26 @@ public record CostEstimateStat(
     decimal? OutputCostEur,
     decimal? TotalCostEur);
 
+/// <summary>
+/// Derived spend of one agent within one project over a window. The project comes from the call's
+/// <c>AgentVersion</c> (an <c>AgentCall</c> has no project of its own), so one row exists per
+/// (project, agent) pair that had traffic — the shape the cost-budget guard evaluates and the
+/// Costs page renders as its agent breakdown.
+/// </summary>
+public record ProjectAgentCostStat(
+    Guid ProjectId,
+    Guid AgentId,
+    decimal CostEur);
+
+/// <summary>
+/// Derived spend of one agent in one time bucket. Aggregated per (bucket, agent, endpoint) in SQL
+/// and priced in C#, so the result is O(buckets × agents × endpoints) and never O(calls).
+/// </summary>
+public record AgentCostPoint(
+    DateTimeOffset BucketStart,
+    Guid AgentId,
+    decimal CostEur);
+
 public record AgentTimeSeriesPoint(
     DateTimeOffset BucketStart,
     int TraceCount,

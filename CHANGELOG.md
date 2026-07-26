@@ -9,6 +9,34 @@ follow [Semantic Versioning](https://semver.org). Ongoing work is collected unde
 
 ## [Unreleased]
 
+### Added
+
+- **Cost tracking and budgets.** A new **Costs** page (under Monitor in the sidebar) shows what your
+  agents are actually spending: month-to-date and previous-month totals, a straight-line month-end
+  projection, spend over time stacked per agent, and a per-agent breakdown. Alongside it you can now
+  set **monthly spend budgets** — one for the whole project and, optionally, one per agent — with two
+  independent thresholds. Reaching the **soft limit** raises a warning notification; reaching the
+  **hard limit** raises a critical notification *and* makes the proxy reject further LLM calls for
+  that scope with an OpenAI-shaped `403` (`proxytrace_budget_exceeded`) until the month resets or you
+  raise the limit. Blocked calls are still recorded as flagged traces and, since they never reach the
+  provider, cost nothing.
+
+  Budgets run on the UTC calendar month and reset on the 1st: alerts re-arm and blocks lift by
+  themselves, with no cleanup to run. Each threshold alerts once per month, so an ongoing overspend
+  does not flood the inbox. Editing a budget clears its alert state, which is what makes raising a
+  hard limit actually unblock traffic.
+
+  Cost stays **derived** — Proxytrace still stores token counts, never a price, so correcting an
+  endpoint's price reprices your whole history and every budget follows. Calls served by an endpoint
+  with no configured price contribute nothing, and the page now says so explicitly instead of
+  presenting an incomplete total as exact.
+
+  Viewing the page and any configured budgets is free on every plan and open to all project members;
+  **creating or changing** a budget requires an administrator and an **Enterprise** license. An
+  install that loses its license keeps its budget configuration — nothing fires and nothing blocks
+  until the license is restored. Note that agent-scoped blocking can only match traffic that sends
+  the `x-proxytrace-agent` header, so a project-wide budget is the reliable backstop.
+
 ## [1.9.0] - 2026-07-26
 
 ### Fixed

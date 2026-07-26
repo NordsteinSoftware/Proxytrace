@@ -24,6 +24,18 @@ The pass-rate and latency checks only fire once a suite has enough run history t
 reliable baseline, so a brand-new suite won't produce false alarms — a failed run is always
 reported.
 
+## Cost budget alerts
+
+If a [monthly cost budget](/guide/costs) is configured for the project, crossing one of its
+thresholds raises a notification here:
+
+- **Soft limit reached** — a **Warning**. Nothing is blocked; spend is simply running high.
+- **Hard limit reached** — a **Critical**. Proxied calls for that scope are now being rejected
+  until the month resets or an administrator raises the limit.
+
+Each threshold alerts **once per calendar month**, so an ongoing overspend does not flood the
+inbox — and the counters re-arm by themselves on the 1st.
+
 ## Working with notifications
 
 - Notifications appear **live**, without refreshing the page.

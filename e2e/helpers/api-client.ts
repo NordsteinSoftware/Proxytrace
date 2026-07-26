@@ -1179,6 +1179,60 @@ export class ProxytraceApiClient {
     return res.json();
   }
 
+  // ── cost budgets ──────────────────────────────────────────────────────────
+
+  async listCostLimits(projectId: string): Promise<CostLimitDto[]> {
+    const res = await this.request.get(`/api/cost-limits?projectId=${encodeURIComponent(projectId)}`, {
+      headers: this.headers(),
+    });
+    if (!res.ok()) throw new Error(`list cost limits failed: ${res.status()} ${await res.text()}`);
+    return res.json();
+  }
+
+  async createCostLimit(opts: {
+    projectId: string;
+    agentId?: string | null;
+    softLimitEur?: number | null;
+    hardLimitEur?: number | null;
+    enabled?: boolean;
+  }): Promise<CostLimitDto> {
+    const res = await this.request.post('/api/cost-limits', {
+      headers: this.headers(),
+      data: {
+        projectId: opts.projectId,
+        agentId: opts.agentId ?? null,
+        softLimitEur: opts.softLimitEur ?? null,
+        hardLimitEur: opts.hardLimitEur ?? null,
+        enabled: opts.enabled ?? true,
+      },
+    });
+    if (!res.ok()) throw new Error(`create cost limit failed: ${res.status()} ${await res.text()}`);
+    return res.json();
+  }
+
+  async updateCostLimit(
+    id: string,
+    body: { softLimitEur: number | null; hardLimitEur: number | null; enabled: boolean },
+  ): Promise<CostLimitDto> {
+    const res = await this.request.put(`/api/cost-limits/${id}`, { headers: this.headers(), data: body });
+    if (!res.ok()) throw new Error(`update cost limit failed: ${res.status()} ${await res.text()}`);
+    return res.json();
+  }
+
+  async deleteCostLimit(id: string): Promise<void> {
+    const res = await this.request.delete(`/api/cost-limits/${id}`, { headers: this.headers() });
+    if (!res.ok()) throw new Error(`delete cost limit failed: ${res.status()} ${await res.text()}`);
+  }
+
+  async costOverview(params: {
+    projectId: string;
+    from: string;
+    to: string;
+    bucket?: string;
+  }): Promise<CostOverviewDto> {
+    return this.getList<CostOverviewDto>('/api/statistics/cost-overview', params);
+  }
+
   private async getList<T>(path: string, params: Record<string, string | number | undefined>): Promise<T> {
     const qs = new URLSearchParams();
     for (const [k, v] of Object.entries(params)) if (v != null) qs.set(k, String(v));
@@ -1187,4 +1241,38 @@ export class ProxytraceApiClient {
     if (!res.ok()) throw new Error(`list ${path} failed: ${res.status()} ${await res.text()}`);
     return res.json();
   }
+}
+
+/** One configured monthly cost budget (`/api/cost-limits`). */
+export interface CostLimitDto {
+  id: string;
+  projectId: string;
+  agentId: string | null;
+  agentName: string | null;
+  softLimitEur: number | null;
+  hardLimitEur: number | null;
+  enabled: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** The Costs page payload (`/api/statistics/cost-overview`). */
+export interface CostOverviewDto {
+  monthToDateSpendEur: number;
+  previousMonthSpendEur: number;
+  series: Array<{ bucketStart: string; agentId: string; costEur: number }>;
+  agentTotals: Array<{ agentId: string; agentName: string; costEur: number }>;
+  budgets: Array<{
+    costLimitId: string;
+    agentId: string | null;
+    agentName: string | null;
+    softLimitEur: number | null;
+    hardLimitEur: number | null;
+    enabled: boolean;
+    monthToDateSpendEur: number;
+    softBreached: boolean;
+    hardBreached: boolean;
+  }>;
+  hasUnpricedEndpoints: boolean;
+  bucket: string;
 }
