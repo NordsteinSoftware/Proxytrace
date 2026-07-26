@@ -26,15 +26,12 @@ internal sealed class BudgetBlocker : IBudgetBlocker
     {
         IReadOnlyList<BudgetHardBlock> blocks = await blockProvider.GetBlocksAsync(projectId, cancellationToken);
 
-        foreach (BudgetHardBlock block in blocks)
-        {
-            if (AppliesTo(block, agentName))
-            {
-                return new BudgetBlockMatch(block.CostLimitId, block.AgentName);
-            }
-        }
+        // First match wins: any applicable block stops the call, and which one it was only affects
+        // the log line. Unlike RequestBlocker — whose loop body runs the trigger matcher — the
+        // predicate here is a pure filter, so it reads as one.
+        BudgetHardBlock? block = blocks.FirstOrDefault(candidate => AppliesTo(candidate, agentName));
 
-        return null;
+        return block is null ? null : new BudgetBlockMatch(block.CostLimitId, block.AgentName);
     }
 
     private static bool AppliesTo(BudgetHardBlock block, string? agentName)
