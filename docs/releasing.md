@@ -52,7 +52,14 @@ Propagation:
 1. **meta** — validates the tag is SemVer and that `CHANGELOG.md` has the matching section
    (`scripts/release/extract-changelog.sh`).
 2. **ci / e2e** — reuses the existing `ci.yml` and `e2e.yml` workflows as release gates
-   (both expose `workflow_call`).
+   (both expose `workflow_call`). `ci.yml` is called with **`full: true`**, which is what makes
+   the gate complete: on ordinary PRs and master pushes that workflow skips jobs whose paths did
+   not change, and skips some entirely on master. The input exists rather than an
+   `if: github.event_name != 'push'` check because inside a reusable workflow `github.event_name`
+   reports the *caller's* event — a release is a tag push, so an event-based condition would read
+   `'push'` and silently skip the gate's own jobs. **If you add a job to `ci.yml`, gate it on
+   `inputs.full || …` or it will not run for releases.**
+   `e2e.yml` needs no such input: its `paths-ignore` filter does not apply to `workflow_call`.
 3. **publish-image** — builds the **all-in-one image** (`deploy/allinone/Dockerfile`) once,
    multi-arch (linux/amd64 + linux/arm64; build stages cross-compile natively via
    `--platform=$BUILDPLATFORM` + `dotnet -a $TARGETARCH`, QEMU only runs the runtime stage's
@@ -74,6 +81,14 @@ Propagation:
    the source-built dev/e2e/perf composes; they are not published. `ci.yml`'s **image** job builds
    the same Dockerfile and boots the container on a cold volume, so a broken release image fails
    on the PR, not on the tag.
+
+   Layer cache for this build lives in a **registry** (`ghcr.io/syntaktikeu/proxytrace-buildcache`,
+   tag `release-allinone`), not in the Actions cache. Two `type=gha,mode=max` image builds
+   previously held 8.4 GB of the repo-wide 10 GB Actions budget and LRU-evicted the .NET and npm
+   caches every other job restores from. `cache-to` carries `ignore-error=true` so a registry
+   hiccup degrades to a slow build instead of failing a release. The tag is deliberately separate
+   from `ci.yml`'s `allinone`: this build is multi-arch and mixing them would have each evict the
+   other's platform layers.
 
    Adding a registry = add its image to the `images:` list of the `docker-meta` step; the
    tag rules apply to every image in the list.

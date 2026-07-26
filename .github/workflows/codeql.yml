@@ -2,8 +2,13 @@ name: CodeQL
 
 # Static analysis via GitHub code scanning. Findings appear in the repo's
 # Security tab; a PR fails its check when it introduces new alerts.
-# C# is analyzed with build-mode `none` (no compilation needed), so this stays
-# fast. Python is deliberately excluded — only stray helper scripts.
+# Every language is analyzed with build-mode `none` (no compilation needed), so this
+# stays fast. Python is deliberately excluded — only stray helper scripts.
+#
+# The language matrix is computed from the diff rather than fixed: analysing C# on a
+# frontend-only PR costs ~3 minutes and can only reproduce the previous run's findings.
+# The weekly schedule and every master push still analyse everything, so the Security
+# tab's baseline never drifts from a partial scan.
 
 on:
   pull_request:
@@ -20,7 +25,41 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      languages: ${{ steps.resolve.outputs.languages }}
+
+    steps:
+      - name: Checkout (full history)
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Detect changed areas
+        id: detect
+        uses: ./.github/actions/detect-changes
+
+      - name: Resolve the language set
+        id: resolve
+        env:
+          DETECTED: ${{ steps.detect.outputs.codeql-languages }}
+          IS_PR: ${{ github.event_name == 'pull_request' }}
+        run: |
+          set -euo pipefail
+          # Only a PR may analyse a subset. A master push or the weekly schedule feeds the
+          # Security tab's baseline, and a partial scan there would read as "alert resolved"
+          # for every language that did not run.
+          if [[ "$IS_PR" == "true" ]]; then
+            echo "languages=${DETECTED}" >> "$GITHUB_OUTPUT"
+          else
+            echo 'languages=["csharp","javascript-typescript","actions"]' >> "$GITHUB_OUTPUT"
+          fi
+
   analyze:
+    needs: changes
+    if: ${{ needs.changes.outputs.languages != '[]' }}
     name: Analyze (${{ matrix.language }})
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -32,13 +71,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - language: csharp
-            build-mode: none
-          - language: javascript-typescript
-            build-mode: none
-          - language: actions
-            build-mode: none
+        # The fallback is never analysed — it exists because an empty matrix vector is a
+        # job error in Actions, not a skip, and `if` above is what actually stops the run.
+        language: ${{ fromJSON(needs.changes.outputs.languages != '[]' && needs.changes.outputs.languages || '["csharp"]') }}
 
     steps:
       - name: Checkout
@@ -48,7 +83,7 @@ jobs:
         uses: github/codeql-action/init@v4
         with:
           languages: ${{ matrix.language }}
-          build-mode: ${{ matrix.build-mode }}
+          build-mode: none
 
       - name: Analyze
         uses: github/codeql-action/analyze@v4

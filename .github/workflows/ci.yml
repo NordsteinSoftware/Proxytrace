@@ -5,8 +5,15 @@ on:
   push:
     branches:
       - master
-  # Reused as a release gate by release.yml.
+  # Reused as a release gate by release.yml, which passes full=true.
   workflow_call:
+    inputs:
+      full:
+        description: >-
+          Run every job unconditionally, ignoring both the path gates and the
+          master-push trim. The release gate sets this.
+        type: boolean
+        default: false
 
 # Supersede in-flight runs on PR force-push/amend only; master pushes and
 # release-gate (workflow_call) runs are never cancelled.
@@ -14,8 +21,44 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
+# Needed by the `image` job to read/write the build cache on GHCR.
+permissions:
+  contents: read
+  packages: write
+
+env:
+  # Build cache lives in a registry, NOT in the Actions cache. Two `type=gha,mode=max`
+  # image builds previously held 8.4 GB of the repo-wide 10 GB Actions budget and
+  # LRU-evicted the .NET and npm caches that `backend` and `frontend` restore from.
+  # GHCR storage for a public package is free and uncapped, so the two caches no
+  # longer compete. Owned by this repo (not the release image's `proxytrace` org)
+  # so the workflow's own GITHUB_TOKEN is unambiguously allowed to write it.
+  BUILD_CACHE: ghcr.io/syntaktikeu/proxytrace-buildcache
+
 jobs:
+  # Decides which of the jobs below can be skipped. Fails open — see the action.
+  changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      backend: ${{ steps.detect.outputs.backend }}
+      frontend: ${{ steps.detect.outputs.frontend }}
+      image: ${{ steps.detect.outputs.image }}
+
+    steps:
+      - name: Checkout (full history)
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Detect changed areas
+        id: detect
+        uses: ./.github/actions/detect-changes
+
+  # A secret can be committed to any file, so this is never path-gated. It is skipped
+  # on master pushes only because the PR run already scanned the same history.
   secrets:
+    if: ${{ inputs.full || github.event_name == 'pull_request' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -32,7 +75,11 @@ jobs:
           curl -sSfL https://github.com/gitleaks/gitleaks/releases/download/v8.24.3/gitleaks_8.24.3_linux_x64.tar.gz | tar xz gitleaks
           ./gitleaks git . --redact --verbose
 
+  # Lint/build cannot break from a merge-order interaction, so the PR run is enough
+  # and this is skipped on master pushes.
   frontend:
+    needs: changes
+    if: ${{ inputs.full || (github.event_name == 'pull_request' && needs.changes.outputs.frontend == 'true') }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
@@ -59,7 +106,11 @@ jobs:
         run: npm run build
         working-directory: frontend
 
+  # Kept on master pushes as the post-merge safety net: a PR verified against a stale
+  # base can still break master, and the tests are what catch that.
   backend:
+    needs: changes
+    if: ${{ inputs.full || needs.changes.outputs.backend == 'true' }}
     runs-on: ubuntu-latest
     # A wedged test (a mocked call that never matches leaves the consume loop spinning) otherwise
     # runs to GitHub's 6h default. The suite finishes in a few minutes; 30 leaves ample headroom.
@@ -89,7 +140,10 @@ jobs:
   # Builds the released all-in-one image and boots it, so a container that fails to come up
   # (initdb, supervisord, nginx upstream, migrations on a cold volume) is caught here rather
   # than after a release tag is pushed. Single-arch: the release build adds arm64.
+  # Skipped on master pushes — packaging cannot regress from merge order alone.
   image:
+    needs: changes
+    if: ${{ inputs.full || (github.event_name == 'pull_request' && needs.changes.outputs.image == 'true') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -100,6 +154,16 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
 
+      # Cache reads work anonymously; only the write needs this. Fork PRs get a
+      # read-only token, so the login fails and `ignore-error` drops the export.
+      - name: Log in to GHCR
+        continue-on-error: true
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Build all-in-one image
         uses: docker/build-push-action@v7
         with:
@@ -107,8 +171,8 @@ jobs:
           file: deploy/allinone/Dockerfile
           load: true
           tags: proxytrace:ci
-          cache-from: type=gha,scope=allinone
-          cache-to: type=gha,mode=max,scope=allinone
+          cache-from: type=registry,ref=${{ env.BUILD_CACHE }}:allinone
+          cache-to: type=registry,ref=${{ env.BUILD_CACHE }}:allinone,mode=max,ignore-error=true
 
       # A cold volume: initdb runs, migrations apply, then all five processes must answer.
       - name: Smoke-test the container
