@@ -1,75 +1,166 @@
-<div align="center">
-
-<img src="frontend/public/icon.svg" alt="Proxytrace" width="88" height="88" />
-
 # Proxytrace
 
 ### The debugger, unit test framework, and mission control for AI agents
 
-**One base-URL change** and every LLM call your agent makes — on your laptop or
-in production — becomes an inspectable trace, a reproducible test case, and
-fuel for data-backed optimization.
+Proxytrace captures every LLM call, turns real traffic into test suites, and tells you exactly
+what to fix. Self-hosted, one container. **Ship with evidence, not vibes.**
 
-[![Release](https://img.shields.io/github/v/release/Proxytrace/Proxytrace?color=e8a33d&label=release)](https://github.com/Proxytrace/Proxytrace/releases)
-[![CI](https://github.com/Proxytrace/Proxytrace/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/Proxytrace/Proxytrace/actions/workflows/ci.yml)
-[![E2E](https://github.com/Proxytrace/Proxytrace/actions/workflows/e2e.yml/badge.svg?branch=master)](https://github.com/Proxytrace/Proxytrace/actions/workflows/e2e.yml)
-[![CodeQL](https://github.com/Proxytrace/Proxytrace/actions/workflows/codeql.yml/badge.svg?branch=master)](https://github.com/Proxytrace/Proxytrace/actions/workflows/codeql.yml)
-[![.NET 10](https://img.shields.io/badge/.NET-10-512BD4?logo=dotnet&logoColor=white)](https://dotnet.microsoft.com/)
-[![React 19](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)](https://react.dev/)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-storage-336791?logo=postgresql&logoColor=white)](docs/database.md)
-[![License: Elastic 2.0](https://img.shields.io/badge/license-Elastic%202.0-blue)](LICENSE)
+[![release](https://img.shields.io/github/v/release/SyntaktikEU/Proxytrace?style=flat-square&label=release&color=57c4d3&labelColor=0a0f14)](https://github.com/SyntaktikEU/Proxytrace/releases)
+[![ci](https://img.shields.io/github/actions/workflow/status/SyntaktikEU/Proxytrace/ci.yml?branch=master&style=flat-square&label=ci&color=57c4d3&labelColor=0a0f14)](https://github.com/SyntaktikEU/Proxytrace/actions/workflows/ci.yml)
+[![license Elastic 2.0](https://img.shields.io/badge/license-Elastic%202.0-57c4d3?style=flat-square&labelColor=0a0f14)](LICENSE)
+[![made in the EU](https://img.shields.io/badge/made%20in%20the%20EU-57c4d3?style=flat-square&labelColor=0a0f14)](#nothing-leaves-your-network)
 
-[Quick start](#quick-start) · [Feature tour](#feature-tour) · [How it works](#how-it-works) · [Documentation](#documentation) · [License](#license)
+**Change one line. That's the integration.**
 
-<img src="docs/assets/readme/dashboard.png" alt="The Proxytrace dashboard: live activity feed, token volume, per-model split, latency and pass-rate tiles" width="920" />
+```diff
+  client = OpenAI(
+-     base_url="https://api.openai.com/v1",
++     base_url="http://localhost:5102/openai/v1",
+      api_key="<proxytrace API key>",
+  )
+```
 
-</div>
+`1` line changed · `0` SDKs to install · `100%` of calls captured
+
+<img src="docs/assets/readme/hero-band.png" width="900" alt="Proxytrace mission control on live traffic: a 60-minute activity band showing 6.2 traces per minute, 90 tokens per second and a 0.0 percent error rate, a live feed of calls captured seconds ago across four agents, and an all-time counter of 2.3 million tokens over 5,089 traces with 33 percent served from cache." />
+
+*Nothing changed but the base URL.* &nbsp;`> proxytrace.local · /dashboard`
+
+**[Run it](#run-it)** · [proxytrace.dev](https://proxytrace.dev) · [Manual](manual/) · [Changelog](CHANGELOG.md)
 
 ---
 
-## Why Proxytrace?
+`SEC.01 · CAPTURE`
+## And then: every call lands.<br>Nothing sampled. Nothing dropped.
 
-Agent development is stuck in the printf era. You tweak a prompt, rerun the
-script, and squint at console output or a provider dashboard to guess what
-changed. Regressions ship silently, "it feels better" passes for evidence, and
-production behavior is a black box. Every other kind of software gets a
-debugger, a unit test framework, CI, and monitoring — agents deserve the same
-toolchain. Proxytrace is that toolchain.
+> The proxy is a thin reverse proxy on the hot path and capture is asynchronous, so your
+> agent's latency is untouched.
 
-It starts with a single line. Point any OpenAI-compatible client at the
-Proxytrace proxy:
+*Rows arrive on their own. Nobody pressed refresh.*
 
-```python
-client = OpenAI(
-    base_url="http://localhost:5102/openai/v1",  # ← was: https://api.openai.com/v1
-    api_key="<proxytrace API key>",
-)
+<img src="docs/assets/readme/traces-live.gif" width="900" alt="The Proxytrace traces table while agents are running: new calls insert themselves at the top of the list one by one with a brief highlight, and the trace count, token total, cost and average latency above the table recount with every arrival. Nothing is refreshed and no row already on screen moves out of place." />
+
+`> proxytrace.local · /traces`
+
+Requests reach your provider untouched — every client header travels upstream unchanged. Three
+optional headers are read by Proxytrace, stripped, and never forwarded:
+
+| Header | What it buys you |
+|---|---|
+| `x-proxytrace-agent` | Names the agent explicitly, instead of inferring it from prompt similarity. |
+| `x-proxytrace-conversation-id` | Groups turns into one conversation. |
+| `x-proxytrace-session-id` | Collects traces across agents and conversations into one debugging session. |
+
+### Open any call. Read the whole conversation.
+
+*Not a log line. The system prompt the model actually received, every tool round-trip, the reply.*
+
+<img src="docs/assets/readme/trace-detail.png" width="900" alt="A captured support call opened in full: an anomaly banner flagging high latency, a metric band reading 5.0 seconds, 866 input tokens, 121 output tokens, 7 percent cached and 0.0002 euros, then the whole conversation — the system prompt, the customer's message, two completed tool calls with their arguments, and every reply the agent gave." />
+
+`> proxytrace.local · /traces` — server-side sort and stacking filters across every matching trace
+
+`prompts · tools · parameters · tokens · cache hits · latency · cost in €`
+
+### And the bad ones raise their hand.
+
+*Per-agent baselines, not thresholds you have to guess at.*
+
+<img src="docs/assets/readme/anomalies.png" width="900" alt="The anomaly dashboard: a table of recently flagged calls tagged high token count, high latency, many tool calls and low cache hit, a stacked per-agent timeline of anomalies over the last 24 hours, summary tiles splitting statistical flags from detector flags, and a ranking of the most flagged agents." />
+
+`high tokens · high latency · many tool calls · low cache hit`
+
+Custom detectors review trigger-matched calls against rules you write in plain language, and can
+block a matching request at the proxy before it ever reaches the provider. `ENTERPRISE`
+
+---
+
+`SEC.02 · TESTS`
+## And then: a trace becomes a test.<br>And "what got worse since Friday?" has an answer.
+
+> A call that embarrassed you in production is the best test case you will ever write.
+
+*Two clicks: correct the answer, pick the suite. It is a regression test from now on.*
+
+<img src="docs/assets/readme/add-test.gif" width="900" alt="A captured call where a support agent started a return for a wrongly shipped order is opened, the Add test button turns it into a test case, the expected output is replaced with the answer the agent should have given, a destination suite is selected, and a confirmation reports the case was added to the Refund Policy Accuracy suite." />
+
+`> proxytrace.local · /traces` — promote a trace as-is, correct it, or write a case from scratch
+
+Evaluators are the assertions: `exact match · numeric · JSON schema · LLM-judged`. The first three
+are free; the judged kind `ENTERPRISE` ships with Helpfulness, Politeness, Safety and Tool Usage
+presets, or you write the rubric yourself.
+
+### Race your production model against a candidate.
+
+*One suite, two endpoints, every case scored side by side.*
+
+<img src="docs/assets/readme/runs-matrix.png" width="900" alt="An A/B test run comparing a baseline model at 100 percent pass rate against a candidate that scores 83 percent, 17 points lower and 335 percent more expensive at the same speed, with per-evaluator score distributions and a case-by-case matrix showing exactly which test each model passed and failed." />
+
+`> proxytrace.local · /runs` — highest pass rate · fastest · cheapest, resolved per run
+
+Models are non-deterministic, so a run can sample each endpoint up to five times and report the
+pass fraction per case. Runs stream in live, and can be scheduled on a cadence. `ENTERPRISE`
+
+---
+
+`SEC.03 · PROPOSALS`
+## And then: you get told<br>exactly what to fix.
+
+> Failing runs become theories, theories are A/B tested against your own suite, and only the
+> winners reach you.
+
+*It opens on a diff you wrote. It closes on a diff Proxytrace wrote.*
+
+<img src="docs/assets/readme/proposals.png" width="900" alt="An optimization proposal: a red-green system-prompt diff rewriting the priority-threshold wording, a plain-language rationale, and the evidence behind it — an A/B test that lifted the pass rate 7 points from 71 to 78 percent at p equals 0.03, plus the three failing test runs that motivated the change." />
+
+`> proxytrace.local · /proposals` — `3 samples per arm · p ≤ 0.05` before a candidate wins
+
+**Promote does not deploy anything.** Proxytrace is an observing proxy: it cannot reach into your
+code, and it does not pretend to. Promoting hands you the change — copy buttons, a markdown
+handoff, an artifact endpoint — and starts watching. When that exact prompt shows up in live
+traffic, the proposal flips itself to **Adopted**. `ENTERPRISE`
+
+---
+
+`SEC.04 · AGENTS`
+## And then: hand the whole loop to an agent.
+
+> Everything a human can do here, an agent can do over an API.
+
+<img src="docs/assets/readme/tracey.png" width="900" alt="Tracey, the built-in assistant, answering which agents burn the most tokens: it calls a stats tool against live project data, renders a bar chart of tokens per agent, and explains that three agents account for 90 percent of all tokens, naming each with its token count and input-to-output ratio." />
+
+*Tracey answers from your project's live data — and reads whole traces, curates suites, starts
+runs, and works a reported defect test-first.* `ENTERPRISE`
+
+Every project is also a [Model Context Protocol](https://modelcontextprotocol.io) server at `/mcp`,
+on every tier. Point Claude Code or Cursor at it and your coding agent inspects the traces your
+last run produced, records corrections, curates suites, starts runs, and compares them — with a
+scoped API key, no login.
+
+---
+
+## The loop
+
+> It doesn't end. It closes.
+
+```mermaid
+flowchart LR
+    Agent["Your agent"] -->|OpenAI API| Proxy["Proxytrace proxy"]
+    Proxy -->|forwards| Provider["LLM provider"]
+    Proxy -->|captures| Traces["Traces"]
+    Traces --> Agents["Agent versions<br/>(detected from traffic)"]
+    Traces -->|curate| Suites["Test suites"]
+    Suites --> Runs["Runs +<br/>evaluations"]
+    Runs --> Theories["Theories +<br/>A/B validation"]
+    Theories --> Proposals["Proposals"]
+    Proposals -.->|you ship it| Agent
+    Agents -.->|adoption detected| Proposals
 ```
 
-No SDK swap, no instrumentation library, no code changes — and it works
-identically whether the agent runs on your dev machine or in production.
-Requests are forwarded to your real provider while Proxytrace captures every
-call in full: messages, tool definitions and calls, model parameters, token
-usage, cost, latency, response. From there, one tool covers the whole
-lifecycle:
+---
 
-- **While you build, it's your debugger.** Every call your agent makes is
-  fully inspectable the moment it happens — the exact prompt that went out,
-  every tool invocation with arguments and results, the raw JSON on the wire.
-- **Before you ship, it's your unit test framework.** Real traces and
-  hand-written cases become test suites; evaluators are the assertions; runs
-  execute them against any agent version or candidate model.
-- **In production, it's your observability and QA layer.** Agents are detected
-  and versioned automatically from traffic, dashboards stream live, anomalies
-  are flagged — or blocked at the proxy before they reach the provider.
-- **And the loop closes.** Failing results spawn optimization theories,
-  validated by A/B runs and promoted into concrete, evidence-backed proposals.
+## Run it
 
-## Quick start
-
-Proxytrace ships as one image holding the whole product — web UI, API, ingestion proxy,
-PostgreSQL and Redis. It is published to GHCR (`ghcr.io/proxytrace/proxytrace`) and Docker
-Hub (`proxytrace/proxytrace`, same tags and digests), for `linux/amd64` and `linux/arm64`.
+> Web UI, API, ingestion proxy, database and queue — one image, one command.
 
 ```bash
 docker run -d --name proxytrace \
@@ -78,156 +169,52 @@ docker run -d --name proxytrace \
   ghcr.io/proxytrace/proxytrace
 ```
 
-That one command is a complete dev setup: run it next to your agent code and
-start iterating. For production, run the same image against a database of your
-own: every [GitHub release](https://github.com/Proxytrace/Proxytrace/releases) ships a
-`proxytrace.zip` with a pinned Docker Compose file (app + Postgres + Redis) and an
-`.env` template.
-
-```bash
-curl -fLO https://github.com/Proxytrace/Proxytrace/releases/latest/download/proxytrace.zip
-unzip proxytrace.zip && cd proxytrace-<version>
-docker compose up -d        # no .env required — see .env.example for overrides
-```
-
 1. Open **http://localhost:5101** and follow the first-run setup.
-2. Create an API key, point your agent's OpenAI base URL at
-   `http://localhost:5102/openai/v1`.
-3. Watch traces stream into the UI in real time.
+2. Create an API key.
+3. Point your agent's OpenAI base URL at `http://localhost:5102/openai/v1`.
 
-The bundled user & operator manual is served at **http://localhost:5101/docs**
-(Operations → Installation covers configuration, upgrades, and backups).
+`OpenAI · Azure OpenAI · any OpenAI-compatible endpoint` · `linux/amd64 · linux/arm64`
 
-## Feature tour
+The manual is served at **http://localhost:5101/docs**. For production, every
+[release](https://github.com/SyntaktikEU/Proxytrace/releases) ships a `proxytrace.zip` with a pinned
+Compose file for app + PostgreSQL + Redis. Also on Docker Hub as `proxytrace/proxytrace` — same
+tags, same digests.
 
-### The debugger: every call, fully inspectable
+## Nothing leaves your network
 
-Run your agent and watch every call land in the trace table as it happens:
-multi-turn conversations grouped per session, with tokens, cache hits, tool
-calls, cost, and latency at a glance. Sort by any metric — server-side, across
-all matching traces — and stack composable filter chips for agent, anomaly
-type, tool name, model, status class, and token/latency ranges.
+Proxytrace runs entirely on your infrastructure. Your prompts, responses and provider keys stay on
+your machines — keys encrypted at rest under a Data Protection key ring you own. The one exception:
+the proxy forwards each request to whichever LLM provider you pointed it at, exactly as your client
+would have. For installs with no outbound internet at all, licenses can be verified offline, on-box.
 
-<img src="docs/assets/readme/traces.png" alt="The traces table: grouped multi-turn conversations with tokens, latency, status, and a live timeline" width="920" />
+## Free and Enterprise
 
-Opening a trace is like hitting a breakpoint on the conversation: the complete
-message history, the system prompt exactly as the model received it, tool
-invocations with their arguments and results, raw JSON, cost breakdowns.
-Instead of println-ing completion objects, you step through what actually
-happened — and when a call captures a behavior worth keeping, one click
-**promotes it to a test case**, turning a debugging session into a permanent
-regression test.
+Everything you have read up to `SEC.03` — capture, sessions, anomaly detection, suites, runs, the
+MCP server — is on the Free tier, capped at **10,000 traces/month**, 14-day retention, and one
+project, user, agent and suite. Enterprise lifts every cap to unlimited with 365-day retention, and
+unlocks what is marked `ENTERPRISE` above: LLM-judged and custom evaluators, the optimization loop,
+Tracey, scheduled runs, custom detectors, SSO (OIDC) and the audit log.
 
-<img src="docs/assets/readme/trace-detail.png" alt="Trace detail: full conversation with system prompt, tool calls, latency/cost metrics, and a promote-to-test-case action" width="920" />
-
-### The unit test framework: suites, evaluators, runs
-
-Test cases come from where they should: reality. Promote a good trace as-is,
-record a *correction* ("the agent saw this input — the right answer was X"),
-or write synthetic cases from scratch. Cases collect into **test suites** —
-durable, reproducible benchmarks that pin your agent's critical behaviors.
-
-Evaluators are the assertions: exact match, numeric, JSON schema, tool usage,
-safety, LLM-judged. Runs are the test executions — run a suite against any
-agent version after every prompt change, or race your production model against
-a candidate in an A/B run — with results streaming in live, per-evaluator
-breakdowns, and a case-by-case matrix. It's the red/green cycle you already
-know, applied to agent behavior.
-
-<img src="docs/assets/readme/runs.png" alt="A/B test run: production model vs. candidate with pass rates, speed and cost deltas, evaluator breakdown, and test case matrix" width="920" />
-
-### Production QA: anomalies flagged and blocked
-
-The same base URL that powers your dev loop is your production observability.
-Agents are detected automatically from traffic and versioned as their prompts
-and tools evolve. Statistical outlier detection flags unusual calls (latency
-spikes, token blowups, error bursts) as they happen. Custom LLM-based
-detectors (Enterprise) review trigger-matched calls against your own
-plain-language rules — and can even **block matching requests at the proxy**
-before they reach the provider, e.g. to stop credentials from leaking into
-prompts.
-
-<img src="docs/assets/readme/anomalies.png" alt="Anomaly dashboard: recent flagged calls, anomalies-over-time chart, and most-flagged-agents ranking" width="920" />
-
-### The optimization loop
-
-Failing results don't just sit there. Proxytrace forms **optimization
-theories** — prompt rewrites, tool updates, model swaps — grounded in your
-evaluation data, validates them with A/B runs, and promotes winners into
-**proposals** with measured pass-rate gains. Apply one and it becomes a new
-agent version; the loop closes.
-
-<img src="docs/assets/readme/proposals.png" alt="Optimization theories board: hypotheses moving through proposed, validating, validated, and rejected columns with measured gains" width="920" />
-
-### And the rest of the cockpit
-
-- **MCP server** — every project doubles as a [Model Context
-  Protocol](https://modelcontextprotocol.io) server at `/mcp`. Point your
-  coding agent (Claude Code, Cursor, …) at it and it can inspect the traces
-  your dev runs just produced, record corrections, curate suites, and start
-  runs — the debugger and test framework, scriptable from inside your editor.
-- **Playgrounds** — exercise an agent version or an evaluator interactively
-  before committing to a full run.
-- **Real-time everything** — traces, run progress, and proposals stream to the
-  UI over SSE; no refresh button anywhere.
-- **Notifications** — in-app inbox and email delivery for finished runs, new
-  proposals, and anomaly hits.
-- **Operations-grade** — multi-project tenancy with roles and invitations,
-  local accounts with TOTP two-factor auth, OIDC single sign-on (Enterprise),
-  audit log, encrypted secrets at rest, and a multilingual UI.
-
-## How it works
-
-```mermaid
-flowchart LR
-    Agent["Your agent"] -->|OpenAI API| Proxy["Proxytrace proxy"]
-    Proxy -->|forwards| Provider["LLM provider"]
-    Proxy -->|captures| Traces["Traces"]
-    Traces --> Agents["Agent versions<br/>(auto-detected)"]
-    Traces -->|curate| Suites["Test suites"]
-    Suites --> Runs["Test runs +<br/>evaluations"]
-    Runs --> Theories["Theories +<br/>A/B validation"]
-    Theories --> Proposals["Proposals"]
-    Proposals -.->|apply as new version| Agents
-```
-
-The proxy is a thin, standalone reverse proxy on the hot path — capture is
-asynchronous (in-process channel or Redis Streams), so your agent's latency is
-unaffected. Everything else (ingestion, evaluation, the optimizer, the UI) lives
-behind the API.
-
-| Concept | What it is |
-|---|---|
-| **Trace** | One fully captured agent invocation: messages, tools, params, cost, response. |
-| **Agent / version** | A definition extracted from traffic; each version snapshots prompt + tools. |
-| **Test suite / case** | A curated, reproducible benchmark and its input/expectation cases. |
-| **Test run** | A suite executed against agent versions, producing per-case evaluations. |
-| **Evaluator** | A scoring function: exact match, numeric, JSON schema, tool usage, LLM-judged. |
-| **Theory / proposal** | An optimization hypothesis; A/B-validated theories become appliable proposals. |
-
-Full glossary: [docs/domain-concepts.md](docs/domain-concepts.md).
-
-## Documentation
-
-| Audience | Where |
-|---|---|
-| **Users & operators** | The [manual](manual/) (VitePress), served by the app at `/docs` — guides for every feature plus installation, upgrades, and backups. |
-| **Contributors / AI assistants** | [`docs/`](docs/) — architecture, conventions, database, licensing, optimization loop, SSE, testing, releasing. |
-| **Frontend** | [`frontend/docs/DESIGN.md`](frontend/docs/DESIGN.md) and [`frontend/docs/BEST_PRACTICES.md`](frontend/docs/BEST_PRACTICES.md) — mandatory before UI changes. |
-| **Changelog** | [`CHANGELOG.md`](CHANGELOG.md) — becomes the GitHub release notes verbatim. |
-
-> **Status:** early and moving fast. The data model, optimization loop, and UI
-> evolve quickly; expect breaking changes between releases.
+Pricing: [proxytrace.dev](https://proxytrace.dev)
 
 ## License
 
-Proxytrace is **source-available** under the [Elastic License 2.0](LICENSE).
+Proxytrace is **source-available** under the [Elastic License 2.0](LICENSE) — read it, build it,
+run it, modify it. Three limitations: no offering Proxytrace to third parties as a hosted or managed
+service, no circumventing the license-key functionality, and licensing notices stay put.
 
-The source is public for transparency: you can read it, build it, run it, and modify it.
-The license has three limitations — you may not provide Proxytrace to third parties as a
-hosted or managed service, you may not remove or circumvent the license-key functionality,
-and you must preserve licensing/copyright notices.
+Paid tiers are unlocked with license keys we issue. Commercial licensing, managed-service
+arrangements, or anything beyond the ELv2 grant: <office@syntaktik.eu>.
 
-Proxytrace remains a commercial product: paid tiers are unlocked with license keys issued
-by us. Commercial licensing, managed-service arrangements, or anything beyond the ELv2
-grant: <eberharter@proton.me>.
+<p align="center">
+  <strong>Stop guessing what your agents did.</strong><br><br>
+  <code>docker run -d -p 5101:80 -p 5102:8081 -v proxytrace:/data ghcr.io/proxytrace/proxytrace</code>
+</p>
+
+<p align="center">
+  <a href="https://proxytrace.dev">proxytrace.dev</a> ·
+  <a href="manual/">Manual</a> ·
+  <a href="CONTRIBUTING.md">Contributing</a> ·
+  <a href="SECURITY.md">Security</a> ·
+  <code>MADE IN THE EU</code>
+</p>
