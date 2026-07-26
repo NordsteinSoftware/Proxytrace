@@ -85,6 +85,64 @@ internal class SessionRepository
         await context.SaveChangesAsync(cancellationToken);
     }
 
+    public async Task RecordTraceRemovalsAsync(
+        IReadOnlyCollection<SessionTraceRemoval> removals,
+        CancellationToken cancellationToken = default)
+    {
+        if (removals.Count == 0)
+            return;
+
+        var context = contextFactory();
+
+        foreach (var removal in removals)
+        {
+            // Clamped at zero on both counters. The deltas are computed from the rows about to be
+            // deleted, but a counter can already be low (a bump that failed after its trace
+            // persisted — the upsert is best-effort by design), and a negative count would render as
+            // nonsense in the session header.
+            if (context.Database.IsRelational())
+            {
+                await context.Set<SessionEntity>()
+                    .Where(e => e.Id == removal.SessionId)
+                    .ExecuteUpdateAsync(s => s
+                        .SetProperty(e => e.TraceCount, e => e.TraceCount > removal.TraceCount ? e.TraceCount - removal.TraceCount : 0)
+                        .SetProperty(e => e.TotalTokens, e => e.TotalTokens > removal.TotalTokens ? e.TotalTokens - removal.TotalTokens : 0),
+                        cancellationToken);
+                continue;
+            }
+
+            // In-memory provider (unit tests / kiosk): no ExecuteUpdate, single process, so a
+            // read-modify-write is race-free enough — mirroring RecordActivityAsync.
+            var existing = await context.Set<SessionEntity>()
+                .FirstOrDefaultAsync(e => e.Id == removal.SessionId, cancellationToken);
+            if (existing is null)
+                continue;
+
+            context.Entry(existing).CurrentValues.SetValues(new
+            {
+                TraceCount = Math.Max(0, existing.TraceCount - removal.TraceCount),
+                TotalTokens = Math.Max(0, existing.TotalTokens - removal.TotalTokens),
+            });
+            await context.SaveChangesAsync(cancellationToken);
+        }
+    }
+
+    public async Task<int> RemoveOlderThanAsync(DateTimeOffset cutoff, CancellationToken cancellationToken = default)
+    {
+        var context = contextFactory();
+        var query = context.Set<SessionEntity>().Where(e => e.LastActivityAt <= cutoff);
+
+        // Server-side DELETE without materializing rows, mirroring the trace retention sweep this
+        // runs alongside; the in-memory provider can't translate it, so fall back there.
+        if (context.Database.IsRelational())
+            return await query.ExecuteDeleteAsync(cancellationToken);
+
+        var toRemove = await query.ToListAsync(cancellationToken);
+        context.Set<SessionEntity>().RemoveRange(toRemove);
+        await context.SaveChangesAsync(cancellationToken);
+        return toRemove.Count;
+    }
+
     // LastActivityAt and UpdatedAt only ever move forward (CASE in SQL): a redelivered or
     // out-of-order ingest carrying an older CreatedAt must not rewind the session's activity (and
     // flip its Live indicator off) — and a rewound UpdatedAt could even fall before the row's

@@ -11,6 +11,17 @@ follow [Semantic Versioning](https://semver.org). Ongoing work is collected unde
 
 ### Fixed
 
+- **A session's trace and token counters now go down when traces are deleted.** They were only ever
+  incremented, so deleting a trace — by hand, or because it passed the retention window — left the
+  session header claiming more traces than its timeline could show, permanently. Both retention and
+  the delete action now give back exactly what the removed traces contributed.
+
+- **Sessions no longer accumulate forever.** Session rows outlived their traces indefinitely, so a
+  client that mints a fresh session key per run grew the table without bound — including sessions
+  whose traces were long gone. The nightly trace cleanup now removes sessions whose last activity has
+  passed the same retention window, which by definition means every trace they grouped is already
+  gone. Sessions with recent traces are never touched.
+
 - **Edits to an agent no longer fail for minutes after a busy save.** Under concurrent traffic — an
   agent being updated while its traces were still arriving and the UI was open — the in-process entity
   cache could refill with the *pre-save* version of a row and keep serving it for up to five minutes.
