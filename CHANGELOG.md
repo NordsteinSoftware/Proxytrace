@@ -64,6 +64,15 @@ follow [Semantic Versioning](https://semver.org). Ongoing work is collected unde
   update check calls) points at `SyntaktikEU/Proxytrace` instead of relying on GitHub's rename
   redirect.
 
+- **The install quick starts now advertise the project-scoped proxy URL.** The installation page,
+  the Docker Hub overview and the deployment artifact's README, compose file and `.env` template all
+  told new users to point their agents at `http://localhost:5102/openai/v1` — the legacy unscoped
+  form, which only works with a Proxytrace-issued key. Anyone following the documented one-line
+  migration, keeping their existing upstream provider key, got a **401** instead of a trace, because
+  the project is read from the URL path in that case. All five now point at the project-scoped
+  endpoint the setup wizard hands you, `http://localhost:5102/{project-slug}/openai/v1`, matching
+  what the manual's Proxy Setup page has always defined as canonical.
+
 - **The licensing manual no longer overstates the Free tier.** It advertised **3** users while the
   code allows **1** — and contradicted its own tier table further down the page — so an operator
   could plan a three-person pilot and hit a blocked invite on the second seat. The page now says one

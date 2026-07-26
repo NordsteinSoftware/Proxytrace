@@ -65,7 +65,8 @@ services:
     ports:
       # Web UI (the browser opens this one).
       - "${FRONTEND_PORT:-5101}:80"
-      # Ingestion proxy — point your agents' OpenAI base URL at http://<host>:5102/openai/v1.
+      # Ingestion proxy — point your agents' OpenAI base URL at
+      # http://<host>:5102/<project-slug>/openai/v1 (the endpoint the setup wizard shows).
       - "${PROXY_PORT:-5102}:8081"
     environment:
       # Set ⇒ the container's embedded Postgres/Redis stay down and these are used instead.

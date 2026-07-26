@@ -21,7 +21,8 @@ docker run -d --name proxytrace \
 ```
 
 Open <http://localhost:5101> and follow the first-run setup. Point your agent's OpenAI base
-URL at `http://localhost:5102/openai/v1` and traces stream into the UI in real time.
+URL at the project-scoped endpoint the wizard shows —
+`http://localhost:5102/{project-slug}/openai/v1` — and traces stream into the UI in real time.
 
 All state (database, secrets, search index) lives in the `/data` volume — back that up, and
 upgrade by pulling a newer tag and recreating the container. Schema migrations run on start.
