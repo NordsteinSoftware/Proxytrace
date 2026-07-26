@@ -1,10 +1,25 @@
 name: E2E
 
+# 98% of merges touch backend or frontend, so this suite is deliberately NOT gated on
+# changed paths — it would almost never skip, and skipping it wrongly is expensive.
+# Only a diff that is purely prose can miss it. Note that `paths-ignore` does not apply
+# to `workflow_call`, so the release gate always runs the suite.
+#
+# The two lists below are duplicated rather than shared via a YAML anchor: the Actions
+# workflow parser does not support anchors/aliases. Keep them in sync by hand.
 on:
   pull_request:
+    paths-ignore:
+      - 'docs/**'
+      - 'manual/**'
+      - '**.md'
   push:
     branches:
       - master
+    paths-ignore:
+      - 'docs/**'
+      - 'manual/**'
+      - '**.md'
   # Reused as a release gate by release.yml (which passes secrets via `secrets: inherit`).
   workflow_call:
 
@@ -14,10 +29,17 @@ concurrency:
   group: e2e-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
+# Needed to read/write the stack's build cache on GHCR.
+permissions:
+  contents: read
+  packages: write
+
 jobs:
   e2e:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    env:
+      BUILD_CACHE: ghcr.io/syntaktikeu/proxytrace-buildcache
 
     steps:
       - name: Checkout
@@ -26,9 +48,24 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
 
+      # Cache reads work anonymously; only the write needs this. Fork PRs get a
+      # read-only token, so the login fails and `ignore-error` drops the export.
+      - name: Log in to GHCR
+        continue-on-error: true
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # COMPOSE_BAKE routes the build through buildx bake, which is what honours the
+      # cache_from/cache_to keys in the ci-cache overlay.
       - name: Boot e2e stack
+        env:
+          COMPOSE_BAKE: "1"
         run: |
           docker compose -f docker-compose.yml -f docker-compose.e2e.yml \
+            -f docker-compose.ci-cache.yml \
             up --build -d --wait
         timeout-minutes: 15
 

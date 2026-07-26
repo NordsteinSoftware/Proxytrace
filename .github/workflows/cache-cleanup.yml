@@ -1,0 +1,47 @@
+name: Cache cleanup
+
+# The repo-wide Actions cache is capped at 10 GB and evicts least-recently-used entries
+# once full. A merged PR's caches are dead weight against that cap but stay for 7 days,
+# so a busy week of PRs can evict the caches that master's own runs depend on. Deleting
+# them on close keeps the budget for branches that still exist.
+#
+# The image build caches live in a registry instead and are unaffected by this.
+
+on:
+  pull_request:
+    types: [closed]
+
+permissions:
+  actions: write
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Delete the closed PR's caches
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+          BRANCH: ${{ github.event.pull_request.head.ref }}
+        run: |
+          set -euo pipefail
+
+          # Caches written by a PR run are keyed to the merge ref; ones written by a push
+          # to the same branch are keyed to the branch itself. Both become garbage now.
+          deleted=0
+          for ref in "refs/pull/${PR}/merge" "refs/heads/${BRANCH}"; do
+            while read -r id; do
+              [[ -z "$id" ]] && continue
+              # A cache can vanish between listing and deleting (concurrent cleanup, TTL
+              # expiry); that is success for our purposes, not a reason to fail the job.
+              if gh api --method DELETE "repos/${REPO}/actions/caches/${id}" --silent 2>/dev/null; then
+                deleted=$((deleted + 1))
+              fi
+            done < <(gh api "repos/${REPO}/actions/caches?ref=${ref}&per_page=100" \
+                       --jq '.actions_caches[].id' 2>/dev/null || true)
+          done
+
+          echo "Deleted ${deleted} cache entr$([[ $deleted -eq 1 ]] && echo y || echo ies) for PR #${PR}."

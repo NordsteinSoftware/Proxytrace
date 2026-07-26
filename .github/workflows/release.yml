@@ -42,8 +42,14 @@ jobs:
         run: scripts/release/extract-changelog.sh "${{ steps.version.outputs.version }}" > /dev/null
 
   # Release gates: the same checks that run on PRs/master.
+  # `full` is mandatory here. ci.yml skips jobs on plain master pushes, and inside a
+  # reusable workflow `github.event_name` reports the CALLER's event — a release is a tag
+  # push, so an event-based check would read 'push' and silently skip the very jobs this
+  # gate exists to run. The explicit input is what keeps the gate complete.
   ci:
     uses: ./.github/workflows/ci.yml
+    with:
+      full: true
 
   e2e:
     uses: ./.github/workflows/e2e.yml
@@ -115,8 +121,13 @@ jobs:
             APP_VERSION=${{ needs.meta.outputs.version }}
           tags: ${{ steps.docker-meta.outputs.tags }}
           labels: ${{ steps.docker-meta.outputs.labels }}
-          cache-from: type=gha,scope=release-allinone
-          cache-to: type=gha,mode=max,scope=release-allinone
+          # Registry cache, not `type=gha`: this build and ci.yml's `image` job together held
+          # 8.4 GB of the repo-wide 10 GB Actions cache budget and LRU-evicted the .NET and npm
+          # caches every other job restores from. GHCR storage for a public package is free and
+          # uncapped. Separate ref from ci.yml's: this build is multi-arch, and mixing the two
+          # would have each evict the other's platform layers.
+          cache-from: type=registry,ref=ghcr.io/syntaktikeu/proxytrace-buildcache:release-allinone
+          cache-to: type=registry,ref=ghcr.io/syntaktikeu/proxytrace-buildcache:release-allinone,mode=max,ignore-error=true
 
       # Keeps the Docker Hub repo page from being an empty shell: pushes a short overview +
       # the product's short description. Non-fatal — a failure here must not fail a release

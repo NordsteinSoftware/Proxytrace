@@ -1,0 +1,109 @@
+name: Detect changed areas
+description: >-
+  Classifies a push/PR diff into the areas CI gates jobs on. Deliberately a local
+  composite action running plain `git diff` rather than a third-party filter action:
+  this repo scans itself with gitleaks and CodeQL, so the pipeline should not grow a
+  supply-chain dependency to decide what the pipeline runs.
+
+  Fails open. Whenever the diff range cannot be resolved (tag push, new branch, a
+  release gate invoked via workflow_call) every area reports changed, so a gate can
+  never silently hide a job that should have run.
+
+outputs:
+  backend:
+    description: .NET projects, the solution, or shared build config changed.
+    value: ${{ steps.diff.outputs.backend }}
+  frontend:
+    description: Anything under frontend/ changed.
+    value: ${{ steps.diff.outputs.frontend }}
+  image:
+    description: Something the all-in-one container image is built from changed.
+    value: ${{ steps.diff.outputs.image }}
+  codeql-languages:
+    description: >-
+      JSON array of the CodeQL languages worth analysing for this diff, ready for
+      `fromJSON` in a matrix. `[]` means no analysis is needed at all.
+    value: ${{ steps.diff.outputs.codeql-languages }}
+
+runs:
+  using: composite
+  steps:
+    - id: diff
+      shell: bash
+      env:
+        BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        BEFORE_SHA: ${{ github.event.before }}
+      run: |
+        set -euo pipefail
+
+        # Three-dot for a PR: diff from the merge base, so commits landing on master
+        # while the PR is open are not misread as the PR's own changes.
+        range=""
+        if [[ -n "${BASE_SHA:-}" ]]; then
+          range="${BASE_SHA}...${HEAD_SHA}"
+        elif [[ -n "${BEFORE_SHA:-}" && ! "${BEFORE_SHA}" =~ ^0+$ ]]; then
+          range="${BEFORE_SHA}..${HEAD_SHA}"
+        fi
+
+        files=""
+        all=false
+        if [[ -z "$range" ]]; then
+          echo "::notice::No diff range for this event — treating every area as changed"
+          all=true
+        elif ! files=$(git diff --name-only "$range" --); then
+          echo "::notice::Range $range is not resolvable — treating every area as changed"
+          all=true
+        fi
+
+        # A workflow or action edit changes the meaning of every gate below, so verify
+        # the whole pipeline rather than trusting gates that the same commit rewrites.
+        if [[ "$all" == false ]] && grep -qE '^\.github/' <<<"$files"; then
+          echo "::notice::CI configuration changed — treating every area as changed"
+          all=true
+        fi
+
+        backend_re='^Proxytrace\.|^Proxytrace\.sln$|^Directory\.Build\.props$|^coverage\.runsettings$|^dotnet-tools\.json$'
+        frontend_re='^frontend/'
+        # The all-in-one image bundles both halves of the app plus its own packaging.
+        image_re="${backend_re}|${frontend_re}|^deploy/|^docker-compose|Dockerfile"
+        # Broader than `frontend`: CodeQL analyses every JS/TS file in the repo, not just
+        # the SPA, so the e2e suite, the sample client and the manual's config all count.
+        # Matched by extension rather than directory on purpose — `^manual/` would put a
+        # prose-only edit through a JavaScript scan, which is most of what manual/ contains.
+        javascript_re='\.[cm]?[jt]sx?$|\.html$|(^|/)package(-lock)?\.json$'
+
+        declare -A area
+        check() {
+          local name="$1" regex="$2" value=false
+          if [[ "$all" == true ]] || grep -qE "$regex" <<<"$files"; then
+            value=true
+          fi
+          area["$name"]=$value
+          echo "  $name=$value"
+        }
+
+        echo "Changed areas:"
+        check backend "$backend_re"
+        check frontend "$frontend_re"
+        check image "$image_re"
+        check javascript "$javascript_re"
+
+        for name in backend frontend image; do
+          echo "$name=${area[$name]}" >> "$GITHUB_OUTPUT"
+        done
+
+        langs=()
+        if [[ "${area[backend]}" == true ]]; then langs+=('"csharp"'); fi
+        if [[ "${area[javascript]}" == true ]]; then langs+=('"javascript-typescript"'); fi
+        # The `actions` pack only has something to say when a workflow changed, which is
+        # exactly the case that already forced `all`.
+        if [[ "$all" == true ]]; then langs+=('"actions"'); fi
+
+        joined=""
+        if [[ ${#langs[@]} -gt 0 ]]; then
+          printf -v joined '%s,' "${langs[@]}"
+          joined="${joined%,}"
+        fi
+        echo "codeql-languages=[${joined}]" >> "$GITHUB_OUTPUT"
+        echo "  codeql-languages=[${joined}]"

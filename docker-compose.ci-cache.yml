@@ -1,0 +1,46 @@
+# CI-only build-cache overlay for the e2e stack.
+#
+# Kept out of docker-compose.yml / docker-compose.e2e.yml on purpose: local `docker compose up`
+# must not start reaching for a remote registry cache. CI layers this on top with
+#   -f docker-compose.yml -f docker-compose.e2e.yml -f docker-compose.ci-cache.yml
+# and COMPOSE_BAKE=1, so compose delegates the build to buildx bake, which honours these keys.
+#
+# Without this the e2e stack rebuilt every image from scratch on every run — 168s of a 381s job,
+# and the only Docker build in the pipeline with no cache at all.
+#
+# `api-free` and `frontend-free` are byte-identical builds to `api` and `frontend`
+# (BUILD_CONFIGURATION defaults to Release, which is what api-free passes explicitly), so they
+# read the same cache tags and deliberately do not export: two targets writing one ref would
+# race on the export with nothing to gain.
+
+services:
+  api:
+    build:
+      cache_from:
+        - type=registry,ref=${BUILD_CACHE:-ghcr.io/syntaktikeu/proxytrace-buildcache}:api
+      cache_to:
+        - type=registry,ref=${BUILD_CACHE:-ghcr.io/syntaktikeu/proxytrace-buildcache}:api,mode=max,ignore-error=true
+
+  api-free:
+    build:
+      cache_from:
+        - type=registry,ref=${BUILD_CACHE:-ghcr.io/syntaktikeu/proxytrace-buildcache}:api
+
+  proxy:
+    build:
+      cache_from:
+        - type=registry,ref=${BUILD_CACHE:-ghcr.io/syntaktikeu/proxytrace-buildcache}:proxy
+      cache_to:
+        - type=registry,ref=${BUILD_CACHE:-ghcr.io/syntaktikeu/proxytrace-buildcache}:proxy,mode=max,ignore-error=true
+
+  frontend:
+    build:
+      cache_from:
+        - type=registry,ref=${BUILD_CACHE:-ghcr.io/syntaktikeu/proxytrace-buildcache}:frontend
+      cache_to:
+        - type=registry,ref=${BUILD_CACHE:-ghcr.io/syntaktikeu/proxytrace-buildcache}:frontend,mode=max,ignore-error=true
+
+  frontend-free:
+    build:
+      cache_from:
+        - type=registry,ref=${BUILD_CACHE:-ghcr.io/syntaktikeu/proxytrace-buildcache}:frontend

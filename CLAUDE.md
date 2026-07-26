@@ -24,6 +24,7 @@ Detailed guidance lives in [`docs/`](docs/). Read the relevant page **before** w
 | [`docs/frontend.md`](docs/frontend.md) | Any frontend change — links the mandatory DESIGN.md + BEST_PRACTICES.md |
 | [`docs/i18n.md`](docs/i18n.md) | Adding any user-facing UI string, or touching the translation system / per-user language |
 | [`docs/commands.md`](docs/commands.md) | Building, running, or testing the stack |
+| [`docs/ci.md`](docs/ci.md) | Adding a CI job/workflow, or touching path gating or a build cache |
 | [`docs/debug_api.md`](docs/debug_api.md) | Using/adding a debug-build-only affordance (e.g. the always-available `debug@proxytrace.dev` login) |
 | [`docs/domain-concepts.md`](docs/domain-concepts.md) | Needing the domain glossary (entities + domain objects) |
 | [`docs/notifications.md`](docs/notifications.md) | Touching notifications, channels, or email delivery |
