@@ -30,6 +30,45 @@ follow [Semantic Versioning](https://semver.org). Ongoing work is collected unde
   including the score it had already given. Judges are now asked to keep their reasoning brief, a
   failed judge call is retried once, and an answer that was cut off is repaired and read rather than
   discarded, so the verdict survives even when the explanation does not.
+- **Opening a trace from a link now scrolls the list to it.** Following a trace link — from an
+  anomaly, a notification, or Tracey — opened the detail drawer but left the list showing the newest
+  traces, so the row you were sent to was never highlighted or brought into view. The older the
+  trace, the more likely it was. The list now loads until it reaches the linked trace and scrolls it
+  into the middle of the view, with the surrounding traces around it.
+- **A session's trace and token counters now go down when traces are deleted.** They were only ever
+  incremented, so deleting a trace — by hand, or because it passed the retention window — left the
+  session header claiming more traces than its timeline could show, permanently. Both retention and
+  the delete action now give back exactly what the removed traces contributed.
+
+- **Sessions no longer accumulate forever.** Session rows outlived their traces indefinitely, so a
+  client that mints a fresh session key per run grew the table without bound — including sessions
+  whose traces were long gone. The nightly trace cleanup now removes sessions whose last activity has
+  passed the same retention window, which by definition means every trace they grouped is already
+  gone. Sessions with recent traces are never touched.
+
+- **Edits to an agent no longer fail for minutes after a busy save.** Under concurrent traffic — an
+  agent being updated while its traces were still arriving and the UI was open — the in-process entity
+  cache could refill with the *pre-save* version of a row and keep serving it for up to five minutes.
+  Every write attempted against that stale copy was rejected as a conflict, so ingestion retried and
+  saves failed for no visible reason. Cached entries are now dropped again once the save commits, so
+  the stale copy cannot outlive the write that replaced it.
+
+- **The proxy logs each upstream request once, not four times.** Every call your agents made through
+  the proxy emitted four identical sets of HTTP client log lines, quadrupling the volume on the
+  busiest path in the system and making proxy logs hard to read during an incident.
+
+- **Proxytrace is documented as source-available, consistently.** The Docker Hub overview still
+  declared the product *Proprietary*, contradicting the Elastic License 2.0 relicense in 1.5.0 — the
+  first licensing statement most evaluators read. It now states the ELv2 terms, the README carries a
+  matching License section, and every documented GitHub link (plus the release-manifest URL the
+  update check calls) points at `SyntaktikEU/Proxytrace` instead of relying on GitHub's rename
+  redirect.
+
+- **The licensing manual no longer overstates the Free tier.** It advertised **3** users while the
+  code allows **1** — and contradicted its own tier table further down the page — so an operator
+  could plan a three-person pilot and hit a blocked invite on the second seat. The page now says one
+  user, explains that this effectively disables user management until an upgrade, and lists the
+  scheduled test runs and custom anomaly detectors that were missing from the Enterprise column.
 
 - **Expanded multi-turn conversations no longer overlap the rows beneath them.** Opening a
   conversation's turns while new traces were streaming in left the expanded turns painted on top of

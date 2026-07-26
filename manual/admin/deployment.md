@@ -5,7 +5,7 @@ Proxytrace is self-hosted with Docker.
 To **install** it, you don't need this page: run the released image
 (`ghcr.io/proxytrace/proxytrace`, also on Docker Hub as `proxytrace/proxytrace`) either
 directly or with the pinned compose file shipped on every
-[GitHub release](https://github.com/Proxytrace/Proxytrace/releases) — see
+[GitHub release](https://github.com/SyntaktikEU/Proxytrace/releases) — see
 [Installation](/admin/installation). One image holds every process described below.
 
 This page is about the shapes the app can be **run** in from a source checkout, which is what

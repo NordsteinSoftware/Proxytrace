@@ -96,6 +96,17 @@ It uses the same trace rows and [detail panel](/guide/capturing-traces#the-trace
 as the Traces page, so you can drill into any call end to end. The whole page updates in **real
 time** as new calls arrive: the counters climb and fresh traces stream in without a refresh.
 
+The counters track what the timeline actually holds: deleting a trace — by hand, or because it
+passed the [trace retention window](/admin/configuration) — takes it back out of the session's
+trace and token totals, so the header never claims more than the timeline can show.
+
+::: info Sessions age out with their traces
+A session lives as long as its traces do. Once every trace in it has passed the retention window,
+the session itself is removed by the same nightly cleanup — so a client that mints a fresh session
+key per run does not accumulate empty sessions forever. Sessions with recent traces are never
+touched.
+:::
+
 ## Filtering traces by session
 
 On the [Traces page](/guide/capturing-traces#filtering-search-and-scrolling), add a **Session**

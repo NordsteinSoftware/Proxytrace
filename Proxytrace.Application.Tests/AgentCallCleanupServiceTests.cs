@@ -6,6 +6,7 @@ using Proxytrace.Application.Cleanup;
 using Proxytrace.Application.Cleanup.Internal;
 using Proxytrace.Domain;
 using Proxytrace.Domain.AgentCall;
+using Proxytrace.Domain.Session;
 using Proxytrace.Licensing;
 using Proxytrace.Testing;
 
@@ -94,6 +95,56 @@ public sealed class AgentCallCleanupServiceTests : BaseTest<Module>
         allAfterDelete.Should().HaveCount(callGenerated);
 
         allAfterDelete.Should().AllSatisfy(x => expectedDeleted.Should().NotContain(x.Id));
+    }
+
+    [TestMethod]
+    public async Task CleanOnce_ReconcilesSessionCountersAndSweepsSessionsWithTheSameCutoff()
+    {
+        // Retention deleted traces without touching the sessions that grouped them, so a session
+        // header kept claiming traces its timeline could no longer show, and session rows never
+        // aged out at all (#436).
+        const int retentionDurationDays = 2;
+        var expectedCutoff = DateTimeOffset.UtcNow - TimeSpan.FromDays(retentionDurationDays);
+        var removals = new[] { new SessionTraceRemoval(Guid.NewGuid(), 3, 300) };
+
+        var agentCallRepository = Substitute.For<IAgentCallRepository>();
+        agentCallRepository
+            .GetSessionRemovalsOlderThanAsync(Arg.Any<DateTimeOffset>(), Arg.Any<CancellationToken>())
+            .Returns(removals);
+        var sessionRepository = Substitute.For<ISessionRepository>();
+
+        var services = GetServices(builder =>
+        {
+            builder.RegisterInstance(agentCallRepository).As<IAgentCallRepository>();
+            builder.RegisterInstance(sessionRepository).As<ISessionRepository>();
+            builder.RegisterInstance(new AgentCallCleanupConfiguration
+            {
+                CleanupIntervalHours = 1,
+                RetentionDurationDays = retentionDurationDays,
+            });
+        });
+
+        await services.GetRequiredService<AgentCallCleanupService>().CleanOnceAsync(CancellationToken);
+
+        var tolerance = TimeSpan.FromSeconds(10);
+
+        // The deltas must be read before the delete — afterwards the rows are gone.
+        Received.InOrder(() =>
+        {
+            agentCallRepository.GetSessionRemovalsOlderThanAsync(
+                Arg.Is<DateTimeOffset>(x => (expectedCutoff - x).Duration() < tolerance), Arg.Any<CancellationToken>());
+            agentCallRepository.RemoveOlderThanAsync(Arg.Any<DateTimeOffset>(), Arg.Any<CancellationToken>());
+            sessionRepository.RecordTraceRemovalsAsync(Arg.Any<IReadOnlyCollection<SessionTraceRemoval>>(), Arg.Any<CancellationToken>());
+        });
+
+        await sessionRepository.Received(1).RecordTraceRemovalsAsync(
+            Arg.Is<IReadOnlyCollection<SessionTraceRemoval>>(x => x != null && x.SequenceEqual(removals)),
+            Arg.Any<CancellationToken>());
+
+        // The session sweep rides the same cutoff: a session's last activity IS its newest trace.
+        await sessionRepository.Received(1).RemoveOlderThanAsync(
+            Arg.Is<DateTimeOffset>(x => (expectedCutoff - x).Duration() < tolerance),
+            Arg.Any<CancellationToken>());
     }
 
     [TestMethod]

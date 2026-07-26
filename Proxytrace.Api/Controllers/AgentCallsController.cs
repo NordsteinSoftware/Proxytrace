@@ -469,8 +469,36 @@ public class AgentCallsController : ControllerBase
             audit.LogAudit(
                 AuditAction.AgentCallDeleted, nameof(IAgentCall), id, call.Agent.Name,
                 projectId: call.Agent.Project.Id);
+
+            await ReverseSessionActivityAsync(call, cancellationToken);
         }
 
         return removed ? NoContent() : NotFound();
+    }
+
+    /// <summary>
+    /// Gives back the counters this trace contributed to its session when it was ingested. Mirrors
+    /// the bump in <c>AgentCallProcessor</c> — including its best-effort stance: the trace row is
+    /// already gone, so a failure here must not turn a successful delete into an error response.
+    /// The token total is computed exactly as the denormalized column is, so the reversal is exact.
+    /// </summary>
+    private async Task ReverseSessionActivityAsync(IAgentCall call, CancellationToken cancellationToken)
+    {
+        if (call.SessionId is not { } sessionId)
+            return;
+
+        try
+        {
+            long totalTokens = call.Response?.Usage is { } usage
+                ? (long)(usage.InputTokenCount + usage.OutputTokenCount)
+                : 0;
+            await sessionRepository.RecordTraceRemovalsAsync(
+                [new SessionTraceRemoval(sessionId, TraceCount: 1, TotalTokens: totalTokens)],
+                cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            audit.LogWarning(ex, "Session counter reversal failed for session {SessionId}", sessionId);
+        }
     }
 }

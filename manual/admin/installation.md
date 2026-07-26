@@ -57,14 +57,14 @@ docker run -d --name proxytrace \
 
 For production, run the same image against a PostgreSQL and a Redis container of your own, so
 the database is an independent, backup-able, separately upgradable thing. Every
-[GitHub release](https://github.com/Proxytrace/Proxytrace/releases) attaches a `proxytrace.zip`
+[GitHub release](https://github.com/SyntaktikEU/Proxytrace/releases) attaches a `proxytrace.zip`
 (extracting to `proxytrace-<version>/`) with exactly that compose file — pinned to the release
 — plus an `.env` template and a quickstart README. The latest is always at
-`https://github.com/Proxytrace/Proxytrace/releases/latest/download/proxytrace.zip`.
+`https://github.com/SyntaktikEU/Proxytrace/releases/latest/download/proxytrace.zip`.
 
 ```bash
 # 1. Download and unpack the deployment artifact from the latest release
-curl -fLO https://github.com/Proxytrace/Proxytrace/releases/latest/download/proxytrace.zip
+curl -fLO https://github.com/SyntaktikEU/Proxytrace/releases/latest/download/proxytrace.zip
 unzip proxytrace.zip && cd proxytrace-<version>
 
 # 2. Start it — no configuration required

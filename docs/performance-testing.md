@@ -83,6 +83,20 @@ scan — only the narrow scalar columns are read, never the request/response JSO
 dev seed (2026-07) was 276.9ms / 170.6ms; budgets sit ~45% above. A jump toward seconds means either
 the per-endpoint fold started round-tripping or the planner lost its statistics (see #246 below).
 
+### Retention's session reconciliation (`sessionRemovalDeltas`)
+
+Trace retention has to give the denormalized session counters back what the traces it deletes
+contributed, or a session header keeps claiming traces its timeline can no longer show (#436). The
+deltas come from `IAgentCallRepository.GetSessionRemovalsOlderThanAsync`, read **before** the delete
+— afterwards the rows are gone.
+
+It is budgeted because it is a new aggregate over the highest-volume table: a `GROUP BY SessionId`
+over the same indexed `CreatedAt` range the delete uses, with the null-session rows excluded. Like
+the summary above, **what crosses the wire is O(sessions in the window), never O(rows)**. The probe
+deliberately passes a cutoff covering the whole seed, which is the worst case — the nightly sweep
+only ever sees the tail beyond the retention window. Regression signature: a climb toward seconds
+means the grouping stopped translating and started materializing the doomed rows client-side.
+
 ### Proxy credential resolution (`Scenarios/ApiKeyResolutionScenario.cs`)
 
 The proxy resolves inbound credentials from storage on **every** proxied request (no positive

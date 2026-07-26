@@ -128,3 +128,10 @@ A/B test that validated it.
 - [Install and operate Proxytrace](manual/admin/installation.md)
 - [Report a bug or request a feature](https://github.com/SyntaktikEU/Proxytrace/issues)
 - [Read the security policy](SECURITY.md)
+
+## License
+
+Source-available under the [Elastic License 2.0](LICENSE): you may use, copy, modify and
+redistribute Proxytrace, but you may not offer it as a managed service to third parties,
+circumvent its license-key functionality, or remove its licensing and copyright notices.
+A free tier is built in; paid tiers unlock higher limits and additional features.

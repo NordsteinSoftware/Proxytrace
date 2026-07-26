@@ -7,8 +7,8 @@ enforces tier limits. **You do not need a license to run Proxytrace** — it run
 ## Source availability
 
 Proxytrace's source code is public at
-[github.com/Proxytrace/Proxytrace](https://github.com/Proxytrace/Proxytrace) under the
-[Elastic License 2.0](https://github.com/Proxytrace/Proxytrace/blob/master/LICENSE) —
+[github.com/SyntaktikEU/Proxytrace](https://github.com/SyntaktikEU/Proxytrace) under the
+[Elastic License 2.0](https://github.com/SyntaktikEU/Proxytrace/blob/master/LICENSE) —
 you can audit exactly what your deployment runs. The license does not permit offering
 Proxytrace as a managed service to third parties or circumventing the license-key
 functionality described on this page.
@@ -19,11 +19,14 @@ With no license configured, Proxytrace starts on the **Free** tier with no furth
 configuration. The Free tier allows:
 
 - **1** project
-- **3** users
+- **1** user
 - **1** agent
 - **1** test suite
 - **14-day** trace retention
 - **10,000** traces per month
+
+The single seat means user management is effectively disabled on Free: once the first admin
+account exists, further invites are rejected until you upgrade.
 
 On startup you will see an informational log line confirming the tier, for example:
 
@@ -141,6 +144,8 @@ These values live in `Proxytrace.Api/appsettings.json` under the `Licensing` sec
 | SSO (OIDC) | — | Yes |
 | Audit Log | — | Yes |
 | Tracey AI assistant | — | Yes |
+| Scheduled test runs | — | Yes |
+| Custom anomaly detectors | — | Yes |
 
 ::: tip Keep this table in sync
 The authoritative limits and feature sets live in
@@ -153,7 +158,7 @@ Kiosk mode ignores `PROXYTRACE_LICENSE` entirely and runs on a built-in, perpetu
 :::
 
 When you exceed a Free-tier limit (for example, trying to create a second project, invite
-a fourth user, or create a second test suite), the request is rejected with HTTP **402** and
+a second user, or create a second test suite), the request is rejected with HTTP **402** and
 the UI raises an **upgrade dialog** explaining which limit was hit, with a link to the
 Enterprise plans. When you access a premium feature without a license that includes it, the
 API responds with HTTP **402** as well and the same dialog appears framed as a feature gate.

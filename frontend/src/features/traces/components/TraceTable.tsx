@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useCallback, useMemo, useRef } from 'react';
 import { Trans } from '@lingui/react/macro';
 import { SkeletonList } from '../../../components/ui/Skeleton';
 import type { AgentCallListItemDto } from '../../../api/models';
@@ -12,6 +12,7 @@ import { TraceTableHeader } from './TraceTableHeader';
 import { TraceDayDivider } from './TraceDayDivider';
 import { TraceListFooter } from './TraceListFooter';
 import { useTraceVirtualizer } from '../hooks/useTraceVirtualizer';
+import { useScrollToTrace } from '../hooks/useScrollToTrace';
 
 /** Scroll offset under which the list counts as "at the top" for live-arrival purposes. */
 const AT_TOP_THRESHOLD_PX = 4;
@@ -128,21 +129,14 @@ export function TraceTable({
   const first = visible.length > 0 ? traceIndices.indexOf(visible[0].index) + 1 : 0;
   const last = visible.length > 0 ? traceIndices.indexOf(visible[visible.length - 1].index) + 1 : 0;
 
-  // Deep link: resolve the trace id to its position and scroll the virtualizer there. A plain
-  // querySelector cannot find an unrendered row, which is exactly what virtualization guarantees.
-  useEffect(() => {
-    if (!scrollToTraceId) return;
-    const index = items.findIndex(item =>
-      item.kind === 'row' && (
-        item.row.type === 'flat'
-          ? item.row.trace.id === scrollToTraceId
-          : item.row.turns.some(t => t.id === scrollToTraceId)
-      ));
-    // Not in a loaded chunk — leave it; the detail drawer still opens via ?trace=.
-    if (index < 0) return;
-    virtualizer.scrollToIndex(index, { align: 'center' });
-    onScrolledToTrace?.();
-  }, [scrollToTraceId, items, virtualizer, onScrolledToTrace]);
+  // Deep link: bring the trace into view, loading chunks until it is reachable.
+  useScrollToTrace({
+    items,
+    virtualizer,
+    paging: { hasNextPage, isFetchingNextPage, onLoadMore },
+    scrollToTraceId,
+    onScrolledToTrace,
+  });
 
   const handleScroll = useCallback(() => {
     onAtTopChange((scrollRef.current?.scrollTop ?? 0) <= AT_TOP_THRESHOLD_PX);

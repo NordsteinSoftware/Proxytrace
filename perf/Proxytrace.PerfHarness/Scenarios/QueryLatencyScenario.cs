@@ -136,6 +136,15 @@ internal static class QueryLatencyScenario
                 () => sessionRepo.GetRecentAsync(sessionProjectId, 1, 50, cancellationToken));
         }
 
+        // Retention's session reconciliation: the per-session totals of the calls a cutoff is about
+        // to delete. Read-only — it only reports the deltas; the delete itself is not measured here.
+        // A GROUP BY over an indexed CreatedAt range, so the wire cost is O(sessions in the window),
+        // never O(rows); the cutoff below deliberately covers the whole seed, which is the worst
+        // case (the nightly sweep only ever sees the tail). Regression signature: a climb toward
+        // seconds means the grouping stopped translating and started materialising the doomed rows.
+        await Measure("sessionRemovalDeltas",
+            () => callRepo.GetSessionRemovalsOlderThanAsync(now, cancellationToken));
+
         // Dashboard statistics aggregations.
         await Measure("statsSummary",
             () => statsReader.GetSummaryAsync(filter, cancellationToken));

@@ -224,6 +224,51 @@ public sealed class CachedRepositoryTests : BaseTest<Module>
         cache.TryGet(created.Id).Should().BeNull("the write must invalidate the cache entry");
     }
 
+    [TestMethod]
+    public async Task UpdateAsync_WhenAConcurrentReaderRepopulatesMidTransaction_TheEntryIsDroppedAfterCommit()
+    {
+        // The race behind #450: invalidation ran inside the still-open transaction, and CanUseCache
+        // suppresses the cache for the *writing* flow only (ambient.IsActive is AsyncLocal). Between
+        // that invalidation and the commit, a reader on another flow could miss the cache, read the
+        // pre-commit row and Set() it back — with nothing invalidating afterwards, the stale entity
+        // and its stale concurrency token were served until the 5-minute TTL expired, failing every
+        // write made against it in between.
+        IServiceProvider services = GetServices();
+        var repository = services.GetRequiredService<IRepository<IModel>>();
+        var generator = services.GetRequiredService<IDomainEntityGenerator<IModel>>();
+        var createExisting = services.GetRequiredService<IModel.CreateExisting>();
+        var cache = services.GetRequiredService<IEntityCache<IModel>>();
+        var transaction = services.GetRequiredService<ITransaction>();
+
+        IModel created = await generator.CreateAsync(CancellationToken);
+
+        await transaction.InvokeAsync(async () =>
+        {
+            await repository.UpdateAsync(createExisting("after-update", created), CancellationToken);
+
+            // Suppressing the ExecutionContext flow keeps the ambient transaction's AsyncLocal out of
+            // the spawned task, so that read sees CanUseCache as true and repopulates the cache —
+            // exactly what the racing reader does.
+            Task<IModel?> concurrentRead;
+            using (ExecutionContext.SuppressFlow())
+            {
+                // Started inside the suppression and awaited outside it: AsyncFlowControl must be
+                // disposed on the thread that created it, which an await in between cannot promise.
+                concurrentRead = Task.Run(() => repository.FindAsync(created.Id, CancellationToken));
+            }
+
+            await concurrentRead;
+
+            cache.TryGet(created.Id).Should().NotBeNull("the concurrent reader is expected to have repopulated the cache");
+        });
+
+        cache.TryGet(created.Id).Should().BeNull("committing must invalidate again, dropping whatever the reader cached");
+
+        IModel reloaded = await repository.FindAsync(created.Id, CancellationToken)
+                          ?? throw new InvalidOperationException("Expected the updated model to be readable.");
+        reloaded.Name.Should().Be("after-update");
+    }
+
     private sealed class FakeTimeProvider : TimeProvider
     {
         private DateTimeOffset now;

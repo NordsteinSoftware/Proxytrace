@@ -41,7 +41,7 @@ hardware. A missing entry means "measure but never fail", so new scenarios run b
 
 **The suite is intentionally RED right now.** The `stats*` query budgets and the HTTP dashboard budget
 are set to *target* values, not current measurements, because those aggregations client-evaluate at
-scale ([#246](https://github.com/Proxytrace/Proxytrace/issues/246)) and measure ~4s. Expect those
+scale ([#246](https://github.com/SyntaktikEU/Proxytrace/issues/246)) and measure ~4s. Expect those
 metrics to FAIL until #246 lands; everything else passes. See `perf-budgets.json`'s `_comment_stats`.
 
 ## Components

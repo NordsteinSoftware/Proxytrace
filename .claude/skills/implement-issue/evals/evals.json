@@ -1,6 +1,6 @@
 {
   "skill_name": "implement-issue",
-  "notes": "Runs are DRY: each subagent works in an isolated git worktree and must NOT push or open a real PR — it prints the gh pr create command instead. This avoids polluting the live Proxytrace/Proxytrace repo while still exercising select -> branch -> implement -> verify -> commit -> (would-)PR.",
+  "notes": "Runs are DRY: each subagent works in an isolated git worktree and must NOT push or open a real PR — it prints the gh pr create command instead. This avoids polluting the live SyntaktikEU/Proxytrace repo while still exercising select -> branch -> implement -> verify -> commit -> (would-)PR.",
   "evals": [
     {
       "id": 0,
