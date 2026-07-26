@@ -15,10 +15,12 @@ interface Props {
   expanded: boolean;
   onToggle: () => void;
   selectedId: string | null;
+  /** Turns that arrived over the live stream moments ago — they flash the arrival wash once. */
+  freshIds: ReadonlySet<string>;
   onSelectTrace: (trace: AgentCallListItemDto) => void;
 }
 
-export function ConversationGroupRow({ group, expanded, onToggle, selectedId, onSelectTrace }: Props) {
+export function ConversationGroupRow({ group, expanded, onToggle, selectedId, freshIds, onSelectTrace }: Props) {
   const { turns, conversationId } = group;
   const totalTokens = turns.reduce((n, t) => n + t.inputTokens + t.outputTokens, 0);
   const totalInput = turns.reduce((n, t) => n + t.inputTokens, 0);
@@ -35,6 +37,9 @@ export function ConversationGroupRow({ group, expanded, onToggle, selectedId, on
   // Collapsed group is flagged when any turn is — OR the turns' bitmasks so the chip's tooltip
   // lists every characteristic that tripped across the conversation.
   const groupFlags = turns.reduce((acc, t) => acc | t.outlierFlags, 0);
+  // A live turn joining an existing conversation grows this group rather than adding a row, so the
+  // header carries the arrival wash on the group's behalf — collapsed, it is the only thing on screen.
+  const groupFresh = turns.some(t => freshIds.has(t.id));
 
   return (
     // One wrapping element, not a fragment: the list virtualizer measures a single node per item,
@@ -48,6 +53,7 @@ export function ConversationGroupRow({ group, expanded, onToggle, selectedId, on
         onClick={onToggle}
         className={cn(
           'grid items-center px-4 py-2.5 min-h-[44px] cursor-pointer transition-colors duration-[100ms] border-b border-border-subtle hover:bg-white/[0.025] bg-white/[0.015]',
+          groupFresh && 'arrival-flash',
           TRACE_GRID_CLS,
         )}
       >
@@ -108,6 +114,7 @@ export function ConversationGroupRow({ group, expanded, onToggle, selectedId, on
             'grid items-center pl-8 pr-4 py-2.5 min-h-[44px] cursor-pointer transition-colors duration-[100ms]',
             'border-b border-border-subtle hover:bg-white/[0.025]',
             turn.id === selectedId && 'bg-white/[0.04]',
+            freshIds.has(turn.id) && 'arrival-flash',
             TRACE_GRID_CLS,
           )}
           style={{ borderLeft: `2px solid color-mix(in srgb, ${c} 38%, transparent)` }}

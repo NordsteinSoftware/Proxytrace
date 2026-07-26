@@ -2029,6 +2029,9 @@ msgstr "Taux d'erreur"
 msgid "errors"
 msgstr "erreurs"
 
+msgid "Errors"
+msgstr "Erreurs"
+
 msgid "Estimated cost in EUR"
 msgstr "Coût estimé en EUR"
 
@@ -4436,11 +4439,11 @@ msgstr "scoring…"
 msgid "Scoring…"
 msgstr "Scoring…"
 
-msgid "Scroll or drag to zoom in · click a bar to focus it"
-msgstr "Faites défiler ou faites glisser pour zoomer · cliquez sur une barre pour la mettre en focus"
+msgid "Scroll or drag to zoom in · click a bucket to focus it"
+msgstr "Faites défiler ou faites glisser pour zoomer · cliquez sur un intervalle pour le mettre en focus"
 
-msgid "Scroll or drag to zoom in · click a bar to focus it · scroll down to zoom out"
-msgstr "Faites défiler ou faites glisser pour zoomer · cliquez sur une barre pour la mettre en focus · faites défiler vers le bas pour dézoomer"
+msgid "Scroll or drag to zoom in · click a bucket to focus it · scroll down to zoom out"
+msgstr "Faites défiler ou faites glisser pour zoomer · cliquez sur un intervalle pour le mettre en focus · faites défiler vers le bas pour dézoomer"
 
 msgid "Scroll to latest"
 msgstr "Faire défiler pour afficher les plus récents"

@@ -2,17 +2,18 @@
  * Decides what a live trace arrival should do to the traces view. Pure, so the policy is testable
  * without a fake SSE stream or a real scroll container.
  *
- * The trace list is an infinite query. Refetching it while the reader is scrolled deep would refetch
- * every loaded chunk *and* shift offsets underneath them as new rows insert at the top — the reader
- * would watch rows jump while trying to read one. So arrivals are withheld while scrolled and
- * flushed when the reader returns to the top, where replacing the loaded chunks is invisible.
+ * At the top an arrival is folded into the head of the loaded list in place (see `traceHeadMerge.ts`)
+ * — the rows already rendered stay mounted and only the arrivals appear. While the reader is scrolled
+ * it is withheld instead: under offset paging, inserting rows above the viewport shifts every offset
+ * below it, so the reader would watch rows jump while trying to read one. The withheld arrival is
+ * flushed when they return to the top.
  *
  * The histogram and the KPI summary are position-independent, so they refresh regardless of scroll —
  * but they are aggregates over a high-volume table, so a burst of arrivals is coalesced into at most
  * one refresh per {@link SUMMARY_COALESCE_MS}.
  */
 export interface StreamGateState {
-  /** An arrival was withheld; the list owes a reset once the reader returns to the top. */
+  /** An arrival was withheld; the list owes a head merge once the reader returns to the top. */
   pending: boolean;
   /** When the aggregates last refreshed, for the coalescing window. */
   lastFlushedAt: number;
@@ -28,8 +29,8 @@ export function initialGateState(): StreamGateState {
 
 export interface ArrivalDecision {
   state: StreamGateState;
-  /** Discard the loaded chunks and refetch from the first one. Only ever true at the top. */
-  resetList: boolean;
+  /** Fold the freshly arrived traces into the head of the loaded list. Only ever true at the top. */
+  mergeHead: boolean;
   /** Invalidate the histogram + summary queries. */
   refreshAggregates: boolean;
 }
@@ -47,7 +48,7 @@ export function onTraceArrived(
       pending: !isAtTop,
       lastFlushedAt: refreshAggregates ? now : state.lastFlushedAt,
     },
-    resetList: isAtTop,
+    mergeHead: isAtTop,
     refreshAggregates,
   };
 }
@@ -55,10 +56,10 @@ export function onTraceArrived(
 export function onReturnedToTop(
   state: StreamGateState,
   now: number,
-): { state: StreamGateState; resetList: boolean } {
+): { state: StreamGateState; mergeHead: boolean } {
   if (!state.pending) {
-    return { state, resetList: false };
+    return { state, mergeHead: false };
   }
 
-  return { state: { pending: false, lastFlushedAt: now }, resetList: true };
+  return { state: { pending: false, lastFlushedAt: now }, mergeHead: true };
 }

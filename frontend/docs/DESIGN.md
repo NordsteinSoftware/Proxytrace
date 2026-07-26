@@ -172,6 +172,7 @@ Animations defined globally in `index.css` — reuse these rather than writing n
 - `streaming-border` — a solid accent arc travelling around the 1px rule of a card/row whose contents are mid-stream. It is a `conic-gradient` with **hard stops** (no soft fade), masked to the border — the one place a conic gradient is legitimate.
 - `indeterminate-bar` — a sliding sliver for work with no countable progress.
 - `tracey-bolt` — a periodic opacity blink on the Ask-Tracey button's bolt icon (the icon dips every ~3s), scoped to `AskTraceyButton`; never on other idle UI. It is not a glow.
+- `arrival-flash` — the **live-arrival marker**: a one-shot flat cyan wash that decays over 1.6s on a row that just arrived over the SSE stream (the dashboard live feed and the traces list). It paints as a `::after` overlay, not on the row's `background-color`, so it composes with the row's own hover and selection fills instead of overriding them while it runs. It is a *tint*, not a glow — there is no blur, and "make the new row glow" resolves to this (§9).
 
 Always honor `prefers-reduced-motion` — every animation above already does; new ones must too.
 
@@ -323,8 +324,9 @@ Inline `style={{ ... }}` is acceptable **only** for genuinely runtime-computed v
 ## 8. Real-time / streaming UI
 
 - Live trace incoming → `streaming-border` class on its row/card while open; `pulse-dot` on the live indicator in the top bar.
-- New rows entering a list animate with `fade-up` (already in CSS). Don't reorder existing rows on insert — only prepend or append per the list's stated sort.
-- Never block interaction during background updates. SSE updates are partial — patch the cached query, don't refetch the page.
+- New rows entering a list animate with `fade-up` (already in CSS), and a row arriving over a **live stream** also carries `arrival-flash` — the one-shot cyan wash that marks it as new (§2.6). Don't reorder existing rows on insert — only prepend or append per the list's stated sort.
+  - **In a virtualized list, `fade-up` is wrong**: the virtualizer positions each row with its own `transform`, and `fade-up` animates `transform`, so the row would animate from the container's origin instead of its slot. `arrival-flash` touches only the overlay, which is why it is the arrival treatment there (`TraceTable`).
+- Never block interaction during background updates. SSE updates are partial — patch the cached query, don't refetch the page. **A list must never blink through its loading state on a live arrival**: an empty list renders its skeleton, so anything that empties the cache (`resetQueries` on an infinite query) redraws the whole table on every event. Patch the cached pages instead (`features/traces/traceHeadMerge.ts`).
 
 **There is no showpiece exception.** Earlier revisions of this guide granted the Dashboard and
 Tracey a scoped licence to exceed the flat-instrument baseline. **That licence was revoked and the
@@ -340,10 +342,11 @@ surface. What is scoped to it is **motion and density**, nothing atmospheric:
 
 - **Dashboard keyframes** (`index.css`, "Dashboard showpiece tier" block): `pulse-sweep` (a solid
   2px playhead crossing the pulse band on arrival — a rule, not a beam), `pulse-idle-sweep` (a slow
-  7%-tint segment across an idle band, so a flatline reads as intentional), `arrival-flash` (a
-  one-shot cyan wash on a fresh feed row), `chart-draw-in` (a stroke-dashoffset line draw), and
-  `digit-tick` (a one-frame odometer nudge when a live counter changes). Dashboard-only — do not
-  use them on other routes.
+  7%-tint segment across an idle band, so a flatline reads as intentional), `chart-draw-in` (a
+  stroke-dashoffset line draw), and `digit-tick` (a one-frame odometer nudge when a live counter
+  changes). Dashboard-only — do not use them on other routes. (`arrival-flash` started here and is
+  now shared: the traces list marks live arrivals with it too, so it lives in the common motion set
+  in §2.6.)
 - **Display-tier type**: the hero token number is `text-[68px]` and the pulse counters are mono
   `text-display`. The 68px hero figure is the single sanctioned size outside the type scale;
   don't read it as permission to invent others.
