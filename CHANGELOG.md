@@ -11,6 +11,12 @@ follow [Semantic Versioning](https://semver.org). Ongoing work is collected unde
 
 ### Fixed
 
+- **Opening a trace from a link now scrolls the list to it.** Following a trace link — from an
+  anomaly, a notification, or Tracey — opened the detail drawer but left the list showing the newest
+  traces, so the row you were sent to was never highlighted or brought into view. The older the
+  trace, the more likely it was. The list now loads until it reaches the linked trace and scrolls it
+  into the middle of the view, with the surrounding traces around it.
+
 - **Proxytrace is documented as source-available, consistently.** The Docker Hub overview still
   declared the product *Proprietary*, contradicting the Elastic License 2.0 relicense in 1.5.0 — the
   first licensing statement most evaluators read. It now states the ELv2 terms, the README carries a
