@@ -9,6 +9,8 @@ follow [Semantic Versioning](https://semver.org). Ongoing work is collected unde
 
 ## [Unreleased]
 
+## [1.9.0] - 2026-07-26
+
 ### Fixed
 
 - **A test run no longer hangs forever because one case failed.** A case whose model call threw was
