@@ -60,4 +60,25 @@ public sealed class OrphanedTestRunReaperTests : BaseTest<Module>
         var reloaded = await groupRepo.GetAsync(group.Id, CancellationToken);
         reloaded.Status.Should().Be(TestRunStatus.Cancelled);
     }
+
+    [TestMethod]
+    public async Task ReapAsync_CancelsARunLeftNonTerminalUnderAFinishedGroup()
+    {
+        // The group-scoped sweep selects by *group* status, so a run stranded under a group that
+        // already completed is invisible to it — which is exactly the row #452 produced, and it
+        // survived every restart. Rows written before that fix still need healing.
+        var services = GetServices();
+        var groupRepo = services.GetRequiredService<ITestRunGroupRepository>();
+        var runRepo = services.GetRequiredService<ITestRunRepository>();
+        var (group, run) = await SeedRunningGroupAsync(services, CancellationToken);
+        await group.SetCompleted(CancellationToken);
+
+        await OrphanedTestRunReaperHostedService.ReapAsync(groupRepo, runRepo, NullLogger.Instance, CancellationToken);
+
+        var reloadedRun = await runRepo.GetAsync(run.Id, CancellationToken);
+        reloadedRun.Status.Should().Be(TestRunStatus.Cancelled);
+
+        var reloadedGroup = await groupRepo.GetAsync(group.Id, CancellationToken);
+        reloadedGroup.Status.Should().Be(TestRunStatus.Completed, "the finished group is not touched");
+    }
 }

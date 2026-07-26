@@ -45,13 +45,20 @@ describe('resultPass / resultScore', () => {
   it('passes only when every evaluator passes; null with no evaluators', () => {
     expect(resultPass(result([PASS, PASS]))).toBe(true);
     expect(resultPass(result([PASS, FAIL]))).toBe(false);
-    expect(resultPass(result([PASS, ERR]))).toBe(false);
     expect(resultPass(result([]))).toBeNull();
+  });
+
+  it('leaves errored evaluators out of the verdict; null when nothing judged the case', () => {
+    // A judge that crashed is not evidence about the agent, so it must not read as a failure.
+    expect(resultPass(result([PASS, ERR]))).toBe(true);
+    expect(resultPass(result([FAIL, ERR]))).toBe(false);
+    expect(resultPass(result([ERR, ERR]))).toBeNull();
   });
 
   it('scores the fraction of passing evaluators; null with no evaluators', () => {
     expect(resultScore(result([PASS, FAIL]))).toBe(0.5);
     expect(resultScore(result([PASS, PASS]))).toBe(1);
+    expect(resultScore(result([PASS, ERR]))).toBe(1);
     expect(resultScore(result([]))).toBeNull();
   });
 });

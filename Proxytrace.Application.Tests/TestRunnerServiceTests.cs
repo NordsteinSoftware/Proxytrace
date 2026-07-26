@@ -591,6 +591,101 @@ public sealed class TestRunnerServiceTests : BaseTest<Module>
         }
     }
 
+    // A two-case suite: one case the model answers, one it blows up on. That is the shape of the
+    // flaky upstream call RunTestCase deliberately swallows.
+    private static async Task<ITestSuite> BuildTwoCaseSuiteAsync(
+        IServiceProvider services,
+        AssistantMessage expectedOutput,
+        string failingInput,
+        CancellationToken ct)
+    {
+        var agentGenerator = services.GetRequiredService<IDomainEntityGenerator<IAgent>>();
+        var evaluatorGenerator = services.GetRequiredService<IDomainEntityGenerator<IEvaluator>>();
+        var createTestCase = services.GetRequiredService<ITestCase.CreateNew>();
+        var testCaseRepo = services.GetRequiredService<IRepository<ITestCase>>();
+        var createTestSuite = services.GetRequiredService<ITestSuite.CreateNew>();
+        var testSuiteRepo = services.GetRequiredService<IRepository<ITestSuite>>();
+
+        var agent = await agentGenerator.GetOrCreateAsync(ct);
+        var evaluator = await evaluatorGenerator.GetOrCreateAsync(ct);
+
+        var cases = new List<ITestCase>();
+        foreach (string prompt in new[] { "What is the capital of France?", failingInput })
+        {
+            var input = Conversation.Create().With(new UserMessage([Content.FromText(prompt)]));
+            var testCase = createTestCase(input, expectedOutput, sourceAgentCallId: null);
+            cases.Add(await testCaseRepo.AddAsync(testCase, ct));
+        }
+
+        var suite = createTestSuite("Flaky Suite", agent, [evaluator], cases);
+        await testSuiteRepo.AddAsync(suite, ct);
+        return suite;
+    }
+
+    private static void RegisterModelClientFailingFor(
+        ContainerBuilder builder,
+        AssistantMessage response,
+        string failingInput)
+    {
+        builder.Register(ct =>
+        {
+            IModelClient handler = Substitute.For<IModelClient>();
+            var completionFactory = ct.Resolve<ICompletion.Create>();
+            handler.CompleteAsync(Arg.Any<Conversation>(), Arg.Any<ModelOptions>(), Arg.Any<IReadOnlyDictionary<string, string>?>(), Arg.Any<CancellationToken>())
+                .Returns(call =>
+                {
+                    var conversation = call.Arg<Conversation>();
+                    if (conversation is not null && conversation.Messages.Any(m => m.GetText().Contains(failingInput)))
+                        throw new InvalidOperationException("upstream provider blew up");
+
+                    return Task.FromResult(completionFactory(response, null, TimeSpan.FromMilliseconds(1000)));
+                });
+            return handler;
+        });
+    }
+
+    [TestMethod]
+    public async Task RunInForeground_WhenACaseThrows_SettlesTheRunAsFailed()
+    {
+        // The skipped case never produces a result, so the run can never reach the suite's case
+        // count. Before it was settled explicitly it stayed Running for the life of the process
+        // while its own group read Completed (#452).
+        const string failingInput = "detonate";
+        var expectedOutput = new AssistantMessage([Content.FromText(MatchingText)], []);
+        var services = GetServices(config => RegisterModelClientFailingFor(config, expectedOutput, failingInput));
+        var suite = await BuildTwoCaseSuiteAsync(services, expectedOutput, failingInput, CancellationToken);
+        var endpoint = (await CreateEndpoints(services, 1))[0];
+        var runner = services.GetRequiredService<ITestRunnerService>();
+
+        var group = await runner.RunInForegroundAsync(suite, [endpoint], cancellationToken: CancellationToken);
+
+        var runRepo = services.GetRequiredService<ITestRunRepository>();
+        var storedRun = (await runRepo.GetByGroupAsync(group.Id, CancellationToken)).Single();
+
+        storedRun.Status.Should().Be(TestRunStatus.Failed);
+        storedRun.CompletedAt.Should().NotBeNull();
+        storedRun.TestResults.Should().HaveCount(1, "the flaky case is skipped, the other still runs");
+        group.Status.Should().Be(TestRunStatus.Completed);
+    }
+
+    [TestMethod]
+    public async Task RunInForeground_WhenEveryCaseSucceeds_CompletesTheRun()
+    {
+        var expectedOutput = new AssistantMessage([Content.FromText(MatchingText)], []);
+        var services = GetServices(config => RegisterFakeModelClient(config, expectedOutput));
+        var suite = await BuildTwoCaseSuiteAsync(services, expectedOutput, "detonate", CancellationToken);
+        var endpoint = (await CreateEndpoints(services, 1))[0];
+        var runner = services.GetRequiredService<ITestRunnerService>();
+
+        var group = await runner.RunInForegroundAsync(suite, [endpoint], cancellationToken: CancellationToken);
+
+        var runRepo = services.GetRequiredService<ITestRunRepository>();
+        var storedRun = (await runRepo.GetByGroupAsync(group.Id, CancellationToken)).Single();
+
+        storedRun.Status.Should().Be(TestRunStatus.Completed);
+        storedRun.TestResults.Should().HaveCount(2);
+    }
+
     [TestMethod]
     public async Task RunInBackground_WithSampleCountOutOfRange_Throws()
     {

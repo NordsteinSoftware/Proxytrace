@@ -3,10 +3,10 @@
 // Pass/fail semantics are NOT re-derived here: they come from lib/runResults.ts so a case's verdict
 // matches the Runs UI exactly. What this module adds is DISAMBIGUATION. `resultPass` is tri-state
 // (`boolean | null`) and `failingResults` keeps only `=== false`, so "absent from the failure list"
-// silently unions passed / unjudged / not-in-run — and because `isEvalPass` is false for an errored
-// evaluator, a crashed judge is indistinguishable from a real failure. A red/green loop has to tell
-// those apart: "the judge broke" is not evidence that the agent is wrong, and "I didn't see it in
-// the failures" is not evidence that it passed.
+// silently unions passed / unjudged / not-in-run — and a case whose judge broke lands in whichever
+// of those its *other* evaluators put it in, saying nothing about the broken judge. A red/green loop
+// has to tell those apart: "the judge broke" is not evidence that the agent is wrong, and "I didn't
+// see it in the failures" is not evidence that it passed.
 
 import { TestRunStatus } from '../../../api/models';
 import type { TestResultDto, TestRunDto } from '../../../api/models';
@@ -29,9 +29,10 @@ export interface CaseResult {
 }
 
 /**
- * Classifies one executed result. `evaluator-error` is checked BEFORE pass/fail on purpose: an
- * errored evaluator drags `resultPass` to false, which would otherwise report a broken judge as a
- * confirmed defect — and a fix would then be theorized against a bug that was never demonstrated.
+ * Classifies one executed result. `evaluator-error` is checked BEFORE pass/fail on purpose: a broken
+ * judge is reported as such rather than folded into the surviving evaluators' verdict, so a fix is
+ * never theorized against a bug that was never demonstrated — nor a case called clean on evidence
+ * that partly failed to materialize.
  */
 function verdictOf(result: TestResultDto): CaseVerdict {
   if (result.evaluations.some(isErrored)) return 'evaluator-error';

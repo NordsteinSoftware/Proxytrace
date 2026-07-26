@@ -55,6 +55,12 @@ smoothly toward the final value — it never starts near zero and jumps at the e
 runs can be grouped together (a **test run group**) so you can compare, for example, the
 same suite across several agent versions.
 
+An **amber (errored) slot does not count against the case**. A judge that failed to answer says
+nothing about your agent, so the case is decided by the evaluators that did return a verdict; only
+when *every* evaluator on a case errored is the case left unjudged. Likewise, a run that could not
+execute every one of its cases — an upstream outage part-way through, say — finishes as **Failed**
+rather than Completed, so a partial run is never mistaken for a full one.
+
 ### A/B validation runs
 
 When the optimizer validates an [optimization theory](/guide/optimization-theories), it

@@ -46,8 +46,9 @@ internal sealed class OrphanedTestRunReaperHostedService : IHostedService
     public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 
     /// <summary>
-    /// Cancels every non-terminal group and its non-terminal runs. Each group is handled
-    /// independently so one bad row can't abort the sweep. Exposed for testing.
+    /// Cancels every non-terminal group and its non-terminal runs, then every remaining non-terminal
+    /// run whose group already settled. Each group and run is handled independently so one bad row
+    /// can't abort the sweep. Exposed for testing.
     /// </summary>
     internal static async Task ReapAsync(
         ITestRunGroupRepository groups,
@@ -59,12 +60,12 @@ internal sealed class OrphanedTestRunReaperHostedService : IHostedService
             [TestRunStatus.Pending, TestRunStatus.Running],
             cancellationToken);
 
-        if (orphaned.Count == 0)
-            return;
-
-        logger.LogWarning(
-            "Reaping {Count} test-run group(s) left non-terminal by a previous shutdown — marking them cancelled",
-            orphaned.Count);
+        if (orphaned.Count > 0)
+        {
+            logger.LogWarning(
+                "Reaping {Count} test-run group(s) left non-terminal by a previous shutdown — marking them cancelled",
+                orphaned.Count);
+        }
 
         foreach (var group in orphaned)
         {
@@ -81,6 +82,45 @@ internal sealed class OrphanedTestRunReaperHostedService : IHostedService
             catch (Exception ex)
             {
                 logger.LogError(ex, "Failed to reap orphaned test-run group {GroupId}", group.Id);
+            }
+        }
+
+        await ReapOrphanedRunsAsync(runs, logger, cancellationToken);
+    }
+
+    /// <summary>
+    /// Cancels runs left non-terminal under a group that is already terminal. The group-scoped sweep
+    /// above cannot see them — it selects by *group* status — so a run stranded this way (before
+    /// #452 was fixed, a single skipped case did exactly that) would survive every restart. Runs
+    /// belonging to a still-open group are skipped: the sweep above owns those.
+    /// </summary>
+    private static async Task ReapOrphanedRunsAsync(
+        ITestRunRepository runs,
+        ILogger logger,
+        CancellationToken cancellationToken)
+    {
+        var stranded = (await runs.GetByStatusAsync(
+                [TestRunStatus.Pending, TestRunStatus.Running],
+                cancellationToken))
+            .Where(r => r.Group.Status.IsTerminal())
+            .ToList();
+
+        if (stranded.Count == 0)
+            return;
+
+        logger.LogWarning(
+            "Reaping {Count} test run(s) left non-terminal under an already-finished group — marking them cancelled",
+            stranded.Count);
+
+        foreach (var run in stranded)
+        {
+            try
+            {
+                await run.SetCancelled(cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Failed to reap orphaned test run {RunId}", run.Id);
             }
         }
     }

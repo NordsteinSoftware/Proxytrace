@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.Diagnostics;
 using JetBrains.Annotations;
@@ -6,6 +7,7 @@ using Proxytrace.Domain.Agent;
 using Proxytrace.Domain.Evaluation;
 using Proxytrace.Domain.Internal;
 using Proxytrace.Domain.Message;
+using Proxytrace.Domain.ModelEndpoint;
 using Proxytrace.Domain.Project;
 using Proxytrace.Domain.TestResult;
 using Proxytrace.Domain.Usage;
@@ -58,11 +60,19 @@ internal sealed record AgenticEvaluator : DomainEntity<IEvaluator>, IAgenticEval
         {
             Conversation conversation = Conversation.Create().With(BuildEvaluationMessage(testResult));
 
-            using var client = Agent.CreateClient();
-            var completion = await client
-                .CompleteAsync<AgenticEvaluatorResult>(
-                    conversation,
-                    cancellationToken: cancellationToken);
+            TypedCompletion<AgenticEvaluatorResult> completion;
+            try
+            {
+                completion = await JudgeAsync(conversation, cancellationToken);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                // Sampling is non-deterministic, so the usual cause of a failure here — a verdict cut
+                // off mid-sentence because the judge talked past its output budget — does not repeat.
+                // One retry costs a judge call; not retrying persists an errored evaluation, which
+                // the pass-rate math then has to treat as a case that was never judged.
+                completion = await JudgeAsync(conversation, cancellationToken);
+            }
 
             if (completion.Response is null)
             {
@@ -85,6 +95,16 @@ internal sealed record AgenticEvaluator : DomainEntity<IEvaluator>, IAgenticEval
             // Let cancellation propagate rather than persisting it as a normal "errored" evaluation.
             return erroredFactory(this, sw.Elapsed, ex);
         }
+    }
+
+    private async Task<TypedCompletion<AgenticEvaluatorResult>> JudgeAsync(
+        Conversation conversation,
+        CancellationToken cancellationToken)
+    {
+        using var client = Agent.CreateClient();
+        return await client.CompleteAsync<AgenticEvaluatorResult>(
+            conversation,
+            cancellationToken: cancellationToken);
     }
 
     private UserMessage BuildEvaluationMessage(ITestResult testResult)
@@ -118,8 +138,17 @@ internal sealed record AgenticEvaluator : DomainEntity<IEvaluator>, IAgenticEval
         yield return Validation.True(Agent.IsSystemAgent);
     }
 
+    /// <summary>
+    /// The judge's verdict. <see cref="Reasoning"/> is the only unbounded field, and it is what runs
+    /// a response out of output budget — the answer is then cut mid-string, the JSON no longer
+    /// parses, and a perfectly good <see cref="Score"/> is thrown away with it. The description is
+    /// exported into the JSON schema the judge is prompted with, so the budget reaches the model.
+    /// </summary>
     [UsedImplicitly]
     private record AgenticEvaluatorResult(
         EvaluationScore Score,
+        [property: Description(
+            "A brief justification for the score: at most 3 sentences and 600 characters. " +
+            "Be concise — a longer answer risks being cut off before it is complete.")]
         string? Reasoning);
 }

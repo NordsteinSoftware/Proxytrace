@@ -47,6 +47,17 @@ chain `trace → case` stays answerable; synthetic cases carry `null`. Both the 
 (`POST /api/test-suites/{id}/test-cases`) and the MCP `add_trace_to_suite` tool expose the correction
 path (see [`mcp.md`](mcp.md)).
 
+**An errored evaluator is not a failing case.** `TestResultExtensions.IsPass` — the canonical verdict,
+mirrored in the frontend by `lib/runResults.ts` — passes a result when at least one evaluation
+produced a verdict and every such verdict passed. Evaluations that **errored** are excluded from the
+verdict rather than counted as failures: a judge that crashed or answered unparseably says nothing
+about the agent, and folding it in makes a broken evaluator indistinguishable from a real defect,
+dragging the run's pass rate down and biasing the two-proportion A/B test that reads it. A result
+whose evaluations *all* errored has no verdict and still does not pass. The judge side is hardened to
+match: an agentic evaluator's `Reasoning` carries an explicit length budget in the schema it is
+prompted with, a failed judge call is retried once, and a verdict truncated mid-string is repaired
+and re-parsed (`TruncatedJsonRepair`) rather than discarded over its prose.
+
 **A case scores one model call — so promote the decision, not the summary.** `RunTestCase` calls
 `IModelClient.CompleteAsync(testCase.Input)` **exactly once** and never continues the tool loop
 (`TestRunnerService.cs`), so a case only ever grades the next assistant message. A promoted or
@@ -84,12 +95,21 @@ construction.
   and in tests. Takes `customAgent` and an `isSystemTestRun` flag that **hides internal A/B runs**
   from the user's run list.
 - Each `TestCase` produces a **`TestResult`** scored by the suite's evaluators. Live progress
-  streams over SSE via `ITestResultBroadcaster`.
+  streams over SSE via `ITestResultBroadcaster`. A case whose inference or evaluation throws is
+  **skipped** (logged, the run carries on) and therefore produces no result at all.
+- A run reaches a terminal state through `FinishRun`, once every case has been *attempted* —
+  `Completed` when all of them produced a result, **`Failed`** when any were skipped. Completion is
+  deliberately not inferred from the result count alone: a skipped case can never reach that count,
+  which used to strand the run in `Running` for the lifetime of the process while its group already
+  read `Completed`. A `Failed` run is *visibly* incomplete, and the A/B validators refuse to score it
+  either way (`IsRunComplete` compares result count against suite size).
 - The runner's work queue and in-flight state are **in-memory only**, so a process restart mid-run
   strands those groups in `Running`/`Pending` (they can't be resumed). `OrphanedTestRunReaperHostedService`
   runs on startup and marks every non-terminal group and its non-terminal runs **`Cancelled`**
-  (via `ITestRunGroupRepository.GetByStatusesAsync`), mirroring how theory validation re-reconciles its
-  in-memory queue on boot. Idempotent — a clean shutdown leaves nothing to reap.
+  (via `ITestRunGroupRepository.GetByStatusesAsync`), then sweeps any run still non-terminal under an
+  already-terminal group (via `ITestRunRepository.GetByStatusAsync`) — the group-scoped query cannot
+  see those. Mirrors how theory validation re-reconciles its in-memory queue on boot. Idempotent — a
+  clean shutdown leaves nothing to reap.
 
 Runs can be kicked off **manually** (the API/UI) or on a **schedule**. A `TestRunSchedule` (a
 domain entity binding a suite to a fixed set of endpoints — capped at 3, like manual runs — + a
