@@ -2029,6 +2029,9 @@ msgstr "Fehlerrate"
 msgid "errors"
 msgstr "Fehler"
 
+msgid "Errors"
+msgstr "Fehler"
+
 msgid "Estimated cost in EUR"
 msgstr "Geschätzte Kosten in EUR"
 
@@ -4436,11 +4439,11 @@ msgstr "wird bewertet…"
 msgid "Scoring…"
 msgstr "Wird bewertet…"
 
-msgid "Scroll or drag to zoom in · click a bar to focus it"
-msgstr "Scrollen oder ziehen zum Vergrößern · auf einen Balken klicken, um ihn zu fokussieren"
+msgid "Scroll or drag to zoom in · click a bucket to focus it"
+msgstr "Scrollen oder ziehen zum Vergrößern · auf ein Intervall klicken, um es zu fokussieren"
 
-msgid "Scroll or drag to zoom in · click a bar to focus it · scroll down to zoom out"
-msgstr "Scrollen oder ziehen zum Vergrößern · auf einen Balken klicken, um ihn zu fokussieren · nach unten scrollen zum Verkleinern"
+msgid "Scroll or drag to zoom in · click a bucket to focus it · scroll down to zoom out"
+msgstr "Scrollen oder ziehen zum Vergrößern · auf ein Intervall klicken, um es zu fokussieren · nach unten scrollen zum Verkleinern"
 
 msgid "Scroll to latest"
 msgstr "Zu den neuesten scrollen"

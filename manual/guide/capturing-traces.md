@@ -76,9 +76,13 @@ Typical things you can do:
   run of traces belongs to. They show only when the list is sorted by **Time** and spans more than
   one day — under any other sort, consecutive rows aren't in time order, so a day marker would be
   misleading.
-- **New traces while you read.** Live captures pause while you are scrolled down, so rows never
-  shift under you mid-read. A small pulsing dot beside the position count means new traces are
-  waiting; scroll back to the top and the list refreshes with them.
+- **New traces while you read.** At the top of the list, a captured call **slides into place** as it
+  arrives: it is inserted among the rows already on screen — briefly highlighted so you can see which
+  one is new — and nothing else moves or reloads. Under a metric sort (say slowest-first) the new
+  trace lands wherever it actually ranks rather than being pushed to the top, and a call that doesn't
+  match your filters doesn't appear at all. Live captures pause while you are scrolled down, so rows
+  never shift under you mid-read: a small pulsing dot beside the position count means new traces are
+  waiting, and scrolling back to the top brings them in.
 
 ![Scrolling back through the trace list: day markers label each run of traces, the header keeps a running "1–15 of 16" count, and an "End of results" rule closes the list.](/screenshots/traces/day-markers.png)
 
@@ -95,20 +99,28 @@ sense in time order.
 
 ### The timeline
 
-![The traces timeline strip — each bar's height is the trace count for that time slice, with failed calls marked in red along the bottom.](/screenshots/traces/timeline.png)
+![The traces timeline strip — a stepped cyan line plots the trace count per time slice above a zero line, with red error notches hanging below it.](/screenshots/traces/timeline.png)
 
 Above the table a **timeline strip** plots how many traces were captured over the selected
-range, so you can spot ingestion hotspots at a glance. Each bar's height is the trace count
-for that slice of time; the **red** portion at the bottom marks failed calls (HTTP errors),
-making error spikes easy to find. A **time axis** along the bottom labels the window, and
-hovering a bar shows its exact time, count, and error count.
+range, so you can spot ingestion hotspots at a glance. Traces are drawn as a **stepped line**
+rising from a zero line — one step per slice of time, so you read volume as a profile rather
+than counting bars. Failed calls (HTTP errors) hang **below** the same zero line as red
+notches, which makes error bursts jump out even when only a handful of calls failed. A **time
+axis** along the bottom labels the window, and hovering the strip shows the exact time, count,
+and error count for the slice under the cursor.
+
+::: tip Reading the two sides
+The two sides are scaled separately. The red lane answers *when* things failed, not *how many
+relative to traffic* — a single failure still draws a visible notch. Hover for the exact
+counts, and use the **Error rate** stat card below the strip for the ratio.
+:::
 
 - **Drag across the timeline** to zoom into that window. The view re-spans to your selection —
-  the bars redraw at higher resolution *and* the table narrows to the same range, so you can
+  the line redraws at higher resolution *and* the table narrows to the same range, so you can
   drill straight into a spike.
 - **Scroll up** over the timeline to zoom in toward the cursor; **scroll down** to step back
   out one level (each zoom-in is remembered, so you can drill in repeatedly and reverse out).
-- **Click a bar** to focus its time bucket directly.
+- **Click the strip** to focus the time slice under the cursor directly.
 
 If you zoom into a window with no traces, the strip stays put (showing *"No traces in this
 range"*) so you can always scroll back out.

@@ -10,6 +10,19 @@ export type TraceListRow =
   | { kind: 'row'; row: TraceRow };
 
 /**
+ * Stable identity for a list entry, independent of where it currently sits.
+ *
+ * Load-bearing twice over: it is the React reconciliation key *and* the virtualizer's `getItemKey`,
+ * which is what its measured-height cache is keyed by. Position cannot serve here — a live arrival
+ * splices rows into the head, so every index below it shifts, and a position-keyed height cache
+ * hands an expanded group's measurement to whatever row inherits its old index.
+ */
+export function listRowKey(item: TraceListRow): string {
+  if (item.kind === 'divider') return `divider-${item.dayKey}`;
+  return item.row.type === 'flat' ? item.row.trace.id : `conv-${item.row.conversationId}`;
+}
+
+/**
  * The instant a row sits at. A conversation group is dated by its first turn — the same turn whose
  * relative time the collapsed group row displays — so the divider lands where the reader sees the
  * day change, rather than inside a group.

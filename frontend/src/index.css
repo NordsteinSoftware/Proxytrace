@@ -251,6 +251,27 @@ html, body, #root {
   .fade-up { animation: none; }
 }
 
+/* One-shot cyan wash marking a row that just arrived over the live stream — the dashboard feed and
+   the traces list both use it. A flat tint that decays, not a glow (DESIGN.md §9): it is painted as
+   an overlay rather than on `background-color` so it composes with the row's own hover and selection
+   fills instead of overriding them for the length of the animation. */
+@keyframes arrival-flash {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+.arrival-flash { position: relative; }
+.arrival-flash::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-color: color-mix(in srgb, var(--accent-primary) 16%, transparent);
+  animation: arrival-flash 1.6s var(--ease-standard) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .arrival-flash::after { animation: none; display: none; }
+}
+
 .pulse-dot {
   display: inline-block;
   animation: pulse-dot 2s ease-in-out infinite;
@@ -335,16 +356,6 @@ html, body, #root {
 }
 @media (prefers-reduced-motion: reduce) {
   .pulse-idle-sweep::after { animation: none; display: none; }
-}
-
-/* One-shot cyan wash on a freshly arrived feed row. */
-@keyframes arrival-flash {
-  0%   { background-color: color-mix(in srgb, var(--accent-primary) 16%, transparent); }
-  100% { background-color: transparent; }
-}
-.arrival-flash { animation: arrival-flash 1.6s var(--ease-standard) both; }
-@media (prefers-reduced-motion: reduce) {
-  .arrival-flash { animation: none; }
 }
 
 /* Draw-in for a chart line path; the element sets --draw-length to (an upper bound of) its length. */

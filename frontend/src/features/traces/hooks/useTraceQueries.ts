@@ -4,6 +4,7 @@ import { QUERY_KEYS } from '../../../api/query-keys';
 import useCurrentProject from '../../../hooks/useCurrentProject';
 import type { AgentCallFilter } from '../../../api/models';
 import { advancedFilterParams, DEFAULT_TRACE_SORT, SORT_FIELD_TO_API, type TraceAdvancedFilters, type TraceSort } from '../tracesMeta';
+import { dedupeById } from '../traceHeadMerge';
 
 /**
  * Rows fetched per scroll chunk. Internal, not a user-facing choice: the list scrolls continuously,
@@ -88,7 +89,9 @@ export function useTraceQueries(args: TraceQueryArgs) {
   });
 
   return {
-    traces: tracesQuery.data?.pages.flatMap(page => page.items) ?? [],
+    // Deduped because the head grows under live arrivals while chunks are addressed by offset: the
+    // next chunk then starts at a shifted offset and repeats rows already loaded (see `dedupeById`).
+    traces: dedupeById(tracesQuery.data?.pages.flatMap(page => page.items) ?? []),
     total: tracesQuery.data?.pages[0]?.total ?? 0,
     isFetching: tracesQuery.isFetching,
     isFetchingNextPage: tracesQuery.isFetchingNextPage,

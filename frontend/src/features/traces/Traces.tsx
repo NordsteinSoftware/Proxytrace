@@ -130,7 +130,9 @@ export default function Traces() {
   const handleScrolledToTrace = useCallback(() => setPendingScrollId(null), []);
 
 
-  const { markAtTop, pendingRefresh } = useTraceSseStream();
+  // Live arrivals are folded into the head of the loaded list under the same filter/sort the list
+  // itself uses, so the table is patched in place rather than reloaded.
+  const { markAtTop, pendingRefresh, freshIds } = useTraceSseStream(traceQueryArgs);
 
   function toggleConv(id: string) {
     setExpandedConvs(prev => {
@@ -241,9 +243,8 @@ export default function Traces() {
           isFetchingNextPage,
           hasNextPage,
           onLoadMore: fetchNextPage,
-          pendingRefresh,
-          onAtTopChange: markAtTop,
         }}
+        live={{ freshIds, pendingRefresh, onAtTopChange: markAtTop }}
         selection={{
           selectedId: selectedTrace?.id ?? null,
           expandedConvs,

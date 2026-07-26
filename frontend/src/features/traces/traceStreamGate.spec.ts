@@ -2,17 +2,17 @@ import { describe, expect, it } from 'vitest';
 import { initialGateState, onReturnedToTop, onTraceArrived, SUMMARY_COALESCE_MS } from './traceStreamGate';
 
 describe('onTraceArrived', () => {
-  it('resets the list immediately when the reader is at the top', () => {
+  it('folds the arrival into the head immediately when the reader is at the top', () => {
     const result = onTraceArrived(initialGateState(), true, 1000);
 
-    expect(result.resetList).toBe(true);
+    expect(result.mergeHead).toBe(true);
     expect(result.state.pending).toBe(false);
   });
 
-  it('withholds the reset and marks pending when scrolled away from the top', () => {
+  it('withholds the merge and marks pending when scrolled away from the top', () => {
     const result = onTraceArrived(initialGateState(), false, 1000);
 
-    expect(result.resetList).toBe(false);
+    expect(result.mergeHead).toBe(false);
     expect(result.state.pending).toBe(true);
   });
 
@@ -21,7 +21,7 @@ describe('onTraceArrived', () => {
     const second = onTraceArrived(first.state, false, 2000);
 
     expect(second.state.pending).toBe(true);
-    expect(second.resetList).toBe(false);
+    expect(second.mergeHead).toBe(false);
   });
 
   it('clears a pending flag if an arrival lands while back at the top', () => {
@@ -29,7 +29,7 @@ describe('onTraceArrived', () => {
 
     const result = onTraceArrived(pending, true, 2000);
 
-    expect(result.resetList).toBe(true);
+    expect(result.mergeHead).toBe(true);
     expect(result.state.pending).toBe(false);
   });
 
@@ -68,19 +68,19 @@ describe('onTraceArrived', () => {
 });
 
 describe('onReturnedToTop', () => {
-  it('flushes a pending reset', () => {
+  it('flushes a pending merge', () => {
     const pending = onTraceArrived(initialGateState(), false, 1000).state;
 
     const result = onReturnedToTop(pending, 5000);
 
-    expect(result.resetList).toBe(true);
+    expect(result.mergeHead).toBe(true);
     expect(result.state.pending).toBe(false);
   });
 
   it('does nothing when nothing is pending', () => {
     const result = onReturnedToTop(initialGateState(), 5000);
 
-    expect(result.resetList).toBe(false);
+    expect(result.mergeHead).toBe(false);
     expect(result.state.pending).toBe(false);
   });
 
@@ -90,7 +90,7 @@ describe('onReturnedToTop', () => {
     const first = onReturnedToTop(pending, 5000);
     const second = onReturnedToTop(first.state, 6000);
 
-    expect(first.resetList).toBe(true);
-    expect(second.resetList).toBe(false);
+    expect(first.mergeHead).toBe(true);
+    expect(second.mergeHead).toBe(false);
   });
 });

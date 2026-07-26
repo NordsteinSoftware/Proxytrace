@@ -1,6 +1,6 @@
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useCallback, useEffect, type RefObject } from 'react';
-import type { TraceListRow } from '../traceDayDividers';
+import { listRowKey, type TraceListRow } from '../traceDayDividers';
 
 /**
  * Starting heights only — every item is re-measured once mounted, so these exist to keep the initial
@@ -35,6 +35,19 @@ export function useTraceVirtualizer(
     [items],
   );
 
+  // Identity, not position. The measured-height cache is keyed by this, and a live arrival splices
+  // rows into the head — so under the default index key, an expanded group that shifts down inherits
+  // the collapsed height cached at its new index (and `measureElement` returns that stale value
+  // instead of reading the DOM, since the node's box never changed and no resize fires). Every row
+  // below it then lands short and the expanded turns paint over them.
+  const getItemKey = useCallback(
+    (index: number) => {
+      const item = items[index];
+      return item ? listRowKey(item) : index;
+    },
+    [items],
+  );
+
   // ESLint's react-hooks/incompatible-library warns here: `useVirtualizer` returns functions React
   // Compiler cannot safely memoize, so it skips compiling this hook. That is expected and harmless —
   // the virtualizer is inherently stateful and re-reads the DOM on scroll, which is exactly the case
@@ -43,6 +56,7 @@ export function useTraceVirtualizer(
     count: items.length,
     getScrollElement: () => scrollRef.current,
     estimateSize,
+    getItemKey,
     overscan: OVERSCAN,
   });
 

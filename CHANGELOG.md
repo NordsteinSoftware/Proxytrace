@@ -9,6 +9,24 @@ follow [Semantic Versioning](https://semver.org). Ongoing work is collected unde
 
 ## [Unreleased]
 
+### Fixed
+
+- **Expanded multi-turn conversations no longer overlap the rows beneath them.** Opening a
+  conversation's turns while new traces were streaming in left the expanded turns painted on top of
+  the following rows, with the text of both stacked on itself. The table measured each row by its
+  position in the list, so an arriving trace — which shifts every row below it down a slot — handed
+  an expanded group's height to whichever row inherited its old position. Rows are now measured by
+  identity, so they keep their own height however the list shifts around them.
+
+- **A newly captured trace no longer redraws the whole Traces table.** While you watched the list at
+  the top, every arriving call blanked the table back to loading skeletons and rebuilt it — a flicker
+  on every request your agents made, and it threw away the rows you had already scrolled in. Arrivals
+  are now inserted **in place**, among the rows already on screen, and briefly highlighted so the new
+  one is easy to spot. Nothing else moves. A burst of calls is collected into one insert rather than
+  one reload each, and under a metric sort (slowest-first, say) the new trace lands where it actually
+  ranks instead of jumping to the top. A duplicated row that could appear after new traces arrived
+  and you scrolled on for the next batch is fixed with it.
+
 ### Added
 
 - **Ask Tracey a specific question from a trace.** The trace detail action now opens a multiline
@@ -84,6 +102,15 @@ follow [Semantic Versioning](https://semver.org). Ongoing work is collected unde
   The key value itself is never recorded.
 
 ### Changed
+
+- **The traces timeline reads as a signal, not a picket fence.** The strip above the trace table is
+  now a stepped line — volume rises from a zero line as a continuous profile, so a run of quiet
+  minutes and a sudden spike are one shape you take in at a glance rather than 120 separate bars.
+  Failures moved out from behind the volume: they hang **below** the zero line as red notches on a
+  scale of their own, so a handful of errors during a busy hour is visible instead of buried as a
+  sliver at the foot of a tall bar. A key names both lanes, and hovering drops a playhead across the
+  strip with the exact time, count, and error count for that slice. Drag-to-zoom, scroll-to-zoom, and
+  click-to-focus work exactly as before.
 
 - **Trace lists scroll instead of paging.** The Traces table and a session's trace list no longer
   have page buttons or a "per page" picker — keep scrolling and the next batch loads, until an

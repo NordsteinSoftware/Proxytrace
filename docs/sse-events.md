@@ -165,30 +165,45 @@ do. `useTraceSseStream` routes every arrival through a pure policy in
 
 | Reader is… | List | Aggregates (overview / histogram / summary) |
 |---|---|---|
-| at the top | **reset** to a single fresh chunk | refreshed, coalesced |
+| at the top | **head merge**: arrivals folded into the cached chunks in place | refreshed, coalesced |
 | scrolled down | **withheld**; the arrival is marked pending | refreshed, coalesced |
-| returning to the top | pending arrival flushed (reset) | — |
+| returning to the top | pending arrival flushed (head merge) | — |
 
-Three things are load-bearing here:
+Four things are load-bearing here:
 
 - **Withholding while scrolled** is not an optimization. Under offset paging, inserting rows at the
   top shifts every subsequent offset, so a refetch mid-read makes rows jump and can duplicate or skip
   traces across a chunk boundary. Freezing sidesteps that without needing keyset pagination.
-- **Reset, not invalidate.** `invalidateQueries` on an infinite query refetches *every* loaded chunk —
-  a reader twenty chunks deep would fire twenty requests. `resetQueries` drops back to one fresh
-  chunk, which is invisible precisely because it only ever happens at the top.
-- **The list key is namespaced** (`QUERY_KEYS.agentCallsListRoot` → `['agent-calls','list']`) so the
-  reset does not also drop the overview, histogram and summary and flash the whole page to loading.
+- **Patch, never reset or invalidate.** `invalidateQueries` on an infinite query refetches *every*
+  loaded chunk — a reader twenty chunks deep would fire twenty requests. `resetQueries` is worse in a
+  different way: it *discards* the loaded chunks, so the query has no data at all until its refetch
+  lands, and a list with no rows renders its loading skeleton — every arrival flashed the whole table
+  away and redrew it, skeletons and all. Instead `useTraceHeadMerge` fetches **page 1 only** and folds
+  it into the cache with `setQueryData` (`features/traces/traceHeadMerge.ts`): the rendered rows stay
+  mounted, and only the arrivals mount — which is what lets them animate in (`arrival-flash`, see
+  DESIGN.md §2.6).
+- **The fold inserts at the position the fresh chunk gives it**, not blindly at the top. Under the
+  default time-descending sort that is the top; under a metric sort it is wherever the server ranked
+  the trace. Fetching page 1 rather than the single trace by id is what makes that possible — and it
+  also means a trace that does not match the live filter simply never appears.
+- **Chunks are deduped when flattened** (`dedupeById`). Once the head grows, the next chunk the reader
+  scrolls into starts at a shifted offset and repeats rows already on screen; without the dedupe those
+  render twice under a duplicate React key.
 
 Aggregate refreshes are coalesced to at most one per `SUMMARY_COALESCE_MS` (5s) because each is a
-whole-table query; a busy proxy would otherwise emit one per trace. The withheld state is surfaced in
-the list header as a pulsing accent dot plus an `aria-live` status — a frozen list that says nothing
-reads as a broken one.
+whole-table query; a busy proxy would otherwise emit one per trace. The head fetch has its own,
+shorter trailing window (`HEAD_MERGE_COALESCE_MS`, 400ms) with at most one fetch in flight, so a burst
+of arrivals becomes one request that inserts several rows. The withheld state is surfaced in the list
+header as a pulsing accent dot plus an `aria-live` status — a frozen list that says nothing reads as a
+broken one.
 
-This remains a documented deviation from BEST_PRACTICES §3.2 ("SSE patches the cache; it does not
-trigger refetches"): `TraceCreatedEvent` carries only partial data, so a `setQueryData` patch would
-need a per-event GET. It is narrower than the previous blanket invalidation of the whole
-`['agent-calls']` prefix.
+The one page-1 GET is why this is no longer a deviation from BEST_PRACTICES §3.2 ("SSE patches the
+cache; it does not trigger refetches") in substance: `TraceCreatedEvent` carries only partial data, so
+*some* read is unavoidable to learn the row the list renders — but what reaches the cache is a patch,
+not a refetch of what is already loaded.
+
+The session timeline (`useSessionLiveStream`) still invalidates rather than patches; it keeps its rows
+mounted through the refetch, so it never blinks, but it does refetch every loaded chunk.
 
 ## Adding a new SSE stream
 

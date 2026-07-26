@@ -1,6 +1,8 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { Trans, Plural, useLingui } from '@lingui/react/macro';
-import { computeTimeline, timeToX, xToTime, timelineAxisTicks, zoomTowardPivot } from './chart-math';
+import {
+  computeTimelineTrace, timeToX, xToTime, timelineAxisTicks, zoomTowardPivot, formatBucketInstant,
+} from './chart-math';
 import { useElementWidth } from '../../hooks/useElementWidth';
 import { useWheelZoom } from '../../hooks/useWheelZoom';
 import type { TraceHistogramBucket } from '../../api/models';
@@ -24,11 +26,11 @@ interface Props {
   height?: number;
 }
 
-export function TraceTimeline({ buckets, from, to, onZoom, onZoomOut, canZoomOut, height = 84 }: Props) {
+export function TraceTimeline({ buckets, from, to, onZoom, onZoomOut, canZoomOut, height = 92 }: Props) {
   const { t } = useLingui();
   const [ref, measuredWidth] = useElementWidth<HTMLDivElement>(600);
   const w = measuredWidth || 600;
-  const geo = useMemo(() => computeTimeline(buckets, w, height), [buckets, w, height]);
+  const geo = useMemo(() => computeTimelineTrace(buckets, w, height), [buckets, w, height]);
   // One tick per ~120px of strip width, kept between 2 and 7 so labels never crowd.
   const ticks = useMemo(() => {
     const count = Math.max(2, Math.min(7, Math.round(w / 120)));
@@ -47,10 +49,10 @@ export function TraceTimeline({ buckets, from, to, onZoom, onZoomOut, canZoomOut
 
   const bucketAt = (clientX: number) => {
     const rect = ref.current?.getBoundingClientRect();
-    if (!rect || geo.bars.length === 0) return null;
+    if (!rect || geo.points.length === 0) return null;
     const xVb = ((clientX - rect.left) / rect.width) * w;
-    const slot = (geo.plotR - geo.plotL) / geo.bars.length;
-    return Math.min(geo.bars.length - 1, Math.max(0, Math.floor((xVb - geo.plotL) / slot)));
+    const slot = (geo.plotR - geo.plotL) / geo.points.length;
+    return Math.min(geo.points.length - 1, Math.max(0, Math.floor((xVb - geo.plotL) / slot)));
   };
 
   const handlePointerDown = (e: React.PointerEvent) => {
@@ -102,6 +104,7 @@ export function TraceTimeline({ buckets, from, to, onZoom, onZoomOut, canZoomOut
   const selX1 = dragSel ? timeToX(dragSel.from, from, to, geo.plotL, geo.plotR) : 0;
   const selX2 = dragSel ? timeToX(dragSel.to, from, to, geo.plotL, geo.plotR) : 0;
   const hoverBucket = hoverIdx !== null ? buckets[hoverIdx] : null;
+  const hoverPt = hoverIdx !== null ? geo.points[hoverIdx] : null;
 
   return (
     <div
@@ -114,45 +117,72 @@ export function TraceTimeline({ buckets, from, to, onZoom, onZoomOut, canZoomOut
       onPointerLeave={() => setHoverIdx(null)}
       title={
         canZoomOut
-          ? t`Scroll or drag to zoom in · click a bar to focus it · scroll down to zoom out`
-          : t`Scroll or drag to zoom in · click a bar to focus it`
+          ? t`Scroll or drag to zoom in · click a bucket to focus it · scroll down to zoom out`
+          : t`Scroll or drag to zoom in · click a bucket to focus it`
       }
     >
       <svg viewBox={`0 0 ${w} ${height}`} width="100%" height={height} className="block">
-        {/* Faint vertical guides under the bars, aligned to the interior axis ticks. */}
-        {ticks.slice(1, -1).map((t, i) => (
-          <line key={`g${i}`} x1={t.x} x2={t.x} y1={geo.plotT} y2={geo.baselineY} stroke="var(--border-subtle)" />
+        {/* Faint vertical guides spanning both lanes, aligned to the interior axis ticks. */}
+        {ticks.slice(1, -1).map((tick, i) => (
+          <line key={`g${i}`} x1={tick.x} x2={tick.x} y1={geo.plotT} y2={geo.plotB} stroke="var(--border-subtle)" />
+        ))}
+        {/* Volume: a flat body under a smooth curve through the bucket counts. */}
+        <path d={geo.totalArea} fill="var(--accent-primary)" fillOpacity={0.2} />
+        <path
+          d={geo.totalLine}
+          fill="none"
+          stroke="var(--accent-primary)"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        {/* Errors hang below the shared zero line as solid notches, on a scale of their own. The
+            lane is meaningless unlabelled, so it names itself — inside the one band the volume
+            series never reaches, and under the notches so data always wins the overlap. */}
+        <text
+          x={geo.plotL + 4}
+          y={(geo.baselineY + geo.plotB) / 2 + 3}
+          fill="var(--text-muted)"
+          fontSize="9"
+          fontFamily="JetBrains Mono, monospace"
+          letterSpacing="0.6"
+        >
+          {t`Errors`}
+        </text>
+        {geo.errorAreas.map((d, i) => (
+          <path key={`e${i}`} d={d} fill="var(--danger)" fillOpacity={0.7} />
         ))}
         <line x1={geo.plotL} x2={geo.plotR} y1={geo.baselineY} y2={geo.baselineY} stroke="var(--border-color)" />
-        {geo.bars.map((b, i) => (
-          <g key={i}>
-            {b.totalH > 0 && (
-              <rect x={b.x} y={b.totalY} width={b.w} height={b.totalH} fill="var(--accent-primary)" opacity={hoverIdx === i ? 0.95 : 0.7} />
-            )}
-            {b.errorH > 0 && (
-              <rect x={b.x} y={b.errorY} width={b.w} height={b.errorH} fill="var(--danger)" />
-            )}
-          </g>
-        ))}
         {dragSel && (
           <rect
-            x={selX1} y={geo.plotT} width={Math.max(selX2 - selX1, 1)} height={geo.baselineY - geo.plotT}
+            x={selX1} y={geo.plotT} width={Math.max(selX2 - selX1, 1)} height={geo.plotB - geo.plotT}
             fill="var(--accent-primary)" opacity={0.12} stroke="var(--accent-primary)" strokeOpacity={0.5}
           />
         )}
-        {/* Time axis: a short tick + label under the baseline. */}
-        {ticks.map((t, i) => (
+        {hoverPt && !dragSel && (
+          <g>
+            {/* Playhead: one rule crossing both lanes, so the two series read as one instant. */}
+            <line
+              x1={hoverPt.x} x2={hoverPt.x} y1={geo.plotT} y2={geo.plotB}
+              stroke="var(--accent-primary)" strokeOpacity={0.45}
+            />
+            <circle cx={hoverPt.x} cy={hoverPt.totalY} r="3" fill="var(--accent-primary)" />
+            <circle cx={hoverPt.x} cy={hoverPt.totalY} r="1.25" fill="var(--bg-card)" />
+          </g>
+        )}
+        {/* Time axis: a short tick + label under the plot. */}
+        {ticks.map((tick, i) => (
           <g key={`t${i}`}>
-            <line x1={t.x} x2={t.x} y1={geo.baselineY} y2={geo.baselineY + 3} stroke="var(--border-color)" />
+            <line x1={tick.x} x2={tick.x} y1={geo.plotB} y2={geo.plotB + 3} stroke="var(--border-color)" />
             <text
-              x={t.x}
+              x={tick.x}
               y={height - 4}
-              textAnchor={t.anchor}
+              textAnchor={tick.anchor}
               fill="var(--text-muted)"
               fontSize="9"
               fontFamily="JetBrains Mono, monospace"
             >
-              {t.label}
+              {tick.label}
             </text>
           </g>
         ))}
@@ -165,9 +195,9 @@ export function TraceTimeline({ buckets, from, to, onZoom, onZoomOut, canZoomOut
         </div>
       )}
       {hoverBucket && (
-        <div className="pointer-events-none absolute top-1 left-1 rounded-sm bg-card px-2 py-1 text-caption text-secondary shadow-[var(--shadow-float)]">
-          {new Date(hoverBucket.start).toLocaleTimeString()} · <Plural value={hoverBucket.total} one="# trace" other="# traces" />
-          {hoverBucket.errors > 0 && <span className="text-[var(--danger)]"> · <Trans>{hoverBucket.errors} err</Trans></span>}
+        <div className="pointer-events-none absolute top-1 left-1 bg-card px-2 py-1 font-mono text-caption tabular-nums text-secondary">
+          {formatBucketInstant(new Date(hoverBucket.start).getTime(), to - from)} · <Plural value={hoverBucket.total} one="# trace" other="# traces" />
+          {hoverBucket.errors > 0 && <span className="text-danger"> · <Trans>{hoverBucket.errors} err</Trans></span>}
         </div>
       )}
     </div>

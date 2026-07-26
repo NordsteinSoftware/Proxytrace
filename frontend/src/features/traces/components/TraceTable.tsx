@@ -4,7 +4,7 @@ import { SkeletonList } from '../../../components/ui/Skeleton';
 import type { AgentCallListItemDto } from '../../../api/models';
 import { GRID_TEMPLATE, GRID_TEMPLATE_NARROW, traceListView } from '../tracesMeta';
 import type { TraceRow, TraceSort, TraceSortField } from '../tracesMeta';
-import type { TraceListRow } from '../traceDayDividers';
+import { listRowKey, type TraceListRow } from '../traceDayDividers';
 import { FlatTraceRow } from './FlatTraceRow';
 import { ConversationGroupRow } from './ConversationGroupRow';
 import { TracesEmptyState } from './TracesEmptyState';
@@ -23,10 +23,16 @@ export interface TracePagingProps {
   isFetchingNextPage: boolean;
   hasNextPage: boolean;
   onLoadMore: () => void;
+}
+
+/** The live-arrival seam: what just landed, what is being withheld, and where the reader is. */
+export interface TraceLiveProps {
+  /** Traces folded into the list moments ago; they flash the arrival wash once. */
+  freshIds: ReadonlySet<string>;
   /** Live traces arrived while scrolled; surfaced in the header until the reader returns to the top. */
-  pendingRefresh?: boolean;
+  pendingRefresh: boolean;
   /** Reports whether the list is scrolled to the top, so the page can decide when to flush. */
-  onAtTopChange?: (isAtTop: boolean) => void;
+  onAtTopChange: (isAtTop: boolean) => void;
 }
 
 export interface TraceSelectionProps {
@@ -36,10 +42,19 @@ export interface TraceSelectionProps {
   onToggleConv: (id: string) => void;
 }
 
+/** Stand-in for a list nothing streams into: no fresh rows, nothing withheld, no scroll reporting. */
+const NO_LIVE_ARRIVALS: TraceLiveProps = {
+  freshIds: new Set(),
+  pendingRefresh: false,
+  onAtTopChange: () => {},
+};
+
 interface Props {
   /** Rows plus any interleaved day dividers, already ordered. */
   items: TraceListRow[];
   paging: TracePagingProps;
+  /** Omitted by a list with no live-arrival owner — the session timeline appends its own traces. */
+  live?: TraceLiveProps;
   selection: TraceSelectionProps;
   /** A narrowing filter (agent or search) is active — empty means "no match", not "no traces yet". */
   filtered: boolean;
@@ -51,19 +66,13 @@ interface Props {
   onScrolledToTrace?: () => void;
 }
 
-/* eslint-disable lingui/no-unlocalized-strings -- React reconciliation keys, not UI copy */
-function rowKey(item: TraceListRow): string {
-  if (item.kind === 'divider') return `divider-${item.dayKey}`;
-  return item.row.type === 'flat' ? item.row.trace.id : `conv-${item.row.conversationId}`;
-}
-/* eslint-enable lingui/no-unlocalized-strings */
-
-function renderRow(row: TraceRow, selection: TraceSelectionProps) {
+function renderRow(row: TraceRow, selection: TraceSelectionProps, freshIds: ReadonlySet<string>) {
   if (row.type === 'flat') {
     return (
       <FlatTraceRow
         trace={row.trace}
         selected={row.trace.id === selection.selectedId}
+        fresh={freshIds.has(row.trace.id)}
         onClick={() => selection.onSelectTrace(row.trace)}
       />
     );
@@ -74,6 +83,7 @@ function renderRow(row: TraceRow, selection: TraceSelectionProps) {
       expanded={selection.expandedConvs.has(row.conversationId)}
       onToggle={() => selection.onToggleConv(row.conversationId)}
       selectedId={selection.selectedId}
+      freshIds={freshIds}
       onSelectTrace={selection.onSelectTrace}
     />
   );
@@ -87,6 +97,7 @@ function renderRow(row: TraceRow, selection: TraceSelectionProps) {
 export function TraceTable({
   items,
   paging,
+  live,
   selection,
   filtered,
   sort,
@@ -95,7 +106,8 @@ export function TraceTable({
   onScrolledToTrace,
 }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null);
-  const { total, isFetching, isFetchingNextPage, hasNextPage, onLoadMore, pendingRefresh, onAtTopChange } = paging;
+  const { total, isFetching, isFetchingNextPage, hasNextPage, onLoadMore } = paging;
+  const { freshIds, pendingRefresh, onAtTopChange } = live ?? NO_LIVE_ARRIVALS;
 
   const { virtualizer, virtualItems } = useTraceVirtualizer(scrollRef, items, {
     hasNextPage,
@@ -133,7 +145,7 @@ export function TraceTable({
   }, [scrollToTraceId, items, virtualizer, onScrolledToTrace]);
 
   const handleScroll = useCallback(() => {
-    onAtTopChange?.((scrollRef.current?.scrollTop ?? 0) <= AT_TOP_THRESHOLD_PX);
+    onAtTopChange((scrollRef.current?.scrollTop ?? 0) <= AT_TOP_THRESHOLD_PX);
   }, [onAtTopChange]);
 
   const view = traceListView(traceIndices.length, isFetching, filtered);
@@ -158,10 +170,16 @@ export function TraceTable({
         <TraceTableHeader
           sort={sort}
           onSortChange={onSortChange}
-          position={{ first, last, total, pendingRefresh: pendingRefresh ?? false }}
+          position={{ first, last, total, pendingRefresh }}
         />
 
-        {view === 'loading' && <div className="p-3"><SkeletonList rows={10} height={36} gap={4} /></div>}
+        {/* Test id is load-bearing: a live arrival must patch the list in place, and the e2e spec
+            proves that by watching for this skeleton and failing if it ever reappears. */}
+        {view === 'loading' && (
+          <div data-testid="trace-list-loading" className="p-3">
+            <SkeletonList rows={10} height={36} gap={4} />
+          </div>
+        )}
 
         {view === 'empty-filtered' && (
           <div data-testid="traces-empty-state" className="py-12 flex flex-col items-center gap-1 text-center">
@@ -179,7 +197,7 @@ export function TraceTable({
               if (!item) return null;
               return (
                 <div
-                  key={rowKey(item)}
+                  key={listRowKey(item)}
                   data-index={virtualItem.index}
                   ref={virtualizer.measureElement}
                   className="absolute top-0 left-0 w-full"
@@ -187,7 +205,7 @@ export function TraceTable({
                 >
                   {item.kind === 'divider'
                     ? <TraceDayDivider timestamp={item.timestamp} />
-                    : renderRow(item.row, selection)}
+                    : renderRow(item.row, selection, freshIds)}
                 </div>
               );
             })}

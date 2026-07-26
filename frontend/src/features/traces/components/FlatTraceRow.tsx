@@ -10,10 +10,12 @@ import { MessagePreviewCell, OutlierCell, TokenCell, CachedCell, ToolsCell, Late
 interface Props {
   trace: AgentCallListItemDto;
   selected: boolean;
+  /** Arrived over the live stream moments ago — flashes the arrival wash once. */
+  fresh: boolean;
   onClick: () => void;
 }
 
-export function FlatTraceRow({ trace, selected, onClick }: Props) {
+export function FlatTraceRow({ trace, selected, fresh, onClick }: Props) {
   return (
     <div
       role="row"
@@ -24,6 +26,7 @@ export function FlatTraceRow({ trace, selected, onClick }: Props) {
         'grid items-center px-4 py-2.5 min-h-[44px] cursor-pointer transition-colors duration-[100ms]',
         'border-b border-border-subtle hover:bg-white/[0.025]',
         selected && 'bg-white/[0.04]',
+        fresh && 'arrival-flash',
         TRACE_GRID_CLS,
       )}
     >

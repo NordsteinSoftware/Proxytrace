@@ -2029,6 +2029,9 @@ msgstr "Error rate"
 msgid "errors"
 msgstr "errors"
 
+msgid "Errors"
+msgstr "Errors"
+
 msgid "Estimated cost in EUR"
 msgstr "Estimated cost in EUR"
 
@@ -4436,11 +4439,11 @@ msgstr "scoring…"
 msgid "Scoring…"
 msgstr "Scoring…"
 
-msgid "Scroll or drag to zoom in · click a bar to focus it"
-msgstr "Scroll or drag to zoom in · click a bar to focus it"
+msgid "Scroll or drag to zoom in · click a bucket to focus it"
+msgstr "Scroll or drag to zoom in · click a bucket to focus it"
 
-msgid "Scroll or drag to zoom in · click a bar to focus it · scroll down to zoom out"
-msgstr "Scroll or drag to zoom in · click a bar to focus it · scroll down to zoom out"
+msgid "Scroll or drag to zoom in · click a bucket to focus it · scroll down to zoom out"
+msgstr "Scroll or drag to zoom in · click a bucket to focus it · scroll down to zoom out"
 
 msgid "Scroll to latest"
 msgstr "Scroll to latest"
