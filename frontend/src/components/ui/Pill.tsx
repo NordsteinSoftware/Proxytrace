@@ -22,6 +22,8 @@ export function Pill({ label, color, size = 'md', onClick, selected }: PillProps
       size={size}
       onClick={onClick}
       selected={selected}
+      // Long labels (model ids) truncate inside narrow row columns — keep the full value reachable.
+      title={label}
     />
   );
 }

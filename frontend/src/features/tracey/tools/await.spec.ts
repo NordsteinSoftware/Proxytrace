@@ -37,6 +37,43 @@ describe('terminal predicates', () => {
 describe('await_actions', () => {
   beforeEach(() => vi.clearAllMocks());
 
+  it('names each run, so the next step does not have to guess which one it was', async () => {
+    testRunGroupsApi.get.mockResolvedValue({
+      id: 'g1', suiteName: 'Refund policy', agentName: 'Returns', status: TestRunStatus.Completed,
+      runs: [{
+        id: 'run1', agentName: 'Returns', status: TestRunStatus.Completed,
+        passedCases: 1, failedCases: 1, totalCases: 2, passRate: 50,
+      }],
+    });
+
+    const tool = createAwaitTools(ctx, store).await_actions;
+    if (!tool.execute) throw new Error('tool has no execute');
+    const result = await tool.execute({ handles: [{ kind: 'test-run', id: 'g1' }] }, ctx) as {
+      results: { runs: { runId: string }[] }[];
+    };
+
+    expect(result.results[0].runs[0].runId).toBe('run1');
+  });
+
+  it('carries the A/B evidence a theory produced, even when it lost', async () => {
+    // The candidate run id is recorded on the rejected path too, and it is the only handle to the
+    // A/B evidence that exists — so an Invalidated theory still has to surface it.
+    theoriesApi.get.mockResolvedValue({
+      id: 't1', agentName: 'Returns', status: TheoryStatus.Invalidated, resultingProposalId: null,
+      abTestRunId: 'cand1', baselinePassRate: 0.5, projectedPassRate: 0.75, pValue: 0.3,
+    });
+
+    const tool = createAwaitTools(ctx, store).await_actions;
+    if (!tool.execute) throw new Error('tool has no execute');
+    const result = await tool.execute({ handles: [{ kind: 'theory', id: 't1' }] }, ctx) as {
+      results: Record<string, unknown>[];
+    };
+
+    expect(result.results[0]).toMatchObject({
+      abTestRunId: 'cand1', baselinePassRate: 0.5, projectedPassRate: 0.75, pValue: 0.3,
+    });
+  });
+
   it('aggregates a mixed batch of already-terminal handles', async () => {
     testRunGroupsApi.get.mockResolvedValue({
       id: 'g1', suiteName: 'Suite', agentName: 'A', status: TestRunStatus.Completed,

@@ -30,7 +30,9 @@ export function MessagePreviewCell({ trace }: { trace: AgentCallListItemDto }) {
   const c = trace.agentId ? agentColor(trace.agentId) : modelColor(trace.model);
   const preview = tracePreview(trace);
   return (
-    <span className="flex items-center gap-2 min-w-0">
+    // `pr-3`: the row grid has no column gap, so each cell carries its own gutter — without it a
+    // truncated preview runs straight into the agent name in the next column.
+    <span className="flex items-center gap-2 min-w-0 pr-3">
       <span className="w-[3px] h-[18px] shrink-0" style={{ background: c }} />
       <span className="text-body-sm text-secondary overflow-hidden text-ellipsis whitespace-nowrap">
         {preview ?? <span className="text-muted">—</span>}

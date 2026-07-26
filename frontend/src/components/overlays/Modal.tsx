@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useId, useRef, type RefObject } from 'react';
 import { createPortal } from 'react-dom';
 import { Trans, useLingui } from '@lingui/react/macro';
 import { Button, IconButton } from '../ui/Button';
@@ -34,11 +34,13 @@ interface ModalProps {
   headerActions?: React.ReactNode;
   maxWidth?: number;
   size?: ModalSize;
+  initialFocusRef?: RefObject<HTMLElement | null>;
 }
 
-export function Modal({ title, onClose, children, footer, headerActions, maxWidth, size }: ModalProps) {
+export function Modal({ title, onClose, children, footer, headerActions, maxWidth, size, initialFocusRef }: ModalProps) {
   const { t } = useLingui();
   const panelRef = useRef<HTMLDivElement>(null);
+  const titleId = useId();
   const resolvedMaxWidth = maxWidth ?? (size ? SIZE_PX[size] : SIZE_PX.sm);
 
   // Move focus into the panel on open and restore it to the trigger on close.
@@ -46,9 +48,9 @@ export function Modal({ title, onClose, children, footer, headerActions, maxWidt
     const panel = panelRef.current;
     const previouslyFocused = document.activeElement as HTMLElement | null;
     const focusable = panel ? getFocusable(panel) : [];
-    (focusable[0] ?? panel)?.focus();
+    (initialFocusRef?.current ?? focusable[0] ?? panel)?.focus();
     return () => previouslyFocused?.focus?.();
-  }, []);
+  }, [initialFocusRef]);
 
   // Close on Esc and trap Tab / Shift+Tab within the panel.
   useEffect(() => {
@@ -89,6 +91,7 @@ export function Modal({ title, onClose, children, footer, headerActions, maxWidt
         ref={panelRef}
         role="dialog"
         aria-modal="true"
+        aria-labelledby={title ? titleId : undefined}
         tabIndex={-1}
         data-testid="modal-panel"
         className="modal-panel fade-up"
@@ -97,7 +100,7 @@ export function Modal({ title, onClose, children, footer, headerActions, maxWidt
         {title && (
           <div className="flex items-center justify-between gap-2 mb-5">
             <div className="flex items-center gap-2 min-w-0">
-              <h2 className="m-0 text-h2 font-semibold text-primary truncate min-w-0">{title}</h2>
+              <h2 id={titleId} className="m-0 text-h2 font-semibold text-primary truncate min-w-0">{title}</h2>
               {headerActions}
             </div>
             <IconButton onClick={onClose} aria-label={t`Close`}><XIcon size={14} /></IconButton>

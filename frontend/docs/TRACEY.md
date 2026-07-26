@@ -26,6 +26,37 @@ ideal reply is a rendered component plus one short sentence of context, never a 
 numbers. This is enforced by `TRACEY_SYSTEM_PROMPT` (`tracey-prompt.ts`) and by every read tool
 returning only a compact digest to the model while the full payload is rendered to the user.
 
+## The output budget (why the prompt is blunt about length)
+
+"Be concise" did not work. A multi-step turn produced a running commentary — a sentence before
+each tool call ("let me load the skill and inspect the trace"), one after ("good, the skill is
+loaded"), the loaded skill's numbered steps mirrored back as user-facing headings, and a prose
+paragraph per step restating what the cards already showed. Nobody reads that, and output tokens
+are the expensive ones.
+
+So the prompt carries an **OUTPUT BUDGET** section written as six absolute rules rather than an
+adjective, because an adjective is something the model can rationalize around:
+
+1. **No narration of the work** — and specifically, **no text at all between tool calls**. Every
+   call already renders its own row, so announcing one is pure duplication. This is the single
+   biggest volume win.
+2. **No restating instructions.** A skill's numbered steps are the model's checklist, not a report
+   format; mirroring them as "Step 1 / Step 2" headings leaks the playbook into the answer.
+3. **One block per finished turn** — a bold lead line plus at most 3–5 bullets or a small table,
+   target under 80 words, longer only when the user asked to be taught.
+4. **Never repeat what a card shows.** Add the "so what", or say nothing.
+5. **No preamble, recap, or sign-off.**
+6. **No reaction words** ("Perfect!", "Great", "As you can see").
+
+It then gives a formatting palette (bold lead line, bullets, tables, a fixed set of status emoji
+used only as line-leading verdict markers, `code` for ids) and — the part models actually follow —
+a worked **write this / never write that** pair taken from a real over-long turn. A closing line
+notes the limit is on length, not language: she still answers in the user's language.
+
+Two related rules live elsewhere in the prompt: "lead with the component" under *Other behavior*,
+and "a long multi-step job does not earn a long reply — ten tool calls still end in one short
+block". Keep all of these in one place conceptually; if you soften one, the commentary returns.
+
 ## The two planes (the one mental model that matters)
 
 Tracey runs on two independent request paths. Keep them separate in your head:
@@ -55,6 +86,10 @@ the wire and attributes the call to her agent by name (`X-Proxytrace-Agent` / sa
 - Tracey's **system prompt** lives only in `tracey-prompt.ts` (`TRACEY_SYSTEM_PROMPT`).
 - Do **not** reintroduce a backend copy of the prompt or tools. The byte-identical-mirror
   constraint that used to exist is gone by design.
+- After editing the prompt, a skill, or a tool description, **verify it against the live model** —
+  the `prompt-lab` skill (`.claude/skills/prompt-lab/SKILL.md`) runs her real prompt and tools
+  against the kiosk endpoint and A/Bs your working copy against the committed version. Unit tests
+  cannot see a prompt regression; a transcript can.
 
 ## File map
 
@@ -66,7 +101,7 @@ the wire and attributes the call to her agent by name (`X-Proxytrace-Agent` / sa
 | `tracey-chat-context.ts` | Shares the single `TraceyChat` (runtime + state) app-wide. `TraceyChatProvider` mounts in `TraceyHost` around the `Outlet`; `useTraceyChatContext()` reads it from the page. |
 | `tracey-runtime.ts` | `TraceyTransport` — the AI SDK `ChatTransport`. Wires `createOpenAI` at the same-origin base URL, injects the JWT + turn-correlation header per request, windows the history sent to the model (`windowMessages`, UI thread untouched), runs `streamText` with `prepareStep` (progressive tool disclosure) + `stopWhen: stepCountIs(MAX_TURN_STEPS)` (64 — a high infinite-loop **safety backstop**, not a user-facing turn limit), adapts our tools into the SDK `ToolSet` (threading the abort signal), and writes per-turn metadata on finish. |
 | `tracey-tools.ts` | **Composition root** for tools: `createTraceyTools(ctx)` wires every `tools/*` domain factory against a shared artifact store. `TRACEY_TOOLS_META` is the static name+description list for the slash menu (must list every tool). |
-| `tools/` | Per-domain tool factories: `navigation.ts` (navigate, search_docs, load_skill), `agents.ts`, `suites.ts`, `runs.ts`, `proposals.ts`, `stats.ts`, `providers.ts`, `traces.ts`, `display.ts` (show_*, ask_questions), `await.ts` (await_actions). `shared.ts` holds `TraceyToolContext`, the `tool()`/`empty`/`CANCELLED` helpers, and `makeStore`. `poll-until-terminal.ts` backs `await`; `run-analysis.ts` holds the pure failure/comparison derivations behind `get_run_failures`/`compare_runs` (verdicts reuse `features/runs/results.ts`). |
+| `tools/` | Per-domain tool factories: `navigation.ts` (navigate, search_docs, load_skill), `agents.ts`, `suites.ts`, `runs.ts`, `proposals.ts`, `stats.ts`, `providers.ts`, `traces.ts`, `display.ts` (show_*, ask_questions), `await.ts` (await_actions). `shared.ts` holds `TraceyToolContext`, the `tool()`/`empty`/`CANCELLED` helpers, and `makeStore`. `poll-until-terminal.ts` backs `await`; `run-analysis.ts` holds the pure comparison derivation behind `compare_runs` and the shared `clip`; `case-verdict.ts` holds the pure per-case verdicts behind `get_case_results` (both reuse `lib/runResults.ts`); `trace-transcript.ts` builds `get_trace`'s verbose whole-conversation digest. |
 | `tool-access.ts` | **Progressive tool disclosure.** `CORE_TOOL_NAMES` (always active) + `activeToolNamesFor(loadedSkillIds)` (core ∪ the tool bundles of skills loaded this conversation). |
 | `tracey-prompt.ts` | `TRACEY_SYSTEM_PROMPT` — her system prompt (wire source of truth), with the skill catalog appended. |
 | `skills/` | On-demand **skills** — markdown playbooks loaded at runtime via `load_skill`. `registry.ts` parses front-matter (`name`, `description`, optional `tools:` bundle) from every `*.md` via `import.meta.glob`; `types.ts`; one file per skill. |
@@ -78,7 +113,7 @@ the wire and attributes the call to her agent by name (`X-Proxytrace-Agent` / sa
 | `components/TraceyConversationRail.tsx` | The conversation-history **right-hand rail** (collapsed by default). Lists stored conversations newest-first, highlights the active one, and offers new / open (view == continue) / delete (with a `ConfirmDialog`). Presentational — all state lives in `useTraceyChat`. |
 | `tracey-actions.tsx` | React context (`navigate`) for assistant-ui message-part components that can't take props. |
 | `tracey-quick-actions.ts` | Curated prompt presets: the empty-thread starter chips (clicking one **sends** its prompt immediately) + the top of the slash menu (which prefills for editing). |
-| `useAskTracey.ts` | The app-wide **Ask Tracey** send queue: `askTracey(prompt)` navigates to the page, starts a fresh conversation, and appends the prompt once the session is `ready` (sends reject before that). Exposed on `TraceyChat`, consumed by `components/tracey/AskTraceyButton`. |
+| `useAskTracey.ts` | The app-wide **Ask Tracey** send queue: `askTracey(prompt)` navigates to the page, starts a fresh conversation, and appends the prompt once the session is `ready` (sends reject before that). Exposed on `TraceyChat`, consumed by `components/tracey/AskTraceyButton`. The trace-detail integration first opens `components/trace-detail/AskTraceyModal`, then sends the focused question as `Trace <id>: <question>`; the other integrations still send their context-built prompt immediately. |
 | `message-stats.ts` | `readMessageStats` + `readTraceConversationId` — narrows `metadata.custom` to tokens (input / cached-input / output / total) + duration + the trace id (unit-tested). |
 | `useArtifact.ts` / `useOpenResponseTrace.ts` | Hook to resolve a stored artifact for a card; hook behind `OpenTraceButton`. |
 | `TraceyConversation.tsx` | assistant-ui `Thread`/`Message` primitives styled to DESIGN.md: user/assistant bubbles, an end-of-thread "Thinking…" busy indicator while a turn runs, per-tool inline UI (`tools.by_name`) with `ToolCallCard` fallback, the `FollowUpSuggestions` chips after the last finished turn, empty state. |
@@ -203,9 +238,10 @@ column is which bundle activates the tool (`core` = always available).
 | `list_suites` / `get_suite` | read | no | `test-suites-and-runs`, `suite-curation`, `diagnose-agent` | `SuiteListToolUI` / `SuiteCardToolUI` |
 | `create_suite` / `add_to_suite` | write | **yes** | `suite-curation`, `diagnose-agent` | `SuiteCardToolUI` |
 | `remove_test_case` | write | **yes** | `suite-curation` | `SuiteCardToolUI` |
-| `update_expected_output` | write | **yes** | `suite-curation`, `diagnose-agent` | `ToolCallCard` |
+| `update_expected_output` | write | **yes** | `suite-curation`, `diagnose-agent`, `test-driven-improvement` | `ToolCallCard` |
+| `set_suite_evaluators` | write | **yes** | `suite-curation`, `diagnose-agent`, `test-driven-improvement` | `SuiteCardToolUI` |
 | `list_runs` / `get_run` | read | no | `test-suites-and-runs`, `diagnose-agent` | `RunListToolUI` / `RunCardToolUI` |
-| `get_run_failures` | read (analysis) | no | `test-suites-and-runs`, `optimize-agent`, `diagnose-agent` | `RunFailuresToolUI` |
+| `get_case_results` | read (analysis) | no | `test-suites-and-runs`, `optimize-agent`, `diagnose-agent`, `test-driven-improvement` | `CaseResultsToolUI` |
 | `compare_runs` | read (analysis) | no | `test-suites-and-runs`, `optimize-agent` | `RunComparisonToolUI` |
 | `start_test_run` | write | **yes** | `test-suites-and-runs`, `diagnose-agent` | `StartTestRunToolUI` (live) |
 | `cancel_test_run` | write | **yes** | `test-suites-and-runs` | `ToolCallCard` |
@@ -215,7 +251,7 @@ column is which bundle activates the tool (`core` = always available).
 | `get_dashboard_stats` | read | no | `project-insights` | `DashboardStatsToolUI` |
 | `get_provider` | read | no | `project-insights` | `ProviderCardToolUI` |
 | `find_traces` | read (search) | no | `project-insights`, `optimize-agent`, `diagnose-agent` | `TraceListToolUI` |
-| `get_trace` | read | no | `project-insights`, `optimize-agent`, `diagnose-agent` | `TraceCardToolUI` |
+| `get_trace` | read (`verbose` opt-in) | no | `project-insights`, `optimize-agent`, `diagnose-agent` | `TraceCardToolUI` |
 | `get_agent_anomalies` | read | no | `diagnose-agent` | `AnomalyListToolUI` |
 | `list_evaluators` | read | no | `diagnose-agent` | `EvaluatorListToolUI` |
 | `create_evaluator` | write | **yes** | `diagnose-agent` | `ToolCallCard` |
@@ -241,6 +277,122 @@ is unit-tested. The prompt's "card economy" rules tell the model to keep reads s
 **writes** (`create_suite`/`add_to_suite`/`remove_test_case`) — a mutation result is a real event,
 so `get_suite` is gated while those writes (same `SuiteCardToolUI`) are not. The gate is applied
 per registry entry, so the same component is gated for a read yet full for a write.
+
+## Verbose reads: the whole trace (`get_trace`)
+
+Every read tool digests its payload down for the model (see the artifact store below), which is
+right for lists and entities but was **wrong for a trace**: the digest carried metadata only
+(model, status, tokens, latency, cost), so the model could describe a call it had never read. It
+could not quote a prompt, explain a failure, or judge whether a trace was worth capturing as a test
+case — the card showed the conversation to the *user*, but nothing reached the *model*.
+
+So `get_trace` takes an opt-in **`verbose: boolean`**. With it, the digest is the full transcript
+built by the pure `tools/trace-transcript.ts`:
+
+- every **request message** in order (role, content, `toolCallId`) with its **tool requests**
+  (id, name, raw arguments), then the **response** message the same way,
+- the **tool schema** the agent was offered (name, clipped description, argument name/type/required
+  /enum values), the **set** model parameters (nulls dropped), plus `cachedInputTokens`,
+  `finishReason`, `errorMessage`, the conversation/session ids, and the decoded outlier reasons.
+
+`verbose` is model-facing only: the stored artifact and the `TraceCardToolUI` card are identical
+either way, and `present` still decides whether a card renders at all. The two flags are
+orthogonal — verbose widens what the *model* sees, `present` widens what the *user* sees.
+
+**Sizing — two ceilings.** A captured call has no size limit, so an unbounded transcript could
+swallow a turn's context in one read. `traceTranscript` clips every message (and every tool-call
+argument string) at `min(MESSAGE_CHAR_MAX, fairShareCap(…))`:
+
+- **`MESSAGE_CHAR_MAX`** (20k chars ≈ 5k tokens) is a hard per-message ceiling that **always**
+  applies. Without it a call whose single message is enormous stays under the total budget and
+  hands the model the whole thing.
+- **`TRANSCRIPT_CHAR_BUDGET`** (100k chars ≈ 25k tokens) bounds the conversation as a whole, split
+  by a **fair-share (water-filling)** rule (`fairShareCap`, unit-tested): the largest per-string cap
+  whose `sum(min(length, cap))` fits the budget. Short messages therefore always survive whole and
+  only the outsized ones (a giant tool result, a pasted document) pay.
+
+**No message is ever dropped** — the model always sees the true shape of the conversation — and any
+clipping adds a `note` telling it the user's card holds the untouched original.
+
+The prompt and the `project-insights` / `optimize-agent` / `diagnose-agent` / `suite-curation`
+skills all instruct the model to go verbose whenever the *content* of a call matters and to stay on
+the summary for a metadata glance. Keep those in sync with this behavior.
+
+## Test-driven improvement (the red/green loop)
+
+The `test-driven-improvement` skill turns a defect the user *reports* — "this agent approved a
+refund it should have refused, see trace `5b71…`" — into a failing regression test, then a fix
+proven against that exact case. Its entry point is what the neighbouring skills miss:
+`diagnose-agent` starts from statistical anomalies, and a policy violation is not one (the tokens
+and latency were perfectly normal); `optimize-agent` starts from aggregate run failures. Five
+properties of the surface make the loop work, and each fixes something that was previously wrong:
+
+**A promoted case cannot fail.** `POST /api/test-suites/from-traces` seeds every case's expected
+output with the response the agent actually recorded, so a suite built from a buggy trace asserts
+the bug and passes. `create_suite` / `add_to_suite` therefore take
+`cases: [{ agentCallId, expectedOutput? }]`; supplying `expectedOutput` makes a **correction** — the
+trace's input paired with what the agent *should* have said — which the backend has supported all
+along through `BuildTestCase` and which keeps `SourceAgentCallId` provenance intact. `create_suite`
+posts to the generic `POST /api/test-suites` for this reason; `/from-traces` physically cannot carry
+an expected output. Both writes return `addedCases: [{ caseId, agentCallId, isCorrection }]`, mapped
+by `sourceAgentCallId` rather than array position (the API does not promise request order).
+
+**Correct the decision, not the summary.** A test run scores exactly one model call
+(`TestRunnerService` calls `CompleteAsync` once per case and never continues the tool loop), while an
+agent *turn* that uses tools is several upstream calls — each ingested as its own trace, all sharing a
+`conversationId`. The **last** trace of such a turn already contains every tool call the agent made
+*and* every result it got, so the only thing a model can still produce from it is the closing
+message. Correct that one and the case is unpassable by construction: if the harmful call already
+succeeded in the input, no expected output contradicting that result can be generated, and the case
+fails forever while reading as "the fix did not work". This was a real failure — a refund-policy
+correction was written against the summary call, so the flagship case stayed red through an A/B whose
+prompt change had in fact worked.
+
+Three things now prevent it. `find_traces` reports `conversationId` and `toolCallsRequested` per row,
+which is what makes a loop legible at all — `preview` is the *first user message*, so every call of
+one turn previews identically and "the newest trace" silently means "the closing summary".
+`Conversation.ResolvedToolCallCount` (domain) counts the tool calls an input already resolved and
+rides out on `TestCaseDto.resolvedToolCallCount`, so `get_suite`'s digest carries `resolvedToolCalls`
+per case. And `create_suite` / `add_to_suite` return `unpassableCases` — naming the case, its
+`resolvedToolCalls`, and the fix — whenever a **correction** lands on such an input. Promotions are
+deliberately not flagged: a promotion asserts the response the agent actually gave, which by
+construction agrees with the tool results in its own input.
+
+**A case verdict is tri-state, so absence proves nothing.** `resultPass` is `boolean | null` and the
+old `get_run_failures` returned only `=== false` cases, so "my case isn't in the list" silently
+unioned *passed*, *unjudged* and *not in this run* — and since `isEvalPass` is false for an errored
+evaluator, a crashed judge was byte-identical to a real failure. `get_case_results` replaces it:
+given `caseIds` it reports `pass` / `fail` / `unjudged` / `evaluator-error` / `not-in-run` /
+`run-incomplete` per case, checking the error case *before* pass/fail. Only `pass` means passed.
+Called bare it still returns the run's failing cases, so it is a strict superset. The pure
+derivation lives in `tools/case-verdict.ts` and reuses `lib/runResults.ts` rather than re-deriving
+pass semantics. Its optional `expect` argument is presentational only — it labels the card red or
+green so a false narrative sits directly above a contradicting verdict.
+
+**Evaluators replace, they never union.** A case passes only when **every** attached evaluator
+passes (`lib/runResults.ts`), and a suite created without `evaluatorIds` gets a default ExactMatch
+judge. Attaching a behavioral judge *alongside* it would leave a correct prose answer unpassable, so
+`set_suite_evaluators` sets the whole set. `get_suite`'s digest carries `evaluators` and `cases`
+(with each case's id and clipped expected output) to make that safe to do — and to fix a standing
+bug, since the tool's description had always promised per-case ids that `suiteDigest` never shipped,
+leaving `remove_test_case` and `update_expected_output` unreachable from a cold start.
+
+**Green is a case verdict, not a proposal.** `AbTestTheoryValidator` promotes a theory only when the
+two-proportion p-value clears `SignificanceLevel` = 0.05. For exactly one case flipping fail→pass in
+an n-case suite the z-score is `sqrt(2n / (2n - 1))`, which is bounded above by 1.414 — so
+`p >= 0.157` at **every** suite size, and a single-case fix can never spawn a proposal. It takes
+roughly three or four cases moving to clear the bar. The loop survives because
+`TheoryValidationOutcome.Rejected` records `candidateRun.Id` too, so the candidate run exists
+whether the theory won or lost. `await_actions` surfaces it as `abTestRunId` (plus the pass rates
+and p-value) — the only handle to that evidence in the system, since a Tracey-submitted theory
+carries no `evidenceTestRunIds` and the A/B *baseline* run id is never persisted. The playbook
+therefore proves green with `get_case_results({ runId: abTestRunId, caseIds, expect: 'pass' })` and
+tells the user plainly when a genuinely-fixed case still came back `Invalidated`.
+
+Two smaller digest fixes serve the same loop: `await_actions` now names each `runId` (the awaitable
+is a *group* id, and `summarizeRun` used to discard `run.id`, which is why the playbooks had to take
+"the newest run" out of `list_runs` — a race), and `get_trace` reports `agentId` on both branches so
+a pasted trace resolves to its agent without a name match that renames and duplicates break.
 
 ## System agents hidden by default
 
@@ -286,7 +438,8 @@ adapter. Each domain factory also receives a `StoreFn` bound to the artifact sto
   card always shows everything), and
   `get_dashboard_stats` includes `byAgent`/`byModel` usage breakdowns so a cross-agent usage chart
   needs one read, not `get_agent_stats` per agent (the prompt's "card economy" rules lean on
-  this).
+  this). `get_trace` additionally takes `verbose: true` to return the whole captured conversation
+  instead of the metadata digest — see "Verbose reads" above.
 - **Write tools** (`start_test_run`, `cancel_test_run`, `set_proposal_status`,
   `submit_optimization_theory`, and the suite-curation writes `create_suite` / `add_to_suite` /
   `remove_test_case` / `update_expected_output`) set `confirm: true`. They call `ctx.confirm(summary)`
@@ -545,6 +698,19 @@ anomalies page, dashboard. The prompts carry real entity ids and end with an "id
 app UI" note that matches the app-provided-ids exception in `TRACEY_SYSTEM_PROMPT` — do not
 remove one without the other. Prompts stay untranslated (like `tracey-quick-actions.ts`).
 
+### Ids the user pastes
+
+The prompt's id rule is split in two on purpose: a **name** the user types must be resolved through
+a `list_*` first, but an **id-shaped** value (a GUID) the user pastes is authoritative and goes
+straight to the by-id tool. Users routinely copy a trace id out of a URL or the traces table
+("look at trace `6339…`"), and an earlier blanket "ids never come from the user" rule made Tracey
+route that id into `find_traces`' `query` instead — which is a fulltext index over the captured
+request/response, so it matched nothing and she reported the trace as missing. `find_traces`
+therefore also guards defensively: a `query` that passes `isEntityId` short-circuits to
+`{ count: 0, items: [], useInstead: { tool: 'get_trace', traceId } }` without an API call, so the
+wrong tool names the right one instead of returning a silent empty list. Keep the prompt rule and
+this guard in sync.
+
 ## Skills (on-demand playbooks + tool bundles)
 
 A **skill** is a named markdown playbook the model loads at runtime instead of carrying in the base
@@ -558,12 +724,13 @@ Current skills (`skills/*.md`):
 
 | Skill (`name`) | Unlocks (`tools:`) |
 |----------------|--------------------|
-| `test-suites-and-runs` | `list_suites`, `get_suite`, `list_runs`, `get_run`, `get_run_failures`, `compare_runs`, `start_test_run`, `cancel_test_run`, `await_actions` |
-| `suite-curation` | `list_suites`, `get_suite`, `find_traces`, `get_trace`, `create_suite`, `add_to_suite`, `remove_test_case`, `update_expected_output` |
+| `test-suites-and-runs` | `list_suites`, `get_suite`, `list_runs`, `get_run`, `get_case_results`, `compare_runs`, `start_test_run`, `cancel_test_run`, `await_actions` |
+| `suite-curation` | `list_suites`, `get_suite`, `find_traces`, `get_trace`, `create_suite`, `add_to_suite`, `remove_test_case`, `update_expected_output`, `list_evaluators`, `create_evaluator`, `set_suite_evaluators` |
 | `review-proposals` | `list_proposals`, `get_proposal`, `set_proposal_status` |
 | `project-insights` | `get_dashboard_stats`, `get_provider`, `find_traces`, `get_trace` |
-| `optimize-agent` | `submit_optimization_theory`, `get_agent_stats`, `list_suites`, `list_runs`, `get_run`, `get_run_failures`, `compare_runs`, `find_traces`, `get_trace`, `list_theories`, `await_actions` |
-| `diagnose-agent` | `get_agent_anomalies`, `get_trace`, `find_traces`, `list_suites`, `get_suite`, `create_suite`, `add_to_suite`, `update_expected_output`, `list_evaluators`, `create_evaluator`, `start_test_run`, `list_runs`, `get_run`, `get_run_failures`, `list_theories`, `submit_optimization_theory`, `await_actions` |
+| `optimize-agent` | `submit_optimization_theory`, `get_agent_stats`, `list_suites`, `list_runs`, `get_run`, `get_case_results`, `compare_runs`, `find_traces`, `get_trace`, `list_theories`, `await_actions` |
+| `diagnose-agent` | `get_agent_anomalies`, `get_trace`, `find_traces`, `list_suites`, `get_suite`, `create_suite`, `add_to_suite`, `update_expected_output`, `list_evaluators`, `create_evaluator`, `set_suite_evaluators`, `start_test_run`, `list_runs`, `get_run`, `get_case_results`, `list_theories`, `submit_optimization_theory`, `await_actions` |
+| `test-driven-improvement` | `get_trace`, `find_traces`, `list_suites`, `get_suite`, `create_suite`, `add_to_suite`, `update_expected_output`, `list_evaluators`, `create_evaluator`, `set_suite_evaluators`, `start_test_run`, `get_case_results`, `compare_runs`, `list_theories`, `submit_optimization_theory`, `await_actions` |
 
 - **Add a skill:** drop a `skills/<name>.md` with YAML front-matter (`name`, `description`, optional
   `tools:` — a comma/space-separated bundle) and the playbook as the body. `registry.ts`

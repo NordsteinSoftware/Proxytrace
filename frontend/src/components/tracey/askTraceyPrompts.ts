@@ -61,6 +61,10 @@ export function tracePrompt(trace: AgentCallDto, hits: CustomAnomalyHitDto[]): s
   ].filter(Boolean).join('\n');
 }
 
+export function traceQuestionPrompt(traceId: string, question: string): string {
+  return `Trace ${traceId}: ${question.trim()}`;
+}
+
 /** A suite below this pass-rate share counts as "low" and is called out in the prompt. */
 const LOW_PASS_RATE = 0.8;
 

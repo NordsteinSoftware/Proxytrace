@@ -35,6 +35,25 @@ Tracey fetches live data before answering. If a request is ambiguous (for exampl
 agents match a name) or she needs a few decisions from you before acting, she asks with an
 inline **questions widget** rather than guessing — see *Inline components* below.
 
+You can also point her at one specific item by pasting its **id** — copy it from the page URL or
+from a table and ask "look at trace `6339237b-0757-48ec-88bc-83233a3d29a8`" or "debug this run
+`…`". She opens exactly that item instead of searching for it. Naming something instead
+("the Returns agent") works too; she looks the name up first.
+
+### Reading a whole trace
+
+When you ask about a captured call, Tracey can read the **entire trace** — not just its headline
+numbers. Ask her to explain, review, summarize, or debug a trace ("why did this call fail?", "what
+was this agent told?", "summarize trace `…`") and she pulls the **full conversation**: every
+message in the request (the system prompt, the user turns, the assistant's replies, tool calls and
+their results), the model's final response, the tool schema the agent was offered, and the model
+parameters (temperature, max tokens, …) the call ran with. That is what lets her quote the prompt,
+point at the exact turn that went wrong, and turn a trace into a test case.
+
+For a quick "how big, how slow, how much" question she stays on the trace's summary — model,
+status, tokens, latency and cost — so the answer is fast and cheap. Either way the trace itself
+renders as a card you can click through to the full detail view.
+
 By default Tracey answers about **your own agents**. Proxytrace runs a few internal *system*
 agents — Tracey herself and the evaluators that score your test runs — which make their own model
 calls. She leaves these out of "list my agents", token-usage charts, recent test runs, and trace
@@ -83,13 +102,14 @@ lists, tables, and code blocks).
 ## Ask Tracey from anywhere
 
 You don't have to start on the Tracey page. Wherever the app shows something worth
-investigating, a cyan **⚡ Ask Tracey** button appears next to it. Clicking it opens Tracey AI
-in a fresh conversation and immediately asks her about the thing you were looking at — with all
-the context (ids, anomaly reasons, pass rates) already filled in:
+investigating, a cyan **⚡ Ask Tracey** button appears next to it. It opens Tracey AI in a fresh
+conversation with the item context already filled in. On a trace, clicking the button first opens
+a multiline question box so you can ask exactly what you need; submitting sends a message such as
+`Trace ddee0986-af5e-48c3-8e5d-d846f3c5350a: why was the refund approved?`. Other Ask Tracey
+buttons send their contextual request immediately:
 
-- **A trace's detail drawer** — for a flagged trace, Tracey analyzes why the anomaly happened
-  and how to prevent it (the detector hits and outlier reasons are passed along); for a normal
-  trace she reviews and summarizes it.
+- **A trace's detail drawer** — enter a focused question about the call; Tracey reads the full
+  trace before answering.
 - **An agent's header** — if the agent has suites with a low pass rate, Tracey digs into the
   failing runs and proposes an improvement to A/B-test; otherwise she reviews the agent's recent
   anomalies and results.
@@ -119,6 +139,18 @@ cancelled, not left running in the background) and ends the turn. If she was wai
 long-running action you started — a test run or an optimization theory — stopping only ends her
 *waiting*; that action keeps running on the server, and you'll still find its result on the Runs or
 Proposals page.
+
+## How Tracey answers
+
+Tracey is built to be **scanned, not read**. She answers in one short block — a bold headline, then
+a few bullets or a small table, with status markers (✅ ❌ ⚠️ 🔴 🟢 ⏳) as verdicts — and she doesn't
+narrate her own work. You won't see "let me check…" before a step or "that worked" after it,
+because every tool call already shows its own row in the thread, and she won't repeat numbers that
+are already on a card in front of you.
+
+That holds however much work a request takes: a job spanning ten tool calls ends in the same short
+answer as a one-line question. If you *want* the long version, ask her to explain or walk you
+through it and she will.
 
 ## Inline components
 
@@ -230,6 +262,7 @@ Her skills cover:
 | **Project insights** | overall stats/usage/cost, a provider, or finding/inspecting captured traces |
 | **Optimize an agent** | optimizing, improving, or tuning an agent (below) |
 | **Diagnose an agent** | what's wrong with an agent, its anomalies/outliers, or degraded behavior (below) |
+| **Test-driven improvement** | a specific thing an agent got wrong, usually with a trace id (below) |
 
 ## Optimizing an agent
 
@@ -295,6 +328,44 @@ The flow:
 
 Anomalies are statistical, so Tracey won't force a fix out of a one-off spike — if the flagged
 calls don't add up to a repeating, fixable pattern, she says so and stops.
+
+## Reporting a defect: the red/green loop
+
+Anomaly detection catches calls that look *unusual*. It cannot catch a call that looks perfectly
+normal and is simply **wrong** — an agent that approves a refund outside the return window uses
+ordinary tokens and ordinary latency. That one you have to report, and Tracey turns it into a test.
+
+Paste the trace id and say what went wrong:
+
+> "The agent in trace `5b715614-…` approved a refund even though it shouldn't have, because the
+> refund window had already expired. Please look into it."
+
+She then works a test-first loop:
+
+1. **Reproduce.** She opens the trace, reads the whole conversation, and tells you what the agent
+   actually did, quoting it. If the trace doesn't show the behavior you described, she says so and
+   stops rather than inventing a problem.
+2. **State the rule.** She writes the rule that was broken as one sentence — *"a refund must be
+   refused when the request falls outside the return window"*. That sentence becomes both the
+   expected answer and the criterion the evaluator scores against.
+3. **Write a failing test.** She adds the trace to a fitting suite (or creates one) as a **test case
+   whose expected answer is what the agent should have said** — not what it did say. She also makes
+   sure the suite has an evaluator that can actually judge the rule, creating an LLM judge for it if
+   none fits.
+4. **Prove it fails.** She runs the suite and checks *that specific case*. This step is the point of
+   the whole loop. If the case unexpectedly **passes**, the test doesn't capture your bug, and she
+   fixes the test rather than proposing a change. If the evaluator itself errored, she says so — a
+   broken judge is not evidence the agent is wrong.
+5. **Propose a fix and prove it works.** She submits an optimization theory, and when the background
+   A/B test finishes she checks your case again against the candidate — showing it move from failing
+   to passing.
+
+Two things worth knowing about the result. First, Proxytrace only *observes* your agent: it can
+prove a change works, but **a human still has to apply it**. Second, a theory only becomes a formal
+**proposal** when the whole suite improves by more than statistical noise, and a single case moving
+is never enough on its own — so Tracey will often report that your case is fixed while the theory
+itself came back rejected. That is the expected outcome, not a contradiction: the case-level result
+is the proof that the fix addresses what you reported.
 
 ## Conversation history
 

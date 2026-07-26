@@ -1,5 +1,6 @@
 using AwesomeAssertions;
 using NSubstitute;
+using Proxytrace.Application.Optimization;
 using Proxytrace.Application.Optimization.Internal.Validation;
 using Proxytrace.Application.TestRun;
 using Proxytrace.Domain.Agent;
@@ -23,6 +24,12 @@ namespace Proxytrace.Application.Tests;
 [TestClass]
 public sealed class SystemPromptTheoryValidatorTests : BaseTest<Module>
 {
+    /// <summary>
+    /// One sample per arm — the fixture stubs exactly two foreground runs (baseline, candidate).
+    /// <see cref="Validate_PoolsSamples_SoASmallSuiteCanReachSignificance"/> covers the multi-sample path.
+    /// </summary>
+    private static readonly OptimizationOptions TestOptions = new() { AbSampleCount = 1 };
+
     [TestMethod]
     public async Task Validate_CandidateImproves_ProducesProposal()
     {
@@ -34,7 +41,7 @@ public sealed class SystemPromptTheoryValidatorTests : BaseTest<Module>
         outcome.Proposal.Should().NotBeNull();
         outcome.BaselinePassRate.Should().Be(0.2);
         outcome.ProjectedPassRate.Should().Be(0.9);
-        outcome.PValue.Should().BeLessThan(AbTestTheoryValidator<ISystemPromptTheory>.SignificanceLevel);
+        outcome.PValue.Should().BeLessThan(TestOptions.SignificanceLevel);
         f.Captured.CurrentPassRate.Should().Be(0.2);
         f.Captured.ProposedPassRate.Should().Be(0.9);
     }
@@ -51,7 +58,7 @@ public sealed class SystemPromptTheoryValidatorTests : BaseTest<Module>
         outcome.Proposal.Should().BeNull();
         outcome.BaselinePassRate.Should().Be(0.5);
         outcome.ProjectedPassRate.Should().Be(1.0);
-        outcome.PValue.Should().BeGreaterThan(AbTestTheoryValidator<ISystemPromptTheory>.SignificanceLevel);
+        outcome.PValue.Should().BeGreaterThan(TestOptions.SignificanceLevel);
     }
 
     [TestMethod]
@@ -84,6 +91,72 @@ public sealed class SystemPromptTheoryValidatorTests : BaseTest<Module>
         // A run whose results carry no evaluations must score 0, not 1 (All() over empty is vacuously true).
         var f = Build(baselinePassed: [true], candidatePassed: []); // candidate result has zero evaluations
         f.OverrideCandidate(MakeRunWithEmptyEvaluations(1));
+
+        var outcome = await f.Validator.ValidateAsync(f.Theory, CancellationToken);
+
+        outcome.Proposal.Should().BeNull();
+    }
+
+    [TestMethod]
+    public async Task Validate_PoolsSamples_SoASmallSuiteCanReachSignificance()
+    {
+        // The showcase's real numbers: an 11-case suite going 5/11 → 8/11. That is a large, genuine
+        // improvement, but on a single sample per arm it lands at p≈0.19 and is discarded as noise —
+        // which is exactly why the kiosk demo's optimizer never produced a proposal. Replaying the
+        // same per-sample outcome three times pools it into 15/33 → 24/33, which clears 0.05.
+        var f = BuildSampled(
+            samples: 3,
+            baselinePassed: Passes(5, 11),
+            candidatePassed: Passes(8, 11));
+
+        var outcome = await f.Validator.ValidateAsync(f.Theory, CancellationToken);
+
+        outcome.Proposal.Should().NotBeNull("pooling three samples makes the 5/11 → 8/11 effect provable");
+        outcome.BaselinePassRate.Should().BeApproximately(15d / 33d, 1e-9);
+        outcome.ProjectedPassRate.Should().BeApproximately(24d / 33d, 1e-9);
+        outcome.PValue.Should().BeLessThan(0.05);
+    }
+
+    [TestMethod]
+    public async Task Validate_SingleSample_RejectsTheSameEffectAsNoise()
+    {
+        // The control for the test above: identical per-sample rates, one sample per arm, no proposal.
+        var f = BuildSampled(samples: 1, baselinePassed: Passes(5, 11), candidatePassed: Passes(8, 11));
+
+        var outcome = await f.Validator.ValidateAsync(f.Theory, CancellationToken);
+
+        outcome.Proposal.Should().BeNull("one sample of an 11-case suite cannot resolve this effect");
+        outcome.PValue.Should().BeGreaterThan(0.05);
+    }
+
+    [TestMethod]
+    public async Task Validate_WithoutSignificanceRequirement_AcceptsAnImprovementAndStillRecordsThePValue()
+    {
+        // The kiosk showcase's gate: the same under-powered 5/11 → 8/11 wins on the improvement
+        // alone. The p-value must survive into the outcome — the UI labels such a proposal as an
+        // improvement rather than a significant result, and it cannot do that without the number.
+        var f = BuildSampled(
+            samples: 1,
+            baselinePassed: Passes(5, 11),
+            candidatePassed: Passes(8, 11),
+            options: OptimizationOptions.KioskShowcase);
+
+        var outcome = await f.Validator.ValidateAsync(f.Theory, CancellationToken);
+
+        outcome.Proposal.Should().NotBeNull();
+        outcome.PValue.Should().BeGreaterThan(0.05, "the win is not significance-backed, and the UI must be able to say so");
+    }
+
+    [TestMethod]
+    public async Task Validate_WithoutSignificanceRequirement_StillRejectsARegression()
+    {
+        // Dropping the significance gate must not drop the improvement gate: a candidate that is no
+        // better than the baseline loses whatever the configuration says.
+        var f = BuildSampled(
+            samples: 1,
+            baselinePassed: Passes(8, 11),
+            candidatePassed: Passes(5, 11),
+            options: OptimizationOptions.KioskShowcase);
 
         var outcome = await f.Validator.ValidateAsync(f.Theory, CancellationToken);
 
@@ -129,7 +202,7 @@ public sealed class SystemPromptTheoryValidatorTests : BaseTest<Module>
         runner.RunInForegroundAsync(
                 Arg.Any<ITestSuite>(), Arg.Any<IReadOnlyList<IModelEndpoint>>(),
                 Arg.Any<IAgent?>(), Arg.Any<bool>(),
-                Arg.Any<Func<ITestRunGroup, CancellationToken, Task>?>(), Arg.Any<CancellationToken>())
+                Arg.Any<Func<ITestRunGroup, CancellationToken, Task>?>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
             .Returns(baselineGroup, candidateGroup);
 
         var captured = new Captured();
@@ -152,7 +225,8 @@ public sealed class SystemPromptTheoryValidatorTests : BaseTest<Module>
         var validator = new SystemPromptTheoryValidator(
             proposalFactory, promptFactory, agentFactory,
             new Lazy<ITestRunnerService>(() => runner),
-            Substitute.For<ITestRunRepository>());
+            Substitute.For<ITestRunRepository>(),
+            TestOptions);
 
         return new Fixture { Validator = validator, Theory = theory, Captured = captured, Runner = runner, Endpoint = endpoint, Baseline = baselineRun };
     }
@@ -161,6 +235,86 @@ public sealed class SystemPromptTheoryValidatorTests : BaseTest<Module>
     {
         var group = Substitute.For<ITestRunGroup>();
         group.GetTestRuns(Arg.Any<CancellationToken>()).Returns(Task.FromResult<IReadOnlyList<ITestRun>>([run]));
+        return group;
+    }
+
+    /// <summary>
+    /// Like <see cref="Build"/>, but each arm's group returns <paramref name="samples"/> identical
+    /// runs — the shape the runner produces for a multi-sample foreground run.
+    /// </summary>
+    private Fixture BuildSampled(
+        int samples,
+        bool[] baselinePassed,
+        bool[] candidatePassed,
+        OptimizationOptions? options = null)
+    {
+        var endpoint = Substitute.For<IModelEndpoint>();
+        endpoint.Id.Returns(Guid.NewGuid());
+
+        var agent = Substitute.For<IAgent>();
+        agent.Name.Returns("agent");
+        agent.Endpoint.Returns(endpoint);
+        agent.Tools.Returns(new List<ToolSpecification>());
+        agent.Project.Returns(Substitute.For<Domain.Project.IProject>());
+        agent.SystemPrompt.Returns(Substitute.For<IPromptTemplate>());
+        agent.ModelParameters.Returns(Substitute.For<IModelParameters>());
+
+        var suite = Substitute.For<ITestSuite>();
+        var caseCount = Math.Max(baselinePassed.Length, candidatePassed.Length);
+        suite.TestCases.Returns(Enumerable.Range(0, caseCount).Select(_ => Substitute.For<ITestCase>()).ToList());
+
+        var theory = Substitute.For<ISystemPromptTheory>();
+        theory.Agent.Returns(agent);
+        theory.Suite.Returns(suite);
+        theory.Priority.Returns(Priority.Medium);
+        theory.Rationale.Returns("better prompt");
+        theory.ProposedSystemMessage.Returns("You are better.");
+        theory.EvidenceTestRunIds.Returns(Array.Empty<Guid>());
+
+        // Build every substitute BEFORE the Returns() call — NSubstitute cannot configure a
+        // substitute while it is resolving the arguments of another one.
+        var baselineRuns = Enumerable.Range(0, samples).Select(_ => MakeRun(endpoint, baselinePassed)).ToList();
+        var candidateRuns = Enumerable.Range(0, samples).Select(_ => MakeRun(endpoint, candidatePassed)).ToList();
+        var baselineGroup = GroupReturningMany(baselineRuns);
+        var candidateGroup = GroupReturningMany(candidateRuns);
+
+        var runner = Substitute.For<ITestRunnerService>();
+        runner.RunInForegroundAsync(
+                Arg.Any<ITestSuite>(), Arg.Any<IReadOnlyList<IModelEndpoint>>(),
+                Arg.Any<IAgent?>(), Arg.Any<bool>(),
+                Arg.Any<Func<ITestRunGroup, CancellationToken, Task>?>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+            .Returns(baselineGroup, candidateGroup);
+
+        var captured = new Captured();
+        ISystemPromptProposal.CreateNew proposalFactory = (
+            _, _, _, _, currentPassRate, proposedPassRate, _, _) =>
+        {
+            captured.CurrentPassRate = currentPassRate;
+            captured.ProposedPassRate = proposedPassRate;
+            return Substitute.For<ISystemPromptProposal>();
+        };
+
+        IPromptTemplate.Create promptFactory = (_, _) => Substitute.For<IPromptTemplate>();
+        IAgent.CreateNew agentFactory = (_, _, _, _, _, _, _) =>
+        {
+            var candidate = Substitute.For<IAgent>();
+            candidate.Endpoint.Returns(endpoint);
+            return candidate;
+        };
+
+        var validator = new SystemPromptTheoryValidator(
+            proposalFactory, promptFactory, agentFactory,
+            new Lazy<ITestRunnerService>(() => runner),
+            Substitute.For<ITestRunRepository>(),
+            (options ?? new OptimizationOptions()) with { AbSampleCount = samples });
+
+        return new Fixture { Validator = validator, Theory = theory, Captured = captured, Runner = runner, Endpoint = endpoint, Baseline = baselineRuns[0] };
+    }
+
+    private static ITestRunGroup GroupReturningMany(IReadOnlyList<ITestRun> runs)
+    {
+        var group = Substitute.For<ITestRunGroup>();
+        group.GetTestRuns(Arg.Any<CancellationToken>()).Returns(Task.FromResult(runs));
         return group;
     }
 
@@ -213,7 +367,7 @@ public sealed class SystemPromptTheoryValidatorTests : BaseTest<Module>
             Runner.RunInForegroundAsync(
                     Arg.Any<ITestSuite>(), Arg.Any<IReadOnlyList<IModelEndpoint>>(),
                     Arg.Any<IAgent?>(), Arg.Any<bool>(),
-                    Arg.Any<Func<ITestRunGroup, CancellationToken, Task>?>(), Arg.Any<CancellationToken>())
+                    Arg.Any<Func<ITestRunGroup, CancellationToken, Task>?>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
                 .Returns(baselineGroup, candidateGroup);
         }
     }

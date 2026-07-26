@@ -11,6 +11,34 @@ follow [Semantic Versioning](https://semver.org). Ongoing work is collected unde
 
 ### Added
 
+- **Ask Tracey a specific question from a trace.** The trace detail action now opens a multiline
+  question box instead of immediately sending a generic analysis request. Ask what matters for the
+  call, such as why a refund was approved, and Tracey starts a fresh conversation with the trace ID
+  and your exact question.
+
+- **Tracey writes the failing test before she proposes a fix.** Report a defect in a captured call —
+  "the agent in trace `5b71…` approved a refund even though the return window had expired" — and
+  Tracey now works it test-first. She reproduces it from the real conversation (and stops if the
+  trace doesn't show what you described), states the rule that was broken, then turns it into a
+  **test case whose expected answer is what the agent *should* have said** rather than what it did
+  say, attaching an LLM judge that can actually score that rule. She runs the suite and checks that
+  specific case: if it unexpectedly passes, the test doesn't capture your bug and she fixes the
+  test, not the agent; if the evaluator itself errored she says so, because a broken judge is not
+  evidence the agent was wrong. Only with a confirmed failure does she propose a change, and when
+  the background A/B test finishes she checks your case again against the candidate to show it move
+  from failing to passing. Anomaly detection can only flag calls that look *unusual*; this covers
+  the ones that look perfectly normal and are simply wrong.
+
+- **Tracey can read a whole trace.** Asking Tracey about a captured call previously gave her only its
+  headline numbers (model, status, tokens, latency, cost) — enough to describe the call, but not to
+  read it. She can now pull the **complete trace** instead: every message of the request (system
+  prompt, user turns, assistant replies, tool calls and their results), the full response, the tool
+  schema the agent was offered, and the model parameters the call ran with. So "why did this call
+  fail?", "what was this agent actually told?" and "summarize this trace" are answered from the real
+  conversation rather than from metadata, and trace-driven work — diagnosing anomalies, grounding an
+  optimization theory, curating a suite from traces — is based on what was really said. She keeps
+  using the quick summary for "how big / how slow / how much" questions.
+
 - **Debugging sessions: group live traces across agents and conversations.** Tag your calls with the
   `x-proxytrace-session-id` header and Proxytrace collects every trace sharing that key — spanning
   multiple agents and conversations — into one **session**, the bigger picture around a single app run
@@ -67,6 +95,106 @@ follow [Semantic Versioning](https://semver.org). Ongoing work is collected unde
 
 ### Fixed
 
+- **The refund showcase could not be fixed by the optimizer it was built to demonstrate.** The demo
+  tricks a support agent into refunding an out-of-window order, then has Proxytrace propose a prompt
+  that stops it. In practice the "fixed" agent still gave the money back roughly one run in three —
+  it opened a `damaged` return instead of calling `issue_refund`, which pays out in full anyway, and
+  the runbook's success check only looked for the refund tool. The cause was the scenario, not the
+  optimizer: the customer says the motor died, and the store's own policy granted defective items a
+  full refund with no time limit, so an agent that reasoned carefully was *right* to pay out. Product
+  failures reported after the return window are now a manufacturer-warranty matter, the sample client
+  refuses out-of-window returns with no damage on file, and the demo's pass criterion is "no refund
+  granted **or promised**, by any route". The fixed agent now declines, offers the 50% goodwill
+  credit, and points the customer at the warranty — measured 4 runs out of 4.
+
+- **A test case built from the wrong trace of a tool loop could never pass, and nothing said so.** A
+  run asks the agent for one reply per case, but an agent turn that calls tools is captured as several
+  traces. The last one already contains every tool call the agent made *and* every result it got, so
+  the only reply left is a closing summary. Turning that trace into a regression test — keeping its
+  input but editing the expectation to "the agent should have refused" — produced a case that was
+  unpassable by construction: the input already said the action succeeded. It stayed red through every
+  A/B run and looked exactly like a prompt fix that had not worked, when the fix was fine. Proxytrace
+  now counts the tool calls a case's input already resolved and reports it on the case, Tracey's trace
+  search shows which traces belong to one turn and what each of them decided, and adding a corrected
+  case on top of a completed tool loop reports back which case is affected and which earlier trace to
+  use instead. Promoting a trace as-is is unaffected. The manual explains how to pick the right trace.
+
+- **The refund suite's failing cases failed for the wrong reason.** The seeded social-engineering
+  cases named no order, so the agent's first move was "what's your order number?" — which the
+  helpfulness judge scored as unhelpful. Three of the four red cases were failing on etiquette rather
+  than on policy, one of them while scoring full marks for policy compliance, and that noise was what
+  the optimizer read as its diagnosis. Those cases now embed their order lookup, so the agent answers
+  with the facts in hand — the suite fails 4 to 6 of 11, and every red is a policy red.
+
+- **A real improvement could be dismissed as noise on a small suite.** An A/B validation ran each arm
+  once, so a twelve-case suite gave the significance test twelve observations to work with — not
+  enough to prove anything short of an enormous effect. A candidate prompt taking a suite from 5/11
+  to 8/11, a large and genuine gain, came out at p≈0.19 and was filed as "No improvement", and no
+  amount of rewriting the prompt could change that. Validation now runs **three samples per arm** and
+  pools the results, which proves that same change (15/33 → 24/33) properly. It costs three times the
+  runtime; `Optimization__AbSampleCount` tunes it.
+
+- **One optimizer's bad model output threw away every other optimizer's work.** The optimizers that
+  propose prompt changes, tool-definition changes and model switches ran as a batch, and if the model
+  returned malformed JSON to any one of them the whole batch was discarded — a failed run produced no
+  theories at all, with nothing on screen to say why. Each optimizer's failure is now contained and
+  logged, and the theories the others found still arrive.
+
+- **Tracey talked far too much.** A multi-step job turned into a running commentary: a sentence
+  announcing each tool call ("let me load the skill and inspect the trace"), another confirming it
+  worked, her internal checklist mirrored back as "Step 1 / Step 2" headings, and a paragraph per
+  step restating what the cards on screen already showed. She now answers in one short block — a
+  bold lead line plus a few bullets or a small table, with status markers like ✅ ❌ ⚠️ 🔴 🟢 — and
+  writes nothing at all between tool calls, since every call already shows its own row. Ten tool
+  calls end in the same short answer as one. Replies are quicker to read, and cost noticeably less
+  to generate.
+
+- **Tracey could not see a suite's test cases or evaluators.** Her suite tool promised the per-case
+  ids that editing and removing a case require, but only ever returned the case *count* — so those
+  actions were unreachable unless a case id happened to come up some other way. A suite's attached
+  evaluators were invisible to her for the same reason, which meant she could create a judge but not
+  tell whether one already covered the behavior she needed scored. Both are now part of what she
+  reads, and she can change which evaluators a suite scores with.
+
+- **Tracey guessed which test run to look at.** After waiting for a run to finish she had to find it
+  again by listing the agent's runs and taking the newest one — which could pick up a different run
+  that finished in between. A finished run now reports its own id.
+
+- **Tracey now opens a trace you paste by id.** Asking the assistant to look at a specific trace by
+  its id ("debug trace `6339237b-…`") made her report that no such trace existed, even though the
+  trace was right there. Her instructions told her that ids only ever come from a list and never
+  from what the user typed, so instead of fetching the trace by id she ran a free-text search for
+  it — and that search covers the captured request and response text, not ids, so it always came
+  back empty. A pasted id is now treated as what it is: she fetches that trace (or agent, run,
+  suite, proposal) directly, and only reports it missing if the lookup really finds nothing.
+
+- **Multi-turn conversations no longer lose every turn after the first.** When an agent handled a
+  tool-calling exchange, the follow-up calls — the ones carrying the tool results and the final
+  answer — could vanish from Proxytrace while the opening turn appeared normally, so a conversation
+  that plainly ran to completion in the client showed up as a single trace ending in a pending tool
+  call. Ingestion updates the agent as calls arrive (endpoint, model parameters, current version),
+  and when a rapid burst of calls for one agent collided on that update, the losing call was
+  classified as permanently malformed and thrown away instead of being retried. Such a collision is
+  now retried and the trace is kept.
+- **An agent's system prompt is recorded exactly as sent.** Captured calls stored the prompt with a
+  `System: ` prefix glued to the front, so agent pages showed the wrong text. Because the prefix also
+  changed the prompt's fingerprint, the first live call to an agent created outside ingestion (a
+  seeded demo agent, or one set up in the UI) always appeared to change its prompt and appended a
+  spurious new version. Prompts are now stored verbatim and that phantom version is gone. Existing
+  agents whose prompt was captured with the prefix get one final version on their next call, after
+  which their history stays stable.
+- **Long model names no longer overlap the columns beside them.** On the dashboard's live feed, a
+  model id wider than its column — `deepseek/deepseek-v4-flash` and friends — painted straight over
+  the turn count on its left and the status on its right, leaving all three unreadable. Model tags
+  now shorten with an ellipsis to fit their column and show the full name on hover, and the live
+  feed gives the model column more room to begin with. On the Traces page the same names were cut
+  off mid-character and ran flush into the status dot beside them; that column now has a gutter.
+- **The Traces table uses its width better on a large screen.** The message and agent columns grew
+  with the window while the model column stayed capped, so a wide display showed truncated model
+  names next to a stretch of empty space — and message previews ran into the agent name beside them
+  with nothing between. The agent and model columns now take the width they can actually use (model
+  names fit in full on a wide screen), every spare pixel goes to the message preview, and each
+  column keeps a gutter. Narrow windows are unchanged.
 - **The read-only demo no longer throws errors at visitors who touch a disabled control.** Kiosk
   mode dimmed every button that would change something, but only against the mouse — tabbing to one
   and pressing Enter still sent the request, which the server refused, surfacing a red error. The

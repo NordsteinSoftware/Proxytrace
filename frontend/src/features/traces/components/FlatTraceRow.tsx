@@ -28,10 +28,10 @@ export function FlatTraceRow({ trace, selected, onClick }: Props) {
       )}
     >
       <MessagePreviewCell trace={trace} />
-      <span className="text-body text-secondary overflow-hidden text-ellipsis whitespace-nowrap pr-2 @max-2xl:hidden">
+      <span className="text-body text-secondary overflow-hidden text-ellipsis whitespace-nowrap pr-3 @max-2xl:hidden">
         {trace.agentName ?? <span className="text-muted">—</span>}
       </span>
-      <span className="overflow-hidden @max-2xl:hidden">
+      <span className="min-w-0 overflow-hidden pr-3 @max-2xl:hidden">
         <Pill label={trace.model} color={modelColor(trace.model)} size="sm" />
       </span>
       <StatusDot httpStatus={trace.httpStatus} />

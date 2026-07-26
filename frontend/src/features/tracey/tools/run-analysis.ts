@@ -1,20 +1,15 @@
-// Pure derive helpers for Tracey's tuning tools (`get_run_failures`, `compare_runs`).
+// Pure derive helpers for Tracey's tuning tools (`compare_runs`, and `clip` for every digest).
 // No JSX, no I/O — unit-tested in run-analysis.spec.ts. Pass/fail semantics are NOT
 // re-derived here: they come from lib/runResults.ts so a case's verdict is
-// computed identically to the Runs UI.
+// computed identically to the Runs UI. Per-case verdicts live in case-verdict.ts.
 
-import type { TestResultDto, TestRunDto } from '../../../api/models';
+import type { TestRunDto } from '../../../api/models';
 import { resultPass } from '../../../lib/runResults';
 
 /** Truncates a string for a model-facing digest, marking the cut. */
 export function clip(value: string, max: number): string {
   const trimmed = value.trim();
   return trimmed.length <= max ? trimmed : `${trimmed.slice(0, max)}…`;
-}
-
-/** The run's failing results (every-evaluator-pass is the Runs UI's verdict; null = unjudged). */
-export function failingResults(run: TestRunDto): TestResultDto[] {
-  return run.results.filter((r) => resultPass(r) === false);
 }
 
 /** One case's movement between a baseline and a candidate run. */

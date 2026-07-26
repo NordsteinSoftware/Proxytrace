@@ -54,7 +54,20 @@ export interface RunAwaitResult extends AwaitResult {
   status: TestRunStatus;
   suiteName: string;
   agentName: string;
-  runs: { agentName: string; status: TestRunStatus; passed: number; failed: number; total: number; passRate: number }[];
+  /**
+   * One entry per run in the group. `runId` is the id every run-reading tool takes — the handle
+   * itself is a *group* id, so without this the only way to name the run just finished is to list
+   * runs and take the newest, which races.
+   */
+  runs: {
+    runId: string;
+    agentName: string;
+    status: TestRunStatus;
+    passed: number;
+    failed: number;
+    total: number;
+    passRate: number;
+  }[];
 }
 
 export interface TheoryAwaitResult extends AwaitResult {
@@ -62,6 +75,15 @@ export interface TheoryAwaitResult extends AwaitResult {
   status: TheoryStatus;
   agentName: string;
   resultingProposalId: string | null;
+  /**
+   * The A/B **candidate** run, recorded whether the theory won or lost — and the only handle to the
+   * A/B evidence that exists, since a Tracey-submitted theory carries no evidenceTestRunIds and the
+   * baseline run id is never persisted. Pass it to get_case_results to prove a specific case moved.
+   */
+  abTestRunId: string | null;
+  baselinePassRate: number | null;
+  projectedPassRate: number | null;
+  pValue: number | null;
 }
 
 /** What one awaited handle resolves to — discriminated by `kind` (the card narrows on it). */
@@ -76,6 +98,7 @@ function summarizeRun(group: TestRunGroupDto, timedOut: boolean): RunAwaitResult
     suiteName: group.suiteName,
     agentName: group.agentName,
     runs: group.runs.map((run) => ({
+      runId: run.id,
       agentName: run.agentName,
       status: run.status,
       passed: run.passedCases,
@@ -94,6 +117,10 @@ function summarizeTheory(theory: TheoryDto, timedOut: boolean): TheoryAwaitResul
     timedOut,
     agentName: theory.agentName,
     resultingProposalId: theory.resultingProposalId,
+    abTestRunId: theory.abTestRunId,
+    baselinePassRate: theory.baselinePassRate,
+    projectedPassRate: theory.projectedPassRate,
+    pValue: theory.pValue,
   };
 }
 
@@ -138,7 +165,9 @@ export const createAwaitTools: ToolFactory = () => ({
       'batched; never per action, and never poll get_run / get_proposal yourself. A result with ' +
       '`timedOut: true` means the action is still running — say so. An entry in `errors` means its ' +
       'state could not be read (the action itself may still be running or have succeeded) — report ' +
-      'that honestly instead of claiming the action failed.',
+      'that honestly instead of claiming the action failed. A finished run names each `runId` (pass ' +
+      'those to get_case_results — the handle itself is a GROUP id); a finished theory reports ' +
+      '`abTestRunId`, the A/B candidate run, plus the baseline/projected pass rates and the p-value.',
     parameters: z.object({
       handles: z.array(handleSchema).min(1).describe('The actions to wait for.'),
     }),

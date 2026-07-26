@@ -48,7 +48,7 @@ export function ConversationGroupRow({ group, expanded, onToggle, selectedId, on
           TRACE_GRID_CLS,
         )}
       >
-        <span className="flex items-center gap-2 min-w-0">
+        <span className="flex items-center gap-2 min-w-0 pr-3">
           <span className="w-[3px] h-[18px] shrink-0" style={{ background: c }} />
           <span
             className="inline-flex items-center text-caption font-semibold px-1.5 py-0.5 rounded-none shrink-0"
@@ -61,11 +61,11 @@ export function ConversationGroupRow({ group, expanded, onToggle, selectedId, on
           </span>
         </span>
 
-        <span className="text-body text-secondary overflow-hidden text-ellipsis whitespace-nowrap pr-2 @max-2xl:hidden">
+        <span className="text-body text-secondary overflow-hidden text-ellipsis whitespace-nowrap pr-3 @max-2xl:hidden">
           {agentName ?? <span className="text-muted">—</span>}
         </span>
 
-        <span className="overflow-hidden @max-2xl:hidden">
+        <span className="min-w-0 overflow-hidden pr-3 @max-2xl:hidden">
           <Pill label={model} color={modelColor(model)} size="sm" />
         </span>
 
@@ -109,16 +109,16 @@ export function ConversationGroupRow({ group, expanded, onToggle, selectedId, on
           )}
           style={{ borderLeft: `2px solid color-mix(in srgb, ${c} 38%, transparent)` }}
         >
-          <span className="flex items-center gap-2 min-w-0">
+          <span className="flex items-center gap-2 min-w-0 pr-3">
             <span className="mono text-caption text-muted shrink-0"><Trans>Turn {turns.length - i}</Trans></span>
             <span className="text-body-sm text-secondary overflow-hidden text-ellipsis whitespace-nowrap min-w-0">
               {tracePreview(turn) ?? <span className="text-muted">—</span>}
             </span>
           </span>
-          <span className="text-body text-secondary overflow-hidden text-ellipsis whitespace-nowrap pr-2 @max-2xl:hidden">
+          <span className="text-body text-secondary overflow-hidden text-ellipsis whitespace-nowrap pr-3 @max-2xl:hidden">
             {turn.agentName ?? <span className="text-muted">—</span>}
           </span>
-          <span className="overflow-hidden @max-2xl:hidden">
+          <span className="min-w-0 overflow-hidden pr-3 @max-2xl:hidden">
             <Pill label={turn.model} color={modelColor(turn.model)} size="sm" />
           </span>
           <StatusDot httpStatus={turn.httpStatus} />

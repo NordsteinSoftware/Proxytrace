@@ -368,9 +368,10 @@ describe('tracey entity-fetch tools', () => {
     expect(result.summary.items[0]).toMatchObject({ id: 't1', error: 'upstream exploded', tokens: 15 });
   });
 
-  it('get_run_failures keeps only judged failures and digests evaluator verdicts', async () => {
+  it('get_case_results keeps only judged failures and digests evaluator verdicts', async () => {
     testRunsApi.get.mockResolvedValue({
       id: 'r1', suiteName: 'Suite', agentName: 'Alpha', passRate: 50, totalCases: 2,
+      status: 'Completed',
       results: [
         {
           id: 'res1', testCaseId: 'c1', testCaseSummary: 'failing case', actualResponse: 'wrong answer',
@@ -386,15 +387,15 @@ describe('tracey entity-fetch tools', () => {
     });
     const ctx = makeCtx();
 
-    const result = await exec(createTraceyTools(ctx).get_run_failures, { runId: 'r1' }, ctx) as {
+    const result = await exec(createTraceyTools(ctx).get_case_results, { runId: 'r1' }, ctx) as {
       kind: string;
-      summary: { failedCases: number; failures: { case: string; evaluations: { evaluator: string; score: string }[] }[] };
+      summary: { cases: { testCaseId: string; verdict: string; case: string; evaluations: { evaluator: string; score: string }[] }[] };
     };
 
-    expect(result.kind).toBe('run-failures');
-    expect(result.summary.failedCases).toBe(1);
-    expect(result.summary.failures[0].case).toBe('failing case');
-    expect(result.summary.failures[0].evaluations[0]).toMatchObject({ evaluator: 'Exact', score: 'Bad' });
+    expect(result.kind).toBe('case-results');
+    expect(result.summary.cases).toHaveLength(1);
+    expect(result.summary.cases[0]).toMatchObject({ testCaseId: 'c1', verdict: 'fail', case: 'failing case' });
+    expect(result.summary.cases[0].evaluations[0]).toMatchObject({ evaluator: 'Exact', score: 'Bad' });
   });
 
   it('compare_runs fetches both runs and digests the case movements', async () => {
@@ -418,12 +419,15 @@ describe('tracey entity-fetch tools', () => {
     const result = await exec(createTraceyTools(ctx).compare_runs,
       { baselineRunId: 'old', candidateRunId: 'new' },
       ctx,
-    ) as { kind: string; summary: { fixed: number; regressed: number; fixedCases: string[] } };
+    ) as {
+      kind: string;
+      summary: { fixed: number; regressed: number; fixedCases: { testCaseId: string; summary: string }[] };
+    };
 
     expect(result.kind).toBe('run-comparison');
     expect(result.summary.fixed).toBe(1);
     expect(result.summary.regressed).toBe(0);
-    expect(result.summary.fixedCases).toEqual(['was failing']);
+    expect(result.summary.fixedCases).toEqual([{ testCaseId: 'c1', summary: 'was failing' }]);
   });
 
   it('list_theories returns the tried theories with their A/B outcomes', async () => {
@@ -488,6 +492,17 @@ describe('tracey entity-fetch tools', () => {
     expect(agentCallsApi.list).not.toHaveBeenCalled();
   });
 
+  it('find_traces redirects a trace id passed as the free-text query to get_trace', async () => {
+    const ctx = makeCtx();
+    const traceId = '6339237b-0757-48ec-88bc-83233a3d29a8';
+    const result = await exec(createTraceyTools(ctx).find_traces, { query: traceId }, ctx);
+
+    // The backend `q` is a fulltext index over message content, so an id matches nothing and the
+    // model would read the empty result as "no such trace" instead of reaching for `get_trace`.
+    expect(result).toEqual({ count: 0, items: [], useInstead: { tool: 'get_trace', traceId } });
+    expect(agentCallsApi.list).not.toHaveBeenCalled();
+  });
+
   it('get_trace stores the full call and returns a curated summary', async () => {
     const call = { id: 't1', model: 'gpt-4o', provider: 'openai', httpStatus: 200, inputTokens: 10, outputTokens: 20, durationMs: 500, costEur: 0.1 };
     agentCallsApi.get.mockResolvedValue(call);
@@ -499,7 +514,46 @@ describe('tracey entity-fetch tools', () => {
     expect(agentCallsApi.get).toHaveBeenCalledWith('t1', { silentStatuses: [404] });
     expect(result.kind).toBe('trace');
     expect(result.summary).toMatchObject({ id: 't1', model: 'gpt-4o', httpStatus: 200 });
+    // Without `verbose` the model gets metadata only — no conversation.
+    expect(result.summary).not.toHaveProperty('messages');
     expect(await getArtifact(result.artifactRef)).toEqual(call);
+  });
+
+  it('get_trace with verbose returns the whole conversation, not just the metadata summary', async () => {
+    const call = {
+      id: 't1', agentName: 'Returns', model: 'gpt-4o', provider: 'openai', httpStatus: 200,
+      inputTokens: 10, outputTokens: 20, cachedInputTokens: 4, durationMs: 500, costEur: 0.1,
+      finishReason: 'stop', createdAt: '2026-06-01T00:00:00Z', outlierFlags: 0,
+      request: [
+        { role: 'system', content: 'Be terse.', toolRequests: [], toolCallId: null },
+        { role: 'user', content: 'Refund order 42?', toolRequests: [], toolCallId: null },
+      ],
+      response: { role: 'assistant', content: 'Refunded.', toolRequests: [], toolCallId: null },
+      tools: [{ name: 'refund', description: 'Refund an order.', arguments: [] }],
+      modelParameters: { temperature: 0.2 },
+    };
+    agentCallsApi.get.mockResolvedValue(call);
+    const ctx = makeCtx();
+    const result = await exec(createTraceyTools(ctx).get_trace, { traceId: 't1', verbose: true }, ctx) as {
+      artifactRef: string; kind: string;
+      summary: { messageCount: number; messages: { role: string; content: string }[]; response: { content: string } };
+    };
+
+    expect(result.summary.messageCount).toBe(2);
+    expect(result.summary.messages).toEqual([
+      { role: 'system', content: 'Be terse.' },
+      { role: 'user', content: 'Refund order 42?' },
+    ]);
+    expect(result.summary.response).toEqual({ role: 'assistant', content: 'Refunded.' });
+    // The card resolves the same untouched artifact either way.
+    expect(await getArtifact(result.artifactRef)).toEqual(call);
+  });
+
+  it('get_trace with verbose still answers a missing trace with notFound', async () => {
+    agentCallsApi.get.mockRejectedValue(Object.assign(new Error('gone'), { status: 404 }));
+    const ctx = makeCtx();
+    expect(await exec(createTraceyTools(ctx).get_trace, { traceId: 't9', verbose: true }, ctx))
+      .toEqual({ notFound: 't9' });
   });
 });
 

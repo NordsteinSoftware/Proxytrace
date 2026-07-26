@@ -1,7 +1,7 @@
 ---
 name: diagnose-agent
 description: Investigate an agent's flagged anomalies end to end — analyze the outlier calls, benchmark them in a suite, and validate a fix with an A/B test. Use when the user asks what's wrong with an agent, about its anomalies/outliers, or to diagnose degraded behavior.
-tools: get_agent_anomalies, get_trace, find_traces, list_suites, get_suite, create_suite, add_to_suite, update_expected_output, list_evaluators, create_evaluator, start_test_run, list_runs, get_run, get_run_failures, list_theories, submit_optimization_theory, await_actions
+tools: get_agent_anomalies, get_trace, find_traces, list_suites, get_suite, create_suite, add_to_suite, update_expected_output, list_evaluators, create_evaluator, set_suite_evaluators, start_test_run, list_runs, get_run, get_case_results, list_theories, submit_optimization_theory, await_actions
 ---
 
 # Skill: Diagnose an agent
@@ -34,8 +34,10 @@ broader trends).
 
 Investigative reads for YOUR reasoning — keep them silent (no `present`):
 
-- `get_trace` 2–4 representative anomalies (cover the dominant reasons in `byReason`) and read the
-  actual prompt/response.
+- `get_trace` with `verbose: true` on 2–4 representative anomalies (cover the dominant reasons in
+  `byReason`) and read the actual conversation — every message, the tool calls, the response.
+  Without `verbose` you get only metadata (tokens, latency, status), which cannot tell you WHY the
+  call went wrong.
 - `find_traces` for broader context when the flagged calls alone don't explain it (e.g. compare
   against normal calls of the same agent).
 
@@ -58,19 +60,20 @@ and evaluators. Decide:
   `create_evaluator` — usually an Agentic judge whose system message names the observed failure
   ("fail responses that restate the full order history…"); use ExactMatch/NumericMatch/
   JsonSchemaMatch only when the expected output is deterministic. Pass the evaluator id in
-  `create_suite`'s `evaluatorIds`. If `create_evaluator` reports `notLicensed`, fall back to the
-  default exact-match evaluator (omit `evaluatorIds`) and tell the user why.
+  `create_suite`'s `evaluatorIds`. To attach a judge to an EXISTING suite use
+  `set_suite_evaluators` — it replaces the set, and a case passes only when EVERY attached
+  evaluator passes, so a leftover exact-match judge will keep failing a correct prose answer.
 
-A flagged call's recorded response is often NOT the ideal answer — it is the problem. Use
-`update_expected_output` to set what the agent SHOULD have answered on cases where the recorded
-response itself is wrong or bloated.
+A flagged call's recorded response is often NOT the ideal answer — it is the problem. Give the case
+an `expectedOutput` when you add it (`add_to_suite` / `create_suite`) to seed what the agent SHOULD
+have answered in one call; use `update_expected_output` to correct a case that already exists.
 
 ## 5. Run the suite and analyze the results
 
 `start_test_run` on the suite — the app forces your next step to be `await_actions`, so start
-everything you need in the same step. After the wait, fetch the run's failures: `list_runs({
-agentId })`, take the newest run, then `get_run_failures` with that **run id** (NOT the group id
-from the awaitable). Read the evaluator verdicts and connect them back to the anomaly reasons.
+everything you need in the same step. The wait names each `runId`; pass that to `get_case_results`
+(the awaitable is a GROUP id, which the run tools do not take). Read the evaluator verdicts and
+connect them back to the anomaly reasons.
 
 ## 6. Theorize a fix and A/B-validate it
 

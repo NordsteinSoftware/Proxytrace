@@ -10,7 +10,7 @@ import { SELECTION_ROW_INACTIVE, selectionBarStyle, selectionRowStyle } from '..
 import { KIND_META } from '../shared';
 import { adoptionLabel } from '../validatedView';
 import type { QueueGroupKey } from '../theoryQueue';
-import { formatPValue, isInsideNoise, passRateTransition, theoryShortId } from '../theoryQueue';
+import { formatPValue, passRateTransition, significanceLabel, theoryShortId } from '../theoryQueue';
 
 interface Props {
   theory: TheoryDto;
@@ -101,7 +101,7 @@ function RowStatus({ theory, proposal, group }: { theory: TheoryDto; proposal: O
   if (group === 'decision') {
     return theory.pValue != null ? (
       <span className="mono text-caption text-muted">
-        {formatPValue(theory.pValue)} · {isInsideNoise(theory.pValue) ? <Trans>inside noise</Trans> : <Trans>significant</Trans>}
+        {formatPValue(theory.pValue)} · {i18n._(significanceLabel(theory.pValue, theory.status === TheoryStatus.Validated))}
       </span>
     ) : null;
   }

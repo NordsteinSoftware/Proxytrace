@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { EvaluationScore } from '../../../api/models';
 import type { EvaluationResultDto, TestResultDto, TestRunDto } from '../../../api/models';
-import { clip, compareRuns, failingResults } from './run-analysis';
+import { clip, compareRuns } from './run-analysis';
 
 function evaluation(score: EvaluationScore | null, errorMessage: string | null = null): EvaluationResultDto {
   return { evaluatorId: 'e1', evaluatorKind: 'ExactMatch', evaluatorName: 'Exact', score, reasoning: null, errorMessage } as EvaluationResultDto;
@@ -35,17 +35,8 @@ describe('clip', () => {
   });
 });
 
-describe('failingResults', () => {
-  it('keeps only judged failures — unjudged (no evaluations) cases are not failures', () => {
-    const r = run('run1', [result('a', true), result('b', false), result('c', null)]);
-    expect(failingResults(r).map((x) => x.testCaseId)).toEqual(['b']);
-  });
-
-  it('treats an errored evaluator as failing, matching the Runs UI verdict', () => {
-    const broken: TestResultDto = { ...result('a', true), evaluations: [evaluation(null, 'boom')] };
-    expect(failingResults(run('run1', [broken]))).toHaveLength(1);
-  });
-});
+// Failure/verdict classification moved to case-verdict.ts — see case-verdict.spec.ts, which also
+// covers the cases this could never express: a case that passed, and one absent from the run.
 
 describe('compareRuns', () => {
   it('classifies fixed, regressed and unchanged cases', () => {

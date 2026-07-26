@@ -24,6 +24,36 @@ public sealed record Conversation : IDomainObject
         => Messages.FirstOrDefault(x => x.Role == Role.System) as SystemMessage;
 
     /// <summary>
+    /// How many of the assistant's tool calls in this conversation already have their result
+    /// recorded — calls that were both made and came back.
+    ///
+    /// This is what tells a *decision point* apart from a *summary*. An agent turn that uses tools
+    /// is several upstream calls, each capturing the conversation so far; the last one already holds
+    /// every tool call the agent made and every result it got, so the only thing a model can still
+    /// produce from it is the closing message. Every choice the agent made was decided in an earlier
+    /// call. A test case built on such a conversation therefore scores the wording of the summary,
+    /// never the decision — see <c>docs/optimization-loop.md</c>.
+    /// </summary>
+    public int ResolvedToolCallCount
+    {
+        get
+        {
+            // A ToolMessage carries its tool-call id in the first content slot. Read that slot
+            // directly instead of going through ToolMessage.Id, which throws on a malformed
+            // message — a descriptive count is not worth failing a whole read over.
+            HashSet<string> resolved =
+            [
+                .. Messages.OfType<ToolMessage>()
+                    .Select(tool => tool.Contents.Count > 0 ? tool.Contents[0].Text : null)
+                    .OfType<string>()
+            ];
+            return Messages.OfType<AssistantMessage>()
+                .SelectMany(assistant => assistant.ToolRequests)
+                .Count(request => resolved.Contains(request.Id));
+        }
+    }
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="Conversation"/> class with the specified messages.
     /// </summary>
     /// <param name="messages">The messages in the conversation.</param>

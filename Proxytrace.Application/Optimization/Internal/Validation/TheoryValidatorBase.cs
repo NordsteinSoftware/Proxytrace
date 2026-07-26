@@ -22,22 +22,21 @@ internal readonly record struct RunMetrics(double? PassRate, decimal? Cost, Time
 /// </summary>
 internal abstract class TheoryValidatorBase : ITheoryValidator
 {
-    /// <summary>
-    /// Maximum two-sided p-value at which an observed pass-rate difference counts as real
-    /// rather than sampling noise.
-    /// </summary>
-    internal const double SignificanceLevel = 0.05;
-
     private readonly Lazy<ITestRunnerService> testRunnerService;
     private readonly ITestRunRepository testRuns;
 
     protected TheoryValidatorBase(
         Lazy<ITestRunnerService> testRunnerService,
-        ITestRunRepository testRuns)
+        ITestRunRepository testRuns,
+        OptimizationOptions options)
     {
         this.testRunnerService = testRunnerService;
         this.testRuns = testRuns;
+        Options = options;
     }
+
+    /// <summary>How hard a theory has to work to be believed — significance level and A/B samples.</summary>
+    protected OptimizationOptions Options { get; }
 
     public abstract bool CanValidate(IOptimizationTheory theory);
 
@@ -85,6 +84,21 @@ internal abstract class TheoryValidatorBase : ITheoryValidator
         IModelEndpoint endpoint,
         CancellationToken cancellationToken,
         CandidateRunObserver? onRunCreated = null)
+        => (await RunSamplesAsync(suite, agent, endpoint, sampleCount: 1, cancellationToken, onRunCreated))[0];
+
+    /// <summary>
+    /// Executes <paramref name="sampleCount"/> ephemeral runs of <paramref name="agent"/> over the
+    /// suite and returns all of them, so the caller can pool their results into one comparison.
+    /// <paramref name="onRunCreated"/> receives the FIRST run's id — that is the run the UI links to
+    /// while validation is in flight.
+    /// </summary>
+    protected async Task<IReadOnlyList<ITestRun>> RunSamplesAsync(
+        ITestSuite suite,
+        IAgent agent,
+        IModelEndpoint endpoint,
+        int sampleCount,
+        CancellationToken cancellationToken,
+        CandidateRunObserver? onRunCreated = null)
     {
         var group = await testRunnerService.Value.RunInForegroundAsync(
             suite: suite,
@@ -98,10 +112,10 @@ internal abstract class TheoryValidatorBase : ITheoryValidator
                     var createdRuns = await createdGroup.GetTestRuns(ct);
                     await onRunCreated(createdRuns.First().Id, ct);
                 },
+            sampleCount: sampleCount,
             cancellationToken: cancellationToken);
 
-        var runs = await group.GetTestRuns(cancellationToken);
-        return runs.First();
+        return await group.GetTestRuns(cancellationToken);
     }
 
     /// <summary>
@@ -139,6 +153,16 @@ internal abstract class TheoryValidatorBase : ITheoryValidator
     {
         var results = run.TestResults;
         return (results.Count(r => r.IsPass()), results.Count);
+    }
+
+    /// <summary>
+    /// Pools <see cref="PassCounts"/> over every sample in one A/B arm. Each sample is an
+    /// independent replay of the same suite, so the sums are the arm's total evidence.
+    /// </summary>
+    protected static (int Passes, int Total) SumPassCounts(IReadOnlyList<ITestRun> runs)
+    {
+        var counts = runs.Select(PassCounts).ToList();
+        return (counts.Sum(c => c.Passes), counts.Sum(c => c.Total));
     }
 
     /// <summary>

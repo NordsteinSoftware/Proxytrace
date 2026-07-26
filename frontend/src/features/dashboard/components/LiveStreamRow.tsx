@@ -28,17 +28,30 @@ import { hoverAccentWashCls } from '../../../components/ui/classes';
 // entirely (both the grid track and the corresponding cells, via `@max-2xl:hidden`),
 // leaving the message column all the room it needs even at narrow panel widths.
 // eslint-disable-next-line lingui/no-unlocalized-strings -- Tailwind grid-template class, not UI copy
-export const LIVE_STREAM_GRID = 'grid [grid-template-columns:var(--live-grid)] gap-5 @max-2xl:[grid-template-columns:var(--live-grid-narrow)] @max-2xl:gap-3';
+export const LIVE_STREAM_GRID = 'grid [grid-template-columns:var(--live-grid)] gap-4 @max-2xl:[grid-template-columns:var(--live-grid-narrow)] @max-2xl:gap-3';
 
 // Full (wide) and narrow column templates, exposed as CSS vars on the `@container` card — see
 // {@link LIVE_STREAM_GRID}. Kept as plain strings (not a combined object) so this file keeps
 // exporting only constants + the component, per react-refresh/only-export-components.
-export const LIVE_STREAM_GRID_WIDE = '14px minmax(0,1fr) 64px 104px 56px 60px 64px 52px';
+// Track widths are budgeted around the model column, which carries the longest value in the row
+// (`deepseek/deepseek-v4-flash`): the column gap drops 20px→16px and hands the whole 28px it frees
+// to the model track. The turns track keeps its 64px — "12 turns" already fills it. Total fixed
+// width stays at the 554px documented above (442px of tracks + 112px of gaps), so the narrow-panel
+// budget is unchanged.
+export const LIVE_STREAM_GRID_WIDE = '14px minmax(0,1fr) 64px 132px 56px 60px 64px 52px';
 export const LIVE_STREAM_GRID_NARROW = '14px minmax(0,1fr) 56px 60px 64px 52px';
 
 /** Shared visibility class for the turns + model cells, which drop below the `2xl` container breakpoint. */
 // eslint-disable-next-line lingui/no-unlocalized-strings -- Tailwind class, not UI copy
 export const NARROW_HIDDEN = '@max-2xl:hidden';
+
+// The turns and model cells sit on *fixed* grid tracks, and `justify-self-center` sizes them to
+// their content — so content wider than the track (a long model id like `deepseek/deepseek-v4-flash`
+// on the 104px model track) overflows on *both* sides and paints over the turns badge and the status
+// column. `max-w-full` clamps the cell back to its track and gives the Badge inside a real width to
+// shrink into; the Badge ellipsises and keeps the full value in its `title`.
+// eslint-disable-next-line lingui/no-unlocalized-strings -- Tailwind classes, not UI copy
+const CLAMPED_CELL = 'justify-self-center max-w-full min-w-0 overflow-hidden';
 
 interface Props {
   row: TraceRow;
@@ -73,7 +86,7 @@ export function LiveStreamRow({ row, freshIds, isLast, now, onSelect }: Props) {
           </span>
         </span>
         <span className={cn('text-muted text-center', NARROW_HIDDEN)}>—</span>
-        <span className={cn('justify-self-center', NARROW_HIDDEN)}><Pill label={t.model} color={modelColor(t.model)} size="sm" /></span>
+        <span className={cn(CLAMPED_CELL, NARROW_HIDDEN)}><Pill label={t.model} color={modelColor(t.model)} size="sm" /></span>
         <span className="text-caption font-semibold text-center" style={{ color: sc }}>{t.httpStatus}</span>
         <span className="text-secondary text-right min-w-[54px]">{fmtTokens(t.inputTokens + t.outputTokens)}</span>
         <span className="text-muted text-right min-w-[58px]">{fmtLatency(t.durationMs)}</span>
@@ -104,10 +117,12 @@ export function LiveStreamRow({ row, freshIds, isLast, now, onSelect }: Props) {
           {head.agentName ?? <Trans>unknown agent</Trans>}
         </span>
       </span>
-      <span className={cn('justify-self-center inline-flex items-center text-caption font-semibold px-1.5 py-0.5 rounded-none text-accent bg-accent-subtle', NARROW_HIDDEN)}>
-        <Plural value={turns.length} one="# turn" other="# turns" />
+      <span className={cn(CLAMPED_CELL, 'inline-flex items-center text-caption font-semibold px-1.5 py-0.5 rounded-none text-accent bg-accent-subtle whitespace-nowrap', NARROW_HIDDEN)}>
+        <span className="min-w-0 overflow-hidden text-ellipsis">
+          <Plural value={turns.length} one="# turn" other="# turns" />
+        </span>
       </span>
-      <span className={cn('justify-self-center', NARROW_HIDDEN)}><Pill label={head.model} color={modelColor(head.model)} size="sm" /></span>
+      <span className={cn(CLAMPED_CELL, NARROW_HIDDEN)}><Pill label={head.model} color={modelColor(head.model)} size="sm" /></span>
       <span className="text-caption font-semibold text-center" style={{ color: sc }}>{allOk ? '2xx' : <Trans>mixed</Trans>}</span>
       <span className="text-secondary text-right min-w-[54px]">{fmtTokens(totalTokens)}</span>
       <span className="text-muted text-right min-w-[58px]">{fmtLatency(totalMs)}</span>

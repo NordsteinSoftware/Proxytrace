@@ -301,11 +301,11 @@ msgstr "{0} non-2xx"
 msgid "{0} of {1} attached"
 msgstr "{0} sur {1} attachés"
 
-#. placeholder {0}: data.failures.length
+#. placeholder {0}: data.cases.length
 #. placeholder {1}: data.totalCases
 #. placeholder {2}: fmtPct100(data.passRate)
-msgid "{0} of {1} cases failing · <0>{2}</0> pass rate"
-msgstr "{0} sur {1} cas en échec · <0>{2}</0> de réussite"
+msgid "{0} of {1} cases · <0>{2}</0> pass rate"
+msgstr "{0} sur {1} cas · <0>{2}</0> taux de réussite"
 
 #. placeholder {0}: traces.length
 #. placeholder {1}: allTraces.length
@@ -986,9 +986,6 @@ msgstr "Une théorie ou proposition identique existe déjà pour cet Agent."
 msgid "An unexpected error occurred."
 msgstr "Une erreur inattendue s’est produite."
 
-msgid "Analyzing run…"
-msgstr "Analyse du run…"
-
 msgid "Anomalies"
 msgstr "Anomalies"
 
@@ -1064,6 +1061,9 @@ msgstr "Arguments"
 msgid "Arguments must be valid JSON."
 msgstr "Les arguments doivent être un JSON valide."
 
+msgid "Ask a specific question and Tracey will inspect the full trace before answering."
+msgstr "Posez une question précise et Tracey inspectera le Trace complet avant de répondre."
+
 msgid "Ask about your agents, suites, runs, or proposals — or have me run a suite, review a proposal, or plot your data."
 msgstr "Posez des questions sur vos Agents, suites, runs ou proposals — ou demandez-moi d’exécuter une suite, de revoir une proposal, ou de tracer vos données."
 
@@ -1072,6 +1072,9 @@ msgstr "Demandez à un admin un nouveau lien d’invitation."
 
 msgid "Ask Tracey"
 msgstr "Demander à Tracey"
+
+msgid "Ask Tracey about this trace"
+msgstr "Interroger Tracey sur ce Trace"
 
 msgid "Ask Tracey…  (/ for tools)"
 msgstr "Demandez à Tracey…  (/ pour les Tools)"
@@ -1265,6 +1268,13 @@ msgstr "Cluster de traces en échec capturées"
 
 msgid "Case · reason"
 msgstr "Cas · raison"
+
+msgid "Case results"
+msgstr "Résultats des cas"
+
+#. placeholder {0}: data.suiteName ?? data.agentName
+msgid "Case results · {0}"
+msgstr "Résultats des cas · {0}"
 
 msgid "Cases"
 msgstr "Cas"
@@ -2038,6 +2048,9 @@ msgstr "Evaluator créé"
 msgid "Evaluator Deleted"
 msgstr "Evaluator supprimé"
 
+msgid "evaluator error"
+msgstr "erreur de l'évaluateur"
+
 msgid "Evaluator error"
 msgstr "Erreur d'Evaluator"
 
@@ -2135,6 +2148,9 @@ msgstr "Échec"
 msgid "FAIL"
 msgstr "ÉCHEC"
 
+msgid "failed"
+msgstr "échoué"
+
 msgid "Failed"
 msgstr "Échoué"
 
@@ -2159,13 +2175,6 @@ msgstr "Impossible d'enregistrer"
 
 msgid "Failing"
 msgstr "En échec"
-
-msgid "Failing cases"
-msgstr "Cas en échec"
-
-#. placeholder {0}: data.suiteName ?? data.agentName
-msgid "Failing cases · {0}"
-msgstr "Cas en échec · {0}"
 
 msgid "Failure"
 msgstr "Échec"
@@ -2376,6 +2385,9 @@ msgstr "Amélioré"
 
 msgid "Improved the pass rate."
 msgstr "Amélioration du taux de réussite."
+
+msgid "improvement only"
+msgstr "amélioration uniquement"
 
 msgid "in"
 msgstr "dans"
@@ -3387,8 +3399,14 @@ msgstr "Pas encore attaché à un Suite."
 msgid "Not enough data"
 msgstr "Pas assez de données"
 
+msgid "not in this run"
+msgstr "pas dans cette exécution"
+
 msgid "Not now"
 msgstr "Pas maintenant"
+
+msgid "not scored"
+msgstr "non noté"
 
 msgid "Not scored"
 msgstr "Non noté"
@@ -3633,6 +3651,9 @@ msgstr "taux de réussite après changement"
 
 msgid "Pass rate trend"
 msgstr "Tendance du taux de réussite"
+
+msgid "passed"
+msgstr "réussi"
 
 msgid "Passed"
 msgstr "Réussi"
@@ -3929,6 +3950,9 @@ msgstr "pt"
 msgid "Pulled from the provider; prices load automatically."
 msgstr "Récupéré auprès du provider ; les prix se chargent automatiquement."
 
+msgid "Question"
+msgstr "Question"
+
 msgid "Queue"
 msgstr "File d’attente"
 
@@ -3980,6 +4004,9 @@ msgstr "Renoté · modifié"
 
 msgid "Read"
 msgstr "Lu"
+
+msgid "Reading the run…"
+msgstr "Lecture de l'exécution…"
 
 msgid "Reasoning"
 msgstr "Raisonnement"
@@ -4261,6 +4288,9 @@ msgstr "Lancez ce Suite selon une cadence récurrente."
 
 msgid "Run this suite to build up a history. Each run shows up here, newest first."
 msgstr "Lancez ce Suite pour constituer un historique. Chaque Run apparaît ici, du plus récent au plus ancien."
+
+msgid "run unfinished"
+msgstr "exécution non terminée"
 
 msgid "running"
 msgstr "en cours d’exécution"
@@ -5298,6 +5328,9 @@ msgstr "Total des tokens"
 msgid "Trace"
 msgstr "Trace"
 
+msgid "Trace {traceId}"
+msgstr "Trace {traceId}"
+
 msgid "Trace Deleted"
 msgstr "Trace supprimée"
 
@@ -5407,6 +5440,9 @@ msgstr "Annuler"
 
 msgid "Undo remove"
 msgstr "Annuler la suppression"
+
+msgid "unexpected"
+msgstr "inattendu"
 
 msgid "Unknown"
 msgstr "Inconnu"
@@ -5681,6 +5717,9 @@ msgstr "Quel Agent ce Suite doit-elle tester ?"
 
 msgid "Why this change"
 msgstr "Pourquoi ce changement"
+
+msgid "Why was the refund approved?"
+msgstr "Pourquoi le remboursement a-t-il été approuvé ?"
 
 msgid "widget"
 msgstr "widget"

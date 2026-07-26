@@ -1,0 +1,54 @@
+{
+  "_readme": [
+    "Scenarios are probes, not tests: each one puts Tracey in a situation where a specific clause of",
+    "her prompt is the thing that decides the answer, so a regression in that clause shows up as a",
+    "visible behavior change rather than a number. `intent` says which clause — keep it honest, it is",
+    "what the reader checks the transcript against.",
+    "`turns` is a conversation: the model sees each user message with everything before it in context.",
+    "`fixtures` (optional) overrides the shared fixture world for this scenario only."
+  ],
+  "scenarios": [
+    {
+      "id": "run-triage",
+      "intent": "The everyday case. Should read live state before answering, then land one short verdict — no narration between calls, no restating the numbers the card already shows.",
+      "turns": ["how did my latest test run go?"]
+    },
+    {
+      "id": "follow-up-diagnosis",
+      "intent": "Second turn on the same thread: should go deeper on the failing case without re-listing the run or repeating its own previous answer, and must not report a crashed judge as a failure.",
+      "turns": [
+        "how did my latest test run go?",
+        "why did that refund case fail?"
+      ]
+    },
+    {
+      "id": "skill-dispatch",
+      "intent": "A task with a playbook. Should load the matching skill BEFORE acting and then follow it silently — never announce that it loaded one, never mirror its numbered steps back as headings.",
+      "turns": ["The Customer Support Agent keeps approving refunds it shouldn't. Can you help me fix it?"]
+    },
+    {
+      "id": "docs-question",
+      "intent": "A product question, not a data question: should search the manual and cite a /docs link inline, instead of reaching for the data tools or answering from memory.",
+      "turns": ["how do I point my existing app at the proxy without changing my code?"]
+    },
+    {
+      "id": "usage-comparison",
+      "intent": "Comparative numbers across agents — the case for rendering a component instead of prose. Should pull the stats in one read and show them, not narrate a list of figures.",
+      "turns": ["which of my agents is burning the most tokens?"]
+    },
+    {
+      "id": "german-brevity",
+      "intent": "Brevity is a limit on length, not on language: should answer in German and stay just as short.",
+      "turns": ["Welcher meiner Agenten hat die meisten Fehler?"]
+    },
+    {
+      "id": "empty-world",
+      "intent": "Nothing to report. Should say so plainly instead of inventing ids, names or numbers to fill the silence.",
+      "turns": ["show me the optimization theories you've validated so far"],
+      "fixtures": {
+        "list_theories": { "count": 0, "items": [] },
+        "list_proposals": { "count": 0, "items": [] }
+      }
+    }
+  ]
+}

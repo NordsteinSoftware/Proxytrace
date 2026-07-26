@@ -5,6 +5,7 @@ import {
   groupIntoQueue,
   indexProposals,
   isInsideNoise,
+  significanceLabel,
   loopStats,
   passRateDeltaPt,
   passRateTransition,
@@ -213,5 +214,24 @@ describe('isInsideNoise', () => {
     expect(isInsideNoise(0.05)).toBe(true);
     expect(isInsideNoise(0.008)).toBe(false);
     expect(isInsideNoise(null)).toBe(false);
+  });
+});
+
+describe('significanceLabel', () => {
+  const id = (pValue: number, validated: boolean) => significanceLabel(pValue, validated).id;
+
+  it('calls a low p-value significant either way', () => {
+    expect(id(0.008, true)).toBe(id(0.008, false));
+  });
+
+  it('never labels a noisy p-value significant', () => {
+    expect(id(0.19, true)).not.toBe(id(0.008, true));
+    expect(id(0.19, false)).not.toBe(id(0.008, false));
+  });
+
+  // A validated theory above the threshold means the significance gate was relaxed: the row shows
+  // a win, so "inside noise" would contradict it — it must read as an improvement instead.
+  it('distinguishes a noisy win from a noisy rejection', () => {
+    expect(id(0.19, true)).not.toBe(id(0.19, false));
   });
 });

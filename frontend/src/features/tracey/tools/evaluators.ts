@@ -3,6 +3,7 @@ import { msg } from '@lingui/core/macro';
 import { evaluatorsApi } from '../../../api/evaluators';
 import { EvaluatorKind } from '../../../api/models';
 import { type ToolFactory, tool, CANCELLED, listDigest, presentArg } from './shared';
+import { clip } from './run-analysis';
 
 /** Kind-specific evaluator configuration accepted by `create_evaluator`. */
 const evaluatorDetailsSchema = z.discriminatedUnion('kind', [
@@ -30,14 +31,21 @@ export const createEvaluatorTools: ToolFactory = (ctx, store) => {
     list_evaluators: tool({
       description:
         'List the project\'s evaluators — the scorers (LLM judge, exact/numeric/JSON-schema match) ' +
-        'a test suite grades its cases with. Check this BEFORE create_evaluator: reuse a fitting ' +
-        'one by passing its id to create_suite\'s evaluatorIds. Rendered to the user as a card.',
+        'a test suite grades its cases with. Each agentic judge carries its `systemMessage`, so you ' +
+        'can tell whether one already covers the behavior you need to score. Check this BEFORE ' +
+        'create_evaluator: reuse a fitting one by passing its id to create_suite\'s evaluatorIds or ' +
+        'to set_suite_evaluators. Rendered to the user as a card.',
       parameters: z.object({ present: presentArg }),
       confirm: false,
       execute: async () => {
         const items = await evaluatorsApi.list({ projectId });
         return store('evaluator-list', items, listDigest(items, 25, (e) => ({
-          id: e.id, kind: e.kind, name: e.name,
+          id: e.id,
+          kind: e.kind,
+          name: e.name,
+          // The judge's instructions are what let the model decide whether an existing evaluator
+          // already covers a behavior — id/kind/name cannot answer that.
+          ...(e.systemMessage ? { systemMessage: clip(e.systemMessage, 300) } : {}),
         })));
       },
     }),

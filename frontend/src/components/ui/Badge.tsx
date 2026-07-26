@@ -67,7 +67,11 @@ export function Badge({
       onClick={onClick}
       title={title}
       className={cn(
-        'inline-flex items-center font-semibold whitespace-nowrap transition-opacity',
+        // `max-w-full` + the truncating label span keep a long label (a model id like
+        // `deepseek/deepseek-v4-flash`) inside its column instead of spilling over the
+        // neighbouring cells of a fixed-track row grid — the caller only has to give the
+        // cell a width to fit into (`min-w-0`/`overflow-hidden`).
+        'inline-flex items-center font-semibold whitespace-nowrap transition-opacity max-w-full min-w-0',
         SIZE_CLS[size],
         'rounded-none', // Signal Desk: chips are square tags
         className,
@@ -81,7 +85,7 @@ export function Badge({
           style={{ background: palette.fg }}
         />
       )}
-      {label}
+      <span className="min-w-0 overflow-hidden text-ellipsis">{label}</span>
     </span>
   );
 }

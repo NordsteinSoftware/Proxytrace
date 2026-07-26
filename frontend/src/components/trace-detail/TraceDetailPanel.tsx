@@ -12,15 +12,17 @@ import { Button } from '../ui/Button';
 import { Tabs } from '../ui/Tabs';
 import { DetailPanel } from '../overlays/DetailPanel';
 import { PromoteModal } from './PromoteModal';
+import { AskTraceyModal } from './AskTraceyModal';
 import { DrawerStat } from './DrawerStat';
 import { TraceAnomalyBanner } from './TraceAnomalyBanner';
-import { useTraceAnomalyHits } from './useTraceAnomalyHits';
 import { TraceDetailHeader } from './TraceDetailHeader';
 import { TraceMessagesTab } from './TraceMessagesTab';
 import { TraceRawJsonTab, TraceMetadataTab } from './TraceMetadataTab';
 import { Trans, useLingui } from '@lingui/react/macro';
 import { msg } from '@lingui/core/macro';
 import { type MessageDescriptor } from '@lingui/core';
+import { useTraceyChatContext } from '../../features/tracey/tracey-chat-context';
+import { traceQuestionPrompt } from '../tracey/askTraceyPrompts';
 
 type Tab = 'Messages' | 'Tools' | 'Raw JSON' | 'Metadata';
 
@@ -40,10 +42,12 @@ interface Props {
 
 export function TraceDetailPanel({ trace, onClose, onPrev, onNext }: Props) {
   const navigate = useNavigate();
+  const { askTracey } = useTraceyChatContext();
   const { t, i18n } = useLingui();
   // eslint-disable-next-line lingui/no-unlocalized-strings -- Tab id token (display label from TAB_LABELS)
   const [tab, setTab] = useState<Tab>('Messages');
   const [promoting, setPromoting] = useState(false);
+  const [askingTracey, setAskingTracey] = useState(false);
   const [prevTraceId, setPrevTraceId] = useState(trace.id);
 
   // Reset tab when trace changes (derived state pattern per BEST_PRACTICES §4)
@@ -52,10 +56,10 @@ export function TraceDetailPanel({ trace, onClose, onPrev, onNext }: Props) {
     // eslint-disable-next-line lingui/no-unlocalized-strings -- Tab id token (display label from TAB_LABELS)
     setTab('Messages');
     setPromoting(false);
+    setAskingTracey(false);
   }
 
   const suitesQuery = useAgentSuites(trace.agentId);
-  const anomalyHits = useTraceAnomalyHits(trace);
   const suites = suitesQuery.data?.items ?? [];
   const hasResponse = !!trace.response;
   const promoteDisabled = !trace.agentId || !hasResponse || suitesQuery.isLoading || suites.length === 0;
@@ -98,13 +102,13 @@ export function TraceDetailPanel({ trace, onClose, onPrev, onNext }: Props) {
 
   return (
     <>
-      <DetailPanel onClose={onClose} onPrev={onPrev} onNext={onNext} keyboardEnabled={!promoting} testId="trace-detail">
+      <DetailPanel onClose={onClose} onPrev={onPrev} onNext={onNext} keyboardEnabled={!promoting && !askingTracey} testId="trace-detail">
         <TraceDetailHeader
           trace={trace}
-          anomalyHits={anomalyHits}
           onClose={onClose}
           onPrev={onPrev}
           onNext={onNext}
+          onAskTracey={() => setAskingTracey(true)}
           promote={{
             disabled: promoteDisabled,
             tooltip: promoteTooltip,
@@ -184,6 +188,16 @@ export function TraceDetailPanel({ trace, onClose, onPrev, onNext }: Props) {
       </DetailPanel>
 
       {promoting && <PromoteModal trace={trace} suites={suites} onClose={() => setPromoting(false)} />}
+      {askingTracey && (
+        <AskTraceyModal
+          traceId={trace.id}
+          onClose={() => setAskingTracey(false)}
+          onSubmit={question => {
+            setAskingTracey(false);
+            askTracey(traceQuestionPrompt(trace.id, question));
+          }}
+        />
+      )}
     </>
   );
 }

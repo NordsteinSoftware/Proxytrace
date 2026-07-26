@@ -32,6 +32,16 @@ describe('tracey skills registry', () => {
     expect(getSkill('optimize-agent')?.tools).toContain('get_run');
   });
 
+  it('registers test-driven-improvement with the tools its red/green loop needs', () => {
+    const skill = getSkill('test-driven-improvement');
+    expect(skill?.tools).toEqual(expect.arrayContaining([
+      'get_trace', 'list_suites', 'get_suite', 'create_suite', 'add_to_suite',
+      'list_evaluators', 'create_evaluator', 'set_suite_evaluators',
+      'start_test_run', 'get_case_results', 'compare_runs',
+      'list_theories', 'submit_optimization_theory', 'await_actions',
+    ]));
+  });
+
   it('lists every loaded skill', () => {
     expect(listSkills()).toHaveLength(Object.keys(TRACEY_SKILLS).length);
     expect(listSkills().map((s) => s.name)).toContain('optimize-agent');

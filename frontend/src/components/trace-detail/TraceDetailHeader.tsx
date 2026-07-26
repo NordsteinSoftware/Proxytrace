@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router';
-import type { AgentCallDto, CustomAnomalyHitDto } from '../../api/models';
+import type { AgentCallDto } from '../../api/models';
 import { agentColor, modelColor } from '../../lib/colors';
 import { fmtDateTime } from '../../lib/format';
 import { cn } from '../../lib/cn';
@@ -8,7 +8,6 @@ import { CopyButton } from '../ui/CopyButton';
 import { ColoredBadge } from '../ui/ColoredBadge';
 import { Button, IconButton } from '../ui/Button';
 import { AskTraceyButton } from '../tracey/AskTraceyButton';
-import { tracePrompt } from '../tracey/askTraceyPrompts';
 import { Trans, useLingui } from '@lingui/react/macro';
 
 export interface PromoteAction {
@@ -19,10 +18,10 @@ export interface PromoteAction {
 
 interface Props {
   trace: AgentCallDto;
-  anomalyHits: CustomAnomalyHitDto[];
   onClose: () => void;
   onPrev?: () => void;
   onNext?: () => void;
+  onAskTracey: () => void;
   promote: PromoteAction;
 }
 
@@ -32,7 +31,7 @@ interface Props {
  * (mono, copyable, truncates first) + exact capture time, with the actions. Message/tool-call
  * counts are deliberately absent — the tab badges below already carry them.
  */
-export function TraceDetailHeader({ trace, anomalyHits, onClose, onPrev, onNext, promote }: Props) {
+export function TraceDetailHeader({ trace, onClose, onPrev, onNext, onAskTracey, promote }: Props) {
   const navigate = useNavigate();
   const { t } = useLingui();
 
@@ -117,7 +116,7 @@ export function TraceDetailHeader({ trace, anomalyHits, onClose, onPrev, onNext,
         <div className="flex items-center gap-2 shrink-0">
           <AskTraceyButton
             data-testid="ask-tracey-btn-trace"
-            prompt={() => tracePrompt(trace, anomalyHits)}
+            onClick={onAskTracey}
           />
           <Button
             data-testid="promote-btn"

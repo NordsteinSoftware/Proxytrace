@@ -1,5 +1,6 @@
 using AwesomeAssertions;
 using NSubstitute;
+using Proxytrace.Application.Optimization;
 using Proxytrace.Application.Optimization.Internal.Validation;
 using Proxytrace.Application.TestRun;
 using Proxytrace.Domain.Agent;
@@ -100,7 +101,8 @@ public sealed class ModelSwitchTheoryValidatorTests : BaseTest<Module>
         var validator = new ModelSwitchTheoryValidator(
             factory,
             new Lazy<ITestRunnerService>(() => Substitute.For<ITestRunnerService>()),
-            testRuns);
+            testRuns,
+            new OptimizationOptions { AbSampleCount = 1 });
 
         return new Fixture { Validator = validator, Theory = theory, Captured = captured };
     }

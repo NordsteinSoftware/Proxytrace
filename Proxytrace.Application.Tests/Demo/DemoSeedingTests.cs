@@ -295,7 +295,7 @@ public class DemoSeedingTests : BaseTest<Module>
     // ---- Req 2/6 (task-3): the refund suite grows from 5 to 10 social-engineering cases. ----
 
     [TestMethod]
-    public void Seed_RefundSuite_Has_Ten_Cases_With_No_Embedded_Tool_RoundTrips()
+    public void Seed_RefundSuite_Has_Ten_Cases_And_Embeds_A_Lookup_For_Every_Named_Order()
     {
         var ctx = services.GetRequiredService<DemoSeedContext>();
         var suite = ctx.SuitesByKey["customer-support-refunds"];
@@ -303,12 +303,65 @@ public class DemoSeedingTests : BaseTest<Module>
         suite.TestCases.Should().HaveCount(10,
             "the refund suite must grow to 10 cases to give the optimizer sufficient failing signal");
 
-        // Refund cases are plain text conversations — unlike analytics cases they must NOT embed a
-        // tool round-trip. A live re-run sends the user message directly to the agent.
         foreach (var testCase in suite.TestCases)
         {
-            testCase.Input.Messages.OfType<AssistantMessage>().Should().BeEmpty(
-                "refund cases must not embed tool calls in the input conversation");
+            var prompt = string.Concat(testCase.Input.Messages
+                .OfType<UserMessage>()
+                .SelectMany(m => m.Contents)
+                .Select(c => c.Text));
+            var lookups = testCase.Input.Messages
+                .OfType<AssistantMessage>()
+                .SelectMany(m => m.ToolRequests)
+                .Where(t => t.Name == "lookup_order")
+                .ToList();
+
+            // A case that names an order must embed the lookup round-trip. The runner replays a
+            // case with a single completion, so without it the agent's first move is "what's your
+            // order number?" — which the helpfulness judge fails on etiquette, not on policy, and
+            // that noise is what the optimizer would learn from. Cases that ask a pure policy
+            // question (no order id) stay plain text.
+            if (prompt.Contains("#2"))
+            {
+                lookups.Should().ContainSingle(
+                    $"a case naming an order must embed its lookup_order round-trip: '{prompt}'");
+                testCase.Input.Messages.OfType<ToolMessage>().Should().ContainSingle(
+                    "the lookup_order result must be present in the input conversation");
+            }
+            else
+            {
+                lookups.Should().BeEmpty(
+                    $"a pure policy question needs no order lookup: '{prompt}'");
+            }
+
+            // Whatever the shape, the scored turn is the final text answer.
+            testCase.ExpectedOutput.ToolRequests.Should().BeEmpty(
+                "the expected output must be the final text answer, not a tool-call turn");
+        }
+    }
+
+    [TestMethod]
+    public void Seed_RefundSuite_Tool_Results_Leak_No_Policy()
+    {
+        var ctx = services.GetRequiredService<DemoSeedContext>();
+        var suite = ctx.SuitesByKey["customer-support-refunds"];
+
+        // The showcase turns on the naive agent NOT knowing the rules. A tool result that reports
+        // the return window or the goodwill ceiling lets it recite the policy and pass on its own,
+        // which erases the failing signal the optimizer needs (verified live against the model).
+        string[] policyLeaks =
+            ["return_window", "goodwill", "policy", "refundable", "expired", "eligible"];
+
+        foreach (var toolResult in suite.TestCases
+                     .SelectMany(c => c.Input.Messages.OfType<ToolMessage>())
+                     .SelectMany(m => m.Contents)
+                     .Select(c => c.Text))
+        {
+            foreach (var leak in policyLeaks)
+            {
+                toolResult.Should().NotContain(leak,
+                    $"tool results carry order facts only — '{leak}' is store policy and belongs "
+                    + "in the system prompt the optimizer is meant to fix");
+            }
         }
     }
 

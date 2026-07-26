@@ -8,7 +8,7 @@ import { theoryPrompt } from '../../../components/tracey/askTraceyPrompts';
 import { TONE_BG, TONE_SUBTLE_BG, TONE_TEXT } from '../shared';
 import { THEORY_SOURCE_LABEL, THEORY_STATUS_META } from '../theoryMeta';
 import { buildGainSummary, formatDeltaPt, REVIEW_META } from '../validatedView';
-import { formatPValue, isInsideNoise, theoryShortId } from '../theoryQueue';
+import { formatPValue, significanceLabel, theoryShortId } from '../theoryQueue';
 import { KindPill } from './KindPill';
 
 interface Props {
@@ -74,7 +74,7 @@ export function DossierHeader({ theory, proposal, suiteName }: Props) {
           </span>
           {theory.pValue != null && (
             <span className="mono ml-auto pb-0.5 text-caption text-muted">
-              {formatPValue(theory.pValue)} · {isInsideNoise(theory.pValue) ? t`inside noise` : t`significant`}
+              {formatPValue(theory.pValue)} · {i18n._(significanceLabel(theory.pValue, validated))}
             </span>
           )}
         </div>
