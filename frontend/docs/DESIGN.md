@@ -274,6 +274,7 @@ Use `DataTable` for any tabular dataset > 5 rows; its header row already carries
   - **Master/detail pages** (agents, runs): list and detail become separate screens. Only an *explicit* `?id=` selection opens the detail (the desktop select-first default is suppressed on mobile) and a ghost "All …" back button clears it — see `Runs.tsx` / `Agents.tsx`.
   - **Wide row grids** (trace list): low-priority columns collapse via container query — the list declares `@container` + exposes full/narrow templates as CSS vars, rows share `TRACE_GRID_CLS`, hidden cells carry `@max-2xl:hidden` (`tracesMeta.ts`).
   - **Full-height internal-scroll layouts** become natural page scroll below `md` (`md:h-full md:min-h-0` on the page root — see `Traces.tsx`); horizontal stat strips that can't wrap get `overflow-x-auto`.
+    - **Exception — virtualized lists stay bounded scrollers at every breakpoint.** `TraceTable` carries `max-md:flex-none max-md:h-[60svh]`, so below `md` it is a fixed-height internal scroller inside the page scroll rather than expanding to its content. This is not a style preference: a virtualizer measures its scroll container, so an unbounded one reports every row as visible, which permanently satisfies the infinite-scroll load-more trigger and walks the entire result set. Any future virtualized list needs the same treatment.
 
 ---
 

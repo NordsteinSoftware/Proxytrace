@@ -22,7 +22,7 @@ Until the first call arrives, the Traces page doubles as a quick-start: it shows
 OpenAI `base_url` and a copy-paste snippet (Python, TypeScript, C#, curl) so you can wire up the
 [proxy](/guide/proxy-setup) without leaving the page.
 
-![The Traces view: the capture timeline, the page-summary stat cards, and the table of captured calls.](/screenshots/traces/list.png)
+![The Traces view: the capture timeline, the summary stat cards, and the scrolling table of captured calls.](/screenshots/traces/list.png)
 
 Typical things you can do:
 
@@ -31,18 +31,19 @@ Typical things you can do:
 - Identify traces worth promoting into a benchmark — see
   [Test Suites & Cases](/guide/test-suites-and-cases).
 
-### Filtering, search, and paging
+### Filtering, search, and scrolling
 
-- **Page summary** is the band of stat cards just above the table: number of traces on the
-  current page, total tokens (with the input/output split), total cost, average latency (with
-  its ± spread), and the error rate (share of non-2xx calls). It rolls up only the traces on
-  the *current page* and recomputes as you page, filter, or change the time range.
+- **Summary** is the band of stat cards just above the table: number of traces, total tokens
+  (with the input/output split), total cost, average latency (with its ± spread), and the error
+  rate (share of non-2xx calls). It describes **every trace matching your current filters** — not
+  just the ones on screen — so the numbers hold still while you scroll and change only when you
+  change a filter, the search, or the time range.
 - **Cached input.** Many providers serve part of a prompt from cache at a much lower rate.
-  Wherever input tokens are shown — the page summary, each row's token cell, and the trace
+  Wherever input tokens are shown — the summary, each row's token cell, and the trace
   detail panel — Proxytrace adds a muted **"(N% cached)"** hint showing what share of the input
   was cache-served. The cached portion is priced at the provider's cheaper cached-input rate (when
   it's known), so the displayed **cost** already reflects the discount.
-![The composable filter bar: an Agent chip and an "Any anomaly" chip stacked above the table, with the timeline and page summary following the filtered set.](/screenshots/traces/filters.png)
+![The composable filter bar: an Agent chip and an "Any anomaly" chip stacked above the table, with the timeline and summary following the filtered set.](/screenshots/traces/filters.png)
 
 - **Filters** compose through the **+ Filter** button on the toolbar line, beside search and
   the time range. Pick a field, pick a value, and the filter appears as a removable chip on the
@@ -67,8 +68,17 @@ Typical things you can do:
 - **Search** matches anywhere inside captured message content (and the response), not just
   at the start of a word — searching `efund` finds a trace mentioning `refund`. You can also
   search by model name or the short trace ID.
-- **Per page** lets you choose how many traces to show at once (20, 50, 100, or 200). The
-  total trace count for the current filter is shown alongside the pager.
+- **Scrolling** loads more traces automatically: keep scrolling and the next batch arrives, until
+  an **End of results** marker tells you there is nothing further. There are no page buttons to
+  click. The right of the column header keeps a running count of where you are — `1–16 of 4,208` —
+  so you always know your position and how much is left.
+- **Day markers** appear between rows as you scroll back through time, labelling the day each
+  run of traces belongs to. They show only when the list is sorted by **Time** and spans more than
+  one day — under any other sort, consecutive rows aren't in time order, so a day marker would be
+  misleading.
+- **New traces while you read.** Live captures pause while you are scrolled down, so rows never
+  shift under you mid-read. A small pulsing dot beside the position count means new traces are
+  waiting; scroll back to the top and the list refreshes with them.
 
 ### Sorting the table
 
@@ -77,7 +87,7 @@ Click a column header to sort the table by that column: **Latency**, **Tokens**,
 (largest first — the slowest call, the heaviest token bill); clicking the active column again
 flips the direction. An arrow on the header shows the active sort, which is remembered in your
 browser. Sorting is server-side, so "slowest call in the window" means across *all* matching
-traces, not just the visible page. While sorted by anything other than Time, multi-turn
+traces, not just the ones currently on screen. While sorted by anything other than Time, multi-turn
 conversations are shown as individual calls rather than grouped rows — grouping only makes
 sense in time order.
 
@@ -163,7 +173,7 @@ Close the panel by pressing `Esc` or clicking outside it. Use the arrow buttons 
 `←`/`→` keys) to step to the previous/next trace.
 
 While a trace is open, its ID is written to the page URL (`?trace=…`), so the link is
-shareable and the same trace re-opens after a refresh — even if it isn't on the current page,
+shareable and the same trace re-opens after a refresh — even if it hasn't been scrolled to yet,
 Proxytrace fetches it by ID.
 
 ### Multi-turn conversations
