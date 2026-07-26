@@ -291,17 +291,33 @@ internal class TestRunGroupConfig
 | Owned child (entity can't exist without parent) | `Cascade` |
 | Optional / shared reference | `Restrict` |
 
-### Parallel loading pattern (multiple FK references)
+### Loading multiple FK references — sequentially, never in parallel
 
 ```csharp
 public async Task<IMyEntity> Map(MyEntity stored, CancellationToken ct = default)
 {
-    var parentTask = parents.GetAsync(stored.Parent, ct);
-    var otherTask  = others.GetAsync(stored.Other, ct);
-    await Task.WhenAll(parentTask, otherTask);
-    return factory(parentTask.Result, otherTask.Result, stored);
+    IParent parent = await parents.GetAsync(stored.Parent, ct);
+    IOther other = await others.GetAsync(stored.Other, ct);
+    return factory(parent, other, stored);
 }
 ```
+
+**Do NOT `Task.WhenAll` the loads.** `Func<StorageDbContext>` returns `ambient.Context` whenever a
+transaction is open, so *inside* a transaction every repository shares **one** `StorageDbContext` —
+and two concurrent operations on one context throw `InvalidOperationException: A second operation
+was started on this context instance`. The entity cache does not save you either: `CanUseCache` is
+`cache is not null && !ambient.IsActive`, so a transaction suppresses the cache and both loads
+become real database round trips.
+
+A mapper cannot know whether its caller opened a transaction, and controllers routinely wrap writes
+in `transaction.InvokeAsync`, so a parallel mapper is a latent 500 on every transactional path.
+Every shipped config in `Proxytrace.Storage` loads sequentially — follow them. The loads are
+indexed point lookups, so there is nothing to win.
+
+> This bit for real: `CostLimitConfig` shipped a `Task.WhenAll` mapper and 500'd on creating an
+> agent-scoped cost limit — the only branch that loads two entities. **The in-memory provider does
+> not reproduce it** (it does not enforce the single-operation guard), so the unit suites passed and
+> only the Postgres-backed e2e run caught it.
 
 ---
 

@@ -66,12 +66,13 @@ internal class CostLimitConfig
 
     public async Task<ICostLimit> Map(CostLimitEntity storedEntity, CancellationToken cancellationToken = default)
     {
-        Task<IProject> projectTask = projects.GetAsync(storedEntity.Project, cancellationToken);
-        Task<IAgent?> agentTask = LoadAgentAsync(storedEntity.Agent, cancellationToken);
-        await Task.WhenAll(projectTask, agentTask);
-
-        IProject project = await projectTask;
-        IAgent? agent = await agentTask;
+        // Sequential, NOT Task.WhenAll: inside a transaction every repository shares one
+        // StorageDbContext (Func<StorageDbContext> returns ambient.Context), and two concurrent
+        // operations on it throw "A second operation was started on this context instance". A
+        // mapper cannot know whether its caller opened a transaction, so it must never parallelize.
+        // Both are indexed point lookups, so there is nothing to win here anyway.
+        IProject project = await projects.GetAsync(storedEntity.Project, cancellationToken);
+        IAgent? agent = await LoadAgentAsync(storedEntity.Agent, cancellationToken);
 
         return factory(
             project: project,

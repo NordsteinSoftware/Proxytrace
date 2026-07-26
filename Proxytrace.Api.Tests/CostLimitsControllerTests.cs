@@ -73,6 +73,50 @@ public sealed class CostLimitsControllerTests : BaseTest<Module>
     }
 
     [TestMethod]
+    public async Task Create_WithAgentScope_ReturnsCreatedDtoNamingTheAgent()
+    {
+        IServiceProvider services = GetServices();
+        CostLimitsController controller = ResolveController(services);
+        IAgent agent = await services.GetRequiredService<IAgentGenerator>().GetOrCreateAsync(CancellationToken);
+
+        var result = await controller.Create(
+            new CreateCostLimitRequest(agent.Project.Id, agent.Id, null, 25m), CancellationToken);
+
+        // The agent branch is the only one that loads TWO entities while mapping, and it had no
+        // coverage at all until an e2e run 500'd on it: the mapper loaded them concurrently, and
+        // inside the controller's transaction every repository shares one StorageDbContext (the
+        // cache is suppressed while `ambient.IsActive`), so Npgsql raised "A second operation was
+        // started on this context instance".
+        //
+        // NOTE: this test would NOT have caught that. The in-memory provider does not enforce the
+        // single-operation guard, so the concurrent version passes here — only the Postgres-backed
+        // e2e spec reproduces it. It is kept because the agent-scoped create path deserves coverage
+        // on its own; the concurrency invariant is guarded by the comment in CostLimitConfig.Map.
+        CostLimitDto dto = result.Result.Should().BeOfType<CreatedAtActionResult>()
+            .Which.Value.Should().BeOfType<CostLimitDto>().Subject;
+        dto.AgentId.Should().Be(agent.Id);
+        dto.AgentName.Should().Be(agent.Name);
+        dto.HardLimitEur.Should().Be(25m);
+    }
+
+    [TestMethod]
+    public async Task Update_OnAgentScopedBudget_PersistsNewThresholds()
+    {
+        IServiceProvider services = GetServices();
+        CostLimitsController controller = ResolveController(services);
+        IAgent agent = await services.GetRequiredService<IAgentGenerator>().GetOrCreateAsync(CancellationToken);
+        ICostLimit limit = await CreateLimit(services, agent.Project, agent);
+
+        // Update maps inside a transaction too, so it shares the create path's hazard.
+        var result = await controller.Update(
+            limit.Id, new UpdateCostLimitRequest(10m, 200m, true), CancellationToken);
+
+        CostLimitDto dto = result.Value.Should().BeOfType<CostLimitDto>().Subject;
+        dto.AgentId.Should().Be(agent.Id);
+        dto.HardLimitEur.Should().Be(200m);
+    }
+
+    [TestMethod]
     public async Task Create_WithNoThresholds_ReturnsBadRequest()
     {
         IServiceProvider services = GetServices();

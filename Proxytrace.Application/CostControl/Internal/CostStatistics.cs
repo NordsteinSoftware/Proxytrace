@@ -63,6 +63,10 @@ internal class CostStatistics : ICostStatistics
         Task<IReadOnlyList<ICostLimitBreach>> breachTask = breaches.GetForMonthAsync(monthStart, cancellationToken);
         Task<IReadOnlyList<IAgent>> agentsTask = agents.GetByProjectAsync(projectId, cancellationToken);
 
+        // Safe to fan out ONLY because this is a read path with no transaction open: with no
+        // ambient context each repository call resolves its own StorageDbContext. Wrapping this
+        // method in a transaction would make them share one and turn this into
+        // "A second operation was started on this context instance" — keep it transaction-free.
         await Task.WhenAll(
             seriesTask, windowTotalsTask, monthTask, previousMonthTask,
             unpricedTask, limitsTask, breachTask, agentsTask);
