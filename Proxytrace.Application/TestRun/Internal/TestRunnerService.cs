@@ -285,7 +285,37 @@ internal class TestRunnerService : BackgroundService, ITestRunnerService
             async (testCase, ct) => await RunTestCase(testCase, testRun, customAgent, ct));
 
         testRun = await testRun.ReloadAsync(cancellationToken);
+        testRun = await FinishRun(testRun, cancellationToken);
         broadcaster.PublishComplete(RunCompleteEvent.Create(testRun));
+    }
+
+    /// <summary>
+    /// Moves a run to its terminal state once every case has been attempted. Completion cannot be
+    /// left to the result count alone: <see cref="RunTestCase"/> deliberately skips a case whose
+    /// inference or evaluation threw, so that case never produces a result and the count can never
+    /// be reached — one transient error would strand the run in <c>Running</c> for the lifetime of
+    /// the process while its group already reads <c>Completed</c>. A run that produced a result for
+    /// every case is <c>Completed</c>; one that did not is <c>Failed</c>, which is what an
+    /// incomplete run is — the A/B validators already refuse to score it.
+    /// </summary>
+    private async Task<ITestRun> FinishRun(ITestRun testRun, CancellationToken cancellationToken)
+    {
+        // The last case may already have completed the run through SetTestResult, and a cancelled
+        // run is reconciled by the caller — never transition either.
+        if (testRun.Status.IsTerminal())
+            return testRun;
+
+        int expected = testRun.Group.Suite.TestCases.Count;
+        int produced = testRun.TestResults.Count;
+
+        if (produced == expected)
+            return await testRun.SetCompleted(cancellationToken);
+
+        logger.LogWarning(
+            "Test run {RunId} produced {Produced} of {Expected} case results; {Skipped} case(s) were skipped after an error — marking the run failed",
+            testRun.Id, produced, expected, expected - produced);
+
+        return await testRun.SetFailed(cancellationToken);
     }
 
     private async Task RunTestCase(
@@ -349,9 +379,10 @@ internal class TestRunnerService : BackgroundService, ITestRunnerService
         catch (Exception ex)
         {
             // A single case's inference/evaluation failure (flaky LLM call, transient timeout) must
-            // not abort the whole run: log it and skip this case so the remaining cases still run and
-            // the group completes. Validation guards against scoring an incomplete run (see the A/B
-            // validators' result-count check).
+            // not abort the whole run: log it and skip this case so the remaining cases still run.
+            // The skipped case produces no result, so the run is settled by FinishRun rather than by
+            // the result count, and lands on Failed — visibly incomplete. Validation guards against
+            // scoring it either way (see the A/B validators' result-count check).
             logger.LogError(ex,
                 "Test case {TestCaseId} in run {RunId} failed; skipping it and continuing the run",
                 testCase.Id, testRun.Id);

@@ -11,6 +11,26 @@ follow [Semantic Versioning](https://semver.org). Ongoing work is collected unde
 
 ### Fixed
 
+- **A test run no longer hangs forever because one case failed.** A case whose model call threw was
+  deliberately skipped so the rest of the run could continue — but the run counted results to decide
+  it was finished, and the skipped case never produced one. The run therefore sat at **Running** for
+  as long as the server stayed up, while the group it belonged to already read Completed, and a
+  restart did not clear it. Runs are now settled once every case has been *attempted*: **Completed**
+  when all of them produced a result, **Failed** when any were skipped — visibly incomplete instead
+  of eternally in progress. Runs already stranded this way are cleaned up on the next start.
+
+- **A broken judge no longer reads as a failing test case.** When an LLM evaluator errored, the case
+  it was scoring counted as *not passing*, so a crashed judge was indistinguishable from an agent
+  that behaved badly — it dragged the run's pass rate down and could turn an optimization theory into
+  "could not test". A case is now decided by the evaluators that actually returned a verdict; errored
+  ones are left out, and a case is only unjudged when *every* evaluator on it errored.
+
+- **A long-winded LLM judge no longer throws away its own verdict.** An evaluator that talked past
+  its output budget had its answer cut off mid-sentence, which made the whole response unreadable —
+  including the score it had already given. Judges are now asked to keep their reasoning brief, a
+  failed judge call is retried once, and an answer that was cut off is repaired and read rather than
+  discarded, so the verdict survives even when the explanation does not.
+
 - **Expanded multi-turn conversations no longer overlap the rows beneath them.** Opening a
   conversation's turns while new traces were streaming in left the expanded turns painted on top of
   the following rows, with the text of both stacked on itself. The table measured each row by its

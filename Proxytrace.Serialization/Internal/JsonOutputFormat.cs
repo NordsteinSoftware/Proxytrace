@@ -80,9 +80,43 @@ internal record JsonOutputFormat : IOutputFormat
         if (cleanedOutput is null)
             return default;
 
-        var deserialized = await serializer.DeserializeAsync<TOutput>(cleanedOutput, cancellationToken);
-        return deserialized
-               ?? throw new InvalidOperationException($"Failed to deserialize model output to {typeof(TOutput).FullName}");
+        try
+        {
+            var deserialized = await serializer.DeserializeAsync<TOutput>(cleanedOutput, cancellationToken);
+            return deserialized
+                   ?? throw new InvalidOperationException($"Failed to deserialize model output to {typeof(TOutput).FullName}");
+        }
+        catch (Exception) when (!cancellationToken.IsCancellationRequested)
+        {
+            // A model that runs out of output budget stops mid-token, leaving an unterminated string
+            // and unclosed braces. Everything written before the cut is still good — and the fields
+            // that carry the answer are usually written before the long prose that ran out of room —
+            // so close what was left open and parse that rather than losing the whole response.
+            TOutput? salvaged = await TryParseTruncatedAsync<TOutput>(cleanedOutput, cancellationToken);
+            if (salvaged is not null)
+                return salvaged;
+
+            throw;
+        }
+    }
+
+    private async Task<TOutput?> TryParseTruncatedAsync<TOutput>(string output, CancellationToken cancellationToken)
+    {
+        foreach (string candidate in TruncatedJsonRepair.Candidates(output))
+        {
+            try
+            {
+                var deserialized = await serializer.DeserializeAsync<TOutput>(candidate, cancellationToken);
+                if (deserialized is not null)
+                    return deserialized;
+            }
+            catch (Exception) when (!cancellationToken.IsCancellationRequested)
+            {
+                // This repair didn't parse either — try the next, more aggressive one.
+            }
+        }
+
+        return default;
     }
     
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)

@@ -79,10 +79,19 @@ describe('resultPass', () => {
     expect(resultPass(result([]))).toBeNull();
   });
 
-  it('passes only when every evaluator passes', () => {
+  it('passes only when every evaluator that produced a verdict passes', () => {
     expect(resultPass(result([PASS, PASS]))).toBe(true);
     expect(resultPass(result([PASS, FAIL]))).toBe(false);
-    expect(resultPass(result([PASS, ERR]))).toBe(false);
+  });
+
+  it('ignores errored evaluators rather than counting them as failures', () => {
+    // A judge that crashed says nothing about the agent — it must not read as a defect.
+    expect(resultPass(result([PASS, ERR]))).toBe(true);
+    expect(resultPass(result([FAIL, ERR]))).toBe(false);
+  });
+
+  it('returns null when every evaluator errored — nothing judged the case', () => {
+    expect(resultPass(result([ERR, ERR]))).toBeNull();
   });
 });
 
@@ -91,11 +100,14 @@ describe('resultScore', () => {
     expect(resultScore(result([]))).toBeNull();
   });
 
-  it('is the fraction of passing evaluators, counting errored as non-pass', () => {
+  it('is the fraction of the judging evaluators that passed', () => {
     expect(resultScore(result([PASS, PASS]))).toBe(1);
     expect(resultScore(result([PASS, FAIL]))).toBe(0.5);
-    expect(resultScore(result([PASS, ERR]))).toBe(0.5);
-    expect(resultScore(result([ERR, ERR]))).toBe(0);
+  });
+
+  it('leaves errored evaluators out of both numerator and denominator', () => {
+    expect(resultScore(result([PASS, ERR]))).toBe(1);
+    expect(resultScore(result([ERR, ERR]))).toBeNull();
   });
 });
 

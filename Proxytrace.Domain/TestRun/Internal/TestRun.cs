@@ -99,6 +99,12 @@ internal record TestRun : DomainEntity<ITestRun>, ITestRun
     public Task<ITestRun> SetRunning(CancellationToken cancellationToken = default)
         => SetState(TestRunStatus.Running, cancellationToken);
 
+    public Task<ITestRun> SetCompleted(CancellationToken cancellationToken = default)
+        => SetState(TestRunStatus.Completed, cancellationToken);
+
+    public Task<ITestRun> SetFailed(CancellationToken cancellationToken = default)
+        => SetState(TestRunStatus.Failed, cancellationToken);
+
     public Task<ITestRun> SetCancelled(CancellationToken cancellationToken = default)
         => SetState(TestRunStatus.Cancelled, cancellationToken);
 

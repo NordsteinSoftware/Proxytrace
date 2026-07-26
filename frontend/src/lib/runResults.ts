@@ -50,19 +50,27 @@ export function scoreLabel(score: number | null): string {
 
 // ── Case-level ───────────────────────────────────────────────────────────────
 
-/** A case passes only if every evaluator passes. `null` when it has no evaluators yet. */
+/**
+ * A case passes only if every evaluator that produced a verdict passed. Errored evaluators are
+ * excluded rather than counted as failures — a judge that crashed says nothing about the agent, and
+ * counting it as a fail makes a broken evaluator look like a defect. Mirrors the backend's
+ * `TestResultExtensions.IsPass`. `null` when nothing judged the case (no evaluators, or all errored).
+ */
 export function resultPass(r: TestResultDto): boolean | null {
-  if (r.evaluations.length === 0) return null;
-  return r.evaluations.every(isEvalPass);
+  const judged = r.evaluations.filter(e => !isErrored(e));
+  if (judged.length === 0) return null;
+  return judged.every(isEvalPass);
 }
 
 /**
- * Case score = fraction of evaluators that passed (0..1). Errored evaluators count
- * as non-pass, matching the fixture drawer's composite. `null` when no evaluators.
+ * Case score = fraction of the evaluators that produced a verdict which passed (0..1). Errored
+ * evaluators are out of both numerator and denominator, matching {@link resultPass}. `null` when
+ * nothing judged the case.
  */
 export function resultScore(r: TestResultDto): number | null {
-  if (r.evaluations.length === 0) return null;
-  return r.evaluations.filter(isEvalPass).length / r.evaluations.length;
+  const judged = r.evaluations.filter(e => !isErrored(e));
+  if (judged.length === 0) return null;
+  return judged.filter(isEvalPass).length / judged.length;
 }
 
 /** Composite percent (0..100) from passed/total evaluators; `null` when total is 0. */

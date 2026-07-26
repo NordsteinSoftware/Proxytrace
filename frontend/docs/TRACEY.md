@@ -360,8 +360,9 @@ construction agrees with the tool results in its own input.
 
 **A case verdict is tri-state, so absence proves nothing.** `resultPass` is `boolean | null` and the
 old `get_run_failures` returned only `=== false` cases, so "my case isn't in the list" silently
-unioned *passed*, *unjudged* and *not in this run* — and since `isEvalPass` is false for an errored
-evaluator, a crashed judge was byte-identical to a real failure. `get_case_results` replaces it:
+unioned *passed*, *unjudged* and *not in this run* — and a case whose judge broke landed in whichever
+of those its surviving evaluators put it in, never reporting the broken judge. `get_case_results`
+replaces it:
 given `caseIds` it reports `pass` / `fail` / `unjudged` / `evaluator-error` / `not-in-run` /
 `run-incomplete` per case, checking the error case *before* pass/fail. Only `pass` means passed.
 Called bare it still returns the run's failing cases, so it is a strict superset. The pure
@@ -369,8 +370,9 @@ derivation lives in `tools/case-verdict.ts` and reuses `lib/runResults.ts` rathe
 pass semantics. Its optional `expect` argument is presentational only — it labels the card red or
 green so a false narrative sits directly above a contradicting verdict.
 
-**Evaluators replace, they never union.** A case passes only when **every** attached evaluator
-passes (`lib/runResults.ts`), and a suite created without `evaluatorIds` gets a default ExactMatch
+**Evaluators replace, they never union.** A case passes only when **every** attached evaluator that
+produced a verdict passes (errored ones are excluded — `lib/runResults.ts`), and a suite created
+without `evaluatorIds` gets a default ExactMatch
 judge. Attaching a behavioral judge *alongside* it would leave a correct prose answer unpassable, so
 `set_suite_evaluators` sets the whole set. `get_suite`'s digest carries `evaluators` and `cases`
 (with each case's id and clipped expected output) to make that safe to do — and to fix a standing

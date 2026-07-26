@@ -56,5 +56,19 @@ public interface ITestRun : IDomainEntity<ITestRun>
 
     Task<ITestRun> SetRunning(CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Marks the run finished. <see cref="SetTestResult"/> already completes a run that produced a
+    /// result for every case; this is the explicit transition the runner applies once every case has
+    /// been *attempted*, which is the only signal available when a case was skipped and therefore
+    /// never produced a result. Throws if the run is already terminal.
+    /// </summary>
+    Task<ITestRun> SetCompleted(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Marks the run failed — it finished without producing a result for every case in the suite, so
+    /// it is not usable as evidence. Throws if the run is already terminal.
+    /// </summary>
+    Task<ITestRun> SetFailed(CancellationToken cancellationToken = default);
+
     Task<ITestRun> SetCancelled(CancellationToken cancellationToken = default);
 }

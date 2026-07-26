@@ -170,8 +170,9 @@ internal abstract class TheoryValidatorBase : ITheoryValidator
     /// the suite. A run that failed or cancelled part-way (or skipped a case after an inference error)
     /// leaves fewer results than the suite has cases, so scoring it would compare baseline and
     /// candidate over different numbers of cases and invalidate the two-proportion test — the
-    /// validators return Inconclusive instead. (Per-run status is not used: only the group is marked
-    /// terminal, so the result count is the reliable completeness signal.)
+    /// validators return Inconclusive instead. (The run's own status settles on Failed in exactly
+    /// this case, but the result count stays the check: it is what the two-proportion test consumes,
+    /// and it also covers a run whose status was reconciled by the reaper.)
     /// </summary>
     protected static bool IsRunComplete(ITestRun run, ITestSuite suite)
         => suite.TestCases.Count > 0

@@ -440,8 +440,9 @@ public class JsonOutputParserTests : BaseTest<Module>
     [TestMethod]
     public async Task ParseAsync_InvalidJson_ThrowsSerializationException()
     {
-        // Arrange
-        string invalidJson = """{"name":"John","age":30,"isActive":""";
+        // Structurally balanced but meaningless — nothing suggests the model was cut off, so there
+        // is nothing to recover and the failure must surface.
+        string invalidJson = """{"name":"John","age":}""";
 
         // Act & Assert
         await Format<SimpleModel>().Invoking(f => f.ParseAsync<SimpleModel>(invalidJson))
@@ -647,6 +648,79 @@ public class JsonOutputParserTests : BaseTest<Module>
         string schema3 = Format<ModelWithEnum>().As<JsonOutputFormat>().Schema;
         schema1.Should().Be(schema2);
         schema1.Should().NotBe(schema3);
+    }
+
+    // ── truncated model output ────────────────────────────────────────────────
+    //
+    // A judge that talks past its output budget stops mid-token: the JSON arrives with an
+    // unterminated string and unclosed braces. Everything before the cut is intact, and the field
+    // that carries the answer is usually written before the long prose that ran out of room — so the
+    // answer is recovered rather than discarded with its tail.
+
+    [TestMethod]
+    public async Task ParseAsync_CutOffMidString_RecoversTheFieldsWrittenBeforeTheCut()
+    {
+        // Verbatim shape of the real truncation from issue #453: a complete verdict followed by a
+        // reasoning string that simply stops — no closing quote, no closing brace.
+        string json = """{"status":"firstValue","description":"The response clearly addresses the""";
+
+        var result = await Format<ModelWithEnum>().ParseAsync<ModelWithEnum>(json);
+
+        result.Should().NotBeNull();
+        result.Status.Should().Be(TestEnum.FirstValue);
+        result.Description.Should().Be("The response clearly addresses the");
+    }
+
+    [TestMethod]
+    public async Task ParseAsync_CutOffMidPropertyName_DropsTheIncompleteMemberAndKeepsTheRest()
+    {
+        // Closing the open brace cannot rescue a half-written key, so the incomplete member is
+        // dropped and the members that did complete are kept.
+        string json = """{"name":"John","age":30,"isAct""";
+
+        var result = await Format<SimpleModel>().ParseAsync<SimpleModel>(json);
+
+        result.Should().NotBeNull();
+        result.Name.Should().Be("John");
+        result.Age.Should().Be(30);
+        result.IsActive.Should().BeFalse();
+    }
+
+    [TestMethod]
+    public async Task ParseAsync_CutOffInsideNestedObject_ClosesEveryOpenContainer()
+    {
+        string json = """{"items":["a","b"],"nestedModel":{"name":"Jane","age":25""";
+
+        var result = await Format<ComplexModel>().ParseAsync<ComplexModel>(json);
+
+        result.Should().NotBeNull();
+        result.Items.Should().Equal("a", "b");
+        result.NestedModel.Should().NotBeNull();
+        result.NestedModel.Name.Should().Be("Jane");
+    }
+
+    [TestMethod]
+    public async Task ParseAsync_CutOffAfterAPropertyColon_KeepsTheCompletedMembers()
+    {
+        string json = """{"name":"John","age":30,"isActive":""";
+
+        var result = await Format<SimpleModel>().ParseAsync<SimpleModel>(json);
+
+        result.Should().NotBeNull();
+        result.Name.Should().Be("John");
+        result.Age.Should().Be(30);
+    }
+
+    [TestMethod]
+    public async Task ParseAsync_MalformedBeyondTruncation_StillThrows()
+    {
+        // Repair is only for output that was cut off. Genuinely broken JSON must not be papered
+        // over into some object that the model never said.
+        string json = """{"name" "John" 30 true}""";
+
+        await FluentActions
+            .Invoking(() => Format<SimpleModel>().ParseAsync<SimpleModel>(json))
+            .Should().ThrowAsync<SerializationException>();
     }
 
     [TestMethod]
