@@ -110,11 +110,19 @@ public sealed record AgentCallSummary(
     }
 
     /// <summary>
-    /// Sample standard deviation derived from three running scalars, so the database never has to
-    /// compute one. Returns zero for fewer than two values (sample standard deviation is undefined
-    /// there) and clamps a negative variance to zero: when every value is identical,
-    /// <c>sumOfSquares - sum²/n</c> can land marginally below zero in floating point, and taking a
-    /// square root of that would surface NaN in the UI.
+    /// Population standard deviation derived from three running scalars, so the database never has
+    /// to compute one.
+    /// <para>
+    /// Population, not sample: this aggregate covers <i>every</i> call matching the filter, so the
+    /// rows are the whole population rather than a draw from one. It also matches what the traces
+    /// KPI band displayed when it was computed client-side, so the "±" figure does not silently
+    /// change meaning.
+    /// </para>
+    /// <para>
+    /// Returns zero for fewer than two values, and clamps a negative variance to zero: when every
+    /// value is identical, <c>sumOfSquares - sum²/n</c> can land marginally below zero in floating
+    /// point, and a square root of that would surface NaN in the UI.
+    /// </para>
     /// </summary>
     public static double StdDev(double sum, double sumOfSquares, int n)
     {
@@ -123,7 +131,7 @@ public sealed record AgentCallSummary(
             return 0;
         }
 
-        double variance = (sumOfSquares - sum * sum / n) / (n - 1);
+        double variance = (sumOfSquares - sum * sum / n) / n;
         return variance <= 0 ? 0 : Math.Sqrt(variance);
     }
 }

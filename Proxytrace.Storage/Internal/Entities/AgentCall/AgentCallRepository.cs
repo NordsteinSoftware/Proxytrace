@@ -240,6 +240,70 @@ internal class AgentCallRepository : AbstractRepository<IAgentCall, AgentCallEnt
             aggregated.Select(a => (a.Index, a.Total, a.Errors)), from, to, buckets);
     }
 
+    public async Task<AgentCallSummary> GetSummaryAsync(
+        AgentCallFilter filter,
+        CancellationToken cancellationToken = default)
+    {
+        var context = contextFactory();
+        var query = await BuildFilteredQueryAsync(context, filter, cancellationToken);
+        if (query is null)
+        {
+            return AgentCallSummary.Empty;
+        }
+
+        // GROUP BY endpoint because cost is priced per endpoint (CalculateCost), so it cannot be
+        // summed in SQL. One row comes back per distinct endpoint in the result — bounded by how
+        // many endpoints are configured, never by how many calls matched. Tokens, latency moments,
+        // and the error count ride along in the same aggregate so this stays one round trip.
+        //
+        // The cached-token clamp is applied PER ROW rather than after aggregating: CalculateCost
+        // clamps cached at input per call, so clamping post-aggregation would price differently
+        // whenever any single row carried more cached tokens than input.
+        //
+        // Latency comes back as sum + sum-of-squares + count so the standard deviation can be
+        // derived in the domain layer — EF cannot translate stddev_samp.
+        var grouped = await query
+            .GroupBy(e => e.EndpointId)
+            .Select(g => new
+            {
+                EndpointId = g.Key,
+                Count = g.Count(),
+                InputTokens = g.Sum(e => (decimal?)e.InputTokens) ?? 0m,
+                OutputTokens = g.Sum(e => (decimal?)e.OutputTokens) ?? 0m,
+                CachedInputTokens = g.Sum(e => (decimal?)(
+                    e.CachedInputTokens < e.InputTokens ? e.CachedInputTokens : e.InputTokens)) ?? 0m,
+                LatencySum = g.Sum(e => e.LatencyMs) ?? 0d,
+                LatencySumOfSquares = g.Sum(e => e.LatencyMs * e.LatencyMs) ?? 0d,
+                LatencyCount = g.Count(e => e.LatencyMs != null),
+                ErrorCount = g.Count(e => e.HttpStatus < 200 || e.HttpStatus >= 300),
+            })
+            .ToListAsync(cancellationToken);
+
+        if (grouped.Count == 0)
+        {
+            return AgentCallSummary.Empty;
+        }
+
+        var endpointsById = (await endpoints.GetManyAsync(
+                grouped.Select(g => g.EndpointId).Distinct().ToArray(), cancellationToken, ignoreMissing: true))
+            .ToDictionary(e => e.Id);
+
+        var groups = grouped.Select(g => new AgentCallSummaryGroup(
+            EndpointId: g.EndpointId,
+            Count: g.Count,
+            InputTokens: (ulong)g.InputTokens,
+            OutputTokens: (ulong)g.OutputTokens,
+            CachedInputTokens: (ulong)g.CachedInputTokens,
+            LatencySum: g.LatencySum,
+            LatencySumOfSquares: g.LatencySumOfSquares,
+            LatencyCount: g.LatencyCount,
+            ErrorCount: g.ErrorCount));
+
+        return AgentCallSummary.Fold(
+            groups,
+            id => endpointsById.TryGetValue(id, out var endpoint) ? endpoint : null);
+    }
+
     /// <summary>
     /// Builds the filtered (but unpaged, unordered) query shared by list + histogram reads.
     /// Returns <see langword="null"/> when the filter provably matches nothing (e.g. a fulltext

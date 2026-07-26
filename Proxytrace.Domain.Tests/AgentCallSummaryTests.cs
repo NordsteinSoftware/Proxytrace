@@ -166,16 +166,19 @@ public sealed class AgentCallSummaryTests
     }
 
     [TestMethod]
-    public void StdDev_KnownSample_MatchesTextbookValue()
+    public void StdDev_KnownDataset_MatchesPopulationStandardDeviation()
     {
-        // 2,4,4,4,5,5,7,9 → sum 40, sum of squares 228, n 8. Sample stddev = sqrt(28/7) = 2.
-        AgentCallSummary.StdDev(sum: 40, sumOfSquares: 228, n: 8).Should().BeApproximately(2d, 1e-9);
+        // 2,4,4,4,5,5,7,9 → sum 40, sum of squares 232, n 8, mean 5.
+        // Population variance = (232 - 40²/8) / 8 = 32/8 = 4, so the deviation is 2.
+        // (The sample deviation for the same data is sqrt(32/7) ≈ 2.138 — this aggregate covers the
+        // whole matching set, so population is the right one.)
+        AgentCallSummary.StdDev(sum: 40, sumOfSquares: 232, n: 8).Should().BeApproximately(2d, 1e-9);
     }
 
     [TestMethod]
     public void StdDev_SingleValue_IsZero()
     {
-        // Sample standard deviation is undefined for n < 2; the KPI band shows "± 0".
+        // One value cannot deviate from itself; the KPI band shows "± 0".
         AgentCallSummary.StdDev(sum: 100, sumOfSquares: 10_000, n: 1).Should().Be(0);
     }
 
