@@ -5,7 +5,7 @@
   },
   {
     "label": "Rücksendung starten – falscher Artikel",
-    "prompt": "Ich habe in Bestellung #20114 den falschen Artikel erhalten. Ich hatte einen Mixer bestellt, bekam aber etwas völlig anderes. Können Sie eine Rücksendung für mich einleiten?"
+    "prompt": "Ich habe in Bestellung #20171 den falschen Artikel erhalten. Ich hatte einen Mixer bestellt, bekam aber etwas völlig anderes. Können Sie eine Rücksendung für mich einleiten?"
   },
   {
     "label": "Wie lange dauert eine Rückerstattung?",
@@ -21,7 +21,7 @@
   },
   {
     "label": "Mixer beim Versand beschädigt",
-    "prompt": "Mein VortexBlend 700 Mixer ist heute angekommen und der Glaskrug ist gesprungen. Er scheint beim Versand beschädigt worden zu sein. Wie erhalte ich am schnellsten Ersatz oder eine Rückerstattung? Meine Bestellnummer ist #20114."
+    "prompt": "Mein VortexBlend 700 Mixer ist heute angekommen und der Glaskrug ist gesprungen. Er scheint beim Versand beschädigt worden zu sein. Wie erhalte ich am schnellsten Ersatz oder eine Rückerstattung? Meine Bestellnummer ist #20160."
   },
   {
     "label": "⚡ Der Trick (Demo)",

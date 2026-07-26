@@ -54,3 +54,17 @@ In CI (`.github/workflows/e2e.yml`) a failing run uploads two artifacts: `playwr
 (always) and `e2e-stack-logs` (on failure only) — per-service Docker Compose logs, container
 states, and `docker inspect` output, captured *before* teardown so stack-side failures stay
 triageable.
+
+## Prompt behavior (prompt-lab)
+
+Prompts are the one part of the system no assertion can cover: the compiler is a language model, so
+a diff tells you nothing until you run it. The **`prompt-lab` skill**
+(`.claude/skills/prompt-lab/SKILL.md`) fires scenarios at the live upstream model with an agent's
+real prompt and real tool schemas, A/Bs the working copy against the committed version, and writes
+transcripts to read.
+
+Use it whenever you change Tracey's system prompt, one of her skills or tool descriptions
+(`frontend/src/features/tracey/`), or a sample-client demo agent's prompt. It needs the kiosk LLM
+credentials in the repo-root `.env` and makes real (paid) model calls; it needs no Docker, no
+database and no login, because Tracey's data tools answer from fixtures. Transcripts land in the
+gitignored `.prompt-lab/`.

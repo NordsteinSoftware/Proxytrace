@@ -14,6 +14,12 @@ internal class Module : Autofac.Module
     {
         base.Load(builder);
 
+        // Fallback gating for hosts that bind no configuration (tests, tooling). The API registers
+        // the configured instance before the modules load, so PreserveExistingDefaults leaves that
+        // one in charge wherever it exists and this one only fills the gap.
+        builder.RegisterInstance(new OptimizationOptions())
+            .PreserveExistingDefaults();
+
         builder.RegisterType<CompositeOptimizer>()
             .As<IOptimizer>()
             .SingleInstance();

@@ -139,7 +139,13 @@ internal sealed class SuiteTools
                  "Pass expectedOutput to instead record a human correction — 'the agent saw this input, " +
                  "and the right answer was X' — which is what turns a rejected output into a regression " +
                  "test. Either way the case keeps a link back to the source trace. The suite and trace " +
-                 "must belong to the project.")]
+                 "must belong to the project. IMPORTANT when correcting: a run scores exactly one " +
+                 "model call, so pick the trace where the agent MADE the wrong decision, not the one " +
+                 "that reports it. An agent turn that uses tools spans several traces; the last one " +
+                 "already contains the harmful tool call and its result, so a corrected expected " +
+                 "output contradicting that result can never pass. Check the new case's " +
+                 "resolvedToolCallCount in the returned suite — anything above 0 means you graded a " +
+                 "summary; correct the earlier trace whose response contains the wrong tool call.")]
     public async Task<TestSuiteDto> AddTraceToSuite(
         [Description("The suite id (GUID), from list_suites.")] Guid suiteId,
         [Description("The trace id (GUID) to add, from list_traces.")] Guid traceId,

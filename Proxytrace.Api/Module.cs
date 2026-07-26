@@ -17,6 +17,7 @@ using Proxytrace.Application.AuditLog;
 using Proxytrace.Application.Auth;
 using Proxytrace.Application.Auth.Local;
 using Proxytrace.Application.Cleanup;
+using Proxytrace.Application.Optimization;
 using Proxytrace.Domain.Kiosk;
 using Proxytrace.Application.ErrorLog;
 using Proxytrace.Application.Pricing;
@@ -88,6 +89,16 @@ internal sealed class Module : Autofac.Module
         var kiosk = configuration.GetSection("Kiosk").Get<KioskOptions>() ?? new KioskOptions();
         builder
             .RegisterInstance(kiosk)
+            .SingleInstance();
+
+        // How hard an optimization theory must work to become a proposal. Explicit configuration
+        // always wins; with none, kiosk falls back to the showcase trade (one sample per arm, any
+        // improvement wins) and every other deployment to the honest defaults — three samples and
+        // a significance gate. See OptimizationOptions.
+        var optimization = configuration.GetSection("Optimization").Get<OptimizationOptions>()
+                           ?? (kiosk.Enabled ? OptimizationOptions.KioskShowcase : new OptimizationOptions());
+        builder
+            .RegisterInstance(optimization)
             .SingleInstance();
 
         // Optional real LLM endpoint for a fully functional kiosk demo. Validate it up front (fail fast

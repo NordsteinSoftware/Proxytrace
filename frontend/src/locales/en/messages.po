@@ -1061,6 +1061,9 @@ msgstr "Arguments"
 msgid "Arguments must be valid JSON."
 msgstr "Arguments must be valid JSON."
 
+msgid "Ask a specific question and Tracey will inspect the full trace before answering."
+msgstr "Ask a specific question and Tracey will inspect the full trace before answering."
+
 msgid "Ask about your agents, suites, runs, or proposals — or have me run a suite, review a proposal, or plot your data."
 msgstr "Ask about your agents, suites, runs, or proposals — or have me run a suite, review a proposal, or plot your data."
 
@@ -1069,6 +1072,9 @@ msgstr "Ask an admin for a new invite link."
 
 msgid "Ask Tracey"
 msgstr "Ask Tracey"
+
+msgid "Ask Tracey about this trace"
+msgstr "Ask Tracey about this trace"
 
 msgid "Ask Tracey…  (/ for tools)"
 msgstr "Ask Tracey…  (/ for tools)"
@@ -2379,6 +2385,9 @@ msgstr "Improved"
 
 msgid "Improved the pass rate."
 msgstr "Improved the pass rate."
+
+msgid "improvement only"
+msgstr "improvement only"
 
 msgid "in"
 msgstr "in"
@@ -3941,6 +3950,9 @@ msgstr "pt"
 msgid "Pulled from the provider; prices load automatically."
 msgstr "Pulled from the provider; prices load automatically."
 
+msgid "Question"
+msgstr "Question"
+
 msgid "Queue"
 msgstr "Queue"
 
@@ -5316,6 +5328,9 @@ msgstr "Total tokens"
 msgid "Trace"
 msgstr "Trace"
 
+msgid "Trace {traceId}"
+msgstr "Trace {traceId}"
+
 msgid "Trace Deleted"
 msgstr "Trace Deleted"
 
@@ -5702,6 +5717,9 @@ msgstr "Which agent should this suite test?"
 
 msgid "Why this change"
 msgstr "Why this change"
+
+msgid "Why was the refund approved?"
+msgstr "Why was the refund approved?"
 
 msgid "widget"
 msgstr "widget"

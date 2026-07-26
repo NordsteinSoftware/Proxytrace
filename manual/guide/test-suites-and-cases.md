@@ -16,6 +16,28 @@ The intended workflow is to **promote production traces** into durable benchmark
 Because cases come from real traffic, suites stay grounded in behaviors that actually
 matter.
 
+### Pick the trace where the agent decided
+
+A run asks the agent for **one** reply per case: it sends the case input and scores the next
+message. It does not replay a whole conversation.
+
+That matters when the agent used tools. A single agent turn that calls tools is captured as
+**several traces** — one per model call — and they all share a conversation. Each trace holds
+the conversation as it stood at that moment, so the **last** one already contains every tool
+call the agent made *and* every result it got. The only reply the agent can still give there
+is a closing summary.
+
+So when you are turning a mistake into a regression test, promote the trace where the agent
+**made** the wrong move, not the one that reports it. If you promote the final trace and then
+[edit the expected output](#editing-the-expected-output) to say the agent should have refused,
+the case can never pass: the input already says the action succeeded, and no amount of prompt
+tuning can change a result that is part of the input. The case stays red forever, which looks
+exactly like a fix that did not work.
+
+The trace you want is the earlier one whose own response contains the wrong tool call — open
+the conversation in the trace detail panel to find it. Promoting a trace **as-is** is never
+affected; only a hand-edited expectation can contradict the input.
+
 ## The suites page
 
 ![The Test Suites page: a selectable suite list on the left and the selected suite's detail panel on the right.](/screenshots/suites/overview.png)

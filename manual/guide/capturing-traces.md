@@ -127,8 +127,9 @@ Click a trace to open its detail panel. The header leads with the **agent** that
 call (click the name to jump to its [agent page](/guide/agents)), followed by the **model**
 and the call's **HTTP status**. The line below shows the full **trace ID** with a **copy**
 button that puts it on your clipboard, and the exact **capture time** (date and time, to the
-second). The header also holds the panel's actions: **Ask Tracey** hands the trace to the
-[AI assistant](/guide/tracey), and **Add test** promotes it into a
+second). The header also holds the panel's actions: **Ask Tracey** opens a question box where
+you can ask something specific about this call (for example, “Why was the refund approved?”),
+then hands the trace ID and your question to the [AI assistant](/guide/tracey). **Add test** promotes it into a
 [test case](/guide/test-suites-and-cases).
 
 If the call was [flagged as an outlier](/guide/outliers) or by a

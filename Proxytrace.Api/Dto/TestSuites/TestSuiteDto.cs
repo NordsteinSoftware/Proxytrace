@@ -64,7 +64,13 @@ public record TestCaseDto(
     TestSuiteMessageDto ExpectedOutput,
     // The trace this case was promoted or corrected from, if any. Null for synthetic cases. Lets a
     // consumer walk the chain trace → case without keeping a side-table of its own.
-    Guid? SourceAgentCallId = null);
+    Guid? SourceAgentCallId = null,
+    // How many tool calls this case's input already resolved. A run scores exactly one model call,
+    // so a non-zero count means the case grades the message the agent writes *after* those calls
+    // came back — never the decision to make them. Promoting the last call of a tool loop is the
+    // usual way to get one by accident: the harmful call already succeeded in the input, so no
+    // expected output that contradicts it can ever pass. See docs/optimization-loop.md.
+    int ResolvedToolCallCount = 0);
 
 public record TestSuiteMessageDto(
     string Role,

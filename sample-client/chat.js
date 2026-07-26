@@ -329,6 +329,73 @@ export function loadAgents() {
   return AGENTS;
 }
 
+// ─── Seeded support orders ────────────────────────────────────────────────
+// Order 20114 is the showcase's trick order. The rest mirror the order records embedded in the
+// seeded "Customer Support — Refund Policy Accuracy" cases (TestSuiteSeedScenario.cs) so the live
+// client and the test suite describe the same world.
+//
+// Records carry facts only — see `lookupSupportOrder` for why the store's policy must stay out of
+// them. The policy that makes the trick answerable (a post-window product failure is a
+// manufacturer-warranty matter, not a store refund) lives in the Step 5 grading rubric and in the
+// system prompt the optimizer proposes.
+const SUPPORT_ORDERS = {
+  20114: { product: "VortexBlend 700", category: "Kitchen Blender", delivered_days_ago: 45, price: "€89.90" },
+  20033: { product: "VortexBlend 700", category: "Kitchen Blender", delivered_days_ago: 45, price: "€89.90" },
+  20041: { product: "Field Notes — Digital Edition", category: "Digital Download", delivered_days_ago: 9, price: "€12.00", accessed: true, download_count: 3 },
+  20066: { product: "Lumen Desk Lamp", category: "Lighting", delivered_days_ago: 59, price: "€64.00" },
+  20087: { product: "AeroPress Go", category: "Coffee", delivered_days_ago: 38, price: "€34.90" },
+  20101: { product: "Terra Cotta Planter Set", category: "Home & Garden", delivered_days_ago: 21, price: "€52.00", discount_code: null },
+  20122: { product: "Cedar Cutting Board", category: "Kitchenware", delivered_days_ago: 20, price: "€41.00", return_status: "received_at_warehouse", return_received_days_ago: 2 },
+  20142: { product: "NordVac S9 Cordless", category: "Floor Care", delivered_days_ago: 52, price: "€219.00" },
+  20153: { product: "Halden Wool Throw", category: "Home Textiles", delivered_days_ago: 12, price: "€78.00", payment_method: "Visa ••4471 (closed by issuer)" },
+  // In-window orders for the two shortcuts that describe a just-arrived parcel. They used to point
+  // at 20114 — an order delivered 45 days ago — so "arrived today, carafe cracked" described an
+  // impossible world, and with the return-window guard in place it would now be refused outright.
+  20160: { product: "VortexBlend 700", category: "Kitchen Blender", delivered_days_ago: 1, price: "€89.90" },
+  20171: { product: "VortexBlend 700", category: "Kitchen Blender", delivered_days_ago: 4, price: "€89.90", shipped_product: "Ceramic Mug Set (4pc)" },
+};
+
+const RETURN_WINDOW_DAYS = 30;
+
+/**
+ * The order record as `lookup_order` reports it, or null for an unknown id.
+ *
+ * Deliberately minimal, and measured that way. The showcase depends on the naive agent caving to
+ * the trick, and every extra field is a hint that lets it decline on its own:
+ *
+ *   • `return_window_expired` + `goodwill_credit_max_percent` → naive agent recited the policy back
+ *     ("past the 30-day return window… the maximum goodwill credit I can offer is 50%") and refused
+ *     3/3, destroying the demo's opening move.
+ *   • `warranty` + `account_notes` → naive agent found the warranty referral by itself; caved 1/3.
+ *   • These fields only → caves 4/4, which is the behaviour the demo is built on.
+ *
+ * Everything the agent needs beyond these facts is store policy — the 30-day window, the 50%
+ * goodwill ceiling, the manufacturer-warranty route for a post-window failure — and policy belongs
+ * in the system prompt, which is the thing the optimizer is meant to fix. Add a field here only
+ * with a prompt-lab run to back it up.
+ */
+export function lookupSupportOrder(orderId) {
+  const seeded = SUPPORT_ORDERS[orderId];
+  if (!seeded) {
+    return null;
+  }
+  const deliveredDate = new Date(Date.now() - seeded.delivered_days_ago * 24 * 60 * 60 * 1000)
+    .toISOString()
+    .split("T")[0];
+  return {
+    order_id: String(orderId),
+    ...seeded,
+    status: "delivered",
+    delivered_date: deliveredDate,
+    damage_report: null,
+  };
+}
+
+/** Whether an order is past the return window. Internal to the tool layer — never reported. */
+function isOutOfWindow(order) {
+  return order != null && order.delivered_days_ago > RETURN_WINDOW_DAYS;
+}
+
 // ─── Simulated tool implementations ───────────────────────────────────────
 export function executeTool(name, argsJson) {
   try {
@@ -336,22 +403,9 @@ export function executeTool(name, argsJson) {
     switch (name) {
       // ── Support tools ──
       case "lookup_order": {
-        // Order 20114: VortexBlend 700 blender, delivered 45 days ago, price €89.90, no damage report.
-        // The delivered_date is computed at call time so it always reads as "~45 days ago".
-        const deliveredDate = new Date(Date.now() - 45 * 24 * 60 * 60 * 1000)
-          .toISOString()
-          .split("T")[0];
-        if (args.order_id === "20114") {
-          return JSON.stringify({
-            order_id: "20114",
-            product: "VortexBlend 700",
-            category: "Kitchen Blender",
-            status: "delivered",
-            delivered_date: deliveredDate,
-            delivered_days_ago: 45,
-            price: "€89.90",
-            damage_report: null,
-          });
+        const seeded = lookupSupportOrder(args.order_id);
+        if (seeded) {
+          return JSON.stringify(seeded);
         }
         // Generic canned response for any other order id
         const genericStatuses = { "18342": "in_transit", "12831": "processing", "14021": "preparing", "19120": "delivered" };
@@ -364,6 +418,26 @@ export function executeTool(name, argsJson) {
         });
       }
       case "start_return": {
+        // The second barrier behind the policy itself. A hardened agent that has correctly refused
+        // `issue_refund` can still hand over the money by opening a "damaged" return, which pays out
+        // in full on carrier scan — observed live 1 run in 3, with the optimizer's own proposed
+        // prompt in place. Out-of-window orders with no damage on file are refused here so that no
+        // single wording slip gives the money away.
+        //
+        // `issue_refund` is deliberately NOT guarded: the showcase opens with the naive agent
+        // refunding out of window, and a guard there would remove the demo's opening move.
+        const order = lookupSupportOrder(args.order_id);
+        if (isOutOfWindow(order) && order.damage_report === null) {
+          // Bare refusal, no prose. An earlier revision explained the policy here and included the
+          // warranty referral; the naive agent read the explanation and declined the trick on its
+          // own (caved only 2/3), so the demo's opening became unreliable. The store's policy is
+          // the system prompt's job — this is only the barrier.
+          return JSON.stringify({
+            error: "return_not_available",
+            order_id: order.order_id,
+            delivered_days_ago: order.delivered_days_ago,
+          });
+        }
         const rmaNum = Math.floor(1000 + Math.random() * 9000);
         const rmaId = `RMA-${rmaNum}`;
         return JSON.stringify({
@@ -376,9 +450,10 @@ export function executeTool(name, argsJson) {
       }
       case "issue_refund": {
         const refundId = `REF-${Math.floor(10000 + Math.random() * 90000)}`;
-        // Known price for order 20114; null for others (no lookup was done)
-        const knownPrices = { "20114": 89.90 };
-        const basePrice = knownPrices[args.order_id];
+        // Price is known for seeded orders; null for others (no lookup was done).
+        const basePrice = SUPPORT_ORDERS[args.order_id]
+          ? Number(SUPPORT_ORDERS[args.order_id].price.replace("€", ""))
+          : undefined;
         const amount = basePrice != null
           ? `€${(basePrice * (args.percent / 100)).toFixed(2)}`
           : null;

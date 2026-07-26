@@ -25,8 +25,43 @@ const suiteDigest = (suite: TestSuiteDto) => ({
     id: testCase.id,
     sourceAgentCallId: testCase.sourceAgentCallId ?? null,
     expected: clip(testCase.expectedOutput.content, 120),
+    resolvedToolCalls: testCase.resolvedToolCallCount ?? 0,
   })),
 });
+
+/**
+ * Cases whose input already contains completed tool calls, paired with the expected output they were
+ * corrected to.
+ *
+ * A run scores exactly ONE model call, so such a case grades the message written after those calls
+ * came back — never the choice to make them. Correcting one is the trap this reports: the last call
+ * of a tool loop contains the harmful call AND its success, so an expected output that contradicts
+ * that result cannot be produced by any prompt. The case fails forever and reads as "the fix did not
+ * work" when nothing was ever wrong with the fix.
+ */
+function summaryOnlyCorrections(
+  added: { caseId: string; agentCallId: string; isCorrection: boolean }[],
+  cases: TestSuiteDto['testCases'],
+) {
+  const resolved = new Map(cases.map((testCase) => [testCase.id, testCase.resolvedToolCallCount ?? 0]));
+  return added.flatMap((entry) => {
+    const count = resolved.get(entry.caseId) ?? 0;
+    if (!entry.isCorrection || count === 0) return [];
+    return [{
+      caseId: entry.caseId,
+      agentCallId: entry.agentCallId,
+      resolvedToolCalls: count,
+      problem:
+        `This case's input already contains ${count} completed tool call${count === 1 ? '' : 's'}, so a ` +
+        'run only scores the message the agent writes AFTER them — the decision was made in an ' +
+        'earlier call and cannot change here. If any of those results contradicts the expected ' +
+        'output you set, the case can never pass.',
+      fix:
+        'Find the earlier trace of the same conversationId whose own response CONTAINS the wrong ' +
+        'tool call, and correct that one instead. Then remove this case.',
+    }];
+  });
+}
 
 /** One trace to turn into a test case, optionally with the answer the agent SHOULD have given. */
 const caseSpecSchema = z.object({
@@ -107,7 +142,11 @@ export const createSuiteTools: ToolFactory = (ctx, store) => {
         'how you write a case that fails until the agent is fixed; omit it to lock in the response ' +
         'the agent actually gave. Pass evaluatorIds to score the suite with specific evaluators ' +
         '(they replace the default); omit it to get a default exact-match evaluator. Returns the ' +
-        'new suite as a card, with `addedCases` naming the case id each trace produced.',
+        'new suite as a card, with `addedCases` naming the case id each trace produced. ' +
+        'When correcting, pick the trace where the agent MADE the wrong decision — an agent turn ' +
+        'that used tools spans several traces, and the last one already contains the harmful tool ' +
+        'call and its result, so a correction there can never pass. Any case that lands this way is ' +
+        'reported back in `unpassableCases`; act on it rather than re-running the suite.',
       parameters: z.object({
         name: z.string().min(1).describe('A short, descriptive name for the suite.'),
         agentId: z.string().describe('The id of the agent the suite benchmarks.'),
@@ -132,7 +171,13 @@ export const createSuiteTools: ToolFactory = (ctx, store) => {
           })),
           ...(evaluatorIds ? { evaluatorIds } : {}),
         });
-        return store('suite', suite, { ...suiteDigest(suite), addedCases: addedCases(cases, suite.testCases) });
+        const added = addedCases(cases, suite.testCases);
+        const unpassable = summaryOnlyCorrections(added, suite.testCases);
+        return store('suite', suite, {
+          ...suiteDigest(suite),
+          addedCases: added,
+          ...(unpassable.length > 0 ? { unpassableCases: unpassable } : {}),
+        });
       },
     }),
     add_to_suite: tool({
@@ -142,7 +187,11 @@ export const createSuiteTools: ToolFactory = (ctx, store) => {
         'a CORRECTION — the trace\'s input with the answer the agent should have given — which ' +
         'fails until the agent is fixed; omit it to lock in the response the agent actually gave. ' +
         'Returns the updated suite as a card, with `addedCases` naming the case id each trace ' +
-        'produced (you need those ids to check the case in a run).',
+        'produced (you need those ids to check the case in a run). ' +
+        'When correcting, pick the trace where the agent MADE the wrong decision — an agent turn ' +
+        'that used tools spans several traces, and the last one already contains the harmful tool ' +
+        'call and its result, so a correction there can never pass. Any case that lands this way is ' +
+        'reported back in `unpassableCases`; act on it rather than re-running the suite.',
       parameters: z.object({
         suiteId: z.string().describe('The id of the suite to add cases to.'),
         cases: z.array(caseSpecSchema).min(1).describe('The traces to add as test cases.'),
@@ -183,9 +232,11 @@ export const createSuiteTools: ToolFactory = (ctx, store) => {
             failed.push({ id: spec.agentCallId, error: e instanceof Error ? e.message : String(e) });
           }
         }
+        const unpassable = summaryOnlyCorrections(added, suite.testCases);
         return store('suite', suite, {
           ...suiteDigest(suite),
           addedCases: added,
+          ...(unpassable.length > 0 ? { unpassableCases: unpassable } : {}),
           ...(failed.length > 0 ? { failed } : {}),
         });
       },

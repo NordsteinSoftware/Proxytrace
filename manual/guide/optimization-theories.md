@@ -32,6 +32,19 @@ whose queue groups theories by what they need from you (see
   and a **p-value** (a two-proportion test of whether the difference is real or just sampling
   noise). A high p-value (≈ ≥ 0.05) means the change is *inside the noise*.
 
+::: tip How much evidence the test has
+Each side of the A/B is run **three times** and the results are pooled, so an eleven-case suite is
+judged on 33 observations per arm rather than 11. That matters: on a single run, a genuine
+improvement from 5/11 to 8/11 comes out at p ≈ 0.19 and would be dismissed as luck. The trade is
+runtime — validation takes three suite runs per side.
+
+An operator can lower the sample count, or drop the significance requirement entirely, for
+environments where speed matters more than proof (the built-in product demo does exactly this).
+Where the requirement is off, a theory can validate on the improvement alone; its p-value is still
+recorded and shown, labelled **improvement only** instead of *significant*, so a win is never
+presented as more certain than it is.
+:::
+
 ## The validation lifecycle
 
 ```
@@ -46,7 +59,8 @@ Proposed → Validating → Validated   → becomes an Optimization Proposal
    are hidden from the [test run](/guide/running-tests) list by default so they don't clutter
    your own results — they live with the theory and its resulting proposal instead, and can be
    revealed with the **A/B runs** toggle.
-3. **Validated** — the change improved the agent beyond sampling noise (p-value ≤ 0.05).
+3. **Validated** — the change improved the agent beyond sampling noise (p-value ≤ 0.05, unless
+   your operator has relaxed that requirement — see above).
    A Draft **proposal** is created automatically, carrying the comparison as evidence.
 4. **Invalidated** — the A/B test ran, and the change did not improve the agent (or the
    improvement was within the noise). The theory is kept so the same idea is not tried

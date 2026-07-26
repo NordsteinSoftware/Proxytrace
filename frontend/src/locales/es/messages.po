@@ -305,7 +305,7 @@ msgstr "{0} de {1} adjuntos"
 #. placeholder {1}: data.totalCases
 #. placeholder {2}: fmtPct100(data.passRate)
 msgid "{0} of {1} cases · <0>{2}</0> pass rate"
-msgstr ""
+msgstr "{0} de {1} casos · <0>{2}</0> tasa de aprobación"
 
 #. placeholder {0}: traces.length
 #. placeholder {1}: allTraces.length
@@ -1061,6 +1061,9 @@ msgstr "Argumentos"
 msgid "Arguments must be valid JSON."
 msgstr "Los argumentos deben ser JSON válido."
 
+msgid "Ask a specific question and Tracey will inspect the full trace before answering."
+msgstr "Haz una pregunta específica y Tracey inspeccionará el Trace completo antes de responder."
+
 msgid "Ask about your agents, suites, runs, or proposals — or have me run a suite, review a proposal, or plot your data."
 msgstr "Pregunta sobre tus Agents, Suites, Runs o Proposals — o pídele que ejecute una Suite, revise una Proposal o grafique tus datos."
 
@@ -1069,6 +1072,9 @@ msgstr "Pide a un Admin un nuevo enlace de invitación."
 
 msgid "Ask Tracey"
 msgstr "Preguntar a Tracey"
+
+msgid "Ask Tracey about this trace"
+msgstr "Pregunta a Tracey sobre este Trace"
 
 msgid "Ask Tracey…  (/ for tools)"
 msgstr "Pregunta a Tracey…  (/ para Tools)"
@@ -1264,11 +1270,11 @@ msgid "Case · reason"
 msgstr "Caso · motivo"
 
 msgid "Case results"
-msgstr ""
+msgstr "Resultados de casos"
 
 #. placeholder {0}: data.suiteName ?? data.agentName
 msgid "Case results · {0}"
-msgstr ""
+msgstr "Resultados de casos · {0}"
 
 msgid "Cases"
 msgstr "Casos"
@@ -2043,7 +2049,7 @@ msgid "Evaluator Deleted"
 msgstr "Evaluator eliminado"
 
 msgid "evaluator error"
-msgstr ""
+msgstr "error del evaluador"
 
 msgid "Evaluator error"
 msgstr "Error de Evaluator"
@@ -2143,7 +2149,7 @@ msgid "FAIL"
 msgstr "FALLAR"
 
 msgid "failed"
-msgstr ""
+msgstr "falló"
 
 msgid "Failed"
 msgstr "Fallado"
@@ -2379,6 +2385,9 @@ msgstr "Mejorado"
 
 msgid "Improved the pass rate."
 msgstr "Mejoró la tasa de aprobación."
+
+msgid "improvement only"
+msgstr "solo mejora"
 
 msgid "in"
 msgstr "en"
@@ -3391,13 +3400,13 @@ msgid "Not enough data"
 msgstr "No hay suficientes datos"
 
 msgid "not in this run"
-msgstr ""
+msgstr "no en esta ejecución"
 
 msgid "Not now"
 msgstr "Ahora no"
 
 msgid "not scored"
-msgstr ""
+msgstr "no calificado"
 
 msgid "Not scored"
 msgstr "Sin puntuación"
@@ -3644,7 +3653,7 @@ msgid "Pass rate trend"
 msgstr "Tendencia de la tasa de aprobación"
 
 msgid "passed"
-msgstr ""
+msgstr "aprobado"
 
 msgid "Passed"
 msgstr "Aprobado"
@@ -3941,6 +3950,9 @@ msgstr "pt"
 msgid "Pulled from the provider; prices load automatically."
 msgstr "Se cargan automáticamente desde el provider; los precios se actualizan solos."
 
+msgid "Question"
+msgstr "Pregunta"
+
 msgid "Queue"
 msgstr "Cola"
 
@@ -3994,7 +4006,7 @@ msgid "Read"
 msgstr "Leído"
 
 msgid "Reading the run…"
-msgstr ""
+msgstr "Leyendo la ejecución…"
 
 msgid "Reasoning"
 msgstr "Razonamiento"
@@ -4278,7 +4290,7 @@ msgid "Run this suite to build up a history. Each run shows up here, newest firs
 msgstr "Ejecuta este Suite para generar historial. Cada ejecución aparece aquí, la más reciente primero."
 
 msgid "run unfinished"
-msgstr ""
+msgstr "ejecución incompleta"
 
 msgid "running"
 msgstr "ejecutando"
@@ -5316,6 +5328,9 @@ msgstr "Tokens totales"
 msgid "Trace"
 msgstr "Trace"
 
+msgid "Trace {traceId}"
+msgstr "Trace {traceId}"
+
 msgid "Trace Deleted"
 msgstr "Trace eliminada"
 
@@ -5427,7 +5442,7 @@ msgid "Undo remove"
 msgstr "Deshacer eliminación"
 
 msgid "unexpected"
-msgstr ""
+msgstr "inesperado"
 
 msgid "Unknown"
 msgstr "Desconocido"
@@ -5702,6 +5717,9 @@ msgstr "¿Qué Agent debería probar este Suite?"
 
 msgid "Why this change"
 msgstr "Por qué este cambio"
+
+msgid "Why was the refund approved?"
+msgstr "¿Por qué se aprobó el reembolso?"
 
 msgid "widget"
 msgstr "widget"

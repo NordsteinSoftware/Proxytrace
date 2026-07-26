@@ -8,8 +8,10 @@ namespace Proxytrace.Application.TestRun;
 public interface ITestRunnerService
 {
     /// <summary>
-    /// Executes a single-endpoint test run synchronously and returns the completed run.
-    /// Used for direct invocations and tests.
+    /// Executes a single-endpoint test run synchronously and returns the completed group.
+    /// Used for direct invocations, A/B validation and tests. <paramref name="sampleCount"/> repeats
+    /// the suite that many times against the endpoint, which A/B validation pools into one
+    /// comparison to get past the small-suite significance floor.
     /// </summary>
     internal Task<ITestRunGroup> RunInForegroundAsync(
         ITestSuite suite,
@@ -17,6 +19,7 @@ public interface ITestRunnerService
         IAgent? customAgent = null,
         bool isSystemTestRun = false,
         Func<ITestRunGroup, CancellationToken, Task>? onGroupCreated = null,
+        int sampleCount = 1,
         CancellationToken cancellationToken = default);
 
     /// <summary>

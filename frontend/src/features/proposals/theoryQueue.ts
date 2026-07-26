@@ -145,6 +145,18 @@ export function isInsideNoise(pValue: number | null): boolean {
   return pValue != null && pValue >= NOISE_THRESHOLD;
 }
 
+/**
+ * Caption for a theory's p-value. A *validated* theory whose p-value sits above the threshold only
+ * occurs where the significance gate is relaxed (see OptimizationOptions.RequireStatisticalSignificance,
+ * used by the kiosk showcase): the candidate did beat the baseline, but the evidence does not rule
+ * out luck. Such a row must not claim "significant", and "inside noise" would contradict the win it
+ * is displayed next to — so it says plainly which of the two the decision rests on.
+ */
+export function significanceLabel(pValue: number, validated: boolean): MessageDescriptor {
+  if (!isInsideNoise(pValue)) return msg`significant`;
+  return validated ? msg`improvement only` : msg`inside noise`;
+}
+
 export function formatPValue(pValue: number): string {
   return `p=${pValue.toFixed(2)}`;
 }

@@ -45,7 +45,30 @@ regression test), or **synthetic** (raw input + expected output, no source). Pro
 cases carry `ITestCase.SourceAgentCallId` — a denormalized link back to the source `AgentCall` — so the
 chain `trace → case` stays answerable; synthetic cases carry `null`. Both the REST seam
 (`POST /api/test-suites/{id}/test-cases`) and the MCP `add_trace_to_suite` tool expose the correction
-path (see [`mcp.md`](mcp.md)). `ITestRunnerService` executes the suite:
+path (see [`mcp.md`](mcp.md)).
+
+**A case scores one model call — so promote the decision, not the summary.** `RunTestCase` calls
+`IModelClient.CompleteAsync(testCase.Input)` **exactly once** and never continues the tool loop
+(`TestRunnerService.cs`), so a case only ever grades the next assistant message. A promoted or
+corrected case's input is `agentCall.Request` verbatim (`TestCase`'s `CreateNewFromCall` /
+`CreateCorrection`), and an agent *turn* that uses tools is **several** `AgentCall`s sharing one
+`ConversationId` — each capturing the conversation as it stood. Promote the **last** one and the input
+already holds every tool call the agent made *and* every result it got; the only producible output is
+the closing summary. A **correction** there is unpassable by construction: when the harmful call
+already succeeded in the input, no expected output that contradicts that result can be generated, and
+the case fails forever while reading as "the prompt fix did not work". Correct instead the call whose
+own *response* contains the wrong tool call — its request stops at the decision point, so the fix has
+somewhere to land.
+
+`Conversation.ResolvedToolCallCount` counts the tool calls an input already resolved (paired by
+tool-call id) and surfaces as `TestCaseDto.ResolvedToolCallCount`; anything above zero means the case
+grades a summary. `add_trace_to_suite` says so in its tool description, and Tracey's
+`create_suite` / `add_to_suite` return an `unpassableCases` report when a correction lands on such an
+input — see [`../frontend/docs/TRACEY.md`](../frontend/docs/TRACEY.md). Straight promotions are not
+flagged: they assert the response the agent actually gave, which agrees with their own input by
+construction.
+
+`ITestRunnerService` executes the suite:
 
 - `RunInBackgroundAsync(suite, endpoints, scheduleId, sampleCount)` — creates a **`TestRunGroup`**
   with **`sampleCount` `TestRun`s per endpoint** (model comparison × sampling), queues them, returns
@@ -55,11 +78,11 @@ path (see [`mcp.md`](mcp.md)). `ITestRunnerService` executes the suite:
   the UI caps selection to match. So a group holds up to 3 × 5 = **15 runs**. Each `TestRun` carries a
   zero-based `SampleIndex`; the group carries the requested `SampleCount` (1 for single-sample runs).
   Runs sharing an endpoint form a **cohort** — averaged in the results UI and reduced to one
-  representative run for this loop (see below). Scheduled runs and A/B validation always use
-  `sampleCount = 1`.
-- `RunInForegroundAsync(...)` — synchronous single run; used internally (A/B validation) and in
-  tests. Takes `customAgent` and an `isSystemTestRun` flag that **hides internal A/B runs** from
-  the user's run list.
+  representative run for this loop (see below). Scheduled runs always use `sampleCount = 1`;
+  A/B validation uses `OptimizationOptions.AbSampleCount`.
+- `RunInForegroundAsync(..., sampleCount, ...)` — synchronous run; used internally (A/B validation)
+  and in tests. Takes `customAgent` and an `isSystemTestRun` flag that **hides internal A/B runs**
+  from the user's run list.
 - Each `TestCase` produces a **`TestResult`** scored by the suite's evaluators. Live progress
   streams over SSE via `ITestResultBroadcaster`.
 - The runner's work queue and in-flight state are **in-memory only**, so a process restart mid-run
@@ -181,10 +204,17 @@ agent on the alternate endpoint. The candidate run is linked to the theory while
 via the `CandidateRunObserver` callback, and is flagged `isSystemTestRun` so it stays out of the
 user's run list.
 
+Each arm runs `OptimizationOptions.AbSampleCount` times (default **3**) and the samples are
+**pooled** — passes and totals summed across them — before the significance test. One sample per arm
+caps the evidence at the suite's case count, which on a small suite cannot resolve anything but an
+enormous effect: an 11-case suite improving 5/11 → 8/11 lands at p≈0.19 and is discarded, while the
+same effect pooled over three samples (15/33 → 24/33) is significant. The cost is proportional —
+each extra sample is another full suite run per arm.
+
 The outcome (`TheoryValidationOutcome`) records baseline pass rate, projected pass rate, p-value,
 and candidate run id **regardless of result**:
 - **Won** — improvement is real (beyond sampling noise: the two-proportion p-value must be
-  ≤ `AbTestTheoryValidator.SignificanceLevel` = 0.05) → spawns a **Draft `OptimizationProposal`**
+  ≤ `OptimizationOptions.SignificanceLevel` = 0.05) → spawns a **Draft `OptimizationProposal`**
   carrying the A/B comparison as evidence. Model-switch theories instead require *no* pass-rate
   regression plus a genuine cost or latency win — equal-quality-but-pricier is not a win.
 - **Rejected** — the A/B ran cleanly but showed no significant improvement → theory marked
@@ -196,6 +226,25 @@ and candidate run id **regardless of result**:
   from the review desk's win rate**, surfaced in its own "Needs attention" queue group instead of
   History, does **not** suppress an identical resubmission (dedup treats it like Invalidated), and
   can be retried (reset) or dismissed (reject → Invalidated without metrics).
+
+### Tuning validation (`OptimizationOptions`)
+
+Bound from the `Optimization` configuration section (`Proxytrace.Api/Module.cs`), with a
+`PreserveExistingDefaults()` fallback in `Optimization/Module.cs` so hosts that bind no
+configuration — tests, tooling — still resolve it:
+
+| Setting | Default | Effect |
+|---------|---------|--------|
+| `AbSampleCount` | `3` | Runs per arm, pooled before the significance test (max `ITestRunGroup.MaxSampleCount`). |
+| `SignificanceLevel` | `0.05` | Maximum two-sided p-value that counts as a real difference. |
+| `RequireStatisticalSignificance` | `true` | When false, beating the baseline is enough — the p-value is still computed and stored. |
+
+`OptimizationOptions.KioskShowcase` is the one place the gate is dropped: the demo runs one sample
+per arm so Step 7 finishes in front of an audience, and its real-but-small effect straddles any
+fixed threshold. The frontend labels such a proposal **"improvement only"** rather than
+"significant" (`theoryQueue.significanceLabel`), so a relaxed gate is never presented as proof it
+isn't. Never relax either setting for a real installation: a false positive means shipping a prompt
+change that did nothing.
 
 ## Stage 4 — Proposal review
 

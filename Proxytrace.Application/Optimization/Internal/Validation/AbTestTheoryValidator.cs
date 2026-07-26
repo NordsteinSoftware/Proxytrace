@@ -16,8 +16,11 @@ namespace Proxytrace.Application.Optimization.Internal.Validation;
 internal abstract class AbTestTheoryValidator<TTheory> : TheoryValidatorBase
     where TTheory : class, IOptimizationTheory
 {
-    protected AbTestTheoryValidator(Lazy<ITestRunnerService> testRunnerService, ITestRunRepository testRuns)
-        : base(testRunnerService, testRuns)
+    protected AbTestTheoryValidator(
+        Lazy<ITestRunnerService> testRunnerService,
+        ITestRunRepository testRuns,
+        OptimizationOptions options)
+        : base(testRunnerService, testRuns, options)
     {
     }
 
@@ -35,27 +38,35 @@ internal abstract class AbTestTheoryValidator<TTheory> : TheoryValidatorBase
         // agent's current state — so the only difference between them is the proposed change.
         // Reusing an older evidence run as the baseline would conflate the change's effect with
         // any drift in the agent since that run, especially when a theory waits in the queue.
-        ITestRun baselineRun = await RunAsync(theory.Suite, agent, agent.Endpoint, cancellationToken);
+        int samples = Options.AbSampleCount;
+        var baselineRuns = await RunSamplesAsync(theory.Suite, agent, agent.Endpoint, samples, cancellationToken);
         IAgent candidateAgent = BuildCandidateAgent(agent, typedTheory);
-        ITestRun candidateRun = await RunAsync(theory.Suite, candidateAgent, agent.Endpoint, cancellationToken, onCandidateRun);
+        var candidateRuns = await RunSamplesAsync(
+            theory.Suite, candidateAgent, agent.Endpoint, samples, cancellationToken, onCandidateRun);
 
         // Never score a partial run: a case failure (or cancellation) leaves fewer results than the
         // suite has cases, which would make the A/B comparison unfair and the proposal unfounded.
-        if (!IsRunComplete(baselineRun, theory.Suite) || !IsRunComplete(candidateRun, theory.Suite))
+        if (baselineRuns.Concat(candidateRuns).Any(r => !IsRunComplete(r, theory.Suite)))
         {
             return TheoryValidationOutcome.CouldNotTest;
         }
 
-        RunMetrics baseline = Metrics(baselineRun);
-        RunMetrics candidate = Metrics(candidateRun);
+        // The run the UI links to; its siblings are the extra samples behind the same comparison.
+        ITestRun candidateRun = candidateRuns[0];
 
-        if (baseline.PassRate is not { } basePassRate || candidate.PassRate is not { } candidatePassRate)
+        // Pool the samples. Each sample is an independent replay of the same suite, so summing
+        // passes and totals across them is exactly the evidence the significance test needs — and
+        // on a small suite it is the difference between proving a real effect and discarding it.
+        (int basePasses, int baseTotal) = SumPassCounts(baselineRuns);
+        (int candPasses, int candTotal) = SumPassCounts(candidateRuns);
+
+        if (baseTotal == 0 || candTotal == 0)
         {
             return TheoryValidationOutcome.CouldNotTest;
         }
 
-        (int basePasses, int baseTotal) = PassCounts(baselineRun);
-        (int candPasses, int candTotal) = PassCounts(candidateRun);
+        double basePassRate = basePasses / (double)baseTotal;
+        double candidatePassRate = candPasses / (double)candTotal;
         double? pValue = ProportionStats.TwoSidedPValue(basePasses, baseTotal, candPasses, candTotal);
 
         if (candidatePassRate <= basePassRate)
@@ -65,8 +76,10 @@ internal abstract class AbTestTheoryValidator<TTheory> : TheoryValidatorBase
 
         // An improvement only wins when it is distinguishable from sampling noise — on a small
         // suite a couple of flaky cases can flip the raw pass rate either way. Without this gate
-        // every lucky run would spawn a proposal.
-        if (pValue is not { } p || p > SignificanceLevel)
+        // every lucky run would spawn a proposal. The kiosk showcase is the one place that trades
+        // it away for a demo that finishes on stage; the p-value is still computed and stored so
+        // the proposal can be labelled as the weaker evidence it is.
+        if (Options.RequireStatisticalSignificance && (pValue is not { } p || p > Options.SignificanceLevel))
         {
             return TheoryValidationOutcome.Rejected(basePassRate, candidatePassRate, pValue, candidateRun.Id);
         }

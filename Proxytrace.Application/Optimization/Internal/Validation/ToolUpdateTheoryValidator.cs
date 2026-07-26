@@ -21,8 +21,9 @@ internal sealed class ToolUpdateTheoryValidator : AbTestTheoryValidator<IToolUpd
         IToolUpdateProposal.CreateNew proposalFactory,
         IAgent.CreateNew agentFactory,
         Lazy<ITestRunnerService> testRunnerService,
-        ITestRunRepository testRuns)
-        : base(testRunnerService, testRuns)
+        ITestRunRepository testRuns,
+        OptimizationOptions options)
+        : base(testRunnerService, testRuns, options)
     {
         this.proposalFactory = proposalFactory;
         this.agentFactory = agentFactory;

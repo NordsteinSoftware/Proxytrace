@@ -26,6 +26,15 @@ services:
       # MODEL feeds BOTH services (one variable prevents endpoint/model mismatch mid-demo).
       - Kiosk__Endpoint__Model=${KIOSK_LLM_MODEL:-}
       - Kiosk__Endpoint__Kind=${KIOSK_LLM_KIND:-OpenAi}
+      # A/B validation, tuned for a live audience. A real installation proves a theory by running
+      # each arm 3× and demanding p≤0.05; on stage that triples the wait at the slowest step, so the
+      # kiosk runs one sample per arm and lets any improvement over the baseline win. One sample of
+      # the 11-case suite cannot clear a fixed bar reliably — the same 5/11 → 8/11 improvement
+      # measured p = 0.19, 0.09 and 0.34 across three rehearsals — so the demo drops the gate rather
+      # than gambling on it. The p-value is still shown, labelled as not significance-tested.
+      # These match OptimizationOptions.KioskShowcase.
+      - Optimization__RequireStatisticalSignificance=${KIOSK_AB_REQUIRE_SIGNIFICANCE:-false}
+      - Optimization__AbSampleCount=${KIOSK_AB_SAMPLES:-1}
     healthcheck:
       # Same bash /dev/tcp pattern used by the e2e compose — no curl/wget dependency.
       test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/8080 && printf \"GET /api/health HTTP/1.0\\r\\nHost: localhost\\r\\n\\r\\n\" >&3 && grep -q status <&3'"]

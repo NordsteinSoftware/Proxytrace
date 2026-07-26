@@ -20,8 +20,9 @@ internal sealed class ModelSwitchTheoryValidator : TheoryValidatorBase
     public ModelSwitchTheoryValidator(
         IModelSwitchProposal.CreateNew proposalFactory,
         Lazy<ITestRunnerService> testRunnerService,
-        ITestRunRepository testRuns)
-        : base(testRunnerService, testRuns)
+        ITestRunRepository testRuns,
+        OptimizationOptions options)
+        : base(testRunnerService, testRuns, options)
     {
         this.proposalFactory = proposalFactory;
     }

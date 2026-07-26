@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using Proxytrace.Domain.Statistics;
 using Proxytrace.Domain.Statistics.TestRun;
 using Proxytrace.Application.TestRun;
@@ -22,15 +23,18 @@ internal sealed class CompositeOptimizer : IOptimizer
     private readonly IReadOnlyCollection<IOptimizerImplementation> optimizers;
     private readonly ITestRunRepository testRuns;
     private readonly IStatsReader<TestRunStats, TestRunStats.Filter> runStats;
+    private readonly ILogger<CompositeOptimizer> logger;
 
     public CompositeOptimizer(
         IReadOnlyCollection<IOptimizerImplementation> optimizers,
         ITestRunRepository testRuns,
-        IStatsReader<TestRunStats, TestRunStats.Filter> runStats)
+        IStatsReader<TestRunStats, TestRunStats.Filter> runStats,
+        ILogger<CompositeOptimizer> logger)
     {
         this.optimizers = optimizers.DistinctBy(x => x.GetType()).ToArray();
         this.testRuns = testRuns;
         this.runStats = runStats;
+        this.logger = logger;
     }
 
     public async Task<IReadOnlyList<IOptimizationTheory>> DiscoverTheories(
@@ -47,9 +51,38 @@ internal sealed class CompositeOptimizer : IOptimizer
         IReadOnlyList<RunCohort> cohorts = RunCohort.Build(runs, statsByRunId);
 
         return (await optimizers
-                .Select(optimizer => optimizer.DiscoverTheories(testRunGroup, cohorts, cancellationToken))
+                .Select(optimizer => DiscoverSafely(optimizer, testRunGroup, cohorts, cancellationToken))
                 .Await())
             .SelectMany(x => x)
             .ToArray();
+    }
+
+    /// <summary>
+    /// Runs one implementation, containing its failure. Each optimizer asks a model for structured
+    /// output, and a model that omits a required field throws — without this, one such reply
+    /// discarded every OTHER optimizer's theories too, so a run that had a perfectly good
+    /// system-prompt hypothesis produced nothing at all (observed live: a tool-definition reply
+    /// missing `jsonSchema` took the system-prompt theory down with it). A flaky sibling should cost
+    /// its own hypothesis and nothing more.
+    /// </summary>
+    private async Task<IReadOnlyList<IOptimizationTheory>> DiscoverSafely(
+        IOptimizerImplementation optimizer,
+        ITestRunGroup testRunGroup,
+        IReadOnlyList<RunCohort> cohorts,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await optimizer.DiscoverTheories(testRunGroup, cohorts, cancellationToken);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            logger.LogWarning(
+                ex,
+                "Optimizer {Optimizer} failed for test run group {GroupId}; its theories are skipped.",
+                optimizer.GetType().Name,
+                testRunGroup.Id);
+            return [];
+        }
     }
 }

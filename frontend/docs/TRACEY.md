@@ -86,6 +86,10 @@ the wire and attributes the call to her agent by name (`X-Proxytrace-Agent` / sa
 - Tracey's **system prompt** lives only in `tracey-prompt.ts` (`TRACEY_SYSTEM_PROMPT`).
 - Do **not** reintroduce a backend copy of the prompt or tools. The byte-identical-mirror
   constraint that used to exist is gone by design.
+- After editing the prompt, a skill, or a tool description, **verify it against the live model** —
+  the `prompt-lab` skill (`.claude/skills/prompt-lab/SKILL.md`) runs her real prompt and tools
+  against the kiosk endpoint and A/Bs your working copy against the committed version. Unit tests
+  cannot see a prompt regression; a transcript can.
 
 ## File map
 
@@ -109,7 +113,7 @@ the wire and attributes the call to her agent by name (`X-Proxytrace-Agent` / sa
 | `components/TraceyConversationRail.tsx` | The conversation-history **right-hand rail** (collapsed by default). Lists stored conversations newest-first, highlights the active one, and offers new / open (view == continue) / delete (with a `ConfirmDialog`). Presentational — all state lives in `useTraceyChat`. |
 | `tracey-actions.tsx` | React context (`navigate`) for assistant-ui message-part components that can't take props. |
 | `tracey-quick-actions.ts` | Curated prompt presets: the empty-thread starter chips (clicking one **sends** its prompt immediately) + the top of the slash menu (which prefills for editing). |
-| `useAskTracey.ts` | The app-wide **Ask Tracey** send queue: `askTracey(prompt)` navigates to the page, starts a fresh conversation, and appends the prompt once the session is `ready` (sends reject before that). Exposed on `TraceyChat`, consumed by `components/tracey/AskTraceyButton`. |
+| `useAskTracey.ts` | The app-wide **Ask Tracey** send queue: `askTracey(prompt)` navigates to the page, starts a fresh conversation, and appends the prompt once the session is `ready` (sends reject before that). Exposed on `TraceyChat`, consumed by `components/tracey/AskTraceyButton`. The trace-detail integration first opens `components/trace-detail/AskTraceyModal`, then sends the focused question as `Trace <id>: <question>`; the other integrations still send their context-built prompt immediately. |
 | `message-stats.ts` | `readMessageStats` + `readTraceConversationId` — narrows `metadata.custom` to tokens (input / cached-input / output / total) + duration + the trace id (unit-tested). |
 | `useArtifact.ts` / `useOpenResponseTrace.ts` | Hook to resolve a stored artifact for a card; hook behind `OpenTraceButton`. |
 | `TraceyConversation.tsx` | assistant-ui `Thread`/`Message` primitives styled to DESIGN.md: user/assistant bubbles, an end-of-thread "Thinking…" busy indicator while a turn runs, per-tool inline UI (`tools.by_name`) with `ToolCallCard` fallback, the `FollowUpSuggestions` chips after the last finished turn, empty state. |
@@ -320,7 +324,7 @@ The `test-driven-improvement` skill turns a defect the user *reports* — "this 
 refund it should have refused, see trace `5b71…`" — into a failing regression test, then a fix
 proven against that exact case. Its entry point is what the neighbouring skills miss:
 `diagnose-agent` starts from statistical anomalies, and a policy violation is not one (the tokens
-and latency were perfectly normal); `optimize-agent` starts from aggregate run failures. Four
+and latency were perfectly normal); `optimize-agent` starts from aggregate run failures. Five
 properties of the surface make the loop work, and each fixes something that was previously wrong:
 
 **A promoted case cannot fail.** `POST /api/test-suites/from-traces` seeds every case's expected
@@ -332,6 +336,27 @@ along through `BuildTestCase` and which keeps `SourceAgentCallId` provenance int
 posts to the generic `POST /api/test-suites` for this reason; `/from-traces` physically cannot carry
 an expected output. Both writes return `addedCases: [{ caseId, agentCallId, isCorrection }]`, mapped
 by `sourceAgentCallId` rather than array position (the API does not promise request order).
+
+**Correct the decision, not the summary.** A test run scores exactly one model call
+(`TestRunnerService` calls `CompleteAsync` once per case and never continues the tool loop), while an
+agent *turn* that uses tools is several upstream calls — each ingested as its own trace, all sharing a
+`conversationId`. The **last** trace of such a turn already contains every tool call the agent made
+*and* every result it got, so the only thing a model can still produce from it is the closing
+message. Correct that one and the case is unpassable by construction: if the harmful call already
+succeeded in the input, no expected output contradicting that result can be generated, and the case
+fails forever while reading as "the fix did not work". This was a real failure — a refund-policy
+correction was written against the summary call, so the flagship case stayed red through an A/B whose
+prompt change had in fact worked.
+
+Three things now prevent it. `find_traces` reports `conversationId` and `toolCallsRequested` per row,
+which is what makes a loop legible at all — `preview` is the *first user message*, so every call of
+one turn previews identically and "the newest trace" silently means "the closing summary".
+`Conversation.ResolvedToolCallCount` (domain) counts the tool calls an input already resolved and
+rides out on `TestCaseDto.resolvedToolCallCount`, so `get_suite`'s digest carries `resolvedToolCalls`
+per case. And `create_suite` / `add_to_suite` return `unpassableCases` — naming the case, its
+`resolvedToolCalls`, and the fix — whenever a **correction** lands on such an input. Promotions are
+deliberately not flagged: a promotion asserts the response the agent actually gave, which by
+construction agrees with the tool results in its own input.
 
 **A case verdict is tri-state, so absence proves nothing.** `resultPass` is `boolean | null` and the
 old `get_run_failures` returned only `=== false` cases, so "my case isn't in the list" silently

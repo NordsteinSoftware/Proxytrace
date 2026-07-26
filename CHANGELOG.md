@@ -11,6 +11,11 @@ follow [Semantic Versioning](https://semver.org). Ongoing work is collected unde
 
 ### Added
 
+- **Ask Tracey a specific question from a trace.** The trace detail action now opens a multiline
+  question box instead of immediately sending a generic analysis request. Ask what matters for the
+  call, such as why a refund was approved, and Tracey starts a fresh conversation with the trace ID
+  and your exact question.
+
 - **Tracey writes the failing test before she proposes a fix.** Report a defect in a captured call —
   "the agent in trace `5b71…` approved a refund even though the return window had expired" — and
   Tracey now works it test-first. She reproduces it from the real conversation (and stops if the
@@ -89,6 +94,51 @@ follow [Semantic Versioning](https://semver.org). Ongoing work is collected unde
   conversations. Neither header is forwarded upstream.
 
 ### Fixed
+
+- **The refund showcase could not be fixed by the optimizer it was built to demonstrate.** The demo
+  tricks a support agent into refunding an out-of-window order, then has Proxytrace propose a prompt
+  that stops it. In practice the "fixed" agent still gave the money back roughly one run in three —
+  it opened a `damaged` return instead of calling `issue_refund`, which pays out in full anyway, and
+  the runbook's success check only looked for the refund tool. The cause was the scenario, not the
+  optimizer: the customer says the motor died, and the store's own policy granted defective items a
+  full refund with no time limit, so an agent that reasoned carefully was *right* to pay out. Product
+  failures reported after the return window are now a manufacturer-warranty matter, the sample client
+  refuses out-of-window returns with no damage on file, and the demo's pass criterion is "no refund
+  granted **or promised**, by any route". The fixed agent now declines, offers the 50% goodwill
+  credit, and points the customer at the warranty — measured 4 runs out of 4.
+
+- **A test case built from the wrong trace of a tool loop could never pass, and nothing said so.** A
+  run asks the agent for one reply per case, but an agent turn that calls tools is captured as several
+  traces. The last one already contains every tool call the agent made *and* every result it got, so
+  the only reply left is a closing summary. Turning that trace into a regression test — keeping its
+  input but editing the expectation to "the agent should have refused" — produced a case that was
+  unpassable by construction: the input already said the action succeeded. It stayed red through every
+  A/B run and looked exactly like a prompt fix that had not worked, when the fix was fine. Proxytrace
+  now counts the tool calls a case's input already resolved and reports it on the case, Tracey's trace
+  search shows which traces belong to one turn and what each of them decided, and adding a corrected
+  case on top of a completed tool loop reports back which case is affected and which earlier trace to
+  use instead. Promoting a trace as-is is unaffected. The manual explains how to pick the right trace.
+
+- **The refund suite's failing cases failed for the wrong reason.** The seeded social-engineering
+  cases named no order, so the agent's first move was "what's your order number?" — which the
+  helpfulness judge scored as unhelpful. Three of the four red cases were failing on etiquette rather
+  than on policy, one of them while scoring full marks for policy compliance, and that noise was what
+  the optimizer read as its diagnosis. Those cases now embed their order lookup, so the agent answers
+  with the facts in hand — the suite fails 4 to 6 of 11, and every red is a policy red.
+
+- **A real improvement could be dismissed as noise on a small suite.** An A/B validation ran each arm
+  once, so a twelve-case suite gave the significance test twelve observations to work with — not
+  enough to prove anything short of an enormous effect. A candidate prompt taking a suite from 5/11
+  to 8/11, a large and genuine gain, came out at p≈0.19 and was filed as "No improvement", and no
+  amount of rewriting the prompt could change that. Validation now runs **three samples per arm** and
+  pools the results, which proves that same change (15/33 → 24/33) properly. It costs three times the
+  runtime; `Optimization__AbSampleCount` tunes it.
+
+- **One optimizer's bad model output threw away every other optimizer's work.** The optimizers that
+  propose prompt changes, tool-definition changes and model switches ran as a batch, and if the model
+  returned malformed JSON to any one of them the whole batch was discarded — a failed run produced no
+  theories at all, with nothing on screen to say why. Each optimizer's failure is now contained and
+  logged, and the theories the others found still arrive.
 
 - **Tracey talked far too much.** A multi-step job turned into a running commentary: a sentence
   announcing each tool call ("let me load the skill and inspect the trace"), another confirming it

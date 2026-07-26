@@ -102,13 +102,14 @@ lists, tables, and code blocks).
 ## Ask Tracey from anywhere
 
 You don't have to start on the Tracey page. Wherever the app shows something worth
-investigating, a cyan **⚡ Ask Tracey** button appears next to it. Clicking it opens Tracey AI
-in a fresh conversation and immediately asks her about the thing you were looking at — with all
-the context (ids, anomaly reasons, pass rates) already filled in:
+investigating, a cyan **⚡ Ask Tracey** button appears next to it. It opens Tracey AI in a fresh
+conversation with the item context already filled in. On a trace, clicking the button first opens
+a multiline question box so you can ask exactly what you need; submitting sends a message such as
+`Trace ddee0986-af5e-48c3-8e5d-d846f3c5350a: why was the refund approved?`. Other Ask Tracey
+buttons send their contextual request immediately:
 
-- **A trace's detail drawer** — for a flagged trace, Tracey analyzes why the anomaly happened
-  and how to prevent it (the detector hits and outlier reasons are passed along); for a normal
-  trace she reviews and summarizes it.
+- **A trace's detail drawer** — enter a focused question about the call; Tracey reads the full
+  trace before answering.
 - **An agent's header** — if the agent has suites with a low pass rate, Tracey digs into the
   failing runs and proposes an improvement to A/B-test; otherwise she reviews the agent's recent
   anomalies and results.

@@ -360,6 +360,7 @@ public sealed class UpdateToolDefinitionOptimizerIntegrationTests : BaseTest<Mod
                 Arg.Any<IAgent?>(),
                 Arg.Any<bool>(),
                 Arg.Any<Func<ITestRunGroup, CancellationToken, Task>?>(),
+                Arg.Any<int>(),
                 Arg.Any<CancellationToken>())
             .Returns(Task.FromResult(abGroup));
 

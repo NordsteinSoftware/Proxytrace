@@ -14,7 +14,12 @@ export const createTraceTools: ToolFactory = (ctx, store) => ({
       'to read its whole conversation. ' +
       'The matching traces are rendered to the user as a card. Hides traces of internal system ' +
       'agents (Tracey, evaluators) unless includeSystem is true. `query` searches message CONTENT, ' +
-      'not ids — to open a trace whose id you already have, call `get_trace` instead.',
+      'not ids — to open a trace whose id you already have, call `get_trace` instead. ' +
+      'ONE agent turn that uses tools is SEVERAL rows: rows sharing a `conversationId` are the ' +
+      'successive calls of one tool loop, oldest `createdAt` first, each capturing the conversation ' +
+      'as it stood. `toolCallsRequested` says what that call decided to do; the final row has 0 ' +
+      'because all it wrote was the closing summary. When a turn misbehaved, the row that MADE the ' +
+      'wrong choice is an earlier one — read the loop with `get_trace` before acting on any of it.',
     parameters: z.object({
       present: presentArg,
       agentId: z.string().optional().describe('Only traces of this agent.'),
@@ -53,6 +58,12 @@ export const createTraceTools: ToolFactory = (ctx, store) => ({
           durationMs: t.durationMs,
           tokens: t.inputTokens + t.outputTokens,
           preview: t.messagePreview ? clip(t.messagePreview, 100) : null,
+          // The two fields that make a tool loop legible. `preview` is the FIRST user message, so
+          // every call of one turn previews identically — without the conversation id and the
+          // per-call tool-call count the rows are indistinguishable, and "the newest one" silently
+          // means "the closing summary".
+          conversationId: t.conversationId,
+          toolCallsRequested: t.toolCount,
           createdAt: t.createdAt,
         })),
       });
@@ -103,6 +114,9 @@ export const createTraceTools: ToolFactory = (ctx, store) => ({
           durationMs: t.durationMs,
           httpStatus: t.httpStatus,
           preview: t.messagePreview ? clip(t.messagePreview, 100) : null,
+          // Calls sharing a conversationId are one tool loop — ManyToolCalls in particular flags a
+          // loop, so without this the same turn reads as several unrelated anomalies.
+          conversationId: t.conversationId,
           createdAt: t.createdAt,
         })),
       });

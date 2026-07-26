@@ -33,7 +33,8 @@ public sealed class TestSuiteDtoMapper
                 tc.Id,
                 tc.Input.Messages.Select(ToInputMessageDto).ToArray(),
                 ToExpectedOutputDto(tc.ExpectedOutput),
-                tc.SourceAgentCallId
+                tc.SourceAgentCallId,
+                tc.Input.ResolvedToolCallCount
             )).ToArray(),
             Description: null,
             Tags: [],

@@ -451,6 +451,14 @@ export interface TestCaseDto {
   expectedOutput: TestSuiteMessageDto;
   /** The trace this case was promoted or corrected from, if any. Null for synthetic cases. */
   sourceAgentCallId?: string | null;
+  /**
+   * How many tool calls this case's input already resolved. A run scores exactly one model call, so
+   * anything above 0 means the case grades the message written *after* those calls came back — not
+   * the decision to make them. Promoting the last call of a tool loop is the usual way to get one by
+   * accident: the harmful call already succeeded in the input, so a corrected expected output that
+   * contradicts it can never pass.
+   */
+  resolvedToolCallCount?: number;
 }
 export interface SuiteEvaluatorDto { id: string; kind: EvaluatorKind; }
 export interface TestSuiteDto {

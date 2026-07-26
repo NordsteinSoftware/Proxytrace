@@ -164,6 +164,75 @@ describe('correction cases', () => {
   });
 });
 
+describe('unpassable corrections (summary-only inputs)', () => {
+  it('create_suite flags a correction whose input already resolved its tool calls', async () => {
+    const ctx = makeCtx();
+    agentsApi.get.mockResolvedValue({ id: 'a1', name: 'A' });
+    // The last call of a tool loop: the harmful call and its success are already in the input, so
+    // an expected output contradicting that result can never be produced.
+    testSuitesApi.createWithCases.mockResolvedValue(suite({
+      testCases: [tc('c9', { sourceAgentCallId: 'call1', resolvedToolCallCount: 3 })],
+    }));
+
+    const tool = createSuiteTools(ctx, store).create_suite;
+    const result = await run(tool, {
+      name: 'Refund policy', agentId: 'a1',
+      cases: [{ agentCallId: 'call1', expectedOutput: 'Refund refused.' }],
+    }, ctx) as { unpassableCases: { caseId: string; agentCallId: string; resolvedToolCalls: number }[] };
+
+    expect(result.unpassableCases).toHaveLength(1);
+    expect(result.unpassableCases[0]).toMatchObject({
+      caseId: 'c9', agentCallId: 'call1', resolvedToolCalls: 3,
+    });
+  });
+
+  it('create_suite stays silent for a correction made at a decision point', async () => {
+    const ctx = makeCtx();
+    agentsApi.get.mockResolvedValue({ id: 'a1', name: 'A' });
+    testSuitesApi.createWithCases.mockResolvedValue(suite({
+      testCases: [tc('c9', { sourceAgentCallId: 'call1', resolvedToolCallCount: 0 })],
+    }));
+
+    const tool = createSuiteTools(ctx, store).create_suite;
+    const result = await run(tool, {
+      name: 'Refund policy', agentId: 'a1',
+      cases: [{ agentCallId: 'call1', expectedOutput: 'Refund refused.' }],
+    }, ctx);
+
+    expect(result).not.toHaveProperty('unpassableCases');
+  });
+
+  it('leaves a plain promotion alone even when its input resolved tool calls', async () => {
+    const ctx = makeCtx();
+    agentsApi.get.mockResolvedValue({ id: 'a1', name: 'A' });
+    // A promotion asserts the response the agent actually gave, which by construction agrees with
+    // the tool results in its own input — there is nothing contradictory to warn about.
+    testSuitesApi.createWithCases.mockResolvedValue(suite({
+      testCases: [tc('c9', { sourceAgentCallId: 'call1', resolvedToolCallCount: 3 })],
+    }));
+
+    const tool = createSuiteTools(ctx, store).create_suite;
+    const result = await run(tool, { name: 'S', agentId: 'a1', cases: [{ agentCallId: 'call1' }] }, ctx);
+
+    expect(result).not.toHaveProperty('unpassableCases');
+  });
+
+  it('add_to_suite flags it too', async () => {
+    const ctx = makeCtx();
+    testSuitesApi.get.mockResolvedValue(suite({ testCases: [tc('c1')] }));
+    testSuitesApi.addTestCase.mockResolvedValue(suite({
+      testCases: [tc('c1'), tc('c2', { sourceAgentCallId: 'call1', resolvedToolCallCount: 2 })],
+    }));
+
+    const tool = createSuiteTools(ctx, store).add_to_suite;
+    const result = await run(tool, {
+      suiteId: 's1', cases: [{ agentCallId: 'call1', expectedOutput: 'Refund refused.' }],
+    }, ctx) as { unpassableCases: { caseId: string; resolvedToolCalls: number }[] };
+
+    expect(result.unpassableCases).toEqual([expect.objectContaining({ caseId: 'c2', resolvedToolCalls: 2 })]);
+  });
+});
+
 describe('get_suite digest', () => {
   it('exposes the evaluators and the case ids the other tools need', async () => {
     const ctx = makeCtx();

@@ -8,6 +8,7 @@ import {
   runGroupPrompt,
   theoryPrompt,
   tracePrompt,
+  traceQuestionPrompt,
 } from './askTraceyPrompts';
 
 // Minimal DTO stubs — only the fields the builders read. Widened via a partial cast
@@ -45,6 +46,18 @@ describe('tracePrompt', () => {
     const p = tracePrompt(trace({ outlierFlags: 0 }), []);
     expect(p).toContain('Review trace trace-1');
     expect(p).not.toContain('anomalous');
+  });
+});
+
+describe('traceQuestionPrompt', () => {
+  it('pairs the trace id with the trimmed custom question', () => {
+    expect(traceQuestionPrompt('ddee0986-af5e-48c3-8e5d-d846f3c5350a', '  why was the refund approved?\n'))
+      .toBe('Trace ddee0986-af5e-48c3-8e5d-d846f3c5350a: why was the refund approved?');
+  });
+
+  it('preserves line breaks inside a multiline question', () => {
+    expect(traceQuestionPrompt('trace-1', 'Why was it approved?\nWhich policy applied?'))
+      .toBe('Trace trace-1: Why was it approved?\nWhich policy applied?');
   });
 });
 

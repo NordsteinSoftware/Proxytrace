@@ -85,10 +85,10 @@ internal class TestRunnerService : BackgroundService, ITestRunnerService
         IAgent? customAgent = null,
         bool isSystemTestRun = false,
         Func<ITestRunGroup, CancellationToken, Task>? onGroupCreated = null,
+        int sampleCount = 1,
         CancellationToken cancellationToken = default)
     {
-        // A/B validation and direct/test invocations always use a single sample per endpoint.
-        ITestRunGroup group = await CreateGroup(suite, endpoints, isSystemTestRun, scheduleId: null, sampleCount: 1, cancellationToken);
+        ITestRunGroup group = await CreateGroup(suite, endpoints, isSystemTestRun, scheduleId: null, sampleCount, cancellationToken);
         if (onGroupCreated is not null)
             await onGroupCreated(group, cancellationToken);
         return await ExecuteGroupAsync(group, customAgent, isSystemTestRun, cancellationToken);
