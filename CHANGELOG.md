@@ -11,6 +11,19 @@ follow [Semantic Versioning](https://semver.org). Ongoing work is collected unde
 
 ### Fixed
 
+- **Proxytrace is documented as source-available, consistently.** The Docker Hub overview still
+  declared the product *Proprietary*, contradicting the Elastic License 2.0 relicense in 1.5.0 — the
+  first licensing statement most evaluators read. It now states the ELv2 terms, the README carries a
+  matching License section, and every documented GitHub link (plus the release-manifest URL the
+  update check calls) points at `SyntaktikEU/Proxytrace` instead of relying on GitHub's rename
+  redirect.
+
+- **The licensing manual no longer overstates the Free tier.** It advertised **3** users while the
+  code allows **1** — and contradicted its own tier table further down the page — so an operator
+  could plan a three-person pilot and hit a blocked invite on the second seat. The page now says one
+  user, explains that this effectively disables user management until an upgrade, and lists the
+  scheduled test runs and custom anomaly detectors that were missing from the Enterprise column.
+
 - **Expanded multi-turn conversations no longer overlap the rows beneath them.** Opening a
   conversation's turns while new traces were streaming in left the expanded turns painted on top of
   the following rows, with the text of both stacked on itself. The table measured each row by its

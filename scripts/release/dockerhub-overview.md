@@ -5,7 +5,7 @@ make, turns real traces into regression suites, and closes the loop with evidenc
 optimization proposals. Self-hosted, runs entirely on your own infrastructure.
 
 - Website: <https://proxytrace.dev>
-- Source & releases: <https://github.com/Proxytrace/Proxytrace>
+- Source & releases: <https://github.com/SyntaktikEU/Proxytrace>
 - Docs: served at `/docs` in every install
 
 ## Run it
@@ -31,11 +31,11 @@ upgrade by pulling a newer tag and recreating the container. Schema migrations r
 Set `ConnectionStrings__Default` (and optionally `Redis__ConnectionString`) and the container
 skips its embedded services and uses yours instead. That is the recommended production shape,
 and it's exactly what the Docker Compose deployment attached to every
-[GitHub release](https://github.com/Proxytrace/Proxytrace/releases) does — a `proxytrace.zip`
+[GitHub release](https://github.com/SyntaktikEU/Proxytrace/releases) does — a `proxytrace.zip`
 with a pinned compose file (this image + Postgres + Redis) and an `.env` template:
 
 ```bash
-curl -fLO https://github.com/Proxytrace/Proxytrace/releases/latest/download/proxytrace.zip
+curl -fLO https://github.com/SyntaktikEU/Proxytrace/releases/latest/download/proxytrace.zip
 unzip proxytrace.zip && cd proxytrace-<version>
 docker compose up -d        # no .env required — see .env.example for overrides
 ```
@@ -52,5 +52,8 @@ identical digests, same tags. GHCR has no anonymous pull-rate limit.
 
 ## License
 
-Proprietary — see [LICENSE](https://github.com/Proxytrace/Proxytrace/blob/master/LICENSE).
+Source-available under the [Elastic License 2.0](https://github.com/SyntaktikEU/Proxytrace/blob/master/LICENSE):
+you may use, copy, modify and redistribute it, but you may not offer it as a managed service to
+third parties, circumvent the license-key functionality, or remove the licensing/copyright notices.
+
 A free tier is built in; paid tiers unlock higher limits and additional features.

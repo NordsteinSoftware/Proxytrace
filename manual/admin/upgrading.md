@@ -1,7 +1,7 @@
 # Upgrading
 
 Proxytrace releases follow [semantic versioning](https://semver.org). Release notes for every
-version are published on the [GitHub releases page](https://github.com/Proxytrace/Proxytrace/releases).
+version are published on the [GitHub releases page](https://github.com/SyntaktikEU/Proxytrace/releases).
 
 When a newer release is available, admins see a notice in the app — see
 [Update notifications](/admin/configuration#update-notifications) for how that works and how
