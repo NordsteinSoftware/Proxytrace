@@ -141,16 +141,19 @@ export function TraceTable({
   return (
     <div
       data-testid="trace-table"
-      className="fade-up bg-card rounded-lg overflow-hidden flex-1 min-h-0 flex flex-col shadow-[var(--shadow-card)] [animation-delay:120ms] @container"
+      // Virtualization needs a BOUNDED scroll container. Below md the page scrolls naturally, so
+      // `flex-1` would let this grow to its content height — every row would then count as visible,
+      // which permanently satisfies the load-more trigger and walks the whole result set. A fixed
+      // viewport-relative height keeps it a real scroller there. (Amends DESIGN.md §4.)
+      className="fade-up bg-card rounded-lg overflow-hidden flex-1 min-h-0 max-md:flex-none max-md:h-[60svh] flex flex-col shadow-[var(--shadow-card)] [animation-delay:120ms] @container"
       style={{ '--trace-grid': GRID_TEMPLATE, '--trace-grid-narrow': GRID_TEMPLATE_NARROW } as React.CSSProperties}
     >
-      {/* Virtualization needs a bounded scroll container, so unlike other full-height layouts this
-          one stays a scroller below md too rather than becoming page scroll (DESIGN.md §4). */}
       <div
         ref={scrollRef}
+        data-testid="trace-scroll"
         onScroll={handleScroll}
         aria-rowcount={total}
-        className="flex-1 min-h-0 overflow-y-auto [scrollbar-gutter:stable] max-md:min-h-[60svh]"
+        className="flex-1 min-h-0 overflow-y-auto [scrollbar-gutter:stable]"
       >
         <TraceTableHeader
           sort={sort}
