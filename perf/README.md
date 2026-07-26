@@ -39,10 +39,17 @@ All three scopes read [`perf-budgets.json`](perf-budgets.json) — the single so
 Most are calibrated from a 1M-row dev run (set ~20–30% above the observed p95/mean); recalibrate on your
 hardware. A missing entry means "measure but never fail", so new scenarios run before a budget is set.
 
-**The suite is intentionally RED right now.** The `stats*` query budgets and the HTTP dashboard budget
-are set to *target* values, not current measurements, because those aggregations client-evaluate at
-scale ([#246](https://github.com/SyntaktikEU/Proxytrace/issues/246)) and measure ~4s. Expect those
-metrics to FAIL until #246 lands; everything else passes. See `perf-budgets.json`'s `_comment_stats`.
+**The suite is green-expected end to end**, so a FAIL is a regression to chase rather than a known
+signal. ([#246](https://github.com/SyntaktikEU/Proxytrace/issues/246) — the `stats*` aggregations
+measuring ~4s at 1M — landed long ago: the cause was stale planner statistics after the bulk seed, the
+seeder now `ANALYZE`s, and those budgets are real measured p95 plus headroom. See `_comment_stats`.)
+
+Mind what the reported "p95" actually is when you calibrate: with `--iterations 10` (the default)
+the 95th percentile of ten samples is **the slowest of the ten**, so it carries every scheduling
+hiccup and background autovacuum the run happened to hit. A budget set just above one observed
+measurement will therefore flap on a busier host or a noisier run — give short queries headroom over
+their spread, not over a single sample ([#372](https://github.com/SyntaktikEU/Proxytrace/issues/372),
+`_comment_anomaly`).
 
 ## Components
 
