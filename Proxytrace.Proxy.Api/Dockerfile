@@ -1,7 +1,14 @@
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS base
 USER root
-RUN mkdir -p /app
-RUN chown $APP_UID:$APP_UID /app
+# /app/data holds the Data Protection key ring the proxy must read to decrypt the upstream provider
+# key before replaying it — it is the SAME ring the API writes, so the composes mount the shared
+# appdata volume here. Pre-create it (an empty named volume inherits the image dir's ownership on
+# first use) and hand /app to the non-root app user.
+RUN mkdir -p /app/data && chown -R $APP_UID:$APP_UID /app
+# Default the key-ring location to that directory, matching what every compose file already mounts.
+# Without this variable the ring is in-memory only and the proxy cannot decrypt anything the API
+# wrote, which surfaces only as upstream 401s. See docs/security.md.
+ENV PROXYTRACE_DATA_DIR=/app/data
 USER $APP_UID
 WORKDIR /app
 EXPOSE 8080

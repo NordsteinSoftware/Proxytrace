@@ -1,3 +1,4 @@
+using System.Text;
 using Proxytrace.Domain.Notification;
 
 namespace Proxytrace.Domain.Notifications;
@@ -26,4 +27,25 @@ public sealed record EmailSettings(
     string FromAddress,
     string FromName,
     string? AppBaseUrl,
-    NotificationSeverity MinSeverity);
+    NotificationSeverity MinSeverity)
+{
+    // Redact the SMTP password from the record's generated ToString()/PrintMembers so it never leaks
+    // into a log line, exception message or debugger string — the same treatment ModelProvider gives
+    // its upstream API key. Password stays a normal member (the mailer reads it; equality keeps it);
+    // only its textual rendering is masked. Private, not protected virtual, because this record is
+    // sealed and derives from object.
+    private bool PrintMembers(StringBuilder builder)
+    {
+        builder.Append("Enabled = ").Append(Enabled)
+            .Append(", SmtpHost = ").Append(SmtpHost)
+            .Append(", SmtpPort = ").Append(SmtpPort)
+            .Append(", Security = ").Append(Security)
+            .Append(", Username = ").Append(Username)
+            .Append(", Password = ***")
+            .Append(", FromAddress = ").Append(FromAddress)
+            .Append(", FromName = ").Append(FromName)
+            .Append(", AppBaseUrl = ").Append(AppBaseUrl)
+            .Append(", MinSeverity = ").Append(MinSeverity);
+        return true;
+    }
+}

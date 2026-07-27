@@ -33,6 +33,7 @@ public class AuthController : ControllerBase
     private readonly IConfiguration config;
     private readonly ILogger<Audit> audit;
     private readonly IEmailSettingsStore emailSettings;
+    private readonly ISessionCookie sessionCookie;
 
     public AuthController(
         AuthOptions options,
@@ -48,7 +49,8 @@ public class AuthController : ControllerBase
         IStreamTicketService streamTickets,
         IConfiguration config,
         ILogger<Audit> audit,
-        IEmailSettingsStore emailSettings)
+        IEmailSettingsStore emailSettings,
+        ISessionCookie sessionCookie)
     {
         this.options = options;
         this.setup = setup;
@@ -64,6 +66,7 @@ public class AuthController : ControllerBase
         this.config = config;
         this.audit = audit;
         this.emailSettings = emailSettings;
+        this.sessionCookie = sessionCookie;
     }
 
     [HttpGet("mode")]
@@ -79,6 +82,7 @@ public class AuthController : ControllerBase
     [HttpPost("claim-legacy")]
     [AllowAnonymous]
     [RequireLocalMode]
+    [EnableRateLimiting(AuthRateLimiterConfigurator.LoginPolicy)]
     public async Task<ActionResult<TokenResponse>> ClaimLegacy([FromBody] ClaimLegacyRequest req, CancellationToken ct)
     {
         var v = policy.Validate(req.Password);
@@ -86,7 +90,7 @@ public class AuthController : ControllerBase
 
         var result = await legacyClaim.ClaimAsync(req.Email, req.Password, ct);
         if (result is null) return Conflict("No eligible legacy account.");
-        SessionCookie.Append(Response, result.Token, result.ExpiresAt);
+        sessionCookie.Append(Response, result.Token, result.ExpiresAt);
         audit.LogAudit(AuditAction.LegacyAccountClaimed, nameof(IUser), result.User.Id, result.User.Email);
         return new TokenResponse(result.Token, result.ExpiresAt);
     }
@@ -102,7 +106,7 @@ public class AuthController : ControllerBase
         if (!v.IsValid) return BadRequest(v.Errors);
 
         var result = await setup.CreateFirstAdminAsync(req.Email, req.Password, ct);
-        SessionCookie.Append(Response, result.Token, result.ExpiresAt);
+        sessionCookie.Append(Response, result.Token, result.ExpiresAt);
         audit.LogAudit(AuditAction.AdminBootstrapped, nameof(IUser), result.UserId, req.Email);
         return new TokenResponse(result.Token, result.ExpiresAt);
     }
@@ -122,9 +126,12 @@ public class AuthController : ControllerBase
         return new StreamTicketResponse(ticket.Token, ticket.ExpiresAt);
     }
 
+    // Rate-limited per client IP: there is no per-account failed-attempt counter, so without this
+    // password guessing against a known address is bounded only by request throughput.
     [HttpPost("login")]
     [AllowAnonymous]
     [RequireLocalMode]
+    [EnableRateLimiting(AuthRateLimiterConfigurator.LoginPolicy)]
     public async Task<ActionResult<LoginResponseDto>> Login([FromBody] LoginRequest req, CancellationToken ct)
     {
         var outcome = await login.LoginAsync(req.Email, req.Password, ct);
@@ -151,7 +158,7 @@ public class AuthController : ControllerBase
     {
         if (outcome is LoginSucceeded s)
         {
-            SessionCookie.Append(Response, s.Token, s.ExpiresAt);
+            sessionCookie.Append(Response, s.Token, s.ExpiresAt);
             return new LoginResponseDto(s.Token, s.ExpiresAt, MfaRequired: false, null, null);
         }
 
@@ -164,7 +171,7 @@ public class AuthController : ControllerBase
     [HttpPost("mfa/verify")]
     [AllowAnonymous]
     [RequireLocalMode]
-    [EnableRateLimiting("auth-mfa")]
+    [EnableRateLimiting(AuthRateLimiterConfigurator.MfaPolicy)]
     public async Task<ActionResult<LoginResponseDto>> MfaVerify([FromBody] MfaVerifyRequest req, CancellationToken ct)
     {
         var result = await mfa.VerifyChallengeAsync(req.ChallengeToken, req.Code, ct);
@@ -174,7 +181,7 @@ public class AuthController : ControllerBase
             return Unauthorized();
         }
 
-        SessionCookie.Append(Response, result.Token, result.ExpiresAt);
+        sessionCookie.Append(Response, result.Token, result.ExpiresAt);
         audit.LogAudit(AuditAction.UserLoggedIn, nameof(IUser), result.User.Id, result.User.Email);
         return new LoginResponseDto(result.Token, result.ExpiresAt, MfaRequired: false, null, null);
     }
@@ -235,7 +242,7 @@ public class AuthController : ControllerBase
         // Only audit a logout that actually ended a session — a spurious anonymous call records
         // nothing. The actor (who logged out) is enriched from the session cookie's context.
         var hadSession = Request.Cookies.ContainsKey(SessionCookie.Name);
-        SessionCookie.Delete(Response);
+        sessionCookie.Delete(Response);
         if (hadSession)
             audit.LogAudit(AuditAction.UserLoggedOut, nameof(IUser));
         return NoContent();
@@ -261,6 +268,7 @@ public class AuthController : ControllerBase
     [HttpPost("signup")]
     [AllowAnonymous]
     [RequireLocalMode]
+    [EnableRateLimiting(AuthRateLimiterConfigurator.LoginPolicy)]
     public async Task<ActionResult<TokenResponse>> Signup([FromBody] SignupRequest req, CancellationToken ct)
     {
         var v = policy.Validate(req.Password);
@@ -272,7 +280,7 @@ public class AuthController : ControllerBase
 
         // A freshly created user has no MFA enrollment, so the password login always yields a session.
         if (await login.LoginAsync(user.Email, req.Password, ct) is not LoginSucceeded session) return NotFound();
-        SessionCookie.Append(Response, session.Token, session.ExpiresAt);
+        sessionCookie.Append(Response, session.Token, session.ExpiresAt);
         return new TokenResponse(session.Token, session.ExpiresAt);
     }
 
@@ -283,7 +291,7 @@ public class AuthController : ControllerBase
     [HttpPost("forgot-password")]
     [AllowAnonymous]
     [RequireLocalMode]
-    [EnableRateLimiting("auth-reset")]
+    [EnableRateLimiting(AuthRateLimiterConfigurator.PasswordResetPolicy)]
     public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequest req, CancellationToken ct)
     {
         await passwordReset.RequestResetAsync(req.Email, BuildResetUrl, ct);
@@ -294,7 +302,7 @@ public class AuthController : ControllerBase
     [HttpPost("reset-password")]
     [AllowAnonymous]
     [RequireLocalMode]
-    [EnableRateLimiting("auth-reset")]
+    [EnableRateLimiting(AuthRateLimiterConfigurator.PasswordResetPolicy)]
     public async Task<ActionResult<LoginResponseDto>> ResetPassword([FromBody] ResetPasswordRequest req, CancellationToken ct)
     {
         var v = policy.Validate(req.Password);
@@ -325,9 +333,12 @@ public class AuthController : ControllerBase
         return $"{baseUrl.TrimEnd('/')}/reset-password?token={Uri.EscapeDataString(token)}";
     }
 
+    // Anonymous lookup of an invite by its raw token — rate-limited so the token space cannot be
+    // swept, sharing the login bucket because both are anonymous credential guesses.
     [HttpGet("invites/by-token/{token}")]
     [AllowAnonymous]
     [RequireLocalMode]
+    [EnableRateLimiting(AuthRateLimiterConfigurator.LoginPolicy)]
     public async Task<ActionResult<InvitePreviewDto>> Preview(string token, CancellationToken ct)
     {
         var invite = await invites.GetByTokenAsync(token, ct);

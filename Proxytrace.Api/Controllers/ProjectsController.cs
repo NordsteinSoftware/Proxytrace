@@ -63,6 +63,11 @@ public class ProjectsController : ControllerBase
         [FromQuery] int pageSize = 50,
         CancellationToken cancellationToken = default)
     {
+        // Clamp before either branch: the admin path clamps inside GetPagedAsync, but the in-memory
+        // member path below did not, so pageSize=int.MaxValue returned every member project in one
+        // response and echoed the unclamped size back in the PagedResult.
+        (page, pageSize) = Paging.Clamp(page, pageSize);
+
         // Admins see every project; non-admins (e.g. the sidebar project switcher) see only the
         // projects they belong to — never the full cross-tenant list.
         if (User.IsInRole(nameof(UserRole.Admin)))
@@ -77,7 +82,7 @@ public class ProjectsController : ControllerBase
 
         var memberProjects = await repository.GetByMemberAsync(user.Id, cancellationToken);
         var items = memberProjects
-            .Skip(Math.Max(page - 1, 0) * pageSize)
+            .Skip(Paging.Offset(page, pageSize))
             .Take(pageSize)
             .Select(ProjectDtoMapper.ToListItemDto)
             .ToArray();

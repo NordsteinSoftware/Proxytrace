@@ -82,6 +82,8 @@ public sealed class JwtBearerEventsFactoryTests
         serviceCollection.AddSingleton(tickets);
         serviceCollection.AddSingleton(repo);
         var httpContext = new DefaultHttpContext { RequestServices = serviceCollection.BuildServiceProvider() };
+        httpContext.Request.Method = HttpMethods.Get;
+        httpContext.Request.Path = "/api/agent-calls/stream";
         httpContext.Request.QueryString = new QueryString("?stream_ticket=ticket-abc");
         var ctx = new MessageReceivedContext(httpContext, Scheme(), new JwtBearerOptions());
 
@@ -96,6 +98,42 @@ public sealed class JwtBearerEventsFactoryTests
     }
 
     [TestMethod]
+    public async Task OnMessageReceived_WithStreamTicketOnNonStreamRoute_DoesNotAuthenticate()
+    {
+        // The ticket redeems into a full principal including the live Role claim, so honoring it
+        // outside the SSE routes it was minted for would turn a URL-borne credential into general
+        // API access — including admin endpoints — for its validity window.
+        var userId = Guid.NewGuid();
+        var user = Substitute.For<IUser>();
+        user.Id.Returns(userId);
+        user.Role.Returns(UserRole.Admin);
+
+        var tickets = Substitute.For<IStreamTicketService>();
+        tickets.Consume("ticket-abc").Returns(userId);
+        var repo = Substitute.For<IRepository<IUser>>();
+        repo.FindAsync(userId, Arg.Any<CancellationToken>()).Returns(user);
+
+        var serviceCollection = new ServiceCollection();
+        serviceCollection.AddSingleton(tickets);
+        serviceCollection.AddSingleton(repo);
+        var httpContext = new DefaultHttpContext { RequestServices = serviceCollection.BuildServiceProvider() };
+        httpContext.Request.Method = HttpMethods.Get;
+        httpContext.Request.Path = "/api/users";
+        httpContext.Request.QueryString = new QueryString("?stream_ticket=ticket-abc");
+        var ctx = new MessageReceivedContext(httpContext, Scheme(), new JwtBearerOptions());
+
+        var events = JwtBearerEventsFactory.Create();
+
+        await events.OnMessageReceived(ctx);
+
+        ctx.Result.Should().BeNull();
+        ctx.Principal.Should().BeNull();
+        httpContext.Items.Should().NotContainKey(CurrentUserAccessor.UserIdItemKey);
+        // The ticket must also stay unspent, so a genuine stream request can still redeem it.
+        tickets.DidNotReceive().Consume(Arg.Any<string>());
+    }
+
+    [TestMethod]
     public async Task OnMessageReceived_WithInvalidStreamTicket_FailsContext()
     {
         var tickets = Substitute.For<IStreamTicketService>();
@@ -105,6 +143,8 @@ public sealed class JwtBearerEventsFactoryTests
         serviceCollection.AddSingleton(tickets);
         serviceCollection.AddSingleton(Substitute.For<IRepository<IUser>>());
         var httpContext = new DefaultHttpContext { RequestServices = serviceCollection.BuildServiceProvider() };
+        httpContext.Request.Method = HttpMethods.Get;
+        httpContext.Request.Path = "/api/agent-calls/stream";
         httpContext.Request.QueryString = new QueryString("?stream_ticket=bad");
         var ctx = new MessageReceivedContext(httpContext, Scheme(), new JwtBearerOptions());
 

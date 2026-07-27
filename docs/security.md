@@ -52,6 +52,23 @@ and the lean ingestion proxy can reach without loading `Application`.
 `Sha256` lives in `Proxytrace.Common` so the `Domain` layer (entity generators) can hash without
 referencing `Application`.
 
+### A missing `PROXYTRACE_DATA_DIR` must be loud
+
+An unset variable is not an error — Development and every test harness legitimately run on an
+in-memory ring — but in a real deployment it silently destroys every encrypted secret on each
+restart, and the three decrypt paths (`ModelProviderConfig`, `UserTotpEnrollmentConfig`,
+`EmailSettingsStore`) degrade the resulting `CryptographicException` at **Warning** only. The
+operator Error Log captures `>= Error`, so the outage would present purely as upstream 401s and
+"invalid authenticator code" with nothing to look at. Two things close that hole:
+
+- `KeyRingPersistenceCheck` (an `IHostedService` in `SecretProtectionModule.cs`) logs at
+  **Critical** at startup when the variable is unset, and at Information with the resolved path
+  when it is. It never throws.
+- Both split-shape Dockerfiles (`Proxytrace.Api/Dockerfile`, `Proxytrace.Proxy.Api/Dockerfile`)
+  set `ENV PROXYTRACE_DATA_DIR=/app/data` — the path the composes already mount the shared
+  `appdata` volume at — so a hand-written manifest inherits the safe default. The single-container
+  image keeps its own `/data/appdata`. An explicit environment value still overrides.
+
 ## Blind-index lookup
 
 Encryption is non-deterministic (random IV), so an encrypted column cannot be looked up or indexed by
@@ -76,6 +93,22 @@ presented raw value before the equality lookup (`ApiKeyRepository.FindByKeyAsync
   repository. It must **not** happen in the mapper — a hashed entity that is re-saved (e.g.
   `Invite.MarkConsumedAsync`) would otherwise be double-hashed.
 
+## Secrets must not survive `ToString()`
+
+A `record`'s generated `ToString()`/`PrintMembers` prints **every** member, so a secret-bearing
+record leaks its plaintext the first time anyone writes `logger.LogX("… {Settings}", settings)`,
+interpolates it into an exception message, or looks at it in a debugger. **Every record that carries
+a replayable secret must override `PrintMembers` and render that member as `***`** — the rest of the
+members stay, so the type is still useful in a log line. The member itself stays public and part of
+record equality; only its textual rendering is masked.
+
+Current overrides: `ModelProvider` (`ApiKey`, the reference implementation), `EmailSettings`
+(`Password`), `UserTotpEnrollment` (`Secret`), `KioskEndpointOptions` and `ResolvedKioskEndpoint`
+(`ApiKey`). Note the accessibility differs: a sealed record deriving from `object` must declare
+`private bool PrintMembers(StringBuilder)`, one deriving from another record
+`protected override bool PrintMembers(StringBuilder)` (and must chain to `base.PrintMembers`).
+`Proxytrace.Domain.Tests/SecretRedactionToStringTests` pins all five.
+
 ## Backfill of pre-existing rows
 
 The product shipped with plaintext secrets, so `SecretsBackfillService` (an `IHostedService`
@@ -85,8 +118,15 @@ idempotent and per-row (a partial run resumes; a re-run is a no-op), keyed on a 
 | Table | "Not yet protected" marker | Action |
 |---|---|---|
 | `ModelProvider` | `ApiKeyLookupHash IS NULL` | encrypt `ApiKey`, set the lookup hash |
-| `ApiKey` | `KeyPrefix IS NULL` | hash the plaintext in `KeyHash`, set `KeyPrefix` |
+| `ApiKey` | `KeyHash` length ≠ 64 | hash the plaintext in `KeyHash`, set `KeyPrefix` |
 | `Invite` | `TokenHash` length ≠ 64 | hash the plaintext token |
+
+The two hash markers read the **protected column itself** (a hex SHA-256 is always 64 chars; the
+pre-retrofit plaintexts never are). Do not move a marker into a companion column: it is then only as
+durable as that column's mapper. `ApiKey` used `KeyPrefix IS NULL` until it turned out `ApiKeyConfig`
+collapses that null (`stored.KeyPrefix ?? string.Empty`) and writes `""` back on every round trip, so
+one save of an un-backfilled row would have hidden it from the pass forever — leaving the plaintext in
+`KeyHash`, where `FindByKeyAsync` (which hashes the presented value) can never match it.
 
 The accompanying migration (`ProtectSecretsAtRest`) **renames** the verify-only columns
 (`ApiKey`→`KeyHash`, `Token`→`TokenHash`) rather than dropping and re-adding them, so the existing
@@ -144,6 +184,62 @@ Operators always have two non-logged recovery paths that do **not** require this
 **Settings → Users → Reset password** (shown once in the UI, never logged). The flag exists only for
 the genuine sole-admin-plus-no-email lockout.
 
+## Reverse-proxy trust: forwarded headers
+
+The documented topology terminates TLS at a reverse proxy (`frontend/nginx.conf`) and forwards to the
+API **over plain HTTP**. Without processing `X-Forwarded-*` the API therefore sees `http` as the
+scheme and the proxy container's address as the client for *every* request. `Program.cs` runs
+`UseForwardedHeaders` as its **first** middleware, processing `XForwardedFor | XForwardedProto`, so
+rate-limit partition keys, audit trails and generated absolute URLs describe the real client.
+
+Those headers are attacker-controlled unless the peer that sent them is trusted, and an unrestricted
+`X-Forwarded-For` is *worse* than none: it turns the rate-limit partition key into a value the client
+picks, defeating throttling entirely. The trust set is therefore operator-declared under the
+**`ForwardedHeaders`** config section (`TrustedProxyConfiguration` in `Program.cs`):
+
+| Key | Default | Meaning |
+|---|---|---|
+| `ForwardedHeaders:Enabled` | `true` | Set `false` to skip the middleware entirely. |
+| `ForwardedHeaders:KnownProxies` | *(none)* | Trusted proxy addresses. Comma-separated or an array. |
+| `ForwardedHeaders:KnownNetworks` | *(none)* | Trusted CIDR ranges, e.g. `172.16.0.0/12`. |
+| `ForwardedHeaders:ForwardLimit` | `1` | Number of trusted proxy hops. |
+
+Both this section and `RateLimiting` below are read from the **host** configuration
+(`appsettings.json` + environment variables), not from `appsettings.local.json` — they are deployment
+settings, and the middleware/limiters are wired before the Autofac container (which owns the
+`appsettings.local.json` view) exists.
+
+**With nothing declared the trust set is the framework default — loopback only.** That is the
+fail-safe choice: it never trusts a forged header, but it also means that behind a *containerised*
+proxy (whose address is not loopback) the forwarded headers are ignored and the per-IP limiters below
+collapse into one global bucket. **An operator running the split deployment must declare the proxy**,
+e.g. on the `api` service in `docker-compose.yml`:
+
+```yaml
+- ForwardedHeaders__KnownNetworks=172.16.0.0/12   # the compose bridge network
+```
+
+Narrow this to the proxy's own address (`ForwardedHeaders__KnownProxies=<nginx ip>`) where the
+address is stable. Do **not** widen it to a range that untrusted clients can originate from — anyone
+inside it can spoof their client address. Note that publishing the API port on the host (`5100:8080`
+in the shipped compose file) lets a client reach the API *around* nginx from the bridge network, so
+keep that port unpublished in any deployment where the trust set covers it.
+
+## Session cookie `Secure` is configuration-driven
+
+The 7-day `proxytrace_session` JWT cookie (`Proxytrace.Api/Auth/SessionCookie.cs`) is `HttpOnly`,
+`SameSite=Strict`, and `Secure` **from configuration** — never inferred from `Request.IsHttps`, which
+is `false` on the plain-HTTP hop behind the TLS-terminating proxy and would strip `Secure` from every
+HTTPS installation's cookie, leaking the full session token on any plaintext request the browser can
+be induced to make.
+
+- Default: **on** everywhere except the `Development` environment (which `dev.sh` and
+  `launchSettings.json` set), where the SPA and API are plain `http://`.
+- Override: `Authentication:SessionCookie:Secure`. Set it to `false` only for a deliberate
+  plain-HTTP deployment on a host that is **not** `localhost` — browsers treat `http://localhost` as
+  a secure context and accept `Secure` cookies there, so the local Docker/e2e/kiosk stacks
+  (`http://localhost:5101`, `:5103`) work with the default.
+
 ## In-process auth/MFA/rate-limit state is single-instance by design
 
 Several auth defenses keep their state **in process memory**, not in a shared store:
@@ -151,8 +247,22 @@ Several auth defenses keep their state **in process memory**, not in a shared st
 - **MFA challenge tickets** (`MfaChallengeService`) — the short-lived two-step-login tickets and their
   per-ticket failed-attempt cap (see [`docs/mfa.md`](mfa.md)).
 - **SSE stream tickets** (`StreamTicketService`).
-- **Per-IP rate limiters** (`Proxytrace.Api/Program.cs` — the `auth-reset` and `auth-mfa` fixed-window
-  policies).
+- **Per-IP rate limiters** (`AuthRateLimiterConfigurator` in `Proxytrace.Api/Program.cs` — the
+  `auth-login`, `auth-reset` and `auth-mfa` fixed-window policies). They partition on
+  `Connection.RemoteIpAddress`, so they are only genuinely *per-IP* once the forwarded-header trust
+  set above is declared; otherwise every client shares one bucket, which both weakens brute-force
+  protection and lets one noisy client exhaust the window for everyone. Limits are overridable under
+  `RateLimiting:{Login,PasswordReset,Mfa}:{PermitLimit,WindowSeconds}`:
+
+  | Policy | Default | Endpoints |
+  |---|---|---|
+  | `auth-login` | 30 / minute | `login`, `claim-legacy`, `signup`, `invites/by-token/{token}` |
+  | `auth-reset` | 10 / 15 min | `forgot-password`, `reset-password` |
+  | `auth-mfa` | 10 / 15 min | `mfa/verify` |
+
+  There is **no per-account failed-attempt counter or lockout**; the `auth-login` window is the only
+  bound on online password guessing, so it is sized to swallow a human fumbling a password (and a
+  shared-NAT office signing in) while cutting an unthrottled attack by three-plus orders of magnitude.
 
 This is correct for the **documented single-instance topology**: the API runs as exactly one replica
 (both the split and kiosk deployment shapes run a single API process — see

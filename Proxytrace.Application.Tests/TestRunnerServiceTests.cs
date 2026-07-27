@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Reflection;
 using Autofac;
 using AwesomeAssertions;
@@ -138,6 +139,137 @@ public sealed class TestRunnerServiceTests : BaseTest<Module>
                 });
             return handler;
         });
+    }
+
+    // A model client that reports whether the token it was handed was ever signalled. It announces
+    // `entered` once the run is provably inside the model call, then waits on that token; the wait
+    // is bounded so a run whose cancellation never arrives finishes on its own instead of hanging
+    // the suite — which is exactly what the pre-fix code did with a live, un-cancelled token.
+    private static void RegisterCancellationObservingModelClient(
+        ContainerBuilder builder,
+        AssistantMessage response,
+        TaskCompletionSource entered,
+        TaskCompletionSource tokenSignalled)
+    {
+        builder.Register(ct =>
+        {
+            IModelClient handler = Substitute.For<IModelClient>();
+            var completionFactory = ct.Resolve<ICompletion.Create>();
+            handler.CompleteAsync(Arg.Any<Conversation>(), Arg.Any<ModelOptions>(), Arg.Any<IReadOnlyDictionary<string, string>?>(), Arg.Any<CancellationToken>())
+                .Returns(async call =>
+                {
+                    CancellationToken callToken = call.Arg<CancellationToken>();
+                    entered.TrySetResult();
+                    try
+                    {
+                        await Task.Delay(TimeSpan.FromSeconds(10), callToken);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        // Recorded before the exception escapes, so a caller that has observed the
+                        // run unwind has necessarily observed this too — no polling, no timing.
+                        tokenSignalled.TrySetResult();
+                        throw;
+                    }
+
+                    return completionFactory(response, null, TimeSpan.FromMilliseconds(1000));
+                });
+            return handler;
+        });
+    }
+
+    [TestMethod]
+    public async Task CancelAsync_WhileGroupIsRunning_SignalsTheInFlightModelCallsToken()
+    {
+        // Regression: ExecuteGroupAsync registers the group's CancellationTokenSource under the
+        // *group* id, but CancelAsync looked it up under each *run* id — the lookup never matched,
+        // so cancelling a group only flipped the database rows while the parallel loop kept issuing
+        // real, billed model calls through to completion.
+        var expectedOutput = new AssistantMessage([Content.FromText(MatchingText)], []);
+        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var tokenSignalled = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var services = GetServices(config =>
+            RegisterCancellationObservingModelClient(config, expectedOutput, entered, tokenSignalled));
+
+        var suite = await BuildSuiteAsync(services, expectedOutput, CancellationToken);
+        var endpoint = (await CreateEndpoints(services, 1))[0];
+        var runner = services.GetRequiredService<ITestRunnerService>();
+
+        ITestRunGroup? created = null;
+        var runTask = runner.RunInForegroundAsync(
+            suite,
+            [endpoint],
+            isSystemTestRun: true,
+            onGroupCreated: (g, _) => { created = g; return Task.CompletedTask; },
+            cancellationToken: CancellationToken);
+
+        // Deterministic mid-run point: the model call has been entered and is now waiting on its
+        // token, so the cancellation below always lands while the run is genuinely in flight.
+        await entered.Task;
+        if (created is not { } group)
+            throw new InvalidOperationException("onGroupCreated must run before the model call is reached");
+
+        await runner.CancelAsync(group, CancellationToken);
+
+        await FluentActions.Invoking(() => runTask).Should().ThrowAsync<OperationCanceledException>();
+        tokenSignalled.Task.IsCompletedSuccessfully.Should()
+            .BeTrue("cancelling the group must reach the token the in-flight model call is running on");
+    }
+
+    [TestMethod]
+    public async Task CancelAsync_WhileGroupIsRunning_SettlesGroupCancelledWithoutASpuriousCompletion()
+    {
+        // The post-run SetCompleted used to be unguarded: a group already driven terminal by
+        // CancelAsync was pushed into an invalid transition, the InvalidOperationException landed in
+        // the generic handler and was logged as "Test run group failed", and a completion event was
+        // broadcast for a group the user had cancelled.
+        var expectedOutput = new AssistantMessage([Content.FromText(MatchingText)], []);
+        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var tokenSignalled = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        var broadcaster = Substitute.For<ITestResultBroadcaster>();
+        var groupEvents = new ConcurrentQueue<GroupRunCompleteEvent>();
+        broadcaster.When(b => b.PublishGroupComplete(Arg.Any<GroupRunCompleteEvent>()))
+            .Do(ci =>
+            {
+                var groupEvent = ci.Arg<GroupRunCompleteEvent>();
+                ArgumentNullException.ThrowIfNull(groupEvent);
+                groupEvents.Enqueue(groupEvent);
+            });
+
+        var services = GetServices(config =>
+        {
+            RegisterCancellationObservingModelClient(config, expectedOutput, entered, tokenSignalled);
+            config.RegisterInstance(broadcaster).As<ITestResultBroadcaster>();
+        });
+
+        var suite = await BuildSuiteAsync(services, expectedOutput, CancellationToken);
+        var endpoint = (await CreateEndpoints(services, 1))[0];
+        var runner = services.GetRequiredService<ITestRunnerService>();
+
+        ITestRunGroup? created = null;
+        var runTask = runner.RunInForegroundAsync(
+            suite,
+            [endpoint],
+            isSystemTestRun: true,
+            onGroupCreated: (g, _) => { created = g; return Task.CompletedTask; },
+            cancellationToken: CancellationToken);
+
+        await entered.Task;
+        if (created is not { } group)
+            throw new InvalidOperationException("onGroupCreated must run before the model call is reached");
+
+        await runner.CancelAsync(group, CancellationToken);
+        await FluentActions.Invoking(() => runTask).Should().ThrowAsync<OperationCanceledException>();
+
+        var groups = services.GetRequiredService<ITestRunGroupRepository>();
+        var final = await groups.GetAsync(group.Id, CancellationToken);
+        final.Status.Should().Be(TestRunStatus.Cancelled);
+
+        // Exactly one terminal event, carrying Cancelled: no completion broadcast for a group the
+        // user cancelled, and no duplicate from the execution unwinding alongside the canceller.
+        groupEvents.Should().ContainSingle()
+            .Which.GroupStatus.Should().Be(TestRunStatus.Cancelled);
     }
 
     [TestMethod]

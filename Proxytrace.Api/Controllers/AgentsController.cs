@@ -102,7 +102,7 @@ public class AgentsController : ControllerBase
 
         (page, pageSize) = Paging.Clamp(page, pageSize);
         var items = sorted
-            .Skip((page - 1) * pageSize)
+            .Skip(Paging.Offset(page, pageSize))
             .Take(pageSize)
             .Select(a => agentDtoMapper.ToListItemDto(a, lastCallTimes.TryGetValue(a.Id, out var t) ? t : null))
             .ToArray();

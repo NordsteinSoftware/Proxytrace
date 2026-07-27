@@ -1,6 +1,8 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace Proxytrace.Api.Dto.TestSuites;
 
 public record UpdateTestSuiteRequest(
     Guid? AgentId,
-    IReadOnlyList<Guid>? EvaluatorIds,
-    IReadOnlyList<Guid>? TestCaseIds);
+    [MaxLength(RequestLimits.MaxEvaluators)] IReadOnlyList<Guid>? EvaluatorIds,
+    [MaxLength(RequestLimits.MaxTestCases)] IReadOnlyList<Guid>? TestCaseIds);

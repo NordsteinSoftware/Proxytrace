@@ -64,7 +64,7 @@ internal class TestSuiteRepository : AbstractRepository<ITestSuite, TestSuiteEnt
         int total = await query.CountAsync(cancellationToken);
         var stored = await query
             .OrderByDescending(e => e.CreatedAt)
-            .Skip((page - 1) * pageSize)
+            .Skip(Paging.Offset(page, pageSize))
             .Take(pageSize)
             .ToListAsync(cancellationToken);
 
@@ -92,7 +92,7 @@ internal class TestSuiteRepository : AbstractRepository<ITestSuite, TestSuiteEnt
         int total = await query.CountAsync(cancellationToken);
         var stored = await query
             .OrderByDescending(s => s.CreatedAt)
-            .Skip((page - 1) * pageSize)
+            .Skip(Paging.Offset(page, pageSize))
             .Take(pageSize)
             .ToListAsync(cancellationToken);
 

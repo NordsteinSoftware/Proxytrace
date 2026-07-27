@@ -8,6 +8,7 @@ using Proxytrace.Domain.AgentVersion;
 using Proxytrace.Domain.Session;
 using Proxytrace.Domain.Events;
 using Proxytrace.Domain.ModelEndpoint;
+using Proxytrace.Domain.Paging;
 using Proxytrace.Domain.Project;
 using Proxytrace.Domain.Search;
 using Proxytrace.Domain.Usage;
@@ -61,7 +62,7 @@ internal class AgentCallRepository : AbstractRepository<IAgentCall, AgentCallEnt
         var total = await query.CountAsync(cancellationToken);
 
         var stored = await ApplySort(query, filter)
-            .Skip((page - 1) * pageSize)
+            .Skip(Paging.Offset(page, pageSize))
             .Take(pageSize)
             .ToListAsync(cancellationToken);
 
@@ -87,7 +88,7 @@ internal class AgentCallRepository : AbstractRepository<IAgentCall, AgentCallEnt
         // Project scalar columns only — the Request/Response/ModelParameters payload columns are
         // never read, so a page does not materialise (or transfer) large conversation JSON.
         var rows = await ApplySort(query, filter)
-            .Skip((page - 1) * pageSize)
+            .Skip(Paging.Offset(page, pageSize))
             .Take(pageSize)
             .Select(e => new ListRow(
                 e.Id,

@@ -101,10 +101,86 @@ public sealed class LiteLlmCatalogResolverTests
         price.Should().Be(ModelPrice.Unknown);
     }
 
+    [TestMethod]
+    public async Task Resolve_AfterFailedFetch_RetriesInsteadOfCachingTheEmptyCatalog()
+    {
+        var fx = Substitute.For<IFxRateProvider>();
+        fx.GetUsdToEurAsync(Arg.Any<CancellationToken>()).Returns(1.0m);
+        var handler = new SequencedHandler(
+            _ => throw new HttpRequestException("transient"),
+            _ => new HttpResponseMessage(HttpStatusCode.OK)
+            { Content = new StringContent(Catalog, Encoding.UTF8, "application/json") });
+        var sut = new LiteLlmCatalogResolver(new HttpClient(handler), new PricingOptions(), fx, Substitute.For<IAsyncLock>());
+
+        // First fetch fails: fail-soft to Unknown, but the empty result must not be cached...
+        ModelPrice first = await sut.ResolveAsync(["gpt-4o"], TestContext.CancellationToken);
+        // ...so the next call re-fetches and picks the catalog up.
+        ModelPrice second = await sut.ResolveAsync(["gpt-4o"], TestContext.CancellationToken);
+
+        first.Should().Be(ModelPrice.Unknown);
+        second.InputTokenCost.Should().Be(2.5m);
+    }
+
+    [TestMethod]
+    public async Task Resolve_SuccessfulFetch_IsCachedAndNotRefetched()
+    {
+        var fx = Substitute.For<IFxRateProvider>();
+        fx.GetUsdToEurAsync(Arg.Any<CancellationToken>()).Returns(1.0m);
+        var handler = new SequencedHandler(
+            _ => new HttpResponseMessage(HttpStatusCode.OK)
+            { Content = new StringContent(Catalog, Encoding.UTF8, "application/json") },
+            _ => throw new InvalidOperationException("catalog must not be fetched twice"));
+        var sut = new LiteLlmCatalogResolver(new HttpClient(handler), new PricingOptions(), fx, Substitute.For<IAsyncLock>());
+
+        await sut.ResolveAsync(["gpt-4o"], TestContext.CancellationToken);
+        ModelPrice second = await sut.ResolveAsync(["gpt-4o"], TestContext.CancellationToken);
+
+        second.InputTokenCost.Should().Be(2.5m);
+        handler.CallCount.Should().Be(1);
+    }
+
+    [TestMethod]
+    public async Task Resolve_WhenCancelled_PropagatesCancellationInsteadOfEmptyCatalog()
+    {
+        var fx = Substitute.For<IFxRateProvider>();
+        fx.GetUsdToEurAsync(Arg.Any<CancellationToken>()).Returns(1.0m);
+        using var cts = new CancellationTokenSource();
+        var handler = new SequencedHandler(ct =>
+        {
+            cts.Cancel();
+            ct.ThrowIfCancellationRequested();
+            throw new InvalidOperationException("unreachable");
+        });
+        var sut = new LiteLlmCatalogResolver(new HttpClient(handler), new PricingOptions(), fx, Substitute.For<IAsyncLock>());
+
+        await FluentActions
+            .Invoking(() => sut.ResolveAsync(["gpt-4o"], cts.Token))
+            .Should().ThrowAsync<OperationCanceledException>();
+    }
+
     private sealed class StubHandler(HttpStatusCode status, string body) : HttpMessageHandler
     {
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct) =>
             Task.FromResult(new HttpResponseMessage(status)
             { Content = new StringContent(body, Encoding.UTF8, "application/json") });
+    }
+
+    /// <summary>
+    /// Responds with a different scripted outcome per call, so a test can assert what happens
+    /// across repeated fetches (retry after failure, or no second fetch at all).
+    /// </summary>
+    private sealed class SequencedHandler(params Func<CancellationToken, HttpResponseMessage>[] responses)
+        : HttpMessageHandler
+    {
+        private int calls;
+
+        public int CallCount => calls;
+
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
+        {
+            int index = Interlocked.Increment(ref calls) - 1;
+            Func<CancellationToken, HttpResponseMessage> response = responses[Math.Min(index, responses.Length - 1)];
+            return Task.FromResult(response(ct));
+        }
     }
 }

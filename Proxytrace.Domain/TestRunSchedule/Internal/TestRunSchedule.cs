@@ -60,7 +60,13 @@ internal record TestRunSchedule : DomainEntity<ITestRunSchedule>, ITestRunSchedu
         if (interval <= TimeSpan.Zero || anchor > after)
             return anchor;
 
-        long steps = (after.Ticks - anchor.Ticks) / interval.Ticks + 1;
+        // UtcTicks, never Ticks: DateTimeOffset.Ticks is the wall-clock reading in the value's own
+        // offset, so subtracting two of them silently understates the elapsed time by the offset
+        // difference. With an anchor like 09:00+02:00 that lands NextRunAt in the *past*, and the
+        // scheduler then re-derives the same past instant on every 60s poll — firing (and billing)
+        // the suite once a minute. The `anchor > after` guard above is instant-based, so the two
+        // must agree on what "later" means.
+        long steps = (after.UtcTicks - anchor.UtcTicks) / interval.Ticks + 1;
         return anchor + TimeSpan.FromTicks(interval.Ticks * steps);
     }
 

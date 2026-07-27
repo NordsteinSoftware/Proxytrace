@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Proxytrace.Domain;
 using Proxytrace.Domain.Events;
+using Proxytrace.Domain.Paging;
 using Proxytrace.Domain.Session;
 
 namespace Proxytrace.Storage.Internal.Entities.Session;
@@ -190,7 +191,7 @@ internal class SessionRepository
         var total = await query.CountAsync(cancellationToken);
         var stored = await query
             .OrderByDescending(e => e.LastActivityAt)
-            .Skip((page - 1) * pageSize)
+            .Skip(Paging.Offset(page, pageSize))
             .Take(pageSize)
             .ToListAsync(cancellationToken);
 

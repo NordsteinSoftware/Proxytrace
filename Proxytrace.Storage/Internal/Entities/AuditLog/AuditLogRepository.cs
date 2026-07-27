@@ -88,7 +88,7 @@ internal class AuditLogRepository
             // stable, total order across pages — without it a tied row can duplicate or vanish at a boundary.
             .OrderByDescending(e => e.CreatedAt)
             .ThenByDescending(e => e.Id)
-            .Skip((page - 1) * pageSize)
+            .Skip(Paging.Offset(page, pageSize))
             .Take(pageSize)
             .ToListAsync(cancellationToken);
 

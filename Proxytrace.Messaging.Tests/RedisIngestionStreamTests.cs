@@ -36,6 +36,62 @@ public sealed class RedisIngestionStreamTests
         connection.DidNotReceiveWithAnyArgs().GetDatabase();
     }
 
+    // Regression: PublishAsync is fire-and-forget on the proxy hot path, but the proxy awaits it in
+    // the `finally` of both response paths with CancellationToken.None — an uncancellable wait. With
+    // AbortOnConnectFail=false the multiplexer does NOT fail fast while Redis is down: it backlogs
+    // the XADD until the async timeout (~5s), so every proxied response used to be stalled by that
+    // much and a client abort could not release it. The publish must short-circuit on IsConnected
+    // exactly like GetQueueDepthAsync does, dropping the capture instead of issuing the command.
+    [TestMethod]
+    public async Task PublishAsync_WhenDisconnected_DropsCaptureWithoutIssuingCommand()
+    {
+        var database = Substitute.For<IDatabase>();
+
+        var connection = Substitute.For<IConnectionMultiplexer>();
+        connection.IsConnected.Returns(false);
+        connection.GetDatabase(Arg.Any<int>(), Arg.Any<object>()).Returns(database);
+
+        var stream = new RedisIngestionStream(
+            connection,
+            new MessagingConfiguration(),
+            NullLogger<RedisIngestionStream>.Instance);
+
+        await stream.PublishAsync(SampleMessage(), CancellationToken.None);
+
+        connection.DidNotReceiveWithAnyArgs().GetDatabase();
+        await database.DidNotReceiveWithAnyArgs().StreamAddAsync(
+            Arg.Any<RedisKey>(), Arg.Any<RedisValue>(), Arg.Any<RedisValue>(),
+            Arg.Any<RedisValue?>(), Arg.Any<int?>(), Arg.Any<bool>(), Arg.Any<CommandFlags>());
+    }
+
+    // The short-circuit above must not swallow the happy path: while the multiplexer reports a
+    // connection the capture is still XADDed to the configured stream.
+    [TestMethod]
+    public async Task PublishAsync_WhenConnected_AddsPayloadToStream()
+    {
+        var config = new MessagingConfiguration();
+        var database = Substitute.For<IDatabase>();
+
+        var connection = Substitute.For<IConnectionMultiplexer>();
+        connection.IsConnected.Returns(true);
+        connection.GetDatabase(Arg.Any<int>(), Arg.Any<object>()).Returns(database);
+
+        var stream = new RedisIngestionStream(
+            connection, config, NullLogger<RedisIngestionStream>.Instance);
+
+        IngestMessage message = SampleMessage();
+        await stream.PublishAsync(message, CancellationToken.None);
+
+        await database.Received(1).StreamAddAsync(
+            config.Stream,
+            "payload",
+            Arg.Is<RedisValue>(value => value.ToString().Contains(message.ProviderId.ToString())),
+            Arg.Any<RedisValue?>(),
+            config.MaxStreamLength,
+            true,
+            Arg.Any<CommandFlags>());
+    }
+
     [TestMethod]
     public void RedeliversUnacknowledged_IsTrue()
     {

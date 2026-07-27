@@ -59,7 +59,7 @@ internal class ApplicationErrorRepository
         int total = await query.CountAsync(cancellationToken);
         var stored = await query
             .OrderByDescending(e => e.CreatedAt)
-            .Skip((page - 1) * pageSize)
+            .Skip(Paging.Offset(page, pageSize))
             .Take(pageSize)
             .ToListAsync(cancellationToken);
 

@@ -34,8 +34,11 @@ public sealed class ModelProviderDtoMapper
 
     private static ApiKeyDto ToKeyDto(IApiKey k, string? plaintextKey)
     {
-        var scopes = new[] { ApiKeyScopes.Ingestion, ApiKeyScopes.McpRead, ApiKeyScopes.McpWrite }
-            .Where(s => k.Scopes.HasFlag(s))
+        // Enumerate the enum rather than a hand-written list: the hardcoded list silently omitted
+        // ApiRead/ApiWrite, so a REST-capable key rendered in the Providers UI as having no REST
+        // capability at all. Deriving from the enum means a newly added scope cannot be forgotten.
+        var scopes = Enum.GetValues<ApiKeyScopes>()
+            .Where(s => s != ApiKeyScopes.None && k.Scopes.HasFlag(s))
             .ToArray();
         return new(k.Id, k.Name, k.KeyPrefix, k.Project.Id, k.Project.Name, k.Provider.Id, k.Provider.Name, scopes, k.Owner.Id, k.Owner.Email, k.CreatedAt, plaintextKey);
     }

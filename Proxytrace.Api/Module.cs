@@ -323,7 +323,30 @@ internal sealed class Module : Autofac.Module
     {
         var authOptions = configuration.GetSection("Authentication").Get<AuthOptions>() ?? new AuthOptions();
         builder.RegisterInstance(authOptions);
-        
+
+        // The session cookie's Secure attribute is configuration-driven, never inferred from the
+        // request: the documented topology terminates TLS at a reverse proxy and forwards plain HTTP,
+        // so Request.IsHttps is false on every hop and would strip Secure from an HTTPS install's
+        // 7-day session cookie. Default: on, except in Development (where the SPA and API are plain
+        // http:// — browsers do accept Secure cookies on localhost, but a dev host that is not
+        // localhost would otherwise silently fail to log in). Override with
+        // Authentication:SessionCookie:Secure for a deliberate plain-HTTP deployment. See docs/security.md.
+        var environmentName = configuration["ASPNETCORE_ENVIRONMENT"]
+                              ?? configuration["DOTNET_ENVIRONMENT"]
+                              ?? "Production";
+        var isDevelopment = string.Equals(environmentName, "Development", StringComparison.OrdinalIgnoreCase);
+        builder
+            .RegisterInstance(new SessionCookieOptions
+            {
+                Secure = configuration.GetSection("Authentication:SessionCookie:Secure").Get<bool?>() ?? !isDevelopment,
+            })
+            .SingleInstance();
+
+        builder
+            .RegisterType<SessionCookie>()
+            .As<ISessionCookie>()
+            .SingleInstance();
+
         builder.RegisterServiceCollection(services =>
         {
             if (kiosk.Enabled)

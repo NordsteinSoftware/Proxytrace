@@ -18,17 +18,27 @@ namespace Proxytrace.Storage.Internal;
 /// per-row marker so a partial run resumes and a re-run is a no-op:
 /// <list type="bullet">
 /// <item><description><c>ModelProvider</c>: <c>ApiKeyLookupHash IS NULL</c> ⇒ <c>ApiKey</c> still plaintext.</description></item>
-/// <item><description><c>ApiKey</c>: <c>KeyPrefix IS NULL</c> ⇒ <c>KeyHash</c> still holds the plaintext key.</description></item>
+/// <item><description><c>ApiKey</c>: <c>KeyHash</c> length ≠ 64 ⇒ it still holds the plaintext key.</description></item>
 /// <item><description><c>Invite</c>: a 64-char hash vs the 43-char base64url token ⇒ length 64 means done.</description></item>
 /// </list>
 /// It reads the still-plaintext value and writes the protected value directly (bypassing the
 /// encrypt/hash-aware mappers). It never fails host boot: each table is isolated, and the provider
 /// pass is skipped (logged) if encryption is unavailable, while the key-ring-independent hash passes
 /// still run.
+///
+/// The two hash markers deliberately read the <em>protected column itself</em> rather than a
+/// companion column: a hex SHA-256 is always 64 characters, while the pre-retrofit plaintexts are
+/// not (an inbound key is <c>"proxytrace-"</c> + 43 base64url chars, an invite token 43). A marker
+/// held in a separate column is only as durable as that column's mapper — <c>ApiKey.KeyPrefix</c>
+/// was such a marker until its <c>NULL</c> turned out to be collapsed to <c>""</c> by
+/// <c>ApiKeyConfig</c> (<c>stored.KeyPrefix ?? string.Empty</c>) on every round trip, so a single
+/// save of an un-backfilled row would have hidden it from the pass forever, stranding a plaintext
+/// key that can never authenticate again.
 /// </summary>
 internal sealed class SecretsBackfillService : IHostedService
 {
-    private const int InviteTokenHashLength = 64;
+    // Length of a hex-encoded SHA-256 — the shape of an already-protected verify-only column.
+    private const int HexHashLength = 64;
     private const int DisplayPrefixLength = 16;
 
     // An Owned<StorageDbContext> factory (not the ambient-aware Func<StorageDbContext>): this service is a
@@ -139,8 +149,10 @@ internal sealed class SecretsBackfillService : IHostedService
     {
         await using var owned = contextFactory();
         var db = owned.Value;
+        // Marker: the stored KeyHash is not yet a hex SHA-256, so it is still the plaintext key.
+        // KeyPrefix cannot serve as the marker — the mapper collapses its NULL to "" on any save.
         var rows = await db.Set<ApiKeyEntity>()
-            .Where(e => e.KeyPrefix == null)
+            .Where(e => e.KeyHash.Length != HexHashLength)
             .ToListAsync(cancellationToken);
         foreach (var row in rows)
         {
@@ -166,7 +178,7 @@ internal sealed class SecretsBackfillService : IHostedService
         await using var owned = contextFactory();
         var db = owned.Value;
         var rows = await db.Set<InviteEntity>()
-            .Where(e => e.TokenHash.Length != InviteTokenHashLength)
+            .Where(e => e.TokenHash.Length != HexHashLength)
             .ToListAsync(cancellationToken);
         foreach (var row in rows)
         {

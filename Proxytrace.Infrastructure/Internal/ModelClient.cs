@@ -3,6 +3,7 @@ using System.ClientModel.Primitives;
 using System.Diagnostics;
 using System.Net;
 using System.Runtime.CompilerServices;
+using System.Runtime.ExceptionServices;
 using System.Text.Json;
 using Microsoft.Extensions.AI;
 using OpenAI;
@@ -246,7 +247,9 @@ internal class ModelClient : IModelClient
 
         if (error is not null)
         {
-            throw error;
+            // Rethrow via ExceptionDispatchInfo so the original provider-side stack trace survives;
+            // a bare `throw error` would reset it to this line and lose the failure's origin.
+            ExceptionDispatchInfo.Capture(error).Throw();
         }
 
         return completion

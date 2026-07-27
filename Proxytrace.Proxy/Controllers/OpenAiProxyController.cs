@@ -1,7 +1,6 @@
 using System.Buffers;
 using System.Diagnostics;
 using System.Net;
-using System.Net.Http.Headers;
 using System.Text;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -32,8 +31,24 @@ public class OpenAiProxyController : ControllerBase
     // Hard caps so a single request can't exhaust proxy memory: reject oversized request bodies
     // outright, and bound the in-memory transcript we accumulate for capture (the bytes are still
     // streamed through to the client untruncated — only the captured copy is bounded).
-    private const long MaxRequestBodyBytes = 64L * 1024 * 1024;
+    //
+    // MaxRequestBodyBytes is public because the host has to pin Kestrel's own
+    // KestrelServerLimits.MaxRequestBodySize to the *same* number: Kestrel's 30 MB default rejects
+    // first otherwise, and this cap — plus the 413 it produces — is unreachable dead code.
+    // See Proxytrace.Proxy.Api/Program.cs.
+    public const long MaxRequestBodyBytes = 64L * 1024 * 1024;
+
     private const int MaxCapturedResponseChars = 16 * 1024 * 1024;
+
+    // Chunk size for every stream copy the proxy performs (request buffering, buffered response
+    // forwarding, streaming reads).
+    private const int CopyChunkBytes = 64 * 1024;
+    private const int StreamReadChunkChars = 16 * 1024;
+
+    // Upper bound on how much of a single un-terminated SSE line the proxy holds in memory before
+    // flushing it onward. Well above any real `data: …` frame, small enough that a pathological
+    // single-line upstream body cannot grow the proxy's working set with it.
+    private const int MaxForwardedLineChars = 256 * 1024;
 
     // Optional: a client may name its owning agent explicitly. When present, ingestion attributes the
     // call to that named agent directly, skipping the prompt/tool similarity matcher.
@@ -190,11 +205,12 @@ public class OpenAiProxyController : ControllerBase
         HttpResponseMessage upstreamResponse;
         try
         {
-            var completionOption = isStreaming
-                ? HttpCompletionOption.ResponseHeadersRead
-                : HttpCompletionOption.ResponseContentRead;
-
-            upstreamResponse = await client.SendAsync(upstream, completionOption, cancellationToken);
+            // ResponseHeadersRead on BOTH branches. ResponseContentRead would call
+            // LoadIntoBufferAsync before returning, materializing the entire upstream body in memory
+            // (bounded only by HttpClient.MaxResponseContentBufferSize, ~2 GB by default) — which is
+            // exactly the unbounded residency ProxyBufferedResponseAsync's chunked copy exists to
+            // avoid. Both paths read the body as a stream, so neither needs the eager buffer.
+            upstreamResponse = await client.SendAsync(upstream, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
         }
         catch (Exception ex)
         {
@@ -277,7 +293,7 @@ public class OpenAiProxyController : ControllerBase
     {
         CopyUpstreamStatusAndHeaders(upstreamResponse);
 
-        var buffer = ArrayPool<byte>.Shared.Rent(64 * 1024);
+        var buffer = ArrayPool<byte>.Shared.Rent(CopyChunkBytes);
         try
         {
             await using var upstreamStream = await upstreamResponse.Content.ReadAsStreamAsync(cancellationToken);
@@ -351,18 +367,44 @@ public class OpenAiProxyController : ControllerBase
             return null;
         }
 
-        using var requestBodyStream = new MemoryStream();
-        await Request.Body.CopyToAsync(requestBodyStream, cancellationToken);
-        var requestBodyBytes = requestBodyStream.ToArray();
-
-        // Re-check after buffering: a chunked request reports no ContentLength up-front.
-        if (requestBodyBytes.LongLength > MaxRequestBodyBytes)
+        byte[]? requestBodyBytes = await BufferRequestBodyAsync(cancellationToken);
+        if (requestBodyBytes is null)
         {
             Response.StatusCode = StatusCodes.Status413PayloadTooLarge;
             return null;
         }
 
         return new BufferedProxyRequest(requestBodyBytes, resolved);
+    }
+
+    // Buffers the request body with the cap enforced *during* the copy, not after it. A chunked
+    // request reports no Content-Length up front, so the pre-check above cannot see its size — and a
+    // plain CopyToAsync would grow the MemoryStream to whatever the client sends before anyone looked
+    // at the total. Reading in fixed-size chunks and bailing the moment the cap is crossed means the
+    // resident bytes never exceed MaxRequestBodyBytes. Returns null when the body is over the cap.
+    private async Task<byte[]?> BufferRequestBodyAsync(CancellationToken cancellationToken)
+    {
+        using var buffered = new MemoryStream();
+        var chunk = ArrayPool<byte>.Shared.Rent(CopyChunkBytes);
+        try
+        {
+            int read;
+            while ((read = await Request.Body.ReadAsync(chunk.AsMemory(0, CopyChunkBytes), cancellationToken)) > 0)
+            {
+                if (buffered.Length + read > MaxRequestBodyBytes)
+                {
+                    return null;
+                }
+
+                await buffered.WriteAsync(chunk.AsMemory(0, read), cancellationToken);
+            }
+        }
+        finally
+        {
+            ArrayPool<byte>.Shared.Return(chunk);
+        }
+
+        return buffered.ToArray();
     }
 
     // Reports whether the (already once-decoded) catch-all route value hides a `..` traversal
@@ -416,8 +458,12 @@ public class OpenAiProxyController : ControllerBase
     {
         var client = httpClientFactory.CreateClient("openai");
         using var request = new HttpRequestMessage(HttpMethod.Get, ProviderEndpoints.AzureDeploymentsUri(provider.Endpoint));
-        request.Headers.Add("api-key", provider.ApiKey);
-        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", provider.ApiKey);
+        // TryAddWithoutValidation, exactly as BuildUpstreamRequest does: `Headers.Add` and the
+        // Authorization setter both validate, and a stored key with a stray newline or control
+        // character (the classic paste artefact) makes them throw FormatException — which would escape
+        // as an unhandled 500 instead of the 502 this method carefully produces for upstream trouble.
+        request.Headers.TryAddWithoutValidation("api-key", provider.ApiKey);
+        request.Headers.TryAddWithoutValidation("Authorization", $"Bearer {provider.ApiKey}");
 
         HttpResponseMessage upstreamResponse;
         try
@@ -531,7 +577,7 @@ public class OpenAiProxyController : ControllerBase
         // MaxCapturedResponseChars, exactly as the streaming path does.
         var captured = new StringBuilder();
         var decoder = Encoding.UTF8.GetDecoder();
-        var buffer = ArrayPool<byte>.Shared.Rent(64 * 1024);
+        var buffer = ArrayPool<byte>.Shared.Rent(CopyChunkBytes);
         var chars = ArrayPool<char>.Shared.Rent(Encoding.UTF8.GetMaxCharCount(buffer.Length));
 
         try
@@ -584,28 +630,53 @@ public class OpenAiProxyController : ControllerBase
         await using var upstreamStream = await upstreamResponse.Content.ReadAsStreamAsync(cancellationToken);
         using var reader = new StreamReader(upstreamStream, Encoding.UTF8, leaveOpen: true);
 
+        // Read fixed-size chunks and split on '\n' ourselves rather than calling ReadLineAsync, which
+        // grows an unbounded internal buffer until it finds a newline. Whether the response is really
+        // an event stream is decided by the *request* (`"stream": true`), never by the upstream, so a
+        // provider that ignores the flag — or a WAF/error page in front of it — can answer with one
+        // multi-megabyte single-line body, which ReadLineAsync would materialize whole as a string and
+        // WriteSseSegmentAsync would then rent 3x its length on top of. A line that grows past
+        // MaxForwardedLineChars is flushed as a raw, unterminated segment instead: the client still
+        // receives every byte, but nothing unbounded is ever resident.
+        var chunk = ArrayPool<char>.Shared.Rent(StreamReadChunkChars);
+        var pending = new StringBuilder();
+
         try
         {
-            while (true)
+            int read;
+            while ((read = await reader.ReadAsync(chunk.AsMemory(0, StreamReadChunkChars), cancellationToken)) > 0)
             {
-                var line = await reader.ReadLineAsync(cancellationToken);
-                if (line is null)
+                var start = 0;
+                while (start < read)
                 {
-                    break;
+                    var newline = Array.IndexOf(chunk, '\n', start, read - start);
+                    if (newline < 0)
+                    {
+                        pending.Append(chunk, start, read - start);
+                        break;
+                    }
+
+                    pending.Append(chunk, start, newline - start);
+                    start = newline + 1;
+                    await EmitSseSegmentAsync(pending, accumulated, terminated: true, cancellationToken);
                 }
 
-                // Bound the captured copy (the forwarded stream below is never truncated). Use '\n'
-                // explicitly so the capture matches what is forwarded rather than Environment.NewLine.
-                if (accumulated.Length < MaxCapturedResponseChars)
+                if (pending.Length >= MaxForwardedLineChars)
                 {
-                    accumulated.Append(line).Append('\n');
+                    await EmitSseSegmentAsync(pending, accumulated, terminated: false, cancellationToken);
                 }
+            }
 
-                await WriteSseLineAsync(line, cancellationToken);
+            if (pending.Length > 0)
+            {
+                // Upstream ended without a trailing newline. The terminator is still written, exactly
+                // as the previous ReadLineAsync-based loop did.
+                await EmitSseSegmentAsync(pending, accumulated, terminated: true, cancellationToken);
             }
         }
         finally
         {
+            ArrayPool<char>.Shared.Return(chunk);
             // Always publish what we accumulated, even when the client disconnects mid-stream: the
             // forward loop above throws out on disconnect, but the partial transcript is exactly the
             // data the proxy exists to capture. Decouple from the request-aborted token with
@@ -617,17 +688,55 @@ public class OpenAiProxyController : ControllerBase
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
-    // Forwards one streamed line plus its '\n' terminator and flushes so the token reaches the
-    // client immediately. Encodes into a pooled buffer to avoid the per-line string concat and
-    // throwaway byte[] that a token-by-token completion would otherwise allocate thousands of.
-    private async Task WriteSseLineAsync(string line, CancellationToken cancellationToken)
+    // Drains the pending segment: appends it to the bounded capture buffer and forwards it to the
+    // client. `terminated` distinguishes a real line (a '\n' was seen upstream, so one is written and
+    // a trailing '\r' is dropped — the CRLF→LF normalization StreamReader.ReadLine used to do) from a
+    // length-forced flush of an over-long line, which is written raw so the forwarded bytes stay
+    // faithful and no newline is invented.
+    private async Task EmitSseSegmentAsync(
+        StringBuilder pending,
+        StringBuilder accumulated,
+        bool terminated,
+        CancellationToken cancellationToken)
     {
-        var buffer = ArrayPool<byte>.Shared.Rent(Encoding.UTF8.GetMaxByteCount(line.Length) + 1);
+        if (terminated && pending.Length > 0 && pending[^1] == '\r')
+        {
+            pending.Length--;
+        }
+
+        var segment = pending.ToString();
+        pending.Clear();
+
+        // Bound the captured copy (the forwarded bytes below are never truncated).
+        if (accumulated.Length < MaxCapturedResponseChars)
+        {
+            accumulated.Append(segment, 0, Math.Min(segment.Length, MaxCapturedResponseChars - accumulated.Length));
+            if (terminated && accumulated.Length < MaxCapturedResponseChars)
+            {
+                accumulated.Append('\n');
+            }
+        }
+
+        await WriteSseSegmentAsync(segment, terminated, cancellationToken);
+    }
+
+    // Forwards one streamed segment (plus its '\n' terminator when the segment is a complete line)
+    // and flushes so the token reaches the client immediately. Encodes into a pooled buffer to avoid
+    // the per-line string concat and throwaway byte[] that a token-by-token completion would
+    // otherwise allocate thousands of.
+    private async Task WriteSseSegmentAsync(string segment, bool terminated, CancellationToken cancellationToken)
+    {
+        var buffer = ArrayPool<byte>.Shared.Rent(Encoding.UTF8.GetMaxByteCount(segment.Length) + 1);
         try
         {
-            var count = Encoding.UTF8.GetBytes(line, buffer);
-            buffer[count] = (byte)'\n';
-            await Response.Body.WriteAsync(buffer.AsMemory(0, count + 1), cancellationToken);
+            var count = Encoding.UTF8.GetBytes(segment, buffer);
+            if (terminated)
+            {
+                buffer[count] = (byte)'\n';
+                count++;
+            }
+
+            await Response.Body.WriteAsync(buffer.AsMemory(0, count), cancellationToken);
             await Response.Body.FlushAsync(cancellationToken);
         }
         finally

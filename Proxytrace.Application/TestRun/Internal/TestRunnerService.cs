@@ -144,26 +144,49 @@ internal class TestRunnerService : BackgroundService, ITestRunnerService
 
     public async Task<ITestRunGroup> CancelAsync(ITestRunGroup group, CancellationToken cancellationToken = default)
     {
-        var runs = await testRunRepository.GetByGroupAsync(group.Id, cancellationToken);
-
-        foreach (var run in runs)
+        // The executing group registers its source under the *group* id (see ExecuteGroupAsync).
+        // Looking it up per run never matched, so cancelling only flipped the rows to Cancelled
+        // while the parallel loop kept issuing real, billed model calls through to completion.
+        if (cancellationTokens.TryGetValue(group.Id, out CancellationTokenSource? cts))
         {
-            if (cancellationTokens.TryGetValue(run.Id, out CancellationTokenSource? cts))
+            try
+            {
                 await cts.CancelAsync();
+            }
+            catch (ObjectDisposedException)
+            {
+                // The group finished and disposed its source between the lookup and the cancel.
+                // There is nothing left to stop; the reconciliation below still settles the rows.
+            }
         }
 
-        // Reload runs and mark any that didn't reach a terminal state as Cancelled.
-        var reloaded = await testRunRepository.GetByGroupAsync(group.Id, cancellationToken);
-        foreach (var run in reloaded.Where(r => !r.Status.IsTerminal()))
+        return await SettleCancelledAsync(group, cancellationToken);
+    }
+
+    /// <summary>
+    /// Drives a cancelled group and its unfinished runs to their terminal state, exactly once.
+    /// </summary>
+    /// <remarks>
+    /// Both the canceller and the cancelled execution land here: the token <see cref="CancelAsync"/>
+    /// trips unwinds <see cref="ExecuteGroupAsync"/> concurrently, and the two touch the same rows.
+    /// Serializing on the group id makes the "already terminal?" check and the transition atomic, so
+    /// the loser is a no-op instead of an <c>OptimisticConcurrencyException</c> on a run row or a
+    /// second group-complete broadcast.
+    /// </remarks>
+    private async Task<ITestRunGroup> SettleCancelledAsync(ITestRunGroup group, CancellationToken cancellationToken)
+    {
+        using IDisposable sync = await asyncLock.LockAsync(group.Id, cancellationToken);
+
+        var runs = await testRunRepository.GetByGroupAsync(group.Id, cancellationToken);
+        foreach (var run in runs.Where(r => !r.Status.IsTerminal()))
             await run.SetCancelled(cancellationToken);
 
         group = await testRunGroupRepository.GetAsync(group.Id, cancellationToken);
-        if (!group.Status.IsTerminal())
-        {
-            group = await group.SetCancelled(cancellationToken);
-            broadcaster.PublishGroupComplete(GroupRunCompleteEvent.Create(group));
-        }
+        if (group.Status.IsTerminal())
+            return group;
 
+        group = await group.SetCancelled(cancellationToken);
+        broadcaster.PublishGroupComplete(GroupRunCompleteEvent.Create(group));
         return group;
     }
 
@@ -199,9 +222,21 @@ internal class TestRunnerService : BackgroundService, ITestRunnerService
                 parallelOptions,
                 async (testRun, ct) => await RunTestRun(testRun, customAgent, ct));
 
-            group = await group.ReloadAsync(cancellationToken);
-            group = await group.SetCompleted(cancellationToken);
-            broadcaster.PublishGroupComplete(GroupRunCompleteEvent.Create(group));
+            using (IDisposable sync = await asyncLock.LockAsync(group.Id, cancellationToken))
+            {
+                group = await group.ReloadAsync(cancellationToken);
+
+                // A concurrent CancelAsync may already have driven the group terminal while the
+                // parallel loop was draining. Completing it then is an invalid transition that
+                // SetState rejects, which used to surface as a bogus "Test run group failed" — plus
+                // a completion broadcast and anomaly detection for a group the user cancelled.
+                // Leave the settled group exactly as the cancellation left it.
+                if (group.Status.IsTerminal())
+                    return group;
+
+                group = await group.SetCompleted(cancellationToken);
+                broadcaster.PublishGroupComplete(GroupRunCompleteEvent.Create(group));
+            }
 
             if (!isSystemTestRun)
             {
@@ -212,21 +247,13 @@ internal class TestRunnerService : BackgroundService, ITestRunnerService
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
-            // The run was cancelled (process shutdown, or a user cancelling theory validation through
-            // the linked token). Mark the group and any non-terminal runs Cancelled with a fresh token
-            // so the in-flight A/B run isn't stranded in Running forever, then rethrow. Best-effort.
+            // The run was cancelled (process shutdown, a user cancelling the group through
+            // CancelAsync, or a caller cancelling theory validation through the linked token). Mark
+            // the group and any non-terminal runs Cancelled with a fresh token so the in-flight A/B
+            // run isn't stranded in Running forever, then rethrow. Best-effort.
             try
             {
-                var runs = await testRunRepository.GetByGroupAsync(group.Id, CancellationToken.None);
-                foreach (var run in runs.Where(r => !r.Status.IsTerminal()))
-                    await run.SetCancelled(CancellationToken.None);
-
-                group = await group.ReloadAsync(CancellationToken.None);
-                if (!group.Status.IsTerminal())
-                {
-                    group = await group.SetCancelled(CancellationToken.None);
-                    broadcaster.PublishGroupComplete(GroupRunCompleteEvent.Create(group));
-                }
+                group = await SettleCancelledAsync(group, CancellationToken.None);
             }
             catch (Exception ex)
             {
@@ -240,12 +267,17 @@ internal class TestRunnerService : BackgroundService, ITestRunnerService
             logger.LogError(ex, "Test run group {GroupId} failed", group.Id);
             try
             {
-                group = await group.ReloadAsync(CancellationToken.None);
-                if (!group.Status.IsTerminal())
+                // Same check-then-act as the cancel path: a user cancelling while the group is
+                // failing must not collide with this transition or its broadcast.
+                using (IDisposable sync = await asyncLock.LockAsync(group.Id, CancellationToken.None))
                 {
-                    group = await group.SetFailed(CancellationToken.None);
+                    group = await group.ReloadAsync(CancellationToken.None);
+                    if (!group.Status.IsTerminal())
+                    {
+                        group = await group.SetFailed(CancellationToken.None);
+                    }
+                    broadcaster.PublishGroupComplete(GroupRunCompleteEvent.Create(group));
                 }
-                broadcaster.PublishGroupComplete(GroupRunCompleteEvent.Create(group));
 
                 // A failed group is the most important anomaly. The success-path enqueue above is
                 // skipped when we land here, so detect from the failure path too.

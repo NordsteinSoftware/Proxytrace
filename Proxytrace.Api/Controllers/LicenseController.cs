@@ -37,9 +37,21 @@ public class LicenseController : ControllerBase
         this.audit = audit;
     }
 
+    /// <summary>
+    /// The current license. Anonymous by design — the setup wizard and the login screen need the
+    /// tier before any user exists — but the licensee's identity is withheld from unauthenticated
+    /// callers: without that, <c>curl https://host/api/license</c> from the internet discloses the
+    /// purchaser's email address. Signed-in callers (the Settings → License panel) still see it.
+    /// </summary>
     [HttpGet]
     [AllowAnonymous]
-    public LicenseDto Get() => Map(licenseService.Current);
+    public LicenseDto Get()
+    {
+        LicenseDto dto = Map(licenseService.Current);
+        return User.Identity?.IsAuthenticated == true
+            ? dto
+            : dto with { CustomerEmail = null };
+    }
 
     /// <summary>
     /// Validates a license key without storing or applying it. Anonymous by design: it is a

@@ -9,6 +9,168 @@ follow [Semantic Versioning](https://semver.org). Ongoing work is collected unde
 
 ## [Unreleased]
 
+### Security
+
+- **The shipped configuration no longer starts the app in the login-free demo mode.** The
+  `appsettings.json` baked into the image had kiosk mode switched on. Kiosk mode exists for the
+  public showcase: it accepts every request as the built-in demo user without asking for a password,
+  and keeps all data in memory. The supported ways of starting Proxytrace each turned it off by
+  hand, so a normal install was unaffected — but anyone starting the app another way (their own
+  Kubernetes manifest, a custom container, running the binary directly) got an installation that
+  served the entire API to anyone who could reach it and lost its data on every restart. The default
+  is now off, and the demo stacks switch it on explicitly.
+
+- **A REST API key can no longer read or change other projects.** An API key is described, and sold
+  in the UI, as granting access to *the project it was created for*. In practice the key acted purely
+  as the person who created it, and its project was ignored — and because keys can only be minted by
+  an administrator, the key normally inherited administrator reach over **every** project in the
+  installation. Anyone holding a key issued for one project could list another project's traces, read
+  their full request and response bodies, and — with the write scope — delete traces and modify test
+  suites anywhere. Keys are now confined to their own project, in addition to whatever their owner
+  may reach.
+
+- **Test suites can no longer be used to pull in another project's data.** Updating a test suite
+  accepted agent, test-case and evaluator identifiers without checking that the caller may access
+  them. Supplying an identifier from another project attached that project's test case — and the
+  response echoed its full conversation and expected output back — re-parented the suite into a
+  project the caller had no access to, or attached another project's evaluator so that running the
+  suite spent that project's provider credit. All three are now checked the same way the rest of the
+  app already checks them.
+
+- **Dashboard figures no longer fall back to showing every project's results.** For a project with no
+  agents yet — a newly created one, or one whose agents were all archived — the test-run pass rate and
+  its trend chart were computed across the whole installation instead of across nothing, showing one
+  project's numbers to another.
+
+- **A single-use streaming credential is now accepted only on streaming endpoints.** The short-lived
+  ticket that live-updating views use to open their connection was honoured on any address, so within
+  its brief validity window it could be replayed against ordinary endpoints, including administrative
+  ones. It is now restricted to the live-update endpoints it was minted for.
+
+- **The licence holder's email address is no longer readable without signing in.** The licence
+  endpoint is deliberately public so the setup wizard and sign-in screen can show the edition, but it
+  also returned the purchaser's email to anyone who asked. Signed-in users still see it.
+
+- **Setting up a new installation is now recorded in the audit log.** The setup wizard creates the
+  first provider — including storing its upstream credential — its endpoint and the first project,
+  none of which left an audit entry, even though every other way of creating them does.
+
+- **The sign-in cookie is now marked as HTTPS-only.** Proxytrace decided this per request by looking
+  at whether *that* request arrived over HTTPS — but with TLS terminated at the reverse proxy in
+  front of it, as every supported deployment does, the request it sees is plain HTTP. So the session
+  cookie was never marked HTTPS-only, and any plain-HTTP request a browser could be led into making
+  would carry the full session token in the clear. It is now marked correctly, and can be overridden
+  for a deliberate plain-HTTP installation.
+
+- **Sign-in now has a rate limit.** Password guessing against a known account was limited only by how
+  fast requests could be sent. The same limit now also covers sign-up, the legacy-account claim, and
+  invite-link lookups.
+
+- **Rate limits can now tell clients apart behind a reverse proxy.** The password-reset and
+  two-factor limits are meant to apply per client, but every request appeared to come from the proxy,
+  so the whole installation shared one allowance — ten attempts locked *everyone* out of password
+  reset and two-factor sign-in for fifteen minutes. The released all-in-one image now gets this right
+  with no configuration; if you run the API behind your own proxy, see
+  [Configuration](/admin/configuration) for the one setting to declare.
+
+- **A lost encryption key directory is now reported instead of failing quietly.** Proxytrace encrypts
+  stored provider keys, SMTP passwords and two-factor secrets with a key set kept in its data
+  directory. If that directory was not configured the key set lived only in memory and was discarded
+  on every restart, and the affected secrets silently read back as empty — visible only as upstream
+  authentication failures and "invalid authenticator code". This is now reported as a critical error
+  in the operator error log, and the published images set the directory themselves.
+
+- **Stored secrets can no longer be printed by accident.** Several internal objects holding a
+  password, an upstream key or a two-factor secret would have included it verbatim if they were ever
+  written to a log or an error message. They now redact it, as the provider record already did.
+
+### Fixed
+
+- **A schedule anchored to a non-UTC time no longer fires every minute.** The next-run calculation
+  compared two timestamps by their wall-clock reading rather than the instant they represent, so an
+  anchor carrying a UTC offset — say a daily run at 09:00+02:00 — lost a whole step and produced a
+  next-run time in the *past*. The scheduler polls every minute, found the schedule perpetually due,
+  and re-derived the same past instant each time, so the suite ran over and over for as long as the
+  offset was wide, billing a full LLM test run on every pass. Alignment is now offset-aware, and the
+  next run is always strictly in the future.
+
+- **Proposal text now reads the same on every server.** The savings percentage, cost and latency
+  figures written into an optimization proposal's rationale were formatted using the host's regional
+  settings, so a server configured for a comma-decimal locale persisted "cuts cost by 12,3%" instead
+  of "12.3%". These numbers are stored prose, so the wrong separator stuck around and rendered for
+  everyone. They are now always formatted the same way regardless of host locale.
+
+- **A Redis outage no longer adds ~5 seconds to every proxied call.** Handing the captured call to
+  the ingestion queue is meant to be fire-and-forget, but the proxy waits for it after answering
+  each request — and while Redis was unreachable the client library quietly queued the write instead
+  of failing, so the wait ran to its full timeout. Every single agent call through the proxy paid
+  that delay, and cancelling the request did not shorten it. The proxy now checks the connection
+  first: with Redis down the capture is dropped with a warning in the log and the response goes out
+  at full speed, instead of the whole proxy crawling because the *tracing* backend is unavailable.
+
+- **A provider key with a stray newline no longer breaks the model list.** An API key pasted with a
+  trailing line break or invisible control character made listing an Azure OpenAI deployment fail
+  with an opaque server error instead of a clean upstream error. The key is now forwarded as-is, the
+  way every other header on the proxy path already was.
+
+- **The proxy's 64 MiB request limit is now the real one.** The standalone proxy documented and
+  checked a 64 MiB cap on request bodies, but the web server underneath it rejected anything over
+  30 MB first — so a large-but-legal request was refused with the wrong error, and the proxy's own
+  check never ran. The server limit is now pinned to the same 64 MiB, and an oversized upload is cut
+  off as it arrives rather than being read into memory in full before being rejected.
+
+- **A non-streaming reply to a streaming request can no longer exhaust proxy memory.** When a client
+  asked for `stream: true` but the upstream answered with one large single-line body — a provider
+  that ignores the flag, or a firewall error page in front of it — the proxy held the entire body in
+  memory (several times over) before forwarding a single byte. It now forwards such a response in
+  bounded pieces; the bytes the client receives are unchanged.
+
+- **Cancelling a test run now actually stops it.** Pressing Cancel marked the run cancelled in the
+  UI, but the work carried on to completion behind the scenes — every remaining model call was still
+  made and still billed. The run also logged a spurious failure and raised a completion notification
+  after finishing. Cancelling now stops the in-flight calls immediately, and the run settles as
+  cancelled without the phantom failure.
+
+- **The proxy no longer follows an upstream redirect.** If a provider answered a redirect, the proxy
+  chased it and carried the provider credential and the forwarded client headers to whatever address
+  the response named. It now relays the redirect to the client instead, matching what it already did
+  for non-model requests.
+
+- **Very large replies are no longer held in memory in full.** Non-streaming responses were read
+  completely into memory before any of them was forwarded, despite the code being written to stream
+  them through — so one big reply could push the proxy far past its intended footprint.
+
+- **Model prices no longer disappear until restart after one failed lookup.** If the first fetch of
+  the pricing catalogue failed — a brief network problem was enough — the empty result was cached
+  permanently, so every model showed an unknown price for the remaining life of the process. A failed
+  fetch is now retried on the next request.
+
+- **Paging past the end of a list no longer returns the first page again.** Asking for a very high
+  page number overflowed the internal offset calculation and silently served page 1, so an
+  integration walking pages could loop forever instead of finishing.
+
+- **The project list now respects the page-size limit.** Requesting a huge page size returned every
+  project the caller belongs to in a single response, unlike every other list in the app.
+
+- **A failure part-way through a live-updating view no longer hides its cause.** When something went
+  wrong after a stream had already started sending, the error handler tried to write a response that
+  was already on its way, which replaced the real error with an abrupt disconnection and logged the
+  wrong thing. The real cause is now logged.
+
+- **Keys with REST API access now show it.** The provider screen listed a key's capabilities from a
+  hardcoded list that had never been updated for the REST API scopes, so a key that could read or
+  write over the REST API appeared to have no REST access at all.
+
+- **Ambiguous project addresses now resolve consistently.** Two projects whose names reduce to the
+  same URL segment — "My Project" and "my-project", for instance — could each win at random, so
+  proxied calls landed in one project or the other from request to request. The same project now wins
+  every time, and the clash is reported in the log.
+
+- **Bulk requests are now bounded.** Several endpoints accepted lists of identifiers with no limit and
+  did a database round-trip per entry, some while holding a transaction open, so one oversized request
+  could stall the whole installation. These lists now have explicit limits and oversized requests are
+  rejected up front.
+
 ## [1.9.0] - 2026-07-26
 
 ### Fixed

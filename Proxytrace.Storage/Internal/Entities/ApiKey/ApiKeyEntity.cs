@@ -19,8 +19,10 @@ internal record ApiKeyEntity : Entity
 
     /// <summary>
     /// <see cref="Proxytrace.Domain.ApiKey.IApiKey.KeyPrefix"/> — a non-secret display slice. Null on a
-    /// pre-retrofit row until the startup backfill sets it (the null marks an un-migrated row whose
-    /// <see cref="KeyHash"/> still holds the plaintext key).
+    /// pre-retrofit row until the startup backfill sets it. It is deliberately <em>not</em> the
+    /// backfill's "still plaintext" marker: the mapper collapses the null to <c>""</c> on every round
+    /// trip, so any save would erase it. <c>SecretsBackfillService</c> keys on the shape of
+    /// <see cref="KeyHash"/> instead.
     /// </summary>
     public string? KeyPrefix { get; init; }
 

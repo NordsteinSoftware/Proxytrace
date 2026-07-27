@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
+using Proxytrace.Api.Auth;
 using Proxytrace.Api.Controllers;
 using Proxytrace.Api.Dto.Auth;
 using Proxytrace.Application.Auth;
@@ -398,7 +399,8 @@ public sealed class AuthControllerTests : BaseTest<Module>
         services.GetRequiredService<IStreamTicketService>(),
         config ?? new ConfigurationBuilder().Build(),
         Microsoft.Extensions.Logging.Abstractions.NullLogger<Proxytrace.Domain.AuditLog.Audit>.Instance,
-        emailSettings ?? Substitute.For<IEmailSettingsStore>())
+        emailSettings ?? Substitute.For<IEmailSettingsStore>(),
+        services.GetRequiredService<ISessionCookie>())
     {
         ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() },
     };
