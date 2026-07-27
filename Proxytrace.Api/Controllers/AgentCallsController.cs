@@ -64,23 +64,22 @@ public class AgentCallsController : ControllerBase
         this.audit = audit;
     }
 
-    // Resolve the effective owning project of a list query and verify access. Admins
-    // (accessible == null) may run any query. Non-admins must scope to a project they belong to —
-    // directly via projectId or via the agent's project — otherwise the list returns nothing rather
-    // than leaking other tenants' rows (#193).
-    private async Task<bool> CanListAsync(Guid? projectId, Guid? agentId, CancellationToken cancellationToken)
+    // Resolve the projects a list query may read. Admins (scope == null) may run any query;
+    // everyone else is confined to the projects they belong to, so no query can leak another
+    // tenant's rows (#193). An unfiltered request is scoped to the caller's own projects rather
+    // than answered with an empty page (#482). An agentId is authorized against the same scope —
+    // the query then filters by that agent, which is already confined to one project.
+    private async Task<IReadOnlyCollection<Guid>?> ListScopeAsync(
+        Guid? projectId,
+        Guid? agentId,
+        CancellationToken cancellationToken)
     {
-        var accessible = await accessGuard.GetAccessibleProjectIdsAsync(cancellationToken);
-        if (accessible is null)
-            return true;
-        if (projectId is { } pid)
-            return accessible.Contains(pid);
-        if (agentId is { } aid)
-        {
-            var agent = await agentRepository.FindAsync(aid, cancellationToken);
-            return agent is not null && accessible.Contains(agent.Project.Id);
-        }
-        return false;
+        var scope = await accessGuard.ResolveListScopeAsync(projectId, cancellationToken);
+        if (scope is null || scope.IsEmpty() || agentId is not { } aid)
+            return scope;
+
+        var agent = await agentRepository.FindAsync(aid, cancellationToken);
+        return agent is not null && scope.Contains(agent.Project.Id) ? scope : [];
     }
 
     // Truncate a caller-supplied session key and pair it with its derived id, so the seed endpoint
@@ -119,11 +118,13 @@ public class AgentCallsController : ControllerBase
         CancellationToken cancellationToken = default)
     {
         (page, pageSize) = Paging.Clamp(page, pageSize);
-        if (!await CanListAsync(projectId, agentId, cancellationToken))
+        var scope = await ListScopeAsync(projectId, agentId, cancellationToken);
+        if (scope.IsEmpty())
             return new PagedResult<AgentCallListItemDto>([], 0, page, pageSize);
+        var (scopedProjectId, scopedProjectIds) = scope.ToFilterScope();
         var filter = new AgentCallFilter(
             AgentId: agentId,
-            ProjectId: projectId,
+            ProjectId: scopedProjectId,
             EndpointId: endpointId,
             Model: model,
             From: from,
@@ -142,7 +143,8 @@ public class AgentCallsController : ControllerBase
             ToolName: toolName,
             SortBy: sortBy,
             SortDescending: sortDesc,
-            SessionId: sessionId);
+            SessionId: sessionId,
+            ProjectIds: scopedProjectIds);
         var (items, total) = await repository.GetFilteredListAsync(filter, page, pageSize, cancellationToken);
         return new PagedResult<AgentCallListItem>(items, total, page, pageSize).Map(agentCallDtoMapper.ToListItemDto);
     }
@@ -158,7 +160,8 @@ public class AgentCallsController : ControllerBase
         [FromQuery] Guid? agentId = null,
         CancellationToken cancellationToken = default)
     {
-        if (!await CanListAsync(projectId, agentId, cancellationToken))
+        var scope = await ListScopeAsync(projectId, agentId, cancellationToken);
+        if (scope.IsEmpty())
             return [];
         return await repository.GetToolNamesAsync(projectId, agentId, cancellationToken);
     }
@@ -187,9 +190,11 @@ public class AgentCallsController : ControllerBase
         CancellationToken cancellationToken = default)
     {
         (page, pageSize) = Paging.Clamp(page, pageSize);
-        if (!await CanListAsync(projectId, agentId, cancellationToken))
+        var scope = await ListScopeAsync(projectId, agentId, cancellationToken);
+        if (scope.IsEmpty())
             return new PagedResult<AgentCallDto>([], 0, page, pageSize);
-        var filter = new AgentCallFilter(agentId, projectId, endpointId, model, from, to, httpStatus, includeSystemAgents, q, conversationId, SessionId: sessionId);
+        var (scopedProjectId, scopedProjectIds) = scope.ToFilterScope();
+        var filter = new AgentCallFilter(agentId, scopedProjectId, endpointId, model, from, to, httpStatus, includeSystemAgents, q, conversationId, SessionId: sessionId, ProjectIds: scopedProjectIds);
         var (items, total) = await repository.GetFilteredAsync(filter, page, pageSize, cancellationToken);
         return new PagedResult<IAgentCall>(items, total, page, pageSize).Map(agentCallDtoMapper.ToDto);
     }
@@ -201,16 +206,26 @@ public class AgentCallsController : ControllerBase
         [FromQuery] DateTimeOffset? from = null,
         CancellationToken cancellationToken = default)
     {
-        if (!await CanListAsync(projectId, agentId, cancellationToken))
+        var scope = await ListScopeAsync(projectId, agentId, cancellationToken);
+        if (scope.IsEmpty())
             return new TracesOverviewDto([], [], []);
 
-        var latencyFilter = new StatisticsFilter(from, null, projectId, agentId);
-        var breakdownFilter = new StatisticsFilter(from, null, projectId);
+        // Unlike the trace lists, the aggregates below go through StatisticsFilter, which filters by
+        // a single project (partly in raw SQL). A scope spanning several projects therefore has
+        // nothing it can safely aggregate over — running unscoped would mix in other tenants' rows —
+        // so those callers still get an empty overview. Every single-project caller, including an
+        // unfiltered REST API key, is served. Tracked in #483.
+        var scopedProjectId = scope.SingleProject();
+        if (scope is not null && scopedProjectId is null)
+            return new TracesOverviewDto([], [], []);
+
+        var latencyFilter = new StatisticsFilter(from, null, scopedProjectId, agentId);
+        var breakdownFilter = new StatisticsFilter(from, null, scopedProjectId);
 
         // Scope the agent load to the project when filtered, instead of loading every agent and
         // discarding the rest in memory.
-        Task<IReadOnlyList<IAgent>> agentsTask = projectId.HasValue
-            ? agentRepository.GetByProjectAsync(projectId.Value, cancellationToken)
+        Task<IReadOnlyList<IAgent>> agentsTask = scopedProjectId.HasValue
+            ? agentRepository.GetByProjectAsync(scopedProjectId.Value, cancellationToken)
             : agentRepository.GetAllAsync(cancellationToken);
         Task<IReadOnlyDictionary<Guid, DateTimeOffset>> lastCallTask = repository.GetLastCallTimesAsync(cancellationToken);
         Task<IReadOnlyList<AgentBreakdownStat>> breakdownTask = statistics.GetAgentBreakdownAsync(breakdownFilter, cancellationToken);
@@ -256,13 +271,15 @@ public class AgentCallsController : ControllerBase
         CancellationToken cancellationToken = default)
     {
         buckets = Math.Clamp(buckets, 1, 240);
-        if (!await CanListAsync(projectId, agentId, cancellationToken))
+        var scope = await ListScopeAsync(projectId, agentId, cancellationToken);
+        if (scope.IsEmpty())
             return [];
+        var (scopedProjectId, scopedProjectIds) = scope.ToFilterScope();
         // Same filter surface as GetAll (minus paging/sort — a histogram has neither), so the
         // timeline always reflects exactly the rows the filtered table shows.
         var filter = new AgentCallFilter(
             AgentId: agentId,
-            ProjectId: projectId,
+            ProjectId: scopedProjectId,
             EndpointId: endpointId,
             Model: model,
             From: from,
@@ -279,7 +296,8 @@ public class AgentCallsController : ControllerBase
             MinLatencyMs: minLatencyMs,
             MaxLatencyMs: maxLatencyMs,
             ToolName: toolName,
-            SessionId: sessionId);
+            SessionId: sessionId,
+            ProjectIds: scopedProjectIds);
         var result = await repository.GetHistogramAsync(filter, buckets, cancellationToken);
         return result.Select(b => new TraceHistogramBucketDto(b.Start, b.Total, b.Errors)).ToList();
     }
@@ -313,12 +331,14 @@ public class AgentCallsController : ControllerBase
         [FromQuery] string? toolName = null,
         CancellationToken cancellationToken = default)
     {
-        if (!await CanListAsync(projectId, agentId, cancellationToken))
+        var scope = await ListScopeAsync(projectId, agentId, cancellationToken);
+        if (scope.IsEmpty())
             return agentCallDtoMapper.ToSummaryDto(AgentCallSummary.Empty);
+        var (scopedProjectId, scopedProjectIds) = scope.ToFilterScope();
 
         var filter = new AgentCallFilter(
             AgentId: agentId,
-            ProjectId: projectId,
+            ProjectId: scopedProjectId,
             EndpointId: endpointId,
             Model: model,
             From: from,
@@ -335,7 +355,8 @@ public class AgentCallsController : ControllerBase
             MinLatencyMs: minLatencyMs,
             MaxLatencyMs: maxLatencyMs,
             ToolName: toolName,
-            SessionId: sessionId);
+            SessionId: sessionId,
+            ProjectIds: scopedProjectIds);
 
         return agentCallDtoMapper.ToSummaryDto(await repository.GetSummaryAsync(filter, cancellationToken));
     }

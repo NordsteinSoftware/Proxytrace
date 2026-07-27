@@ -132,8 +132,16 @@ internal class TestRunGroupRepository : AbstractRepository<ITestRunGroup, TestRu
         return new PagedResult<ITestRunGroup>(await Map(stored, cancellationToken), total, page, pageSize);
     }
 
-    public async Task<PagedResult<ITestRunGroup>> GetByProjectPagedAsync(
+    public Task<PagedResult<ITestRunGroup>> GetByProjectPagedAsync(
         Guid projectId,
+        int page,
+        int pageSize,
+        bool includeSystem = false,
+        CancellationToken cancellationToken = default) =>
+        GetByProjectsPagedAsync([projectId], page, pageSize, includeSystem, cancellationToken);
+
+    public async Task<PagedResult<ITestRunGroup>> GetByProjectsPagedAsync(
+        IReadOnlyCollection<Guid> projectIds,
         int page,
         int pageSize,
         bool includeSystem = false,
@@ -152,7 +160,7 @@ internal class TestRunGroupRepository : AbstractRepository<ITestRunGroup, TestRu
                 gs => gs.Suite.Agent,
                 a => a.Id,
                 (gs, a) => new { gs.Group, Agent = a })
-            .Where(x => x.Agent.Project == projectId && (includeSystem || !x.Group.IsSystemRun))
+            .Where(x => projectIds.Contains(x.Agent.Project) && (includeSystem || !x.Group.IsSystemRun))
             .Select(x => x.Group);
 
         int total = await query.CountAsync(cancellationToken);

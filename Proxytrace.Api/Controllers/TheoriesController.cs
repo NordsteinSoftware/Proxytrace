@@ -70,19 +70,33 @@ public class TheoriesController : ControllerBase
     // (accessible == null) pass for any scope. Non-admins must scope to a project they belong to —
     // directly via projectId or via the agent's project — otherwise the query returns nothing rather
     // than leaking other tenants' rows.
-    private async Task<bool> CanListAsync(Guid? agentId, Guid? projectId, CancellationToken cancellationToken)
+    /// <summary>
+    /// The theories the caller may list under the optional agent/project filters. An agent filter
+    /// authorizes against that agent's project and then queries by agent; otherwise the request is
+    /// scoped to the projects the caller may read.
+    /// </summary>
+    private async Task<IReadOnlyList<IOptimizationTheory>> ListScopedAsync(
+        Guid? agentId,
+        Guid? projectId,
+        CancellationToken cancellationToken)
     {
-        var accessible = await accessGuard.GetAccessibleProjectIdsAsync(cancellationToken);
-        if (accessible is null)
-            return true;
-        if (projectId is { } pid)
-            return accessible.Contains(pid);
+        var scope = await accessGuard.ResolveListScopeAsync(projectId, cancellationToken);
+        if (scope.IsEmpty())
+            return [];
+
         if (agentId is { } aid)
         {
             var agent = await agents.FindAsync(aid, cancellationToken);
-            return agent is not null && accessible.Contains(agent.Project.Id);
+            if (agent is null || !scope.Admits(agent.Project.Id))
+                return [];
+            return await repository.GetByAgentAsync(aid, cancellationToken);
         }
-        return false;
+
+        if (scope.SingleProject() is { } singleProject)
+            return await repository.GetByProjectAsync(singleProject, cancellationToken);
+
+        var all = await repository.GetAllAsync(cancellationToken);
+        return scope is null ? all : all.Where(t => scope.Contains(t.Agent.Project.Id)).ToArray();
     }
 
     [HttpGet]
@@ -92,16 +106,7 @@ public class TheoriesController : ControllerBase
         [FromQuery] TheoryStatus? status = null,
         CancellationToken cancellationToken = default)
     {
-        if (!await CanListAsync(agentId, projectId, cancellationToken))
-            return [];
-
-        IReadOnlyList<IOptimizationTheory> theories;
-        if (agentId.HasValue)
-            theories = await repository.GetByAgentAsync(agentId.Value, cancellationToken);
-        else if (projectId.HasValue)
-            theories = await repository.GetByProjectAsync(projectId.Value, cancellationToken);
-        else
-            theories = await repository.GetAllAsync(cancellationToken);
+        IReadOnlyList<IOptimizationTheory> theories = await ListScopedAsync(agentId, projectId, cancellationToken);
 
         if (status.HasValue)
             theories = theories.Where(t => t.Status == status.Value).ToList();

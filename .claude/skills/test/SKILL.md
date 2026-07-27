@@ -369,3 +369,7 @@ Examples:
 - [ ] State-machine tests cover both valid transitions and invalid/terminal-state attempts
 - [ ] Persistence tests reload from the repository rather than trusting the returned object
 - [ ] No `new` on domain entities — always use factory delegates from DI
+- [ ] Verified with a **scoped** run — `dotnet test <the affected project>`, narrowed with
+      `--filter "FullyQualifiedName~<Class>"` while iterating. Not the whole solution: CI runs
+      `dotnet test Proxytrace.sln` on every push. See
+      [`docs/testing.md`](../../../docs/testing.md#which-tests-to-run).

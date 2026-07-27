@@ -71,8 +71,15 @@ internal class TestSuiteRepository : AbstractRepository<ITestSuite, TestSuiteEnt
         return new PagedResult<ITestSuite>(await Map(stored, cancellationToken), total, page, pageSize);
     }
 
-    public async Task<PagedResult<ITestSuite>> GetByProjectPagedAsync(
+    public Task<PagedResult<ITestSuite>> GetByProjectPagedAsync(
         Guid projectId,
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken = default) =>
+        GetByProjectsPagedAsync([projectId], page, pageSize, cancellationToken);
+
+    public async Task<PagedResult<ITestSuite>> GetByProjectsPagedAsync(
+        IReadOnlyCollection<Guid> projectIds,
         int page,
         int pageSize,
         CancellationToken cancellationToken = default)
@@ -86,7 +93,7 @@ internal class TestSuiteRepository : AbstractRepository<ITestSuite, TestSuiteEnt
                 s => s.Agent,
                 a => a.Id,
                 (s, a) => new { Suite = s, Agent = a })
-            .Where(x => x.Agent.Project == projectId)
+            .Where(x => projectIds.Contains(x.Agent.Project))
             .Select(x => x.Suite);
 
         int total = await query.CountAsync(cancellationToken);

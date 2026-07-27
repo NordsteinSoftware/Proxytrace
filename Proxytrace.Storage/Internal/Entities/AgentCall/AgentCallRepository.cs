@@ -336,6 +336,17 @@ internal class AgentCallRepository : AbstractRepository<IAgentCall, AgentCallEnt
             query = query.Where(e => versionIdsForProject.Contains(e.AgentVersionId));
         }
 
+        // Multi-project scope (a non-admin listing without a project filter, #482). Same shape as
+        // the single-project branch above — an IN over the agent-version subquery — so it stays a
+        // server-side semi-join on AgentVersion(Project) rather than a client-side filter.
+        if (filter.ProjectIds is { Count: > 0 } projectIds)
+        {
+            var versionIdsForProjects = context.Set<AgentVersionEntity>()
+                .Where(v => projectIds.Contains(v.Project))
+                .Select(v => v.Id);
+            query = query.Where(e => versionIdsForProjects.Contains(e.AgentVersionId));
+        }
+
         if (filter.EndpointId is not null)
         {
             query = query.Where(e => e.EndpointId == filter.EndpointId);
@@ -426,24 +437,35 @@ internal class AgentCallRepository : AbstractRepository<IAgentCall, AgentCallEnt
 
         if (!string.IsNullOrWhiteSpace(filter.Query))
         {
-            if (filter.ProjectId is null)
+            // The full-text index is partitioned per project, so a text query needs at least one
+            // project to search. A multi-project scope (#482) searches each and unions the hits —
+            // scopes are a caller's memberships, so this is a handful of index lookups, not a fan-out.
+            IReadOnlyCollection<Guid> searchProjects = filter.ProjectId is { } singleProject
+                ? [singleProject]
+                : filter.ProjectIds ?? [];
+
+            if (searchProjects.Count == 0)
             {
                 return null;
             }
 
-            var matchingIds = await searchService.SearchEntityIdsAsync(
-                filter.ProjectId.Value,
-                filter.Query,
-                SearchKind.AgentCall,
-                MaxFulltextHits,
-                cancellationToken);
+            var idSet = new HashSet<Guid>();
+            foreach (var searchProject in searchProjects)
+            {
+                var hits = await searchService.SearchEntityIdsAsync(
+                    searchProject,
+                    filter.Query,
+                    SearchKind.AgentCall,
+                    MaxFulltextHits,
+                    cancellationToken);
+                idSet.UnionWith(hits);
+            }
 
-            if (matchingIds.Count == 0)
+            if (idSet.Count == 0)
             {
                 return null;
             }
 
-            var idSet = matchingIds.ToHashSet();
             query = query.Where(e => idSet.Contains(e.Id));
         }
 

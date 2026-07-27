@@ -145,16 +145,17 @@ public class TestSuitesController : ControllerBase
             scopeProjectId = scopeAgent.Project.Id;
         }
 
-        if (!await CanListAsync(scopeProjectId, cancellationToken))
+        var scope = await accessGuard.ResolveListScopeAsync(scopeProjectId, cancellationToken);
+        if (scope.IsEmpty())
             return new PagedResult<TestSuiteListItemDto>([], 0, page, pageSize);
 
         PagedResult<ITestSuite> paged;
         if (agentId.HasValue)
             paged = await suiteRepository.GetByAgentPagedAsync(agentId.Value, page, pageSize, cancellationToken);
-        else if (projectId.HasValue)
-            paged = await suiteRepository.GetByProjectPagedAsync(projectId.Value, page, pageSize, cancellationToken);
-        else
+        else if (scope is null)
             paged = await suiteRepository.GetPagedAsync(page, pageSize, cancellationToken);
+        else
+            paged = await suiteRepository.GetByProjectsPagedAsync(scope, page, pageSize, cancellationToken);
 
         var statsBySuite = await GetRunStatsBySuiteAsync(
             paged.Items.Select(s => s.Id).ToArray(), cancellationToken);
@@ -185,11 +186,6 @@ public class TestSuitesController : ControllerBase
             .ToDictionary(g => g.Key, g => (IReadOnlyList<TestRunStats>)g.ToArray());
     }
 
-    private async Task<bool> CanListAsync(Guid? projectId, CancellationToken cancellationToken)
-    {
-        var accessible = await accessGuard.GetAccessibleProjectIdsAsync(cancellationToken);
-        return accessible is null || (projectId.HasValue && accessible.Contains(projectId.Value));
-    }
 
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<TestSuiteDto>> Get(Guid id, CancellationToken cancellationToken)

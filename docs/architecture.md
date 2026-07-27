@@ -75,3 +75,36 @@ DI is wired with Autofac. Each project ships a `Module : Autofac.Module` (`Proxy
 `Proxytrace.Application.Module` registers the hosted services for ingestion + test running plus the optimization sub-module. `Proxytrace.Storage.Module` takes a `Func<IServiceProvider, StorageConfiguration>` (the configuration is auto-detected by `Proxytrace.Api.Module`) plus a `registerApplicationServices` flag (default `true`).
 
 **The `registerApplicationServices` flag.** When `true` — the API/app host and the test/perf harnesses (`Storage.Tests`, `Domain.Tests`, `Application.Tests`, the perf harness) — `Storage.Module` registers Storage's own startup/initialization hosted services: the DB-initializer (`IDatabaseInitializer`) plus the secret/preview backfill services. The standalone **proxy host** (`Proxytrace.Proxy.Api`) passes `false`: it attaches to an already-migrated database read-only and runs no schema init or backfills. Since [#270](https://github.com/SyntaktikEU/Proxytrace/issues/270), `Storage.Module` no longer references or registers `Application.Module` (the flag's name is historical) — each composition root that needs the Application graph (the API host plus the four `Storage.Tests` / `Domain.Tests` / `Application.Tests` / perf harnesses) registers `Application.Module` **and** the at-rest secret seam (`Infrastructure.Security.SecretProtectionModule`) explicitly. The API root's registrations are idempotent (the `IfNotRegistered`/`builder.Properties` guards make any double registration a no-op).
+
+## Multi-tenant list scoping (`IProjectAccessGuard`)
+
+Every resource belongs to an `IProject`; users belong to projects via `Project.Members`, and the
+`Admin` role bypasses membership. Controllers never trust a raw route/query id — they resolve the
+owning project of what they are about to read or mutate and ask
+[`IProjectAccessGuard`](../Proxytrace.Api/Auth/IProjectAccessGuard.cs) (the IDOR fix, #193).
+
+For a **single resource**, use `CanAccessProjectAsync` and hide a denial behind a `404`.
+
+For a **list endpoint** with an optional `projectId` filter, use the
+`ResolveListScopeAsync(projectId)` extension in
+[`Proxytrace.Api/Auth/ProjectListScope.cs`](../Proxytrace.Api/Auth/ProjectListScope.cs) — **not**
+`GetAccessibleProjectIdsAsync` directly. It returns the projects the query must be restricted to:
+
+| Result | Meaning | What the endpoint does |
+|---|---|---|
+| `null` | every project (an admin, unfiltered) | run the unscoped query |
+| empty | nothing | return an empty result without querying |
+| one id | that project | run the existing indexed by-one-project query (`SingleProject()`) |
+| several ids | the caller's memberships | filter the query by the set |
+
+The set case is what makes an **unfiltered** request from a non-admin return that caller's own rows
+instead of an empty page (#482 — the callers who hit it were REST API keys and MCP, which are
+confined to one project and so have no reason to send a `projectId`). It must be applied *inside*
+the query: paging has to be computed over the union, so a paged endpoint needs a set-aware
+repository method (`GetByProjectsPagedAsync`) rather than merging per-project pages. `ToFilterScope()`
+splits a scope into the `(ProjectId, ProjectIds)` pair `AgentCallFilter` takes, so the hot traces
+query keeps its equality predicate whenever the scope names a single project.
+
+Aggregates built on `StatisticsFilter` still take a single project. `StatisticsController` refuses an
+unscoped non-admin request with `403` (an explicit contract, not a silent empty page); the traces
+overview returns empty for a multi-project scope rather than aggregating across tenants (#483).

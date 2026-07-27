@@ -45,6 +45,18 @@ public interface ITestRunGroupRepository : IRepository<ITestRunGroup>
         bool includeSystem = false,
         CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Run groups across several projects, paged as one list. Backs an unfiltered list request from
+    /// a caller who may read more than one project: the page has to be computed over the union, so
+    /// merging per-project pages afterwards would not produce a correct page (#482).
+    /// </summary>
+    Task<PagedResult<ITestRunGroup>> GetByProjectsPagedAsync(
+        IReadOnlyCollection<Guid> projectIds,
+        int page,
+        int pageSize,
+        bool includeSystem = false,
+        CancellationToken cancellationToken = default);
+
     /// <summary>Run groups for a single suite, newest first — backs the suite's run-history view.</summary>
     Task<PagedResult<ITestRunGroup>> GetBySuitePagedAsync(
         Guid suiteId,

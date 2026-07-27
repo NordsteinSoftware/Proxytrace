@@ -62,6 +62,25 @@ follow [Semantic Versioning](https://semver.org). Ongoing work is collected unde
 
 ### Fixed
 
+- **A REST API key now sees its own project's data without having to name the project.** List
+  endpoints take an optional project filter, and leaving it out was meant to mean "everything I am
+  allowed to see". For anyone who is not an administrator it instead meant *nothing*: the request
+  succeeded and returned an empty list. The callers who hit this were the ones with no reason to
+  name a project in the first place — a REST API key, which is confined to a single project, and
+  integrations driving `/api/*` directly — so a service could ask for its traces, agents, suites,
+  runs or evaluators and be told, with a perfectly successful response, that there were none. An
+  unfiltered request is now answered with the caller's own projects, and a caller who belongs to
+  several gets all of them as one correctly paged list. The web app was never affected, because it
+  always names the current project.
+
+- **The Agent Playground no longer asks for an agent that is gone.** The playground remembers which
+  agent you had selected, and it kept asking the server for that agent even after it had been
+  deleted — or, in the login-free demo, after a restart had re-created the demo data with new
+  identities. The page recovered by falling back to the first agent, but every visit fired a request
+  that could only fail, which showed up as a "404 Not Found" in the browser's network console. The
+  remembered selection is now checked against the project's agents first, and a selection that no
+  longer exists is simply dropped.
+
 - **The demo showcase no longer displays A/B tests that never finish.** Two of the seeded improvement
   theories claimed their A/B test was running, so the proposals board showed a pulsing "A/B in flight"
   row and a progress bar that never moved — the demo deliberately never executes those tests. Both now

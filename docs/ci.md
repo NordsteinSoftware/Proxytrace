@@ -7,7 +7,7 @@ workflow, or changing a build cache — the gating rules below are not obvious f
 
 | Workflow | Trigger | What it does |
 |---|---|---|
-| `ci.yml` | PR, master push, `workflow_call` | Secret scan, frontend lint/build, backend build+test, all-in-one image build + boot smoke test |
+| `ci.yml` | PR, master push, `workflow_call` | Secret scan, frontend lint/test/build, backend build+test, all-in-one image build + boot smoke test |
 | `e2e.yml` | PR, master push, `workflow_call` | Boots the full Docker stack and runs the Playwright suite |
 | `codeql.yml` | PR, master push, weekly | Static analysis; findings land in the Security tab |
 | `cache-cleanup.yml` | PR closed | Deletes the closed PR's Actions caches |
@@ -22,7 +22,7 @@ Jobs are gated on which areas a diff touches, computed by the local composite ac
 | Job | PR | master push | Release gate |
 |---|---|---|---|
 | `secrets` | always | skipped | always |
-| `frontend` | if `frontend/**` changed | skipped | always |
+| `frontend` | if `frontend/**` changed | if `frontend/**` changed | always |
 | `backend` | if .NET sources changed | if .NET sources changed | always |
 | `image` | if backend/frontend/`deploy/**`/Dockerfiles changed | skipped | always |
 | e2e | unless the diff is purely prose | unless the diff is purely prose | always |
@@ -30,10 +30,12 @@ Jobs are gated on which areas a diff touches, computed by the local composite ac
 
 Three rules explain the table:
 
-- **master keeps `backend` and e2e as a post-merge safety net.** A PR is verified against the base
-  it was opened on; if master moved underneath it, the merge can still break. Tests are what catch
-  that. Lint, packaging and the secret scan cannot regress from merge order alone, so the PR run is
-  the only time they need to run.
+- **master keeps `frontend`, `backend` and e2e as a post-merge safety net.** A PR is verified
+  against the base it was opened on; if master moved underneath it, the merge can still break. Tests
+  are what catch that — both the .NET suite and the frontend's Vitest suite, which is why `frontend`
+  is no longer PR-only. Its lint and build steps ride along on the same `npm ci` rather than paying
+  for a second install; packaging and the secret scan cannot regress from merge order alone, so the
+  PR run is the only time they need to run.
 - **e2e is barely gated on purpose.** 98% of merges touch backend or frontend, so a path filter
   would almost never skip it and skipping it wrongly is expensive. Only a diff that is entirely
   `docs/**`, `manual/**` or `**.md` misses it, via `paths-ignore`.

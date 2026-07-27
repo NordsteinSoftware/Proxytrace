@@ -119,6 +119,10 @@ Each key also carries explicit **capabilities** (least privilege), chosen when y
 - **REST API write** — additionally create and change data over the REST API (`POST`/`PUT`/`PATCH`/
   `DELETE`). A REST key acts as its owner and, like an MCP key, can never reach admin-only endpoints.
 
+A REST key is confined to its own project, so list endpoints that take an optional `projectId` return
+that project's rows whether or not you pass one — there is no need to repeat the project on every
+call, and a key can never widen its reach by omitting it.
+
 A key works only on the surfaces it was granted: an ingestion-only key cannot drive MCP or the REST API,
 an MCP-only key cannot proxy LLM traffic or drive REST, and a REST key cannot drive MCP. Keys issued
 before these capabilities existed are **ingestion-only**.
