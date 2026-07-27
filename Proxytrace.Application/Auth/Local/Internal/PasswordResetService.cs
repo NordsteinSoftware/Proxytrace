@@ -120,7 +120,7 @@ internal sealed class PasswordResetService : IPasswordResetService
                 "logging is enabled — one-time link (valid {Minutes} min): {ResetUrl}. Hand it to the " +
                 "user over a trusted channel; anyone who can read this log within the TTL can take over " +
                 "the account.",
-                user.Email.ToSingleLogLine(), reason, minutes, issued.ResetLink.Link);
+                user.Email.ToSingleLogLine(), reason, minutes, issued.ResetLink.Link.ToSingleLogLine());
             return;
         }
 
