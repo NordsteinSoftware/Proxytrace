@@ -29,4 +29,21 @@ public enum ApiKeyScopes
 
     /// <summary>Mutate project data over the REST API (<c>POST</c>/<c>PUT</c>/<c>PATCH</c>/<c>DELETE</c> requests).</summary>
     ApiWrite = 16,
+
+    /// <summary>
+    /// Forward non-inference paths through the proxy to the provider's host
+    /// (<c>/{project}/health</c> and anything else the upstream serves).
+    /// </summary>
+    /// <remarks>
+    /// Separate from <see cref="Ingestion"/> because its reach is different in kind. Pass-through
+    /// relays <b>any</b> method and <b>any</b> path to the provider origin with the organisation's
+    /// real upstream credential attached — on a provider that serves account or
+    /// organization-management routes at the same host, that is the provider account's reach, not
+    /// just its inference API. It is also not detected, traced, or audited. Granting it should
+    /// therefore be a decision, not a side effect of being allowed to capture traffic.
+    ///
+    /// Keys minted before this scope existed were granted it by migration, so the documented
+    /// "reach other upstream endpoints" setup keeps working; new keys must ask for it.
+    /// </remarks>
+    Passthrough = 32,
 }

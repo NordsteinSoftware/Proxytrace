@@ -6,6 +6,12 @@ USER root
 # /app/data inherits this ownership on first use (an empty named volume copies the image
 # dir's owner); bind mounts must be made writable by $APP_UID on the host.
 RUN mkdir -p /app/searchindex /app/data && chown -R $APP_UID:$APP_UID /app
+# Default the Data Protection key ring (and the other appdata state) at the directory created above,
+# matching what every compose file already mounts there. Without this variable the ring is in-memory
+# only, so provider keys / TOTP enrollments / the SMTP password stop decrypting after any restart —
+# a green boot that only shows up as upstream 401s. An operator writing their own manifest inherits
+# the safe default; overriding the variable still wins. See docs/security.md.
+ENV PROXYTRACE_DATA_DIR=/app/data
 USER $APP_UID
 WORKDIR /app
 EXPOSE 8080

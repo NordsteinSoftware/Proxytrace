@@ -1,5 +1,6 @@
 using JetBrains.Annotations;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Proxytrace.Common.Text;
 using Proxytrace.Domain;
 using Proxytrace.Domain.Events;
@@ -11,13 +12,17 @@ namespace Proxytrace.Storage.Internal.Entities.Project;
 [UsedImplicitly]
 internal class ProjectRepository : AbstractRepository<IProject, ProjectEntity>, IProjectRepository
 {
+    private readonly ILogger<ProjectRepository> logger;
+
     public ProjectRepository(
         IMapper<IProject, ProjectEntity> mapper,
         Func<StorageDbContext> contextFactory,
         ITransaction transaction,
         IEntityEventService entityEvents,
-        AmbientDbContext ambient) : base(mapper, contextFactory, transaction, entityEvents, ambient)
+        AmbientDbContext ambient,
+        ILogger<ProjectRepository> logger) : base(mapper, contextFactory, transaction, entityEvents, ambient)
     {
+        this.logger = logger;
     }
 
     public async Task<IProject?> FindByNameAsync(
@@ -46,8 +51,31 @@ internal class ProjectRepository : AbstractRepository<IProject, ProjectEntity>, 
         // Slugify the incoming value too: a request-path segment keeps its original casing
         // (e.g. "/Development/openai/v1"), so compare canonical slug to canonical slug.
         var normalizedSlug = slug.ToSlug();
-        var match = candidates.FirstOrDefault(p => p.Name.ToSlug() == normalizedSlug);
-        return match is null ? null : await this.GetAsync(match.Id, cancellationToken);
+
+        // Project *names* are the unique key, not slugs, and ToSlug is lossy — "My Project",
+        // "my-project" and "my_project" all collapse to the same slug. Two legitimately distinct
+        // projects can therefore collide here. Order by Id so the winner is stable instead of
+        // whatever the query happens to return first (which can flip between requests and silently
+        // re-attribute a proxied trace to a different project), and surface the ambiguity.
+        var matches = candidates
+            .Where(p => p.Name.ToSlug() == normalizedSlug)
+            .OrderBy(p => p.Id)
+            .ToArray();
+
+        if (matches.Length == 0)
+            return null;
+
+        if (matches.Length > 1)
+        {
+            logger.LogWarning(
+                "Project slug '{Slug}' is ambiguous — {Count} projects share it ({Names}). Resolving to the " +
+                "lowest id deterministically; rename one of them so proxied traces are attributed unambiguously.",
+                normalizedSlug,
+                matches.Length,
+                string.Join(", ", matches.Select(p => p.Name)));
+        }
+
+        return await this.GetAsync(matches[0].Id, cancellationToken);
     }
 
     public async Task<IReadOnlyList<IProject>> GetByMemberAsync(

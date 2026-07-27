@@ -54,9 +54,8 @@ internal abstract class AbTestTheoryValidator<TTheory> : TheoryValidatorBase
         // The run the UI links to; its siblings are the extra samples behind the same comparison.
         ITestRun candidateRun = candidateRuns[0];
 
-        // Pool the samples. Each sample is an independent replay of the same suite, so summing
-        // passes and totals across them is exactly the evidence the significance test needs — and
-        // on a small suite it is the difference between proving a real effect and discarding it.
+        // Pooled counts give the pass rates that are REPORTED — "of everything attempted, this
+        // fraction passed" — which is what a reader expects to see.
         (int basePasses, int baseTotal) = SumPassCounts(baselineRuns);
         (int candPasses, int candTotal) = SumPassCounts(candidateRuns);
 
@@ -67,7 +66,14 @@ internal abstract class AbTestTheoryValidator<TTheory> : TheoryValidatorBase
 
         double basePassRate = basePasses / (double)baseTotal;
         double candidatePassRate = candPasses / (double)candTotal;
-        double? pValue = ProportionStats.TwoSidedPValue(basePasses, baseTotal, candPasses, candTotal);
+
+        // The significance test, however, must NOT consume those pooled totals. Replays of one test
+        // case are not independent trials of each other, so summing them inflated the sample size by
+        // the replay count and shrank the standard error by roughly its square root — the gate got
+        // easier to pass the more samples an operator configured, which is exactly backwards. Both
+        // arms run the same cases, so the test is paired on the case. See ProportionStats.
+        (var basePerCase, var candPerCase) = PairedPassRates(baselineRuns, candidateRuns);
+        double? pValue = ProportionStats.PairedTwoSidedPValue(basePerCase, candPerCase);
 
         if (candidatePassRate <= basePassRate)
         {

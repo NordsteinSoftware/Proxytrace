@@ -1,5 +1,8 @@
 using Autofac;
+using Proxytrace.Domain;
+using Proxytrace.Domain.Evaluator;
 using Proxytrace.Domain.Statistics;
+using Proxytrace.Domain.TestResult;
 using Proxytrace.Domain.Statistics.TestRun;
 using Proxytrace.PerfHarness.Bootstrap;
 using Proxytrace.PerfHarness.Reporting;
@@ -70,6 +73,31 @@ internal static class TestRunStatsQueryScenario
             () => aggregateReader.GetPassTotalsAsync(new TestRunStats.Filter(), cancellationToken));
         await Measure("testRunStatsRecentCohorts",
             () => aggregateReader.GetRecentCohortsAsync(new TestRunStats.Filter(), limit: 50, cancellationToken));
+
+        // Evaluator history. These used to take the most recent N test results across the whole
+        // install and filter by evaluator in memory, so their cost — and their correctness — was
+        // governed by total table size rather than by the evaluator asked about. They now filter in
+        // SQL over the EvaluationStat (EvaluatorId, CreatedAt) index, so the budgets below are the
+        // regression signal: a drift toward the full-scan aggregates means the filter stopped being
+        // pushed down.
+        var evaluators = scope.Resolve<IRepository<IEvaluator>>();
+        var testResults = scope.Resolve<ITestResultRepository>();
+        IReadOnlyList<IEvaluator> seededEvaluators = await evaluators.GetAllAsync(cancellationToken);
+        if (seededEvaluators.Count == 0)
+        {
+            Console.WriteLine("[db-layer] no evaluators seeded — skipping evaluator-history metrics");
+            return results;
+        }
+
+        Guid evaluatorId = seededEvaluators[0].Id;
+        Console.WriteLine($"[db-layer] evaluator history target={evaluatorId}");
+
+        await Measure("evaluatorLatestResult",
+            () => testResults.GetLatestByEvaluatorAsync(evaluatorId, cancellationToken));
+        await Measure("evaluatorRecentResults",
+            () => testResults.GetRecentByEvaluatorAsync(evaluatorId, count: 20, cancellationToken: cancellationToken));
+        await Measure("evaluatorSearchResults",
+            () => testResults.SearchByEvaluatorAsync(evaluatorId, "the", count: 20, cancellationToken));
 
         return results;
     }

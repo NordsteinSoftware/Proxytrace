@@ -1,3 +1,4 @@
+using Proxytrace.Api.Auth.Rest;
 using Proxytrace.Application.Auth;
 using Proxytrace.Domain.Project;
 using Proxytrace.Domain.User;
@@ -28,15 +29,27 @@ internal sealed class ProjectAccessGuard : IProjectAccessGuard
 {
     private readonly ICurrentUserAccessor currentUser;
     private readonly IProjectRepository projects;
+    private readonly IHttpContextAccessor httpContextAccessor;
 
-    public ProjectAccessGuard(ICurrentUserAccessor currentUser, IProjectRepository projects)
+    public ProjectAccessGuard(
+        ICurrentUserAccessor currentUser,
+        IProjectRepository projects,
+        IHttpContextAccessor httpContextAccessor)
     {
         this.currentUser = currentUser;
         this.projects = projects;
+        this.httpContextAccessor = httpContextAccessor;
     }
 
     public async Task<bool> CanAccessProjectAsync(Guid projectId, CancellationToken cancellationToken = default)
     {
+        // A REST API key is confined to the project it was minted for, on top of whatever its owner
+        // may reach. This check must come first: the key acts as its owner, and since minting is an
+        // admin-only endpoint the owner is typically an Admin — whose role alone would otherwise
+        // satisfy the membership check below for every project in the instance.
+        if (ApiKeyProjectId is { } keyProjectId && keyProjectId != projectId)
+            return false;
+
         var user = await currentUser.GetCurrentUserAsync(cancellationToken);
         if (user is null)
             return false;
@@ -51,9 +64,23 @@ internal sealed class ProjectAccessGuard : IProjectAccessGuard
         var user = await currentUser.GetCurrentUserAsync(cancellationToken);
         if (user is null)
             return [];
-        if (user.Role == UserRole.Admin)
-            return null;
-        var memberships = await projects.GetByMemberAsync(user.Id, cancellationToken);
-        return memberships.Select(p => p.Id).ToArray();
+
+        IReadOnlyCollection<Guid>? ownerScope = user.Role == UserRole.Admin
+            ? null
+            : (await projects.GetByMemberAsync(user.Id, cancellationToken)).Select(p => p.Id).ToArray();
+
+        // Same confinement for list endpoints: an API-key request sees exactly its own project (and
+        // only if the owner could reach it anyway), never the unscoped admin "all projects" null.
+        if (ApiKeyProjectId is { } keyProjectId)
+            return ownerScope is null || ownerScope.Contains(keyProjectId) ? [keyProjectId] : [];
+
+        return ownerScope;
     }
+
+    /// <summary>
+    /// The project a REST API key confines this request to, or <see langword="null"/> when the
+    /// request was not authenticated with an API key (a JWT/session request is unconfined).
+    /// </summary>
+    private Guid? ApiKeyProjectId =>
+        httpContextAccessor.HttpContext?.Items[ApiKeyAuthenticationHandler.ProjectIdItemKey] as Guid?;
 }

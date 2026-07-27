@@ -1,3 +1,4 @@
+using System.Text;
 using Proxytrace.Domain.ModelProvider;
 
 namespace Proxytrace.Domain.Kiosk;
@@ -103,6 +104,25 @@ public sealed record KioskEndpointOptions
             InputTokenCost,
             OutputTokenCost);
     }
+
+    // Redact the upstream provider credential from the record's generated ToString()/PrintMembers so
+    // it never leaks into a log line, exception message or debugger string — the same treatment
+    // ModelProvider gives its API key. Note Resolve() already throws with the *unredacted* BaseUrl
+    // and Kind only, never the key. Private, not protected virtual, because this record is sealed and
+    // derives from object.
+    private bool PrintMembers(StringBuilder builder)
+    {
+        builder.Append("BaseUrl = ").Append(BaseUrl)
+            .Append(", ApiKey = ***")
+            .Append(", Model = ").Append(Model)
+            .Append(", Kind = ").Append(Kind)
+            .Append(", ProviderName = ").Append(ProviderName)
+            .Append(", InputTokenCost = ").Append(InputTokenCost)
+            .Append(", OutputTokenCost = ").Append(OutputTokenCost)
+            .Append(", HasAnyCredential = ").Append(HasAnyCredential)
+            .Append(", IsConfigured = ").Append(IsConfigured);
+        return true;
+    }
 }
 
 /// <summary>
@@ -115,4 +135,19 @@ public sealed record ResolvedKioskEndpoint(
     ModelProviderKind Kind,
     string ProviderName,
     decimal? InputTokenCost,
-    decimal? OutputTokenCost);
+    decimal? OutputTokenCost)
+{
+    // Same redaction as KioskEndpointOptions: this record carries the resolved, definitely-present
+    // upstream credential, so its textual rendering must never contain it.
+    private bool PrintMembers(StringBuilder builder)
+    {
+        builder.Append("BaseUrl = ").Append(BaseUrl)
+            .Append(", ApiKey = ***")
+            .Append(", Model = ").Append(Model)
+            .Append(", Kind = ").Append(Kind)
+            .Append(", ProviderName = ").Append(ProviderName)
+            .Append(", InputTokenCost = ").Append(InputTokenCost)
+            .Append(", OutputTokenCost = ").Append(OutputTokenCost);
+        return true;
+    }
+}

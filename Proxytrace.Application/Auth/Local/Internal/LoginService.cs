@@ -30,6 +30,10 @@ internal sealed class LoginService : ILoginService
         var user = await users.FindByEmailAsync(email, cancellationToken);
         if (user is null || string.IsNullOrEmpty(user.PasswordHash))
         {
+            // Spend the same PBKDF2 cost the found-user path spends below. Returning here without
+            // hashing made an unknown email answer in a fraction of the time a known one took,
+            // disclosing which addresses have accounts (a user-enumeration oracle).
+            passwords.VerifyDummy(password);
             return null;
         }
 

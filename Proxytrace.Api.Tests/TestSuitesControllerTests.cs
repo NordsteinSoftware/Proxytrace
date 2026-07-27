@@ -638,6 +638,7 @@ public sealed class TestSuitesControllerTests : BaseTest<Module>
             services.GetRequiredService<IStatsReader<TestRunStats, TestRunStats.Filter>>(),
             license ?? UnlimitedLicense(),
             accessGuard ?? services.GetRequiredService<Proxytrace.Api.Auth.IProjectAccessGuard>(),
+            services.GetRequiredService<Proxytrace.Common.Async.IAsyncLock>(),
             Microsoft.Extensions.Logging.Abstractions.NullLogger<Proxytrace.Domain.AuditLog.Audit>.Instance);
 
     [TestMethod]
@@ -728,6 +729,45 @@ public sealed class TestSuitesControllerTests : BaseTest<Module>
         var result = await controller.Create(request, CancellationToken);
 
         result.Result.Should().BeOfType<CreatedAtActionResult>();
+    }
+
+    [TestMethod]
+    public async Task Create_WhenTwoRequestsRaceAtTheLimit_OnlyOneSucceeds()
+    {
+        // The count and the create it authorises are check-then-act. Concurrently, both requests
+        // observed "0 suites" against a limit of 1 and both proceeded, leaving a Free-tier install
+        // with two suites and no way to notice.
+        IServiceProvider services = GetServices();
+        var agent = await services.GetRequiredService<IDomainEntityGenerator<IAgent>>().CreateAsync(CancellationToken);
+        var license = LicenseWithSuiteLimit(1);
+
+        // Separate controller instances, as two concurrent requests would have. They share the
+        // singleton IAsyncLock from the container, which is what actually serializes them.
+        var first = ResolveController(services, license);
+        var second = ResolveController(services, license);
+
+        var results = await Task.WhenAll(
+            Attempt(first, "Suite A"),
+            Attempt(second, "Suite B"));
+
+        results.Count(r => r).Should().Be(1, "exactly one of the two racing creates may be admitted");
+        (await services.GetRequiredService<ITestSuiteRepository>().CountAsync(CancellationToken))
+            .Should().Be(1, "the licensed limit must hold under concurrency");
+
+        async Task<bool> Attempt(TestSuitesController controller, string name)
+        {
+            try
+            {
+                await controller.Create(
+                    new CreateTestSuiteRequest(Name: name, AgentId: agent.Id, TestCases: []),
+                    CancellationToken);
+                return true;
+            }
+            catch (LicenseLimitExceededException)
+            {
+                return false;
+            }
+        }
     }
 
     [TestMethod]

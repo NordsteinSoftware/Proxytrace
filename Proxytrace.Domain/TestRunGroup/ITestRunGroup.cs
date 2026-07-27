@@ -46,6 +46,24 @@ public interface ITestRunGroup : IDomainEntity<ITestRunGroup>
     /// <summary>The schedule that triggered this group, or null for a manual/system run.</summary>
     Guid? ScheduleId { get; }
 
+    /// <summary>
+    /// When the optimizer finished looking at this group, or <see langword="null"/> if it has not
+    /// yet been considered.
+    /// </summary>
+    /// <remarks>
+    /// A durable marker for a queue that is otherwise in memory. Completed groups are handed to the
+    /// optimizer through an unbounded in-process channel; a restart discarded whatever was still
+    /// queued, so a deploy during a scheduled-run window silently dropped that night's optimization
+    /// with nothing recorded anywhere. The theory queue can recover because a theory's status *is*
+    /// its marker — a group had no equivalent, which is what this is. It is set once the group has
+    /// been considered, whether or not that produced any theories: "looked at and found nothing" and
+    /// "never looked at" must not be confused.
+    /// </remarks>
+    DateTimeOffset? OptimizationConsideredAt { get; }
+
+    /// <summary>Records that the optimizer has considered this group, and persists.</summary>
+    Task<ITestRunGroup> MarkOptimizationConsidered(CancellationToken cancellationToken = default);
+
     /// <summary>Factory delegate for creating a new test run group.</summary>
     public delegate ITestRunGroup CreateNew(ITestSuite suite, bool isSystemRun, Guid? scheduleId, int sampleCount);
 
@@ -57,6 +75,7 @@ public interface ITestRunGroup : IDomainEntity<ITestRunGroup>
         bool isSystemRun,
         Guid? scheduleId,
         int sampleCount,
+        DateTimeOffset? optimizationConsideredAt,
         IDomainEntityData existing);
 
     Task<ITestRunGroup> SetRunning(CancellationToken cancellationToken = default);

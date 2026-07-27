@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.Text;
 using Proxytrace.Common.Validation;
 using Proxytrace.Domain.Internal;
 using Proxytrace.Domain.User;
@@ -49,6 +50,24 @@ internal record UserTotpEnrollment : DomainEntity<IUserTotpEnrollment>, IUserTot
                 $"Cannot record TOTP step {step} for enrollment {Id}: it must be newer than the last used step {lastUsedStep}.");
         }
         return ApplyAsync(this with { LastUsedStep = step }, cancellationToken);
+    }
+
+    // Redact the TOTP shared secret from the record's generated ToString()/PrintMembers so it never
+    // leaks into a log line, exception message or debugger string — anyone holding it can mint valid
+    // authenticator codes for this user indefinitely. Secret stays a public member (the verifier
+    // reads it; equality keeps it) — only its textual rendering is masked.
+    protected override bool PrintMembers(StringBuilder builder)
+    {
+        if (base.PrintMembers(builder))
+        {
+            builder.Append(", ");
+        }
+
+        builder.Append("User = ").Append(User)
+            .Append(", Secret = ***")
+            .Append(", ConfirmedAt = ").Append(ConfirmedAt)
+            .Append(", LastUsedStep = ").Append(LastUsedStep);
+        return true;
     }
 
     public override IEnumerable<ValidationResult> Validate(ValidationContext validationContext)

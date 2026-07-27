@@ -75,9 +75,14 @@ if [ "$SPLIT" = "1" ]; then
         ConnectionStrings__Default="$PG_CONN" \
         dotnet run --urls "http://localhost:5002") &
 else
-    # Start backend in development mode (single-process kiosk demo)
+    # Start backend in development mode (single-process kiosk demo). Kiosk is opted into
+    # explicitly here: appsettings.json ships Kiosk:Enabled=false so a plain `dotnet run` of the
+    # published app never silently boots the login-free demo handler.
     echo "Starting backend on http://localhost:5001 ..."
-    (cd "$REPO_ROOT/Proxytrace.Api" && ASPNETCORE_ENVIRONMENT=Development dotnet run --urls "http://localhost:5001") &
+    (cd "$REPO_ROOT/Proxytrace.Api" && \
+        ASPNETCORE_ENVIRONMENT=Development \
+        Kiosk__Enabled=true \
+        dotnet run --urls "http://localhost:5001") &
 fi
 
 # Give the backend a moment to bind its port before the frontend proxy tries to connect

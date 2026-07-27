@@ -162,6 +162,73 @@ public sealed class MfaServiceTests : BaseTest<Module>
     }
 
     [TestMethod]
+    public async Task BackupCodes_AreStoredSaltedAndSlow_NotAsAPlainHashOfTheCode()
+    {
+        // A backup code is ~50 bits — sized to be typed, not to resist a GPU. Stored as one
+        // unsalted single-round SHA-256, a dump could be attacked against every user's codes at
+        // once, because the same code hashed to the same value for everyone.
+        var services = GetServices();
+        var user = await SeedUser(services);
+        var (_, codes) = await EnableMfa(services, user);
+
+        var stored = await services.GetRequiredService<IMfaBackupCodeRepository>()
+            .ListByUserAsync(user.Id, CancellationToken);
+        var raw = new string(codes[0].Where(char.IsLetterOrDigit).ToArray()).ToUpperInvariant();
+
+        var plainHash = services.GetRequiredService<Domain.Security.ISecretHasher>().Hash(raw);
+        stored.Should().NotContain(c => c.CodeHash == plainHash,
+            "storing the bare hash makes one dump crackable against every user at once");
+
+        // Salted: two codes never share a hash, and no stored hash is the 64-char hex shape.
+        stored.Select(c => c.CodeHash).Should().OnlyHaveUniqueItems();
+        stored.Should().NotContain(c => c.CodeHash.Length == 64 && c.CodeHash.All(Uri.IsHexDigit));
+    }
+
+    [TestMethod]
+    public async Task VerifyChallenge_WithABackupCodeStoredUnderTheLegacyHash_StillSucceeds()
+    {
+        // Existing codes cannot be re-hashed (the raw code is unrecoverable), so they must keep
+        // verifying against the old scheme until they are used or the user re-enrolls. Otherwise
+        // this change would lock every already-enrolled user out of their recovery codes.
+        var services = GetServices();
+        var user = await SeedUser(services);
+        var mfa = services.GetRequiredService<IMfaService>();
+        var challenges = services.GetRequiredService<IMfaChallengeService>();
+        var (_, codes) = await EnableMfa(services, user);
+
+        var raw = new string(codes[0].Where(char.IsLetterOrDigit).ToArray()).ToUpperInvariant();
+        var legacyHash = services.GetRequiredService<Domain.Security.ISecretHasher>().Hash(raw);
+
+        // Rewrite that one row to the pre-change representation.
+        var repository = services.GetRequiredService<IMfaBackupCodeRepository>();
+        var all = await repository.ListByUserAsync(user.Id, CancellationToken);
+        var target = all[0];
+        var createExisting = services.GetRequiredService<IMfaBackupCode.CreateExisting>();
+        await repository.UpdateAsync(
+            createExisting(target.User, legacyHash, target.ConsumedAt, target),
+            CancellationToken);
+
+        var challenge = challenges.Issue(user);
+        var result = await mfa.VerifyChallengeAsync(challenge.Token, codes[0], CancellationToken);
+
+        result.Should().NotBeNull("a legacy-hashed backup code must keep working");
+    }
+
+    [TestMethod]
+    public async Task VerifyChallenge_WithAnUnissuedBackupCode_ReturnsNull()
+    {
+        var services = GetServices();
+        var user = await SeedUser(services);
+        var mfa = services.GetRequiredService<IMfaService>();
+        var challenges = services.GetRequiredService<IMfaChallengeService>();
+        await EnableMfa(services, user);
+
+        var challenge = challenges.Issue(user);
+
+        (await mfa.VerifyChallengeAsync(challenge.Token, "ABCDE-FGHJK", CancellationToken)).Should().BeNull();
+    }
+
+    [TestMethod]
     public async Task VerifyChallenge_WithUnknownToken_ReturnsNull()
     {
         var services = GetServices();

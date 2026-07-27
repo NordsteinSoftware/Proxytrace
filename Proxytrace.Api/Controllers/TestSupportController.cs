@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Proxytrace.Domain.TestSupport;
+using Proxytrace.Common.Text;
 
 namespace Proxytrace.Api.Controllers;
 
@@ -61,11 +62,11 @@ public class TestSupportController : ControllerBase
         {
             if (request.Critical)
             {
-                logger.LogCritical(exception, "{Message}", request.Message);
+                logger.LogCritical(exception, "{Message}", request.Message.ToSingleLogLine());
             }
             else
             {
-                logger.LogError(exception, "{Message}", request.Message);
+                logger.LogError(exception, "{Message}", request.Message.ToSingleLogLine());
             }
         }
 

@@ -24,7 +24,10 @@ internal class MfaBackupCodeConfig
     public override void Configure(EntityTypeBuilder<MfaBackupCodeEntity> builder)
     {
         builder.HasIndex(e => e.CodeHash).IsUnique();
-        builder.Property(e => e.CodeHash).HasMaxLength(64);
+        // Backup codes are hashed with PBKDF2 + a per-code salt (IPasswordService), whose encoded
+        // form is far longer than the 64-char hex SHA-256 this column originally held. Legacy rows
+        // keep their 64-char value and still verify.
+        builder.Property(e => e.CodeHash).HasMaxLength(256);
         builder.HasIndex(e => e.User);
         // The codes are owned by the user — deleting the user discards them.
         builder.HasOne<UserEntity>()

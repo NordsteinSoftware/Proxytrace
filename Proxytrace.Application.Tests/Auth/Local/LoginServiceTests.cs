@@ -1,5 +1,7 @@
+using Autofac;
 using AwesomeAssertions;
 using Microsoft.Extensions.DependencyInjection;
+using NSubstitute;
 using Proxytrace.Application.Auth.Local;
 using Proxytrace.Domain.User;
 using Proxytrace.Testing;
@@ -48,5 +50,39 @@ public sealed class LoginServiceTests : BaseTest<Module>
     {
         var svc = GetServices().GetRequiredService<ILoginService>();
         (await svc.LoginAsync("unknown@b.com", "Abcdef1!", CancellationToken)).Should().BeNull();
+    }
+
+    [TestMethod]
+    public async Task Login_WithUnknownEmail_StillSpendsTheVerificationCost()
+    {
+        // Bailing out before hashing made an unknown email answer far faster than a known one,
+        // disclosing which addresses have accounts. The not-found path must verify against a dummy
+        // hash so the work — and so the response time — matches the found path.
+        var passwords = Substitute.For<IPasswordService>();
+        var s = GetServices(builder => builder.RegisterInstance(passwords).As<IPasswordService>());
+
+        var svc = s.GetRequiredService<ILoginService>();
+        var result = await svc.LoginAsync("nobody@b.com", "Abcdef1!", CancellationToken);
+
+        result.Should().BeNull();
+        passwords.Received(1).VerifyDummy("Abcdef1!");
+    }
+
+    [TestMethod]
+    public async Task Login_WithKnownEmailButNoPasswordSet_StillSpendsTheVerificationCost()
+    {
+        // Same oracle via a different door: an SSO-only account has no password hash, so the
+        // early return would otherwise distinguish it from an account that simply does not exist.
+        var passwords = Substitute.For<IPasswordService>();
+        var s = GetServices(builder => builder.RegisterInstance(passwords).As<IPasswordService>());
+
+        var factory = s.GetRequiredService<IUser.CreateNew>();
+        await factory("sso@b.com", "external-subject", null, UserRole.Member).AddAsync(CancellationToken);
+
+        var svc = s.GetRequiredService<ILoginService>();
+        var result = await svc.LoginAsync("sso@b.com", "Abcdef1!", CancellationToken);
+
+        result.Should().BeNull();
+        passwords.Received(1).VerifyDummy("Abcdef1!");
     }
 }

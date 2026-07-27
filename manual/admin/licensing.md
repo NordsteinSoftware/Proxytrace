@@ -169,6 +169,28 @@ licensed one: cyan when the license is active, amber while a re-check is pending
 monthly trace quota is exhausted, a banner appears above the top bar warning
 that new traces are being dropped until the quota resets.
 
+### What happens when the monthly trace limit is reached
+
+The trace limit applies to the **whole installation**, but reaching it does not stop every project
+from capturing.
+
+Each project is measured against an equal share of the limit. Once the installation is at its cap,
+only projects **above** their share stop being captured; a project that has used little of its share
+carries on. So one busy project can no longer consume the month's allowance and take every other
+project's tracing down with it.
+
+When a project starts being throttled you get told, rather than having to notice traces going
+missing:
+
+- A **notification** is raised for that project ("Trace limit reached"), naming how many traces it
+  has captured and what its share is.
+- An entry appears in the **Error Log** recording that the installation reached its cap and that
+  dropping has begun.
+
+Proxied calls themselves keep working throughout — only the *recording* of them stops. Proxytrace
+will not fail a customer's LLM request because of a billing limit, which is why the drop has to be
+reported rather than returned as an error.
+
 The **agent** limit is enforced differently because agents are discovered automatically from
 captured traces rather than created by an explicit request. Once the agent limit is reached,
 traces that would create a **new** agent are silently dropped (a warning is logged); traces

@@ -9,7 +9,8 @@ namespace Proxytrace.Domain.ModelEndpoint;
 
 public record ModelOptions(
     string ModelName,
-    IReadOnlyList<ToolSpecification> Tools)
+    IReadOnlyList<ToolSpecification> Tools,
+    ModelSamplingParameters? Sampling = null)
 {
 
     public static ModelOptions FromModel(IModel model)
@@ -21,6 +22,48 @@ public record ModelOptions(
         => new(
             ModelName: model.Name,
             Tools: agent.Tools);
+}
+
+/// <summary>
+/// Per-request sampling overrides. Every member is optional; a <see langword="null"/> leaves the
+/// provider's own default in place rather than sending a value.
+/// </summary>
+/// <remarks>
+/// <para>
+/// Added because the playground offered these controls, mapped them through its request DTO, and
+/// then had nowhere to put them — <see cref="ModelOptions"/> carried only the model name and tools,
+/// so every one of them was dropped before the request left the process. Changing temperature in the
+/// playground did nothing at all, silently.
+/// </para>
+/// <para>
+/// Support is per-provider: an OpenAI-compatible backend may reject or ignore individual fields
+/// (reasoning models, for instance, refuse <c>temperature</c>). Nothing is validated here — the
+/// provider's own error is the honest answer, and it now actually reaches the user instead of the
+/// value being discarded locally.
+/// </para>
+/// </remarks>
+public record ModelSamplingParameters(
+    double? Temperature = null,
+    double? TopP = null,
+    double? FrequencyPenalty = null,
+    double? PresencePenalty = null,
+    int? MaxOutputTokens = null,
+    long? Seed = null,
+    IReadOnlyList<string>? StopSequences = null,
+    string? ReasoningEffort = null,
+    int? ChoiceCount = null)
+{
+    /// <summary>True when no override is set, so the request carries the provider's defaults.</summary>
+    public bool IsEmpty
+        => Temperature is null
+           && TopP is null
+           && FrequencyPenalty is null
+           && PresencePenalty is null
+           && MaxOutputTokens is null
+           && Seed is null
+           && (StopSequences is null || StopSequences.Count == 0)
+           && string.IsNullOrWhiteSpace(ReasoningEffort)
+           && ChoiceCount is null;
 }
 
 public record TypedCompletion<TOutput>(TOutput? Response, TokenUsage? Usage, TimeSpan Latency);

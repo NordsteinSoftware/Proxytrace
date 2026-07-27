@@ -29,8 +29,10 @@ public sealed class Module : Autofac.Module
                     var options = ConfigurationOptions.Parse(configuration.RedisConnectionString);
                     // Never throw on connect: a Redis outage must not stop the proxy from
                     // constructing its controller and forwarding agent traffic. The multiplexer
-                    // reconnects in the background; publishes made while it is down fail fast and
-                    // are swallowed by the producer.
+                    // reconnects in the background. It does NOT fail fast while down — a command is
+                    // backlogged until its async timeout (~5s) — so RedisIngestionStream checks
+                    // IConnectionMultiplexer.IsConnected before issuing one and drops the capture
+                    // instead, keeping the proxy hot path free of that stall.
                     options.AbortOnConnectFail = false;
                     return ConnectionMultiplexer.Connect(options);
                 })

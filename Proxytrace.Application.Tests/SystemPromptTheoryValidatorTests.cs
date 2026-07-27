@@ -98,23 +98,44 @@ public sealed class SystemPromptTheoryValidatorTests : BaseTest<Module>
     }
 
     [TestMethod]
-    public async Task Validate_PoolsSamples_SoASmallSuiteCanReachSignificance()
+    public async Task Validate_ReplayingTheSameOutcome_DoesNotManufactureSignificance()
     {
-        // The showcase's real numbers: an 11-case suite going 5/11 → 8/11. That is a large, genuine
-        // improvement, but on a single sample per arm it lands at p≈0.19 and is discarded as noise —
-        // which is exactly why the kiosk demo's optimizer never produced a proposal. Replaying the
-        // same per-sample outcome three times pools it into 15/33 → 24/33, which clears 0.05.
-        var f = BuildSampled(
-            samples: 3,
-            baselinePassed: Passes(5, 11),
-            candidatePassed: Passes(8, 11));
+        // This test previously asserted the OPPOSITE, and its own comment described the mechanism:
+        // "replaying the same per-sample outcome three times pools it into 15/33 → 24/33, which
+        // clears 0.05". That was the defect, encoded as a feature. Replaying an outcome that does
+        // not change adds no information about whether the change works — but the pooled test
+        // counted 33 independent trials where there were only 11 test cases, so it grew more
+        // confident purely because it was handed the same evidence again.
+        //
+        // 5/11 → 8/11 is three cases flipping out of eleven. Paired on the case, that is p ≈ 0.08:
+        // suggestive, not proven, at one sample or at three.
+        var f = BuildSampled(samples: 3, baselinePassed: Passes(5, 11), candidatePassed: Passes(8, 11));
+        var pooled = await f.Validator.ValidateAsync(f.Theory, CancellationToken);
 
-        var outcome = await f.Validator.ValidateAsync(f.Theory, CancellationToken);
+        // The reported pass rates still pool — "of everything attempted, this fraction passed" is
+        // what a reader expects to see — but the verdict does not follow them.
+        pooled.BaselinePassRate.Should().BeApproximately(15d / 33d, 1e-9);
+        pooled.ProjectedPassRate.Should().BeApproximately(24d / 33d, 1e-9);
+        pooled.PValue.Should().BeGreaterThan(0.05,
+            "three replays of an unchanged outcome are not three times the evidence");
+        pooled.Proposal.Should().BeNull();
+    }
 
-        outcome.Proposal.Should().NotBeNull("pooling three samples makes the 5/11 → 8/11 effect provable");
-        outcome.BaselinePassRate.Should().BeApproximately(15d / 33d, 1e-9);
-        outcome.ProjectedPassRate.Should().BeApproximately(24d / 33d, 1e-9);
-        outcome.PValue.Should().BeLessThan(0.05);
+    [TestMethod]
+    public async Task Validate_TheSameEffect_IsJudgedIdenticallyAtOneSampleAndAtThree()
+    {
+        // The property that makes the gate trustworthy: raising AbSampleCount must not change the
+        // verdict on identical per-sample outcomes. Under the pooled test it did — more samples
+        // meant an easier gate, so the setting quietly traded rigour for acceptances.
+        var single = BuildSampled(samples: 1, baselinePassed: Passes(5, 11), candidatePassed: Passes(8, 11));
+        var triple = BuildSampled(samples: 3, baselinePassed: Passes(5, 11), candidatePassed: Passes(8, 11));
+
+        var singleOutcome = await single.Validator.ValidateAsync(single.Theory, CancellationToken);
+        var tripleOutcome = await triple.Validator.ValidateAsync(triple.Theory, CancellationToken);
+
+        tripleOutcome.PValue.Should().BeApproximately(singleOutcome.PValue ?? -1, 1e-12);
+        tripleOutcome.Proposal.Should().BeNull();
+        singleOutcome.Proposal.Should().BeNull();
     }
 
     [TestMethod]
@@ -163,6 +184,9 @@ public sealed class SystemPromptTheoryValidatorTests : BaseTest<Module>
         outcome.Proposal.Should().BeNull();
     }
 
+    private static Guid[] CaseIds(int count)
+        => Enumerable.Range(0, count).Select(_ => Guid.NewGuid()).ToArray();
+
     private static bool[] Passes(int passed, int total)
         => Enumerable.Range(0, total).Select(i => i < passed).ToArray();
 
@@ -193,8 +217,9 @@ public sealed class SystemPromptTheoryValidatorTests : BaseTest<Module>
         theory.ProposedSystemMessage.Returns("You are better.");
         theory.EvidenceTestRunIds.Returns(Array.Empty<Guid>());
 
-        var baselineRun = MakeRun(endpoint, baselinePassed);
-        var candidateRun = MakeRun(endpoint, candidatePassed);
+        var caseIds = CaseIds(caseCount);
+        var baselineRun = MakeRun(endpoint, baselinePassed, caseIds);
+        var candidateRun = MakeRun(endpoint, candidatePassed, caseIds);
         var baselineGroup = GroupReturning(baselineRun);
         var candidateGroup = GroupReturning(candidateRun);
 
@@ -273,8 +298,9 @@ public sealed class SystemPromptTheoryValidatorTests : BaseTest<Module>
 
         // Build every substitute BEFORE the Returns() call — NSubstitute cannot configure a
         // substitute while it is resolving the arguments of another one.
-        var baselineRuns = Enumerable.Range(0, samples).Select(_ => MakeRun(endpoint, baselinePassed)).ToList();
-        var candidateRuns = Enumerable.Range(0, samples).Select(_ => MakeRun(endpoint, candidatePassed)).ToList();
+        var caseIds = CaseIds(Math.Max(baselinePassed.Length, candidatePassed.Length));
+        var baselineRuns = Enumerable.Range(0, samples).Select(_ => MakeRun(endpoint, baselinePassed, caseIds)).ToList();
+        var candidateRuns = Enumerable.Range(0, samples).Select(_ => MakeRun(endpoint, candidatePassed, caseIds)).ToList();
         var baselineGroup = GroupReturningMany(baselineRuns);
         var candidateGroup = GroupReturningMany(candidateRuns);
 
@@ -318,14 +344,20 @@ public sealed class SystemPromptTheoryValidatorTests : BaseTest<Module>
         return group;
     }
 
-    private static ITestRun MakeRun(IModelEndpoint endpoint, bool[] passed)
+    // Case ids are supplied by the caller and shared across both arms, because the significance
+    // test is PAIRED on the test case: a result whose TestCase is an unstubbed substitute reports
+    // Guid.Empty, which would collapse every result of a run into one case and leave nothing to pair.
+    private static ITestRun MakeRun(IModelEndpoint endpoint, bool[] passed, IReadOnlyList<Guid> caseIds)
     {
-        var results = passed.Select(p =>
+        var results = passed.Select((p, i) =>
         {
             var ev = Substitute.For<IEvaluation>();
             ev.Passed.Returns(p);
+            var testCase = Substitute.For<ITestCase>();
+            testCase.Id.Returns(caseIds[i]);
             var r = Substitute.For<ITestResult>();
             r.Evaluations.Returns([ev]);
+            r.TestCase.Returns(testCase);
             return r;
         }).ToList();
 

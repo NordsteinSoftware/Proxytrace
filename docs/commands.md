@@ -4,10 +4,15 @@
 ```bash
 dotnet restore Proxytrace.sln          # Restore packages
 dotnet build Proxytrace.sln            # Build all projects
-dotnet test Proxytrace.sln             # Run all tests
-dotnet test Proxytrace.Domain.Tests    # Run a single test project
+dotnet test Proxytrace.Domain.Tests    # Run a single test project (the default — see below)
+dotnet test Proxytrace.Domain.Tests --filter "FullyQualifiedName~TestRunGroup"   # one class/area
+dotnet test Proxytrace.sln             # Run all tests (cross-cutting changes / releases only)
 cd Proxytrace.Api && dotnet run        # Start API on http://localhost:5001
 ```
+
+**Scope your test runs.** The full solution run is ~2,200 tests across 10 projects and CI runs it on
+every push — locally, run only the projects (or classes) affected by your change. See
+[`testing.md`](testing.md#which-tests-to-run) for the mapping from changed code to test project.
 
 Swagger UI is available at `http://localhost:5001/swagger` in Development mode.
 
@@ -29,7 +34,8 @@ See [`database.md`](database.md) for full migration details.
 npm install
 npm run dev         # Dev server on http://localhost:4201
 npm run build       # Production build
-npm test            # Vitest unit tests
+npm test -- src/features/playground   # Vitest, scoped to the touched files (preferred)
+npm test            # Vitest, all ~96 spec files (~3s — cheap enough to be the final check)
 ```
 
 ## All-in-one dev mode

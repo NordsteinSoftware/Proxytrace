@@ -64,10 +64,37 @@ public class EvaluatorsController : ControllerBase
         this.transaction = transaction;
     }
 
-    private async Task<bool> CanListAsync(Guid? projectId, CancellationToken cancellationToken)
+    /// <summary>
+    /// The evaluators the caller may list under the optional project filter — the whole instance
+    /// for an unfiltered admin, one project's when the scope names one, and the union of the
+    /// caller's projects otherwise.
+    /// </summary>
+    private async Task<IReadOnlyList<IEvaluator>> ListScopedAsync(
+        IReadOnlyCollection<Guid>? scope,
+        CancellationToken cancellationToken)
     {
-        var accessible = await accessGuard.GetAccessibleProjectIdsAsync(cancellationToken);
-        return accessible is null || (projectId.HasValue && accessible.Contains(projectId.Value));
+        if (scope.IsEmpty())
+            return [];
+        if (scope.SingleProject() is { } projectId)
+            return await evaluatorRepository.GetByProjectAsync(projectId, cancellationToken);
+        var all = await evaluatorRepository.GetAllAsync(cancellationToken);
+        return scope is null ? all : all.Where(e => scope.Contains(e.Project.Id)).ToArray();
+    }
+
+    /// <summary>
+    /// The suites behind the overview's evaluator→suite references, scoped the same way as
+    /// <see cref="ListScopedAsync"/>.
+    /// </summary>
+    private async Task<IReadOnlyList<ITestSuite>> ListScopedSuitesAsync(
+        IReadOnlyCollection<Guid>? scope,
+        CancellationToken cancellationToken)
+    {
+        if (scope.IsEmpty())
+            return [];
+        if (scope.SingleProject() is { } projectId)
+            return await testSuites.GetByProjectAsync(projectId, cancellationToken);
+        var all = await testSuites.GetAllAsync(cancellationToken);
+        return scope is null ? all : all.Where(s => scope.Contains(s.Agent.Project.Id)).ToArray();
     }
 
     [HttpGet("agentic-presets")]
@@ -81,11 +108,8 @@ public class EvaluatorsController : ControllerBase
         [FromQuery] Guid? projectId = null,
         CancellationToken cancellationToken = default)
     {
-        if (!await CanListAsync(projectId, cancellationToken))
-            return [];
-        var all = projectId.HasValue
-            ? await evaluatorRepository.GetByProjectAsync(projectId.Value, cancellationToken)
-            : await evaluatorRepository.GetAllAsync(cancellationToken);
+        var scope = await accessGuard.ResolveListScopeAsync(projectId, cancellationToken);
+        var all = await ListScopedAsync(scope, cancellationToken);
         return all.Select(evaluatorMapper.ToDto).ToArray();
     }
 
@@ -94,11 +118,8 @@ public class EvaluatorsController : ControllerBase
         [FromQuery] Guid? projectId = null,
         CancellationToken cancellationToken = default)
     {
-        if (!await CanListAsync(projectId, cancellationToken))
-            return [];
-        var all = projectId.HasValue
-            ? await evaluatorRepository.GetByProjectAsync(projectId.Value, cancellationToken)
-            : await evaluatorRepository.GetAllAsync(cancellationToken);
+        var scope = await accessGuard.ResolveListScopeAsync(projectId, cancellationToken);
+        var all = await ListScopedAsync(scope, cancellationToken);
         return all.Select(e => new EvaluatorListItemDto(e.Id, e.Kind, e.Name)).ToArray();
     }
 
@@ -121,16 +142,17 @@ public class EvaluatorsController : ControllerBase
         [FromQuery] StatisticsBucket bucket = StatisticsBucket.Daily,
         CancellationToken cancellationToken = default)
     {
-        if (!await CanListAsync(projectId, cancellationToken))
+        var scope = await accessGuard.ResolveListScopeAsync(projectId, cancellationToken);
+        if (scope.IsEmpty())
             return new EvaluatorsOverviewDto([], [], []);
-        Task<IReadOnlyList<IEvaluator>> evaluatorsTask = projectId.HasValue
-            ? evaluatorRepository.GetByProjectAsync(projectId.Value, cancellationToken)
-            : evaluatorRepository.GetAllAsync(cancellationToken);
-        Task<IReadOnlyList<ITestSuite>> suitesTask = projectId.HasValue
-            ? testSuites.GetByProjectAsync(projectId.Value, cancellationToken)
-            : testSuites.GetAllAsync(cancellationToken);
-        Task<IReadOnlyList<EvaluatorSparklineStat>> sparklinesTask = projectId.HasValue && from.HasValue && to.HasValue
-            ? evaluatorStats.GetSparklinesAsync(projectId.Value, from.Value, to.Value, bucket, cancellationToken)
+
+        // The sparkline query is per-project, so it runs whenever the scope narrows to exactly one
+        // — which now includes an unfiltered REST API key, confined to its own project.
+        var singleProject = scope.SingleProject();
+        Task<IReadOnlyList<IEvaluator>> evaluatorsTask = ListScopedAsync(scope, cancellationToken);
+        Task<IReadOnlyList<ITestSuite>> suitesTask = ListScopedSuitesAsync(scope, cancellationToken);
+        Task<IReadOnlyList<EvaluatorSparklineStat>> sparklinesTask = singleProject is { } sparklineProject && from.HasValue && to.HasValue
+            ? evaluatorStats.GetSparklinesAsync(sparklineProject, from.Value, to.Value, bucket, cancellationToken)
             : Task.FromResult<IReadOnlyList<EvaluatorSparklineStat>>([]);
 
         await Task.WhenAll(evaluatorsTask, suitesTask, sparklinesTask);

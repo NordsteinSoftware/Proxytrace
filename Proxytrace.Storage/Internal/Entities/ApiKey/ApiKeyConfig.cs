@@ -48,18 +48,28 @@ internal class ApiKeyConfig : AbstractEntityConfiguration<ApiKeyEntity>, IMapper
             .HasForeignKey(e => e.Project)
             .OnDelete(DeleteBehavior.Restrict);
 
+        // Restrict, not Cascade. Only the key's hash is stored, so a deleted key is unrecoverable —
+        // it cannot be re-issued, only replaced, and every integration configured with it breaks at
+        // once with no diagnostic beyond a 401. Cascading meant hard-deleting a provider silently
+        // destroyed every key issued for it. The provider repository is already archive-only
+        // (SupportsHardDelete => false), so this is the database-level backstop for the paths the
+        // repository never sees (raw SQL, EF bulk deletes) — the same pairing ModelEndpoint uses.
         builder
             .HasOne<ModelProviderEntity>()
             .WithMany()
             .HasForeignKey(e => e.Provider)
-            .OnDelete(DeleteBehavior.Cascade);
+            .OnDelete(DeleteBehavior.Restrict);
 
-        // The key acts as its owner; it cannot outlive them, so deleting a user removes their keys.
+        // Also Restrict. A key acts as its owner, so it genuinely must not outlive them — but
+        // cascading turned "offboard this admin" into "silently revoke every integration they
+        // happened to mint", discovered only when production traffic started failing.
+        // UserAdministrationService now refuses the delete with a 409 naming the keys, so an
+        // operator deletes or reassigns them deliberately instead of finding out afterwards.
         builder
             .HasOne<UserEntity>()
             .WithMany()
             .HasForeignKey(e => e.Owner)
-            .OnDelete(DeleteBehavior.Cascade);
+            .OnDelete(DeleteBehavior.Restrict);
     }
 
     public async Task<IApiKey> Map(ApiKeyEntity stored, CancellationToken cancellationToken = default)

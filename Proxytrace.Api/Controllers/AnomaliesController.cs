@@ -47,19 +47,18 @@ public class AnomaliesController : ControllerBase
     // Same scoping rule as AgentCallsController.GetAll (#193): admins (accessible == null) may run
     // any query; non-admins must scope to a project they belong to — directly via projectId or via
     // the agent's project — otherwise the list returns nothing rather than leaking other tenants' rows.
-    private async Task<bool> CanListAsync(Guid? projectId, Guid? agentId, CancellationToken cancellationToken)
+    // Mirrors AgentCallsController.ListScopeAsync — anomalies are traces, filtered the same way.
+    private async Task<IReadOnlyCollection<Guid>?> ListScopeAsync(
+        Guid? projectId,
+        Guid? agentId,
+        CancellationToken cancellationToken)
     {
-        var accessible = await accessGuard.GetAccessibleProjectIdsAsync(cancellationToken);
-        if (accessible is null)
-            return true;
-        if (projectId is { } pid)
-            return accessible.Contains(pid);
-        if (agentId is { } aid)
-        {
-            var agent = await agentRepository.FindAsync(aid, cancellationToken);
-            return agent is not null && accessible.Contains(agent.Project.Id);
-        }
-        return false;
+        var scope = await accessGuard.ResolveListScopeAsync(projectId, cancellationToken);
+        if (scope is null || scope.IsEmpty() || agentId is not { } aid)
+            return scope;
+
+        var agent = await agentRepository.FindAsync(aid, cancellationToken);
+        return agent is not null && scope.Contains(agent.Project.Id) ? scope : [];
     }
 
     /// <summary>
@@ -75,9 +74,11 @@ public class AnomaliesController : ControllerBase
         CancellationToken cancellationToken = default)
     {
         (page, pageSize) = Paging.Clamp(page, pageSize);
-        if (!await CanListAsync(projectId, agentId, cancellationToken))
+        var scope = await ListScopeAsync(projectId, agentId, cancellationToken);
+        if (scope.IsEmpty())
             return new PagedResult<AnomalyListItemDto>([], 0, page, pageSize);
-        var filter = new AgentCallFilter(AgentId: agentId, ProjectId: projectId, OutlierOnly: true);
+        var (scopedProjectId, scopedProjectIds) = scope.ToFilterScope();
+        var filter = new AgentCallFilter(AgentId: agentId, ProjectId: scopedProjectId, OutlierOnly: true, ProjectIds: scopedProjectIds);
         var (items, total) = await repository.GetFilteredListAsync(filter, page, pageSize, cancellationToken);
         var flaggedIds = items
             .Where(i => ((OutlierFlags)i.OutlierFlags).HasFlag(OutlierFlags.CustomAnomaly))

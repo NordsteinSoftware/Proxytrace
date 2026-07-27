@@ -44,6 +44,19 @@ custom or self-hosted endpoint is shown). The model
 list is **pulled from the provider** — there is no manual "add model" control; use reload (or wait
 for the periodic refresh) to pick up newly deployed models.
 
+### Viewing an upstream API key
+
+The **Upstream API key** row shows the stored credential masked — a few leading and trailing
+characters, enough to tell two keys apart and to confirm a rotation took effect.
+
+Choosing **Reveal** (or **Copy**) fetches the key itself. Only administrators can do this, and
+**every reveal is recorded in the audit log** as *Provider Key Revealed*, naming the administrator
+and the provider. The key value itself is never written to the audit log.
+
+The key is fetched only at the moment you ask for it. It is not part of the providers page's data,
+so simply opening the page — or leaving it open — does not put any provider credential in front of
+the browser.
+
 ### Rotating an upstream API key
 
 To replace the credential Proxytrace uses when forwarding requests to a provider:
@@ -105,6 +118,10 @@ Each key also carries explicit **capabilities** (least privilege), chosen when y
   can call the API directly with a scoped key instead of a long-lived user login.
 - **REST API write** — additionally create and change data over the REST API (`POST`/`PUT`/`PATCH`/
   `DELETE`). A REST key acts as its owner and, like an MCP key, can never reach admin-only endpoints.
+
+A REST key is confined to its own project, so list endpoints that take an optional `projectId` return
+that project's rows whether or not you pass one — there is no need to repeat the project on every
+call, and a key can never widen its reach by omitting it.
 
 A key works only on the surfaces it was granted: an ingestion-only key cannot drive MCP or the REST API,
 an MCP-only key cannot proxy LLM traffic or drive REST, and a REST key cannot drive MCP. Keys issued

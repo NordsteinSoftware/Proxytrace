@@ -66,24 +66,31 @@ public class TestRunGroupsController : ControllerBase
     // (accessible == null) pass for any scope. Non-admins must scope to a project they belong to —
     // via projectId, the suite's project, or the agent's project — otherwise the query returns
     // nothing rather than leaking other tenants' rows.
-    private async Task<bool> CanListAsync(Guid? suiteId, Guid? agentId, Guid? projectId, CancellationToken cancellationToken)
+    // The projects this list request may read: null for an admin, the caller's own projects when no
+    // narrower filter is given (#482), and [] when a named suite/agent/project is out of reach.
+    private async Task<IReadOnlyCollection<Guid>?> ListScopeAsync(
+        Guid? suiteId,
+        Guid? agentId,
+        Guid? projectId,
+        CancellationToken cancellationToken)
     {
-        var accessible = await accessGuard.GetAccessibleProjectIdsAsync(cancellationToken);
-        if (accessible is null)
-            return true;
-        if (projectId is { } pid)
-            return accessible.Contains(pid);
+        var scope = await accessGuard.ResolveListScopeAsync(projectId, cancellationToken);
+        if (scope is null || scope.IsEmpty())
+            return scope;
+
         if (suiteId is { } sid)
         {
             var suite = await suiteRepository.FindAsync(sid, cancellationToken);
-            return suite is not null && accessible.Contains(suite.Agent.Project.Id);
+            return suite is not null && scope.Contains(suite.Agent.Project.Id) ? scope : [];
         }
+
         if (agentId is { } aid)
         {
             var agent = await agentRepository.FindAsync(aid, cancellationToken);
-            return agent is not null && accessible.Contains(agent.Project.Id);
+            return agent is not null && scope.Contains(agent.Project.Id) ? scope : [];
         }
-        return false;
+
+        return scope;
     }
 
     [HttpGet]
@@ -96,7 +103,8 @@ public class TestRunGroupsController : ControllerBase
         [FromQuery] int pageSize = 50,
         CancellationToken cancellationToken = default)
     {
-        if (!await CanListAsync(suiteId, agentId, projectId, cancellationToken))
+        var scope = await ListScopeAsync(suiteId, agentId, projectId, cancellationToken);
+        if (scope.IsEmpty())
             return new PagedResult<TestRunGroupListItemDto>([], 0, page, pageSize);
 
         PagedResult<ITestRunGroup> paged;
@@ -104,10 +112,10 @@ public class TestRunGroupsController : ControllerBase
             paged = await groupRepository.GetBySuitePagedAsync(suiteId.Value, page, pageSize, includeSystem, cancellationToken);
         else if (agentId.HasValue)
             paged = await groupRepository.GetByAgentPagedAsync(agentId.Value, page, pageSize, includeSystem, cancellationToken);
-        else if (projectId.HasValue)
-            paged = await groupRepository.GetByProjectPagedAsync(projectId.Value, page, pageSize, includeSystem, cancellationToken);
-        else
+        else if (scope is null)
             paged = await groupRepository.GetPagedAsync(page, pageSize, cancellationToken);
+        else
+            paged = await groupRepository.GetByProjectsPagedAsync(scope, page, pageSize, includeSystem, cancellationToken);
 
         var items = await Task.WhenAll(
             paged.Items.Select(g => runMapper.ToListItemDtoAsync(g, runRepository, cancellationToken)));

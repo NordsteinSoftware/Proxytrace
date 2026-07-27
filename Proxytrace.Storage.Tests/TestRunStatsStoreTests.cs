@@ -49,6 +49,38 @@ public sealed class TestRunStatsStoreTests : BaseTest<Module>
     }
 
     [TestMethod]
+    public async Task QueryAsync_EmptyAgentIds_MatchesNothing_NotEverything()
+    {
+        var services = GetServices();
+        var writer = services.GetRequiredService<IStatsWriter<TestRunStats>>();
+        var reader = services.GetRequiredService<IStatsReader<TestRunStats, TestRunStats.Filter>>();
+        var run = await services.GetRequiredService<IDomainEntityGenerator<ITestRun>>().CreateAsync(CancellationToken);
+        await writer.UpsertAsync(StatsFor(run), CancellationToken);
+
+        // An empty AgentIds list is what the dashboard produces for a project that has no agents.
+        // It must narrow to nothing; treating it as "no filter" leaked every other project's runs.
+        var scoped = await reader.QueryAsync(new TestRunStats.Filter(AgentIds: []), CancellationToken);
+        var unfiltered = await reader.QueryAsync(new TestRunStats.Filter(AgentIds: null), CancellationToken);
+
+        scoped.Should().BeEmpty();
+        unfiltered.Should().ContainSingle(s => s.TestRunId == run.Id);
+    }
+
+    [TestMethod]
+    public async Task QueryAsync_EmptySuiteIds_MatchesNothing_NotEverything()
+    {
+        var services = GetServices();
+        var writer = services.GetRequiredService<IStatsWriter<TestRunStats>>();
+        var reader = services.GetRequiredService<IStatsReader<TestRunStats, TestRunStats.Filter>>();
+        var run = await services.GetRequiredService<IDomainEntityGenerator<ITestRun>>().CreateAsync(CancellationToken);
+        await writer.UpsertAsync(StatsFor(run), CancellationToken);
+
+        var scoped = await reader.QueryAsync(new TestRunStats.Filter(SuiteIds: []), CancellationToken);
+
+        scoped.Should().BeEmpty();
+    }
+
+    [TestMethod]
     public async Task UpsertAsync_ExistingRow_UpdatesValuesInPlace()
     {
         var services = GetServices();

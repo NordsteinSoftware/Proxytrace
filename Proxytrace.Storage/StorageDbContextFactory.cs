@@ -53,7 +53,7 @@ internal class StorageDbContextFactory : IDesignTimeDbContextFactory<StorageDbCo
         // lean proxy host, which resolves the same storage graph with the same stubs (see
         // Proxytrace.Proxy.Module / #270).
         var designTimeSecrets = new DesignTimeSecretSeam();
-        containerBuilder.RegisterInstance(designTimeSecrets).As<ISecretProtector>().As<ISecretHasher>();
+        containerBuilder.RegisterInstance(designTimeSecrets).As<ISecretProtector>().As<ISecretHasher>().As<ISecretIndexer>();
         containerBuilder.RegisterType<DesignTimeAgentNameGenerator>().As<IAgentNameGenerator>().SingleInstance();
         containerBuilder.RegisterType<DesignTimeProviderClient>().As<IProviderClient>();
 
@@ -69,13 +69,19 @@ internal class StorageDbContextFactory : IDesignTimeDbContextFactory<StorageDbCo
     /// configurations but never runs their value converters, so the real Data Protection-backed
     /// implementations (Proxytrace.Infrastructure.Security) are not needed by <c>dotnet ef</c> tooling.
     /// </summary>
-    private sealed class DesignTimeSecretSeam : ISecretProtector, ISecretHasher
+    private sealed class DesignTimeSecretSeam : ISecretProtector, ISecretHasher, ISecretIndexer
     {
         public string Protect(string plaintext) => plaintext;
 
         public string Unprotect(string ciphertext) => ciphertext;
 
         public string Hash(string value) => value;
+
+        public string Index(string value) => value;
+
+        public string LegacyIndex(string value) => value;
+
+        public bool IsKeyed => false;
     }
 
     /// <summary>

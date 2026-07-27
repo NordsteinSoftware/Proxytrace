@@ -1,3 +1,4 @@
+using System.Globalization;
 using Proxytrace.Domain.Statistics.TestRun;
 using Proxytrace.Application.TestRun;
 using Proxytrace.Domain.OptimizationTheory;
@@ -85,7 +86,9 @@ internal sealed class SwitchModelOptimizer : IOptimizerImplementation
         };
 
         var metricLabel = chosen.Metric == Metric.Cost ? "cost" : "latency";
-        var savingPct = (chosen.RelativeSaving * 100).ToString("F1");
+        // Invariant culture: the rationale is persisted proposal text, so it must not read
+        // "12,3%" merely because the host happens to run under de-DE.
+        var savingPct = (chosen.RelativeSaving * 100).ToString("F1", CultureInfo.InvariantCulture);
         var currentName = currentRun.Endpoint.Model.Name;
         var bestName = bestRun.Endpoint.Model.Name;
         var rationale =
@@ -174,9 +177,9 @@ internal sealed class SwitchModelOptimizer : IOptimizerImplementation
     private static string FormatMetric(Metric metric, TestRunStats stats) 
         => metric switch
         {
-            Metric.Cost => stats.Cost?.ToString("0.####") ?? "?",
+            Metric.Cost => stats.Cost?.ToString("0.####", CultureInfo.InvariantCulture) ?? "?",
             Metric.Latency => stats.TotalDuration.HasValue
-                ? $"{stats.TotalDuration.Value.TotalSeconds:F2}s"
+                ? $"{stats.TotalDuration.Value.TotalSeconds.ToString("F2", CultureInfo.InvariantCulture)}s"
                 : "?",
             _ => "?",
         };

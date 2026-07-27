@@ -11,6 +11,7 @@ using Proxytrace.Domain.Proposal;
 using Proxytrace.Domain.TestCase;
 using Proxytrace.Domain.TestResult;
 using Proxytrace.Domain.TestRun;
+using Proxytrace.Domain.TestRunGroup;
 using Proxytrace.Domain.TestSuite;
 using Proxytrace.Domain.Usage;
 using Proxytrace.Testing;
@@ -57,7 +58,61 @@ public sealed class ModelSwitchTheoryValidatorTests : BaseTest<Module>
         outcome.Proposal.Should().BeNull();
     }
 
-    private static Fixture Build(decimal currentCost, decimal proposedCost, bool[] baselinePassed, bool[] candidatePassed)
+    [TestMethod]
+    public async Task Validate_ExecutesBothArmsFreshRatherThanReusingStoredEvidence()
+    {
+        // The baseline used to come from a PREVIOUSLY STORED evidence run while the candidate ran
+        // fresh, so anything that drifted between the two — the model's behaviour, a provider
+        // update, an edit to the suite — was attributed to the model switch. A theory waiting in the
+        // validation queue widened that gap arbitrarily. docs/optimization-loop.md always said the
+        // arms run "fresh, back to back"; now they do.
+        var f = Build(currentCost: 10m, proposedCost: 4m, baselinePassed: [true, true], candidatePassed: [true, true]);
+
+        await f.Validator.ValidateAsync(f.Theory, CancellationToken);
+
+        await f.Runner.Received(2).RunInForegroundAsync(
+            Arg.Any<ITestSuite>(), Arg.Any<IReadOnlyList<IModelEndpoint>>(),
+            Arg.Any<IAgent?>(), Arg.Any<bool>(),
+            Arg.Any<Func<ITestRunGroup, CancellationToken, Task>?>(), Arg.Any<int>(), Arg.Any<CancellationToken>());
+    }
+
+    [TestMethod]
+    public async Task Validate_HonoursTheConfiguredSampleCount()
+    {
+        // AbSampleCount was ignored entirely here, so the setting silently applied to some
+        // validators and not others.
+        var f = Build(
+            currentCost: 10m, proposedCost: 4m,
+            baselinePassed: [true, true], candidatePassed: [true, true],
+            sampleCount: 3);
+
+        await f.Validator.ValidateAsync(f.Theory, CancellationToken);
+
+        await f.Runner.Received(2).RunInForegroundAsync(
+            Arg.Any<ITestSuite>(), Arg.Any<IReadOnlyList<IModelEndpoint>>(),
+            Arg.Any<IAgent?>(), Arg.Any<bool>(),
+            Arg.Any<Func<ITestRunGroup, CancellationToken, Task>?>(), sampleCount: 3, Arg.Any<CancellationToken>());
+    }
+
+    [TestMethod]
+    public async Task Validate_WithASingleTestCase_IsRefusedAsUnprovable()
+    {
+        // One case agrees with itself trivially, so it cannot evidence parity. The gate is on the
+        // size of the paired comparison — NOT on finding a significant difference, which for a
+        // model switch would be backwards: identical answers plus a lower price is the ideal result.
+        var f = Build(currentCost: 10m, proposedCost: 4m, baselinePassed: [true], candidatePassed: [true]);
+
+        var outcome = await f.Validator.ValidateAsync(f.Theory, CancellationToken);
+
+        outcome.Proposal.Should().BeNull();
+    }
+
+    private static Fixture Build(
+        decimal currentCost,
+        decimal proposedCost,
+        bool[] baselinePassed,
+        bool[] candidatePassed,
+        int sampleCount = 1)
     {
         var currentEndpoint = MakeEndpoint(currentCost);
         var proposedEndpoint = MakeEndpoint(proposedCost);
@@ -70,10 +125,10 @@ public sealed class ModelSwitchTheoryValidatorTests : BaseTest<Module>
         var caseCount = Math.Max(baselinePassed.Length, candidatePassed.Length);
         suite.TestCases.Returns(Enumerable.Range(0, caseCount).Select(_ => Substitute.For<ITestCase>()).ToList());
 
-        var baselineId = Guid.NewGuid();
-        var candidateId = Guid.NewGuid();
-        var baselineRun = MakeRun(baselineId, currentEndpoint, baselinePassed);
-        var candidateRun = MakeRun(candidateId, proposedEndpoint, candidatePassed);
+        // Case ids shared across both arms: the significance test is PAIRED on the test case.
+        var caseIds = Enumerable.Range(0, caseCount).Select(_ => Guid.NewGuid()).ToArray();
+        var baselineRun = MakeRun(Guid.NewGuid(), currentEndpoint, baselinePassed, caseIds);
+        var candidateRun = MakeRun(Guid.NewGuid(), proposedEndpoint, candidatePassed, caseIds);
 
         var theory = Substitute.For<IModelSwitchTheory>();
         theory.Agent.Returns(agent);
@@ -81,11 +136,23 @@ public sealed class ModelSwitchTheoryValidatorTests : BaseTest<Module>
         theory.Priority.Returns(Priority.Medium);
         theory.Rationale.Returns("switch");
         theory.ProposedEndpoint.Returns(proposedEndpoint);
-        theory.EvidenceTestRunIds.Returns(new[] { baselineId, candidateId });
+        theory.EvidenceTestRunIds.Returns(Array.Empty<Guid>());
 
-        var testRuns = Substitute.For<ITestRunRepository>();
-        testRuns.FindAsync(baselineId, Arg.Any<CancellationToken>()).Returns(Task.FromResult<ITestRun?>(baselineRun));
-        testRuns.FindAsync(candidateId, Arg.Any<CancellationToken>()).Returns(Task.FromResult<ITestRun?>(candidateRun));
+        // Both arms are executed FRESH, back to back — the validator no longer reuses a previously
+        // stored evidence run as its baseline, so the runner is what has to be stubbed, not the run
+        // repository. Reusing an old run meant any drift since it was recorded (the model's own
+        // behaviour, a provider update, an edited suite) was attributed to the model switch.
+        // Built before the Returns() call: GroupReturning itself stubs a substitute, and doing that
+        // inside the argument list leaves NSubstitute unable to tell which call it is returning from.
+        var baselineGroup = GroupReturning(baselineRun);
+        var candidateGroup = GroupReturning(candidateRun);
+
+        var runner = Substitute.For<ITestRunnerService>();
+        runner.RunInForegroundAsync(
+                Arg.Any<ITestSuite>(), Arg.Any<IReadOnlyList<IModelEndpoint>>(),
+                Arg.Any<IAgent?>(), Arg.Any<bool>(),
+                Arg.Any<Func<ITestRunGroup, CancellationToken, Task>?>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+            .Returns(baselineGroup, candidateGroup);
 
         var captured = new Captured();
         IModelSwitchProposal.CreateNew factory = (
@@ -100,11 +167,11 @@ public sealed class ModelSwitchTheoryValidatorTests : BaseTest<Module>
 
         var validator = new ModelSwitchTheoryValidator(
             factory,
-            new Lazy<ITestRunnerService>(() => Substitute.For<ITestRunnerService>()),
-            testRuns,
-            new OptimizationOptions { AbSampleCount = 1 });
+            new Lazy<ITestRunnerService>(() => runner),
+            Substitute.For<ITestRunRepository>(),
+            new OptimizationOptions { AbSampleCount = sampleCount });
 
-        return new Fixture { Validator = validator, Theory = theory, Captured = captured };
+        return new Fixture { Validator = validator, Theory = theory, Captured = captured, Runner = runner };
     }
 
     private static IModelEndpoint MakeEndpoint(decimal costPerCall)
@@ -115,14 +182,24 @@ public sealed class ModelSwitchTheoryValidatorTests : BaseTest<Module>
         return endpoint;
     }
 
-    private static ITestRun MakeRun(Guid id, IModelEndpoint endpoint, bool[] passed)
+    private static ITestRunGroup GroupReturning(ITestRun run)
     {
-        var results = passed.Select(p =>
+        var group = Substitute.For<ITestRunGroup>();
+        group.GetTestRuns(Arg.Any<CancellationToken>()).Returns(Task.FromResult<IReadOnlyList<ITestRun>>([run]));
+        return group;
+    }
+
+    private static ITestRun MakeRun(Guid id, IModelEndpoint endpoint, bool[] passed, IReadOnlyList<Guid> caseIds)
+    {
+        var results = passed.Select((p, i) =>
         {
             var ev = Substitute.For<Domain.Evaluation.IEvaluation>();
             ev.Passed.Returns(p);
+            var testCase = Substitute.For<ITestCase>();
+            testCase.Id.Returns(caseIds[i]);
             var result = Substitute.For<ITestResult>();
             result.Evaluations.Returns([ev]);
+            result.TestCase.Returns(testCase);
             result.Latency.Returns(TimeSpan.FromMilliseconds(100));
             result.Usage.Returns(new TokenUsage(10, 5));
             return result;
@@ -140,6 +217,7 @@ public sealed class ModelSwitchTheoryValidatorTests : BaseTest<Module>
         public required ModelSwitchTheoryValidator Validator { get; init; }
         public required IModelSwitchTheory Theory { get; init; }
         public required Captured Captured { get; init; }
+        public required ITestRunnerService Runner { get; init; }
     }
 
     private sealed class Captured

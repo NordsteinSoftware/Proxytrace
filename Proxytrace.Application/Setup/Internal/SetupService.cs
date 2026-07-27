@@ -1,3 +1,4 @@
+using Proxytrace.Common.Async;
 using Proxytrace.Application.Auth;
 using Proxytrace.Application.Auth.Local;
 using Proxytrace.Application.Pricing;
@@ -24,6 +25,10 @@ internal class SetupService : ISetupService
     private readonly IProject.CreateNew createProject;
     private readonly IUser.CreateNew createUser;
     private readonly IPasswordService passwords;
+    private readonly IAsyncLock asyncLock;
+
+    /// <summary>Lock key serializing first-run setup against a concurrent submission of itself.</summary>
+    private const string SetupLockKey = "license-quota:setup";
     private readonly ILocalTokenIssuer tokens;
     private readonly ITransaction transaction;
     private readonly ILicenseService license;
@@ -41,6 +46,7 @@ internal class SetupService : ISetupService
         IProject.CreateNew createProject,
         IUser.CreateNew createUser,
         IPasswordService passwords,
+        IAsyncLock asyncLock,
         ILocalTokenIssuer tokens,
         ITransaction transaction,
         ILicenseService license,
@@ -57,6 +63,7 @@ internal class SetupService : ISetupService
         this.createProject = createProject;
         this.createUser = createUser;
         this.passwords = passwords;
+        this.asyncLock = asyncLock;
         this.tokens = tokens;
         this.transaction = transaction;
         this.license = license;
@@ -94,6 +101,11 @@ internal class SetupService : ISetupService
 
     public async Task<SetupResult> CompleteAsync(SetupInput input, CancellationToken cancellationToken = default)
     {
+        // Taken outside the transaction, and held for the whole of it: the "already completed" test
+        // and the project-limit check below are both check-then-act against the same count, so two
+        // concurrent setup submissions could each observe zero projects and each proceed.
+        using IDisposable setupLock = await asyncLock.LockAsync(SetupLockKey, cancellationToken);
+
         IModelProvider? savedProvider = null;
         var result = await transaction.InvokeAsync(async () =>
         {

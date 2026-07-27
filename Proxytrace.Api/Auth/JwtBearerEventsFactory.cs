@@ -17,8 +17,12 @@ internal static class JwtBearerEventsFactory
             // SSE connections authenticate with a short-lived, single-use ticket instead of
             // the session JWT (which would leak via the EventSource query string). Redeem it
             // here and authenticate the request directly — works in both local and OIDC mode.
+            // Fenced to stream routes for the same reason as the access_token fallback below: the
+            // ticket redeems into a FULL principal (including the live Role claim), so honoring it on
+            // any path would let a URL-borne credential — the very thing the ticket exists to contain
+            // — reach every endpoint its owner can, admin ones included, inside its validity window.
             var streamTicket = context.Request.Query[StreamTicketQueryKey].ToString();
-            if (!string.IsNullOrEmpty(streamTicket))
+            if (!string.IsNullOrEmpty(streamTicket) && IsStreamRequest(context.Request))
             {
                 await AuthenticateStreamTicket(context, streamTicket);
                 return;

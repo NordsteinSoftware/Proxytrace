@@ -75,11 +75,13 @@ jobs:
           curl -sSfL https://github.com/gitleaks/gitleaks/releases/download/v8.24.3/gitleaks_8.24.3_linux_x64.tar.gz | tar xz gitleaks
           ./gitleaks git . --redact --verbose
 
-  # Lint/build cannot break from a merge-order interaction, so the PR run is enough
-  # and this is skipped on master pushes.
+  # Kept on master pushes for the same reason as `backend`: the Vitest suite is the
+  # post-merge safety net for a PR that was verified against a stale base. Lint and
+  # build cannot break from a merge-order interaction on their own, but they share this
+  # job's `npm ci`, so they ride along rather than paying for a second install.
   frontend:
     needs: changes
-    if: ${{ inputs.full || (github.event_name == 'pull_request' && needs.changes.outputs.frontend == 'true') }}
+    if: ${{ inputs.full || needs.changes.outputs.frontend == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
@@ -100,6 +102,12 @@ jobs:
 
       - name: Lint
         run: npm run lint
+        working-directory: frontend
+
+      # Vitest unit/component suite. `pretest` regenerates the docs index from manual/,
+      # so this also catches a manual edit that breaks Tracey's search_docs fixture.
+      - name: Test
+        run: npm test
         working-directory: frontend
 
       - name: Build

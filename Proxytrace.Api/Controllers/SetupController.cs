@@ -8,6 +8,7 @@ using Proxytrace.Application.Setup;
 using Proxytrace.Common.Net;
 using Proxytrace.Domain;
 using Proxytrace.Domain.AuditLog;
+using Proxytrace.Domain.ModelEndpoint;
 using Proxytrace.Domain.ModelProvider;
 using Proxytrace.Domain.Project;
 using Proxytrace.Domain.User;
@@ -72,6 +73,14 @@ public class SetupController : ControllerBase
             request.ProjectName);
 
         var result = await setup.CompleteAsync(input, cancellationToken);
+
+        // The setup wizard creates exactly the entities every other path audits — including a model
+        // provider carrying an upstream credential — so it must leave the same record. Without these
+        // the compliance log has no trace of who configured the instance's first provider key.
+        audit.LogAudit(AuditAction.ProviderConfigCreated, nameof(IModelProvider), result.ProviderId, request.ProviderName);
+        audit.LogAudit(AuditAction.EndpointConfigCreated, nameof(IModelEndpoint), result.EndpointId, request.ModelName);
+        audit.LogAudit(AuditAction.ProjectCreated, nameof(IProject), result.ProjectId, request.ProjectName, projectId: result.ProjectId);
+
         return new CompleteSetupResponse(
             result.ProviderId,
             result.EndpointId,

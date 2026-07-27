@@ -15,6 +15,20 @@ public interface ITestRunGroupRepository : IRepository<ITestRunGroup>
         IReadOnlyCollection<TestRunStatus> statuses,
         CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Returns terminal, non-system groups the optimizer has not considered yet, oldest first.
+    /// </summary>
+    /// <remarks>
+    /// Backs the optimizer's restart recovery. Its queue is an in-process channel, so a restart
+    /// discarded whatever was still in it — a deploy during a scheduled-run window silently dropped
+    /// that night's optimization. System runs are excluded because they are the optimizer's own A/B
+    /// runs and must never re-trigger it. Filters in SQL over the
+    /// (OptimizationConsideredAt, IsSystemRun, Status) index.
+    /// </remarks>
+    Task<IReadOnlyList<ITestRunGroup>> GetPendingOptimizationAsync(
+        int limit,
+        CancellationToken cancellationToken = default);
+
     Task<IReadOnlyList<ITestRunGroup>> GetByProjectAsync(Guid projectId, CancellationToken cancellationToken = default);
 
     Task<PagedResult<ITestRunGroup>> GetByAgentPagedAsync(
@@ -26,6 +40,18 @@ public interface ITestRunGroupRepository : IRepository<ITestRunGroup>
 
     Task<PagedResult<ITestRunGroup>> GetByProjectPagedAsync(
         Guid projectId,
+        int page,
+        int pageSize,
+        bool includeSystem = false,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Run groups across several projects, paged as one list. Backs an unfiltered list request from
+    /// a caller who may read more than one project: the page has to be computed over the union, so
+    /// merging per-project pages afterwards would not produce a correct page (#482).
+    /// </summary>
+    Task<PagedResult<ITestRunGroup>> GetByProjectsPagedAsync(
+        IReadOnlyCollection<Guid> projectIds,
         int page,
         int pageSize,
         bool includeSystem = false,

@@ -9,9 +9,17 @@ public static class ProviderEndpoints
     /// </summary>
     public const string AzureDeploymentsApiVersion = "2023-03-15-preview";
 
-    /// <summary>True when the endpoint host indicates an Azure OpenAI resource.</summary>
+    /// <summary>
+    /// True when the endpoint host indicates an Azure OpenAI resource. Matched as a domain suffix,
+    /// not a substring: a substring test also accepts lookalike hosts such as
+    /// <c>my-azure.com.example.net</c>, and misclassifying one as Azure makes the proxy attach the
+    /// provider credential in a second <c>api-key</c> header on top of the bearer.
+    /// </summary>
     public static bool IsAzure(Uri endpoint) =>
-        endpoint.Host.Contains("azure.com", StringComparison.OrdinalIgnoreCase);
+        endpoint.Host.Equals(AzureDomain, StringComparison.OrdinalIgnoreCase)
+        || endpoint.Host.EndsWith($".{AzureDomain}", StringComparison.OrdinalIgnoreCase);
+
+    private const string AzureDomain = "azure.com";
 
     /// <summary>
     /// The deployments-listing URI for an Azure OpenAI resource (<c>/openai/deployments?api-version=…</c>),

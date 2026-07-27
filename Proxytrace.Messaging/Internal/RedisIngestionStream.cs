@@ -41,6 +41,23 @@ internal sealed class RedisIngestionStream : IIngestionStream
     public async Task PublishAsync(IngestMessage message, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
+
+        // Publishing is fire-and-forget on the proxy hot path, and the producer awaits it inside the
+        // `finally` of both response paths with CancellationToken.None — an uncancellable wait that a
+        // client abort cannot release. The multiplexer is configured with AbortOnConnectFail=false, so
+        // while Redis is down StackExchange.Redis backlogs the command until its async timeout (~5s)
+        // rather than failing fast, adding that delay to *every* proxied response. Short-circuit on the
+        // same IsConnected check GetQueueDepthAsync uses: drop the capture instead of stalling the
+        // response the proxy exists to forward. Logged (never thrown) so an outage is not a silent loss.
+        if (!connection.IsConnected)
+        {
+            logger.LogWarning(
+                "Redis is not connected — dropping the captured call for project {ProjectId} rather than "
+                + "stalling the proxy response until the command times out",
+                message.ProjectId);
+            return;
+        }
+
         var payload = JsonSerializer.Serialize(message);
         // Approximate MAXLEN trim bounds Redis memory if the consumer lags or the app is down.
         await Database.StreamAddAsync(

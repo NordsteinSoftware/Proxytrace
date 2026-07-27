@@ -60,7 +60,7 @@ internal sealed class AgentTools
             throw new McpException($"Agent '{agentId}' was not found in this project.");
         }
 
-        var lastCallTimes = await agentCalls.GetLastCallTimesAsync(cancellationToken);
-        return mapper.ToDto(agent, lastCallTimes.TryGetValue(agent.Id, out var t) ? t : null);
+        var lastCallTime = await agentCalls.GetLastCallTimeAsync(agent.Id, cancellationToken);
+        return mapper.ToDto(agent, lastCallTime);
     }
 }

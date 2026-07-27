@@ -1,3 +1,4 @@
+using System.Globalization;
 using AwesomeAssertions;
 using NSubstitute;
 using Proxytrace.Application.Optimization.Internal;
@@ -168,6 +169,61 @@ public sealed class SwitchModelOptimizerTests : BaseTest<Module>
         c.Endpoint.Should().BeSameAs(fixture.RunsByName["L"].Endpoint);
         c.Rationale.Should().Contain("latency");
         c.Priority.Should().Be(Priority.High);
+    }
+
+    [TestMethod]
+    public async Task DiscoverTheories_CostWinUnderCommaDecimalCulture_FormatsRationaleInvariantly()
+    {
+        Fixture fixture = Build(
+            Spec("current", cost: 12.5m, latency: Sec(5), isCurrent: true),
+            Spec("altA", cost: 10m, latency: Sec(5)));
+
+        await DiscoverUnderCulture(fixture);
+
+        // Persisted proposal text must read the same on every host: "20.0%", not "20,0%".
+        fixture.Captured.Rationale.Should().Contain("20.0%").And.Contain("12.5");
+        fixture.Captured.Rationale.Should().NotContain(",");
+    }
+
+    [TestMethod]
+    public async Task DiscoverTheories_LatencyWinUnderCommaDecimalCulture_FormatsRationaleInvariantly()
+    {
+        Fixture fixture = Build(
+            Spec("current", cost: 10m, latency: Sec(12.5), isCurrent: true),
+            Spec("altA", cost: 10m, latency: Sec(5)));
+
+        await DiscoverUnderCulture(fixture);
+
+        fixture.Captured.Rationale.Should().Contain("60.0%").And.Contain("5.00s").And.Contain("12.50s");
+        fixture.Captured.Rationale.Should().NotContain(",");
+    }
+
+    /// <summary>
+    /// Runs the optimizer with a comma-decimal culture in scope, restoring the ambient culture on
+    /// every path. The culture is set on the flowing <see cref="CultureInfo.CurrentCulture"/> only —
+    /// never on the process-wide <c>DefaultThreadCurrentCulture</c> — and the optimizer completes
+    /// synchronously, so nothing escapes this method.
+    /// </summary>
+    private async Task DiscoverUnderCulture(Fixture fixture)
+    {
+        var german = new CultureInfo("de-DE");
+
+        // Guard against a globalization-invariant host silently making these tests vacuous.
+        12.5m.ToString("0.####", german).Should().Be("12,5");
+
+        CultureInfo previous = CultureInfo.CurrentCulture;
+        CultureInfo.CurrentCulture = german;
+        try
+        {
+            var theories = await fixture.Optimizer.DiscoverTheories(
+                fixture.Group, fixture.Cohorts, CancellationToken);
+
+            theories.Should().HaveCount(1);
+        }
+        finally
+        {
+            CultureInfo.CurrentCulture = previous;
+        }
     }
 
     private static TimeSpan Sec(double seconds) => TimeSpan.FromSeconds(seconds);

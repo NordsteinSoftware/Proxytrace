@@ -213,6 +213,84 @@ internal sealed class ChunkLimitedStream : Stream
     public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
 }
 
+/// <summary>
+/// A response stream that records everything written to it plus the size of the largest single write,
+/// so a test can assert the proxy forwarded a body in bounded pieces instead of materializing it whole.
+/// </summary>
+internal sealed class RecordingResponseStream : Stream
+{
+    private readonly MemoryStream written = new();
+
+    public int LargestWriteBytes { get; private set; }
+
+    public byte[] Written => written.ToArray();
+
+    public override bool CanRead => false;
+    public override bool CanSeek => false;
+    public override bool CanWrite => true;
+    public override long Length => written.Length;
+    public override long Position { get => written.Position; set => throw new NotSupportedException(); }
+
+    public override async ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default)
+    {
+        LargestWriteBytes = Math.Max(LargestWriteBytes, buffer.Length);
+        await written.WriteAsync(buffer, cancellationToken);
+    }
+
+    public override void Write(byte[] buffer, int offset, int count)
+    {
+        LargestWriteBytes = Math.Max(LargestWriteBytes, count);
+        written.Write(buffer, offset, count);
+    }
+
+    public override void Flush() { }
+    public override Task FlushAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+    public override int Read(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+    public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+    public override void SetLength(long value) => throw new NotSupportedException();
+}
+
+/// <summary>
+/// A read-only stream that produces <c>length</c> bytes of filler without materializing them, and
+/// counts how many were actually consumed. Lets a test drive the proxy's request-body cap with a body
+/// far larger than the cap and then assert the proxy stopped reading at the cap.
+/// </summary>
+internal sealed class GeneratedByteStream : Stream
+{
+    private readonly long length;
+    private long position;
+
+    public GeneratedByteStream(long length) => this.length = length;
+
+    /// <summary>Bytes the consumer actually pulled — never the full length once the cap bites.</summary>
+    public long BytesRead => position;
+
+    public override bool CanRead => true;
+    public override bool CanSeek => false;
+    public override bool CanWrite => false;
+    public override long Length => length;
+    public override long Position { get => position; set => throw new NotSupportedException(); }
+
+    public override int Read(byte[] buffer, int offset, int count)
+    {
+        var remaining = length - position;
+        if (remaining <= 0)
+        {
+            return 0;
+        }
+
+        var n = (int)Math.Min(count, remaining);
+        Array.Fill(buffer, (byte)'a', offset, n);
+        position += n;
+        return n;
+    }
+
+    public override void Flush() { }
+    public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+    public override void SetLength(long value) => throw new NotSupportedException();
+    public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+}
+
 /// <summary>A response stream that fails every write — simulates a client that disconnected.</summary>
 internal sealed class ThrowOnWriteStream : Stream
 {

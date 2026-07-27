@@ -235,10 +235,11 @@ internal sealed class TheoryValidationService : BackgroundService, ITheoryValida
     /// The validation queue is in-memory, so without this the backlog would be stranded —
     /// never validated, yet permanently counted against the per-project submission quota.
     /// Skipped in kiosk mode: kiosk storage is in-memory and freshly demo-seeded on every
-    /// start, so the only "backlog" recovery could find is the seeded Proposed/Validating
-    /// theories — re-queuing those would fire real A/B runs (and LLM spend) on every kiosk
-    /// boot when a live Kiosk:Endpoint is configured. User-submitted theories still enqueue
-    /// normally via <see cref="SubmitAsync"/>.
+    /// start, so the only "backlog" recovery could find is the seeded Proposed theories —
+    /// re-queuing those would fire real A/B runs (and LLM spend) on every kiosk boot when a
+    /// live Kiosk:Endpoint is configured. Because of that the demo seed never leaves a theory
+    /// in Validating (it would pulse "A/B in flight" forever). User-submitted theories still
+    /// enqueue normally via <see cref="SubmitAsync"/>.
     /// </summary>
     internal async Task RecoverInFlightTheoriesAsync(CancellationToken cancellationToken)
     {

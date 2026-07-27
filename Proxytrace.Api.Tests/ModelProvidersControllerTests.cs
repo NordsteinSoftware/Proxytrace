@@ -98,6 +98,103 @@ public sealed class ModelProvidersControllerTests : BaseTest<Module>
     }
 
     [TestMethod]
+    public async Task GetAll_DoesNotReturnTheUpstreamKey()
+    {
+        // The key used to be projected into the list response, so every provider credential in the
+        // installation reached the browser on every admin providers-page load.
+        IServiceProvider services = GetServices();
+        var controller = ResolveController(services);
+        var provider = await services.GetRequiredService<IDomainEntityGenerator<IModelProvider>>().CreateAsync(CancellationToken);
+
+        var paged = await controller.GetAll(cancellationToken: CancellationToken);
+
+        var dto = paged.Items.Should().ContainSingle(p => p.Id == provider.Id).Subject;
+        provider.ApiKey.Should().NotBeNullOrEmpty("the fixture must have a key for this to be meaningful");
+        dto.UpstreamApiKeyPreview.Should().NotBe(provider.ApiKey);
+        dto.UpstreamApiKeyPreview.Should().Contain("•");
+    }
+
+    [TestMethod]
+    public async Task GetOverview_DoesNotReturnTheUpstreamKey()
+    {
+        IServiceProvider services = GetServices();
+        var controller = ResolveController(services);
+        var provider = await services.GetRequiredService<IDomainEntityGenerator<IModelProvider>>().CreateAsync(CancellationToken);
+
+        var overview = await controller.GetOverview(CancellationToken);
+
+        var dto = overview.Providers.Should().ContainSingle(p => p.Provider.Id == provider.Id).Subject;
+        dto.Provider.UpstreamApiKeyPreview.Should().NotBe(provider.ApiKey);
+    }
+
+    [TestMethod]
+    public async Task GetUpstreamKey_ReturnsTheKeyAndAuditsTheRead()
+    {
+        IServiceProvider services = GetServices();
+        var audit = new RecordingAuditLogger();
+        var controller = ResolveController(services, audit: audit);
+        var provider = await services.GetRequiredService<IDomainEntityGenerator<IModelProvider>>().CreateAsync(CancellationToken);
+
+        var result = await controller.GetUpstreamKey(provider.Id, CancellationToken);
+
+        result.Value.Should().NotBeNull();
+        result.Value.UpstreamApiKey.Should().Be(provider.ApiKey);
+        audit.Events.Should().ContainSingle()
+            .Which.Id.Should().Be((int)AuditAction.ProviderUpstreamKeyRevealed);
+    }
+
+    [TestMethod]
+    public async Task GetUpstreamKey_UnknownProvider_ReturnsNotFoundAndAuditsNothing()
+    {
+        IServiceProvider services = GetServices();
+        var audit = new RecordingAuditLogger();
+        var controller = ResolveController(services, audit: audit);
+
+        var result = await controller.GetUpstreamKey(Guid.NewGuid(), CancellationToken);
+
+        result.Result.Should().BeOfType<NotFoundResult>();
+        audit.Events.Should().BeEmpty();
+    }
+
+    [TestMethod]
+    public async Task Update_WithNullUpstreamKey_LeavesTheStoredCredentialUnchanged()
+    {
+        // The client no longer holds the key, so an edit that only renames a provider sends null.
+        // Treating that as "no key" would wipe the credential and break every proxied call.
+        IServiceProvider services = GetServices();
+        var controller = ResolveController(services);
+        var providers = services.GetRequiredService<IModelProviderRepository>();
+        var provider = await services.GetRequiredService<IDomainEntityGenerator<IModelProvider>>().CreateAsync(CancellationToken);
+        var originalKey = provider.ApiKey;
+
+        await controller.Update(
+            provider.Id,
+            new UpdateModelProviderRequest("Renamed", provider.Endpoint.ToString(), null, provider.Kind),
+            CancellationToken);
+
+        var reloaded = await providers.GetAsync(provider.Id, CancellationToken);
+        reloaded.Name.Should().Be("Renamed");
+        reloaded.ApiKey.Should().Be(originalKey);
+    }
+
+    [TestMethod]
+    public async Task Update_WithNullUpstreamKey_DoesNotAuditAKeyRotation()
+    {
+        IServiceProvider services = GetServices();
+        var audit = new RecordingAuditLogger();
+        var controller = ResolveController(services, audit: audit);
+        var provider = await services.GetRequiredService<IDomainEntityGenerator<IModelProvider>>().CreateAsync(CancellationToken);
+
+        await controller.Update(
+            provider.Id,
+            new UpdateModelProviderRequest("Renamed", provider.Endpoint.ToString(), null, provider.Kind),
+            CancellationToken);
+
+        audit.Events.Should().ContainSingle()
+            .Which.Id.Should().Be((int)AuditAction.ProviderConfigUpdated);
+    }
+
+    [TestMethod]
     public async Task Update_ChangedUpstreamKey_AuditsKeyRotation()
     {
         IServiceProvider services = GetServices();

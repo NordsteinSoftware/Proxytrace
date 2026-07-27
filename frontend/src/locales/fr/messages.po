@@ -1519,6 +1519,9 @@ msgstr "Impossible d’ouvrir le Trace pour cette réponse."
 msgid "Could not reach the provider."
 msgstr "Impossible de joindre le fournisseur."
 
+msgid "Could not read the upstream API key."
+msgstr "Impossible de lire l'API key amont."
+
 msgid "Could not reset your password. Please try again."
 msgstr "Impossible de réinitialiser votre mot de passe. Veuillez réessayer."
 
@@ -3929,6 +3932,9 @@ msgstr "Configuration du Provider supprimée"
 msgid "Provider Config Updated"
 msgstr "Configuration de Provider mise à jour"
 
+msgid "Provider Key Revealed"
+msgstr "Clé de Provider affichée"
+
 msgid "Provider Key Rotated"
 msgstr "Clé de Provider renouvelée"
 
@@ -5345,6 +5351,9 @@ msgstr "Trace supprimée"
 msgid "Trace is still being captured — try again in a moment."
 msgstr "Le Trace est toujours en cours de capture — réessayez dans un instant."
 
+msgid "Trace limit reached"
+msgstr "Limite de Traces atteinte"
+
 #. placeholder {0}: trace.model
 msgid "Trace preview · {0}"
 msgstr "Aperçu de Trace · {0}"
@@ -5508,6 +5517,12 @@ msgstr "API key amont mise à jour."
 
 msgid "Upstream key copied"
 msgstr "API key amont copiée"
+
+msgid "Upstream pass-through"
+msgstr "Relais direct amont"
+
+msgid "Upstream pass-through — forward non-inference paths (such as /health) to the provider using its own credential. Not traced, and not checked by detectors."
+msgstr "Relais direct amont — transmet les chemins hors inférence (comme /health) au Provider avec ses propres identifiants. Non enregistré comme Trace et non contrôlé par les détecteurs."
 
 msgid "Use your resource’s OpenAI-compatible v1 endpoint. Model discovery lists the models you have deployed."
 msgstr "Utilisez le endpoint v1 OpenAI-compatible de votre ressource. La découverte de modèle liste les modèles que vous avez déployés."

@@ -171,6 +171,66 @@ public sealed class AgentCallsControllerTests : BaseTest<Module>
         result.Items.Should().BeEmpty();
     }
 
+    [TestMethod]
+    public async Task GetAll_AsNonAdminWithoutProjectFilter_ReturnsOwnProjectsCallsOnly()
+    {
+        // #482: an unfiltered list from a non-admin used to short-circuit to an empty page, so a
+        // REST API key — confined to one project, and with no reason to send a projectId — was told
+        // its own project had no traces.
+        IServiceProvider services = GetServices();
+        var mine = await SeedAgentInNewProjectAsync(services, "mine");
+        var theirs = await SeedAgentInNewProjectAsync(services, "theirs");
+        var myCall = await SeedCallWithToolsAsync(services, mine, []);
+        await SeedCallWithToolsAsync(services, theirs, []);
+
+        var controller = ResolveController(services, ScopedGuard(mine.Project.Id));
+        var result = await controller.GetAll(cancellationToken: CancellationToken);
+
+        result.Items.Should().ContainSingle().Which.Id.Should().Be(myCall.Id);
+        result.Total.Should().Be(1);
+    }
+
+    [TestMethod]
+    public async Task GetAll_AsNonAdminInSeveralProjectsWithoutFilter_ReturnsTheUnion()
+    {
+        IServiceProvider services = GetServices();
+        var first = await SeedAgentInNewProjectAsync(services, "first");
+        var second = await SeedAgentInNewProjectAsync(services, "second");
+        var outsider = await SeedAgentInNewProjectAsync(services, "outsider");
+        var firstCall = await SeedCallWithToolsAsync(services, first, []);
+        var secondCall = await SeedCallWithToolsAsync(services, second, []);
+        await SeedCallWithToolsAsync(services, outsider, []);
+
+        // A member of two projects: the page must be computed over the union of both, not one of
+        // them and not the whole instance.
+        var controller = ResolveController(services, ScopedGuard(first.Project.Id, second.Project.Id));
+        var result = await controller.GetAll(cancellationToken: CancellationToken);
+
+        result.Items.Select(i => i.Id).Should().BeEquivalentTo([firstCall.Id, secondCall.Id]);
+        result.Total.Should().Be(2);
+    }
+
+    /// <summary>
+    /// An agent in a project of its own, so a test can tell two tenants' rows apart.
+    /// </summary>
+    private async Task<IAgent> SeedAgentInNewProjectAsync(IServiceProvider services, string name)
+    {
+        var endpoint = await services.GetRequiredService<IDomainEntityGenerator<Proxytrace.Domain.ModelEndpoint.IModelEndpoint>>()
+            .GetOrCreateAsync(CancellationToken);
+        var project = await services.GetRequiredService<Proxytrace.Domain.Project.IProjectRepository>().AddAsync(
+            services.GetRequiredService<Proxytrace.Domain.Project.IProject.CreateNew>()($"P-{name}-{Guid.NewGuid():N}", endpoint, []),
+            CancellationToken);
+
+        var template = services.GetRequiredService<Proxytrace.Domain.Prompt.IPromptTemplate.Create>()(
+            $"T-{name}", "You are a test agent.");
+        var parameters = services.GetRequiredService<Proxytrace.Domain.Inference.IModelParameters.Create>()(null, null, null, null, null);
+
+        return await services.GetRequiredService<IAgentRepository>().AddAsync(
+            services.GetRequiredService<IAgent.CreateNew>()(
+                $"A-{name}", template, [], endpoint, project, parameters),
+            CancellationToken);
+    }
+
     // ── tool-name filter + picker ──────────────────────────────────────────────
 
     [TestMethod]
@@ -289,8 +349,8 @@ public sealed class AgentCallsControllerTests : BaseTest<Module>
 
         // A project-scoped (non-admin) member opens the session timeline: the list request carries
         // both projectId and sessionId, so the access guard authorizes and the sessionId filter
-        // narrows to the one session. Without the projectId the guard would deny and the timeline
-        // would render empty for every non-admin.
+        // narrows to the one session. (Since #482 the projectId is no longer required for a
+        // non-admin to see anything — omitting it scopes to their own projects instead.)
         var controller = ResolveController(services, ScopedGuard(projectId));
         var result = await controller.GetAll(
             projectId: projectId, sessionId: expectedSessionId, cancellationToken: CancellationToken);

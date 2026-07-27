@@ -89,6 +89,18 @@ scope pair from MCP, kept least-privilege:
   Like the MCP handler it stashes the owner id so `ICurrentUserAccessor` attributes the call to the
   owner, and the key id under the same item key the audit actor accessor reads — attribution comes for
   free (`AuditActorType.ApiKey`).
+- **The key is confined to its own project**, and this is load-bearing, not cosmetic. The handler
+  stashes `apiKey.Project.Id` under `ApiKeyAuthenticationHandler.ProjectIdItemKey`, and
+  `ProjectAccessGuard` intersects **every** access decision with it — `CanAccessProjectAsync` denies a
+  different project outright, and `GetAccessibleProjectIdsAsync` collapses the admin "all projects"
+  `null` to just that one id. Without this the key acts purely as its owner, and because
+  `POST /api/providers/{id}/keys` is admin-only the owner is normally an **Admin**, whose role alone
+  satisfies the guard for every project in the instance — so a key minted for one project could read
+  and (with `ApiWrite`) mutate all of them, contradicting the contract the UI and
+  `manual/admin/providers-and-api-keys.md` advertise. A claim is **not** sufficient here: the
+  `"project"` claim these handlers used to emit was read by nothing. Pin new scoping on the
+  `HttpContext.Items` entry the guard actually consults, exactly as MCP does with
+  `McpProjectAccessor.ProjectIdItemKey`.
 - The **default** authorization policy (`Module.ConfigureAuth`, non-kiosk) accepts the `ApiKey` scheme
   **alongside** JwtBearer and carries an `ApiKeyScopeRequirement`. `ApiKeyScopeHandler` enforces the
   read/write split **by HTTP method** for API-key callers only: safe methods (`GET`/`HEAD`/`OPTIONS`)

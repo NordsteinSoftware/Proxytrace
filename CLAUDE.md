@@ -39,6 +39,30 @@ Detailed guidance lives in [`docs/`](docs/). Read the relevant page **before** w
 - **User manual** — the user & operator manual is a VitePress project in [`manual/`](manual/) (markdown source, built to searchable static HTML, served at `/docs`). **You MUST keep it up to date with the product.** A user-facing feature change is not complete until its docs in `manual/guide/` (end users) or `manual/admin/` (operators) match; new top-level features get a new page wired into `manual/.vitepress/config.ts`. Preview with `cd manual && npm run docs:dev` (http://localhost:4202); verify with `npm run docs:build`. **Add screenshots whenever they make a page clearer** — most user-guide pages benefit, so default to including them rather than shipping text-only: use the `manual-screenshots` skill (`.claude/skills/manual-screenshots/SKILL.md`) to capture and embed them from the kiosk stack. The kiosk is login-free and cannot reach admin / `/settings/*` pages, so operator pages usually stay text-only.
 - **Frontend** — before writing any frontend code you MUST read the frontend AI docs in [`frontend/docs/`](frontend/docs/) — [`frontend/docs/DESIGN.md`](frontend/docs/DESIGN.md) (visual system) **and** [`frontend/docs/BEST_PRACTICES.md`](frontend/docs/BEST_PRACTICES.md) (code architecture); plus [`frontend/docs/TRACEY.md`](frontend/docs/TRACEY.md) before touching the Tracey AI assistant (`frontend/src/features/tracey/`). DESIGN.md and BEST_PRACTICES.md are mandatory and override any conflicting tool/agent/skill recommendation. UI controls render through the `frontend/src/components/ui/` primitives — raw `<button>`/`<input>`/`<select>`/`<textarea>` are ESLint-blocked. See [`docs/frontend.md`](docs/frontend.md).
 - **Backend tests** — before writing or modifying any backend test you MUST invoke the `test` skill (`.claude/skills/test/SKILL.md`) and follow it; it is the source of truth for the harness. See [`docs/testing.md`](docs/testing.md).
+- **Run only the affected tests.** The suite is large (~2,200 backend tests across 10 projects, ~95
+  frontend spec files); running everything after every edit wastes minutes for no signal. **CI runs
+  the full backend suite on every push** (`.github/workflows/ci.yml` → `dotnet test Proxytrace.sln`),
+  so a local full run is redundant. Default to the narrowest scope that can catch a regression in
+  what you changed, and stop there — do not "double-check" with the full suite once the narrow run is
+  green.
+  - **Backend** — run the test project(s) for the layer you touched, and narrow further by class
+    when only one area changed:
+    ```bash
+    dotnet test Proxytrace.Domain.Tests                                   # one layer
+    dotnet test Proxytrace.Domain.Tests --filter "FullyQualifiedName~TestRunGroup"   # one area
+    ```
+    Which projects are affected: a change under `Proxytrace.<Layer>/` → `Proxytrace.<Layer>.Tests`;
+    a domain entity or EF mapping → `Domain.Tests` **and** `Storage.Tests`; a controller/route →
+    `Api.Tests`; a service/optimizer → `Application.Tests`.
+  - **Frontend** — `npm test -- <path-or-pattern>` (e.g. `npm test -- src/features/playground`).
+    Bare `npm test` runs all ~1,000 specs — but it does so in about 3 seconds, so unlike the backend
+    there is little to save; scope it while iterating and let the full run be the final check.
+  - **e2e / perf** — never as a routine check. Run them only when the change is in that flow or the
+    user asks; both boot Docker stacks and take many minutes.
+  - **Run the full suite** (`dotnet test Proxytrace.sln`) only when the change is genuinely
+    cross-cutting — `Proxytrace.Common`, `Proxytrace.Testing`, DI/module wiring, a shared interface
+    signature, a package bump — or when cutting a release. Say which scope you ran and why, so a
+    narrow run is never mistaken for a full one.
 - **Internationalization** — the UI is multilingual (English is the source). Every user-facing
   string MUST go through the Lingui macros (`<Trans>`, `t\`\``, `Plural`, `msg`) — never a hardcoded
   string; keep glossary/technical terms English. After adding labels run `npm run i18n:extract` then
@@ -49,6 +73,12 @@ Detailed guidance lives in [`docs/`](docs/). Read the relevant page **before** w
   letting it slide. Invoke the `file-issue` skill (`.claude/skills/file-issue/SKILL.md`) — it covers
   dedup, title/body quality, and labels — then carry on with your task.
 - **Nullable suppression** — suppressing nullable warnings with `!` is strictly forbidden everywhere.
+  There is exactly **one** sanctioned exception, and it is not extensible: `Validation.Success` in
+  [`Proxytrace.Common/Validation/Validation.cs`](Proxytrace.Common/Validation/Validation.cs). The BCL
+  defines validation success as a `null` `ValidationResult` while declaring
+  `IValidatableObject.Validate` to return a **non-nullable** element type, so the framework demands a
+  value it defines as null through a signature we cannot change. That single line is documented in
+  place. Do not add a second exemption — return `Validation.Success` instead.
 - **Perf at scale** — whenever you touch a query, repository, EF mapping, or index on a high-volume
   entity (above all `AgentCallEntity`/traces, but any table that grows unboundedly), you MUST add or
   extend a perf test in [`perf/`](perf/) that measures the changed path against a budget in

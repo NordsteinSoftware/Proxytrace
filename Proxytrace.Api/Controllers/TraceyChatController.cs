@@ -11,6 +11,7 @@ using Proxytrace.Api.Auth.Licensing;
 using Proxytrace.Application.Auth;
 using Proxytrace.Application.Ingestion;
 using Proxytrace.Application.Tracey;
+using Proxytrace.Common.Text;
 using Proxytrace.Domain;
 using Proxytrace.Domain.Project;
 using Proxytrace.Domain.User;
@@ -130,7 +131,7 @@ public class TraceyChatController : ControllerBase
         }
         catch (Exception ex)
         {
-            logger.LogWarning(ex, "Tracey upstream request to /v1/{Path} failed", path);
+            logger.LogWarning(ex, "Tracey upstream request to /v1/{Path} failed", path.ToSingleLogLine());
             Response.StatusCode = StatusCodes.Status502BadGateway;
             return;
         }

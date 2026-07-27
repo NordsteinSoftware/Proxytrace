@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using Proxytrace.Domain.CustomAnomaly;
 
 namespace Proxytrace.Api.Dto.Anomalies;
@@ -32,6 +33,7 @@ public sealed record CreateCustomAnomalyDetectorRequest
 
     public required IReadOnlyList<AnomalyTriggerDto> Triggers { get; init; }
     public bool AllAgents { get; init; } = true;
+    [MaxLength(RequestLimits.MaxScopedAgents)]
     public IReadOnlyList<Guid>? AgentIds { get; init; }
     public bool IsEnabled { get; init; } = true;
 
@@ -49,6 +51,7 @@ public sealed record UpdateCustomAnomalyDetectorRequest
 
     public required IReadOnlyList<AnomalyTriggerDto> Triggers { get; init; }
     public required bool AllAgents { get; init; }
+    [MaxLength(RequestLimits.MaxScopedAgents)]
     public IReadOnlyList<Guid>? AgentIds { get; init; }
     public required bool IsEnabled { get; init; }
 

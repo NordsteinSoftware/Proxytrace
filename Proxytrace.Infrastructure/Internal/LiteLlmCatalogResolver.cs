@@ -83,8 +83,16 @@ internal sealed class LiteLlmCatalogResolver
         using var _ = await gate.LockAsync(lockKey, cancellationToken);
         if (cache is not null)
             return cache;
-        cache = await FetchAsync(cancellationToken);
-        return cache;
+
+        IReadOnlyDictionary<string, (decimal?, decimal?, decimal?)> fetched = await FetchAsync(cancellationToken);
+
+        // Only a fetch that actually produced entries is cached. A failed or empty fetch is left
+        // uncached so the next caller retries — caching it would pin every model price to
+        // ModelPrice.Unknown for the rest of the process lifetime after a single network blip.
+        if (fetched.Count > 0)
+            cache = fetched;
+
+        return fetched;
     }
 
     private async Task<IReadOnlyDictionary<string, (decimal?, decimal?, decimal?)>> FetchAsync(
@@ -109,9 +117,17 @@ internal sealed class LiteLlmCatalogResolver
                     ReadDecimal(prop.Value, "cache_read_input_token_cost"));
             }
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            // Caller-initiated cancellation is not a catalog failure — never swallow it into an
+            // empty (and previously permanently cached) result.
+            throw;
+        }
         catch
         {
-            // fail-soft: empty catalog → callers get ModelPrice.Unknown
+            // fail-soft: empty catalog → callers get ModelPrice.Unknown, and GetCatalogAsync
+            // deliberately does not cache it, so the next call retries.
+            return new Dictionary<string, (decimal?, decimal?, decimal?)>(StringComparer.OrdinalIgnoreCase);
         }
 
         return result;

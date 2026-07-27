@@ -17,7 +17,7 @@ namespace Proxytrace.Storage.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.9")
+                .HasAnnotation("ProductVersion", "10.0.10")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -689,8 +689,8 @@ namespace Proxytrace.Storage.Migrations
 
                     b.Property<string>("CodeHash")
                         .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
 
                     b.Property<DateTimeOffset?>("ConsumedAt")
                         .HasColumnType("timestamp with time zone");
@@ -796,8 +796,8 @@ namespace Proxytrace.Storage.Migrations
                         .HasColumnType("text");
 
                     b.Property<string>("ApiKeyLookupHash")
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
 
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -1486,6 +1486,9 @@ namespace Proxytrace.Storage.Migrations
                     b.Property<bool>("IsSystemRun")
                         .HasColumnType("boolean");
 
+                    b.Property<DateTimeOffset?>("OptimizationConsideredAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<int>("SampleCount")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("integer")
@@ -1509,6 +1512,8 @@ namespace Proxytrace.Storage.Migrations
                     b.HasIndex("ScheduleId");
 
                     b.HasIndex("Suite");
+
+                    b.HasIndex("OptimizationConsideredAt", "IsSystemRun", "Status");
 
                     b.ToTable("TestRunGroupEntity");
                 });
@@ -1765,7 +1770,7 @@ namespace Proxytrace.Storage.Migrations
                     b.HasOne("Proxytrace.Storage.Internal.Entities.User.UserEntity", null)
                         .WithMany()
                         .HasForeignKey("Owner")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("Proxytrace.Storage.Internal.Entities.Project.ProjectEntity", null)
@@ -1777,7 +1782,7 @@ namespace Proxytrace.Storage.Migrations
                     b.HasOne("Proxytrace.Storage.Internal.Entities.ModelProvider.ModelProviderEntity", null)
                         .WithMany()
                         .HasForeignKey("Provider")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });
 

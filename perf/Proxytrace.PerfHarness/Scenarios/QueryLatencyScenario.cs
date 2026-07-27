@@ -67,6 +67,13 @@ internal static class QueryLatencyScenario
             () => callRepo.GetFilteredListAsync(new AgentCallFilter(From: recent, To: now), 1, 50, cancellationToken));
         await Measure("agentCallsHistogram",
             () => callRepo.GetHistogramAsync(new AgentCallFilter(AgentId: agentId), 50, cancellationToken));
+        // Multi-project scope (#482): an unfiltered list from a caller who may read several
+        // projects filters on a set instead of one id. Same shape as the single-project branch — a
+        // semi-join against AgentVersion(Project) — so it must stay in the same class as
+        // agentCallsList rather than degrading into a client-side filter over every row.
+        await Measure("agentCallsListByProjects",
+            () => callRepo.GetFilteredListAsync(
+                new AgentCallFilter(ProjectIds: [projectId ?? Guid.Empty, Guid.NewGuid()]), 1, 50, cancellationToken));
 
         // Filtered-set summary — the traces KPI band. The list scrolls rather than pages, so this
         // aggregate spans EVERY matching row, not a page: at 1M rows the unfiltered case is a full
@@ -170,6 +177,14 @@ internal static class QueryLatencyScenario
             () => agentStats.GetAgentOverviewAsync(agentId, from, now, StatisticsBucket.Daily, cancellationToken));
         await Measure("agentDistributions",
             () => agentStats.GetAgentDistributionsAsync(agentId, from, now, cancellationToken));
+
+        // Last-call timestamps. The whole-table grouping backs the agents LIST; the filtered variant
+        // backs the single-agent GET, which used to run the grouping and so scaled with the trace
+        // table rather than with the one agent. Measuring both keeps that separation honest.
+        await Measure("agentLastCallTimesAll",
+            () => callRepo.GetLastCallTimesAsync(cancellationToken));
+        await Measure("agentLastCallTimeSingle",
+            () => callRepo.GetLastCallTimeAsync(agentId, cancellationToken));
 
         return results;
     }

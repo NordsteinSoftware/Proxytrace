@@ -13,7 +13,17 @@ public interface IMfaBackupCode : IDomainEntity<IMfaBackupCode>
     /// <summary>The user who owns this backup code.</summary>
     IUser User { get; }
 
-    /// <summary>SHA-256 hash of the raw backup code. Verify-only — the raw code is unrecoverable.</summary>
+    /// <summary>
+    /// Salted, slow hash of the raw backup code (PBKDF2, via <c>IPasswordService</c>). Verify-only —
+    /// the raw code is unrecoverable.
+    /// </summary>
+    /// <remarks>
+    /// Deliberately <b>not</b> the unkeyed SHA-256 used for Proxytrace-generated 256-bit secrets. A
+    /// backup code is ~50 bits (10 characters over a 32-symbol alphabet), which is chosen to be
+    /// typeable rather than unguessable, and one unsalted single-round hash per code means a single
+    /// dump can be attacked against every user's codes at once on commodity GPU hardware. Per-code
+    /// salting removes the shared work, and the iteration count removes the throughput.
+    /// </remarks>
     string CodeHash { get; }
 
     /// <summary>When the code was redeemed, or <see langword="null"/> if still usable.</summary>

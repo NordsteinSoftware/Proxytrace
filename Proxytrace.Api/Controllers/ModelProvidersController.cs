@@ -99,6 +99,29 @@ public class ModelProvidersController : ControllerBase
         return mapper.ToRedactedDto(provider);
     }
 
+    /// <summary>
+    /// Returns a provider's upstream credential in the clear.
+    /// </summary>
+    /// <remarks>
+    /// The key used to be projected into the ordinary list/overview responses, so every provider
+    /// credential reached the browser on every admin providers-page load, whether or not anyone
+    /// pressed "reveal" — and nothing recorded who had seen what. It now has to be asked for
+    /// explicitly, and every read is audited.
+    /// </remarks>
+    [HttpGet("{id:guid}/key")]
+    [Authorize(Roles = nameof(UserRole.Admin))]
+    public async Task<ActionResult<ModelProviderKeyDto>> GetUpstreamKey(Guid id, CancellationToken cancellationToken)
+    {
+        var provider = await providerRepository.FindAsync(id, cancellationToken);
+        if (provider is null)
+            return NotFound();
+
+        // Audit before returning, so a read is recorded even if the response never reaches the
+        // client. Only the fact of the read is recorded — never the key value.
+        audit.LogAudit(AuditAction.ProviderUpstreamKeyRevealed, nameof(IModelProvider), provider.Id, provider.Name);
+        return new ModelProviderKeyDto(provider.ApiKey);
+    }
+
     [HttpGet("overview")]
     [Authorize(Roles = nameof(UserRole.Admin))]
     public async Task<ProvidersOverviewDto> GetOverview(CancellationToken cancellationToken = default)
@@ -148,14 +171,18 @@ public class ModelProvidersController : ControllerBase
         var existing = await providerRepository.FindAsync(id, cancellationToken);
         if (existing is null)
             return NotFound();
+        // A null key means "leave the credential alone" — the client no longer receives it, so an
+        // edit that only renames the provider has nothing to send back.
+        string apiKey = request.UpstreamApiKey ?? existing.ApiKey;
+
         // Credential rotation is a security-relevant action of its own; compare against the stored
         // key before it is overwritten so the audit trail distinguishes a rotation from an
         // endpoint/name/kind edit. Only the fact of the change is recorded — never the key value.
-        bool keyRotated = existing.ApiKey != request.UpstreamApiKey;
+        bool keyRotated = existing.ApiKey != apiKey;
         bool configChanged = existing.Name != request.Name
             || existing.Endpoint != request.Endpoint.ToEndpointUri()
             || existing.Kind != request.Kind;
-        var updated = updateProvider(request.Name, request.Endpoint.ToEndpointUri(), request.UpstreamApiKey, request.Kind, existing);
+        var updated = updateProvider(request.Name, request.Endpoint.ToEndpointUri(), apiKey, request.Kind, existing);
         var saved = await providerRepository.UpdateAsync(updated, cancellationToken);
         if (keyRotated)
             audit.LogAudit(AuditAction.ProviderUpstreamKeyRotated, nameof(IModelProvider), saved.Id, saved.Name);

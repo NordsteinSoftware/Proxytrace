@@ -1,11 +1,14 @@
 using Autofac;
 using Autofac.Extensions.DependencyInjection;
+using System.Net;
 using System.Text.Json.Serialization;
 using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Mvc.ApplicationParts;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.OpenApi;
+using Proxytrace.Api;
 using Proxytrace.Api.Auth.Mcp;
 using Proxytrace.Api.Kiosk;
 using Proxytrace.Api.Middleware;
@@ -29,34 +32,13 @@ builder.Services.AddCors(options =>
 
 builder.Services.AddHttpContextAccessor();
 
-// Throttle the anonymous password-reset endpoints (forgot/reset) per client IP to blunt account
-// enumeration and brute-forcing of reset tokens. In-memory is fine — each deployment runs a single
-// API instance. Applied via [EnableRateLimiting("auth-reset")] on the endpoints.
-builder.Services.AddRateLimiter(options =>
-{
-    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
-    options.AddPolicy("auth-reset", httpContext =>
-        RateLimitPartition.GetFixedWindowLimiter(
-            partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
-            factory: _ => new FixedWindowRateLimiterOptions
-            {
-                PermitLimit = 10,
-                Window = TimeSpan.FromMinutes(15),
-                QueueLimit = 0,
-            }));
-
-    // The MFA verify endpoint validates a 6-digit code — a small space — so it is rate-limited per
-    // client IP (in addition to the per-challenge attempt cap) to blunt brute force.
-    options.AddPolicy("auth-mfa", httpContext =>
-        RateLimitPartition.GetFixedWindowLimiter(
-            partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
-            factory: _ => new FixedWindowRateLimiterOptions
-            {
-                PermitLimit = 10,
-                Window = TimeSpan.FromMinutes(15),
-                QueueLimit = 0,
-            }));
-});
+// Throttle the anonymous auth endpoints (login/signup, password reset, MFA verify) per client IP.
+// In-memory is fine — each deployment runs a single API instance. Applied via
+// [EnableRateLimiting(...)] on the endpoints. NOTE: the partition key is the *connection* remote
+// address, which is only the real client when UseForwardedHeaders below is configured to trust the
+// reverse proxy — otherwise every request shares one bucket. See docs/security.md.
+var rateLimiting = new AuthRateLimiterConfigurator(builder.Configuration);
+builder.Services.AddRateLimiter(rateLimiting.Configure);
 
 builder.Services.AddAuthorization(options =>
 {
@@ -123,6 +105,19 @@ var mountKioskProxy = kioskEnabled
                       && app.Services.GetRequiredService<KioskEndpointOptions>().IsConfigured;
 KioskProxyMounting.Apply(app.Services.GetRequiredService<ApplicationPartManager>(), mountKioskProxy);
 
+// FIRST middleware: rewrite Request.Scheme / Connection.RemoteIpAddress from the X-Forwarded-Proto
+// and X-Forwarded-For headers the reverse proxy sets, so everything downstream (rate-limit partition
+// keys, audit trails, generated absolute URLs) sees the real client instead of the proxy container.
+// Only headers arriving from an explicitly trusted proxy are honoured — an unrestricted
+// X-Forwarded-For would be a client-controlled rate-limit partition key. Unconfigured, the trust set
+// is the framework default (loopback only), so this is a no-op behind a containerised proxy until an
+// operator declares it. See docs/security.md.
+var forwardedHeaders = new TrustedProxyConfiguration(builder.Configuration).Build();
+if (forwardedHeaders is not null)
+{
+    app.UseForwardedHeaders(forwardedHeaders);
+}
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -157,3 +152,166 @@ app.MapFallbackToFile("/docs/{*path}", "docs/index.html");
 app.MapFallbackToFile("index.html");
 
 app.Run();
+
+namespace Proxytrace.Api
+{
+    /// <summary>
+    /// Builds the forwarded-headers configuration from the <c>ForwardedHeaders</c> config section.
+    /// The documented topology terminates TLS at a reverse proxy and forwards plain HTTP, so the API
+    /// only learns the real client address and scheme from <c>X-Forwarded-For</c> /
+    /// <c>X-Forwarded-Proto</c>. Those headers are attacker-controlled unless the peer that sent them
+    /// is trusted, so the trust set must be declared by the operator: with none declared the
+    /// framework default (loopback only) applies and forwarded headers from a containerised proxy are
+    /// ignored — the fail-safe choice, since a spoofable client address would silently defeat the
+    /// per-IP auth rate limiters. See docs/security.md.
+    /// </summary>
+    internal sealed class TrustedProxyConfiguration
+    {
+        public const string SectionName = "ForwardedHeaders";
+
+        private readonly IConfiguration configuration;
+
+        public TrustedProxyConfiguration(IConfiguration configuration)
+        {
+            this.configuration = configuration;
+        }
+
+        /// <summary>
+        /// Returns the options to hand to <c>UseForwardedHeaders</c>, or <see langword="null"/> when
+        /// the operator disabled forwarded-header processing entirely.
+        /// </summary>
+        public ForwardedHeadersOptions? Build()
+        {
+            var section = configuration.GetSection(SectionName);
+            if (section.GetValue<bool?>("Enabled") == false)
+            {
+                return null;
+            }
+
+            var options = new ForwardedHeadersOptions
+            {
+                ForwardedHeaders = Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedFor
+                                   | Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedProto,
+
+                // One hop by default: the single reverse proxy of the documented topology. Raise it
+                // only when there really are N chained proxies, all of them trusted.
+                ForwardLimit = section.GetValue<int?>("ForwardLimit") ?? 1,
+            };
+
+            foreach (var proxy in ReadList(section, "KnownProxies"))
+            {
+                options.KnownProxies.Add(ParseAddress(proxy));
+            }
+
+            foreach (var network in ReadList(section, "KnownNetworks"))
+            {
+                options.KnownIPNetworks.Add(ParseNetwork(network));
+            }
+
+            return options;
+        }
+
+        // Accepts both the array form (ForwardedHeaders:KnownNetworks:0) and a comma-separated
+        // scalar, so a container can declare the trust set in a single environment variable.
+        private IReadOnlyList<string> ReadList(IConfigurationSection section, string key)
+        {
+            var child = section.GetSection(key);
+            if (child.Value is not null)
+            {
+                return child.Value.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            }
+
+            return child.Get<string[]>() ?? [];
+        }
+
+        private IPAddress ParseAddress(string value) =>
+            IPAddress.TryParse(value, out var address)
+                ? address
+                : throw new InvalidOperationException(
+                    $"{SectionName}:KnownProxies contains '{value}', which is not a valid IP address.");
+
+        private System.Net.IPNetwork ParseNetwork(string value) =>
+            System.Net.IPNetwork.TryParse(value, out var network)
+                ? network
+                : throw new InvalidOperationException(
+                    $"{SectionName}:KnownNetworks contains '{value}', which is not valid CIDR notation (e.g. 172.16.0.0/12).");
+    }
+
+    /// <summary>
+    /// Registers the fixed-window rate-limiting policies guarding the anonymous auth endpoints, with
+    /// operator-overridable limits under the <c>RateLimiting</c> config section.
+    /// </summary>
+    internal sealed class AuthRateLimiterConfigurator
+    {
+        public const string SectionName = "RateLimiting";
+
+        /// <summary>
+        /// Guards the anonymous credential-accepting endpoints: login, legacy claim, invite signup
+        /// and the invite-token preview.
+        /// </summary>
+        public const string LoginPolicy = "auth-login";
+
+        public const string PasswordResetPolicy = "auth-reset";
+        public const string MfaPolicy = "auth-mfa";
+
+        private readonly IConfiguration configuration;
+
+        public AuthRateLimiterConfigurator(IConfiguration configuration)
+        {
+            this.configuration = configuration;
+        }
+
+        public void Configure(RateLimiterOptions options)
+        {
+            options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+            AddPolicy(options, LoginPolicy, LoginLimits());
+            AddPolicy(options, PasswordResetPolicy, PasswordResetLimits());
+            AddPolicy(options, MfaPolicy, MfaLimits());
+        }
+
+        /// <summary>
+        /// Password guessing is otherwise bounded only by throughput (there is no per-account failed
+        /// attempt counter), so a client address gets 30 credential submissions per minute: an order
+        /// of magnitude above a human fumbling a password or a shared office NAT signing in, and
+        /// three-plus orders of magnitude below what an unthrottled endpoint allows.
+        /// </summary>
+        public FixedWindowRateLimiterOptions LoginLimits() => Limits("Login", 30, TimeSpan.FromMinutes(1));
+
+        /// <summary>
+        /// Blunts account enumeration and brute-forcing of reset tokens.
+        /// </summary>
+        public FixedWindowRateLimiterOptions PasswordResetLimits() =>
+            Limits("PasswordReset", 10, TimeSpan.FromMinutes(15));
+
+        /// <summary>
+        /// The MFA verify endpoint validates a 6-digit code — a small space — so it is limited in
+        /// addition to the per-challenge attempt cap.
+        /// </summary>
+        public FixedWindowRateLimiterOptions MfaLimits() => Limits("Mfa", 10, TimeSpan.FromMinutes(15));
+
+        /// <summary>
+        /// The partition a request is counted against. Only as good as the forwarded-headers trust
+        /// configuration: behind an untrusted proxy every client collapses into one bucket.
+        /// </summary>
+        public string PartitionKey(HttpContext httpContext) =>
+            httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+
+        private void AddPolicy(RateLimiterOptions options, string policy, FixedWindowRateLimiterOptions limits) =>
+            options.AddPolicy(policy, httpContext =>
+                RateLimitPartition.GetFixedWindowLimiter(
+                    partitionKey: PartitionKey(httpContext),
+                    factory: _ => limits));
+
+        private FixedWindowRateLimiterOptions Limits(string key, int permitLimit, TimeSpan window)
+        {
+            var section = configuration.GetSection($"{SectionName}:{key}");
+            var seconds = section.GetValue<int?>("WindowSeconds");
+            return new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = Math.Max(1, section.GetValue<int?>("PermitLimit") ?? permitLimit),
+                Window = seconds is > 0 ? TimeSpan.FromSeconds(seconds.Value) : window,
+                QueueLimit = 0,
+            };
+        }
+    }
+}

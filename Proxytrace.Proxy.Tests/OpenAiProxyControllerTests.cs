@@ -415,6 +415,96 @@ public sealed class OpenAiProxyControllerTests
         await stream.Received(1).PublishAsync(Arg.Any<IngestMessage>(), CancellationToken.None);
     }
 
+    [TestMethod]
+    public async Task Proxy_ChunkedRequestBodyOverCap_Returns413_WithoutBufferingTheWholeBody()
+    {
+        // Regression: MaxRequestBodyBytes was only checked AFTER Request.Body.CopyToAsync had already
+        // grown the MemoryStream to whatever the client sent. A chunked request reports no
+        // Content-Length, so the pre-check cannot see its size — the copy itself has to be bounded.
+        // (The cap is also reachable at all only now that the proxy host pins Kestrel's own
+        // MaxRequestBodySize to the same constant; Kestrel's 30 MB default used to reject first,
+        // making both the constant and this 413 dead code.)
+        const long overCap = OpenAiProxyController.MaxRequestBodyBytes + (8L * 1024 * 1024);
+        var body = new GeneratedByteStream(overCap);
+
+        var controller = BuildController(Substitute.For<IIngestionStream>(), ResolverFor(ApiKey()));
+        controller.ControllerContext = BuildContext("Bearer valid", body: "{}");
+        // Replace the buffered body with an unbounded one and leave ContentLength unset, exactly as a
+        // chunked upload arrives.
+        controller.ControllerContext.HttpContext.Request.Body = body;
+
+        await controller.Proxy("chat/completions", project: null, CancellationToken.None);
+
+        controller.Response.StatusCode.Should().Be(StatusCodes.Status413PayloadTooLarge);
+        body.BytesRead.Should().BeLessThan(
+            overCap, "the copy must abort at the cap instead of buffering the entire body first");
+        body.BytesRead.Should().BeLessThanOrEqualTo(
+            OpenAiProxyController.MaxRequestBodyBytes + (64L * 1024),
+            "at most the chunk that crossed the cap may be read before bailing");
+    }
+
+    [TestMethod]
+    public async Task Proxy_StreamingUpstreamSingleHugeLine_ForwardsVerbatim_InBoundedWrites()
+    {
+        // Regression: the streaming path read with StreamReader.ReadLineAsync, which grows an
+        // unbounded internal buffer until it finds a '\n'. Whether a response is treated as an event
+        // stream is decided by the REQUEST ("stream": true), never by the upstream — so a provider
+        // that ignores the flag, or a WAF/error page in front of it, can answer with one
+        // multi-megabyte single-line body. That was materialized whole as a string and then re-rented
+        // at 3x its length to forward. The bytes must still reach the client verbatim, in bounded
+        // pieces.
+        var line = new string('x', (4 * 1024 * 1024) + 7); // deliberately contains no '\n'
+        var bodyBytes = Encoding.UTF8.GetBytes(line);
+
+        var responseBody = new RecordingResponseStream();
+        var controller = BuildController(
+            Substitute.For<IIngestionStream>(),
+            ResolverFor(ApiKey()),
+            new ChunkedRawHttpClientFactory(bodyBytes, maxBytesPerRead: 64 * 1024));
+        controller.ControllerContext = BuildContext(
+            "Bearer valid", body: """{"model":"gpt-4o","stream":true,"messages":[]}""");
+        controller.ControllerContext.HttpContext.Response.Body = responseBody;
+
+        await controller.Proxy("chat/completions", project: null, CancellationToken.None);
+
+        Encoding.UTF8.GetString(responseBody.Written).Should().Be(
+            line + "\n", "the forwarded body must be byte-for-byte upstream's, plus the line terminator");
+        responseBody.LargestWriteBytes.Should().BeLessThan(
+            1024 * 1024,
+            "an un-terminated line must be flushed in bounded segments, never held whole in memory");
+    }
+
+    [TestMethod]
+    public async Task Proxy_StreamingSseWithCrlf_NormalizesToLf_AndCapturesTranscript()
+    {
+        // The chunked line splitter replaced ReadLineAsync; it must keep that method's line semantics
+        // — CRLF and lone LF both terminate a line, and the forwarded/captured copies use LF.
+        const string upstreamBody = "data: {\"a\":1}\r\n\r\ndata: [DONE]\r\n";
+        const string expected = "data: {\"a\":1}\n\ndata: [DONE]\n";
+
+        IngestMessage? captured = null;
+        var stream = Substitute.For<IIngestionStream>();
+        stream.PublishAsync(Arg.Do<IngestMessage>(m => captured = m), Arg.Any<CancellationToken>())
+            .Returns(Task.CompletedTask);
+
+        var responseBody = new MemoryStream();
+        var controller = BuildController(
+            stream,
+            ResolverFor(ApiKey()),
+            // One byte per read, so every line terminator (and the CR/LF pair itself) is split across
+            // chunk boundaries.
+            new ChunkedRawHttpClientFactory(Encoding.UTF8.GetBytes(upstreamBody), maxBytesPerRead: 1));
+        controller.ControllerContext = BuildContext(
+            "Bearer valid", body: """{"model":"gpt-4o","stream":true,"messages":[]}""");
+        controller.ControllerContext.HttpContext.Response.Body = responseBody;
+
+        await controller.Proxy("chat/completions", project: null, CancellationToken.None);
+
+        Encoding.UTF8.GetString(responseBody.ToArray()).Should().Be(expected);
+        captured.Should().NotBeNull();
+        captured?.ResponseBody.Should().Be(expected, "the captured transcript mirrors what was forwarded");
+    }
+
     private static OpenAiProxyController BuildController(
         IIngestionStream stream,
         IApiKeyResolver resolver,

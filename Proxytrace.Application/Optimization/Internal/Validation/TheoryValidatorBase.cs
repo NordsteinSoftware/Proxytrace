@@ -146,6 +146,35 @@ internal abstract class TheoryValidatorBase : ITheoryValidator
     }
 
     /// <summary>
+    /// <see cref="Metrics"/> across every sample in one A/B arm, so cost and latency describe the
+    /// arm rather than whichever sample happened to be first.
+    /// </summary>
+    /// <remarks>
+    /// Cost and latency are <b>averaged per sample</b>, not summed: they are compared directly
+    /// against the other arm's figures and surfaced on the proposal as "what this switch would cost
+    /// you", so summing would scale both arms by the sample count and make the reported saving that
+    /// many times too large. Pass rate is pooled over all results, matching what the other
+    /// validators report.
+    /// </remarks>
+    protected static RunMetrics AggregateMetrics(IReadOnlyList<ITestRun> runs)
+    {
+        if (runs.Count == 0)
+            return new RunMetrics(null, null, TimeSpan.Zero);
+
+        var perRun = runs.Select(Metrics).ToList();
+
+        (int passes, int total) = SumPassCounts(runs);
+        double? passRate = total > 0 ? passes / (double)total : null;
+
+        var costs = perRun.Where(m => m.Cost.HasValue).Select(m => m.Cost ?? 0m).ToList();
+        decimal? cost = costs.Count > 0 ? costs.Sum() / costs.Count : null;
+
+        var latency = TimeSpan.FromTicks(perRun.Sum(m => m.Latency.Ticks) / runs.Count);
+
+        return new RunMetrics(passRate, cost, latency);
+    }
+
+    /// <summary>
     /// Returns the number of passing results and the total result count for a run — the raw
     /// counts a two-proportion test needs, as opposed to the rounded <see cref="RunMetrics.PassRate"/>.
     /// </summary>
@@ -156,14 +185,60 @@ internal abstract class TheoryValidatorBase : ITheoryValidator
     }
 
     /// <summary>
-    /// Pools <see cref="PassCounts"/> over every sample in one A/B arm. Each sample is an
-    /// independent replay of the same suite, so the sums are the arm's total evidence.
+    /// Pools <see cref="PassCounts"/> over every sample in one A/B arm.
     /// </summary>
+    /// <remarks>
+    /// Use for the <b>reported</b> pass rate, which is simply "how many of the attempts passed" and
+    /// is correctly a pooled figure. Do <b>not</b> feed these totals to a significance test:
+    /// replays of the same case are not independent trials, so the pooled total overstates the
+    /// sample size by the replay count. <see cref="PairedPassRates"/> is what the test consumes.
+    /// </remarks>
     protected static (int Passes, int Total) SumPassCounts(IReadOnlyList<ITestRun> runs)
     {
         var counts = runs.Select(PassCounts).ToList();
         return (counts.Sum(c => c.Passes), counts.Sum(c => c.Total));
     }
+
+    /// <summary>
+    /// Aligns two A/B arms case by case, returning one pass proportion per test case for each arm.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The unit of independence in these comparisons is the <b>test case</b>, and both arms run the
+    /// same ones — so the honest analysis is paired. This projects each arm to "for test case X,
+    /// what fraction of its replays passed", keyed on the case so the two arms line up even if the
+    /// runner returned results in a different order.
+    /// </para>
+    /// <para>
+    /// Only cases present in both arms are returned; a case missing from one side has no pair and
+    /// cannot contribute a difference. Callers already refuse to score incomplete runs, so in
+    /// practice this drops nothing.
+    /// </para>
+    /// </remarks>
+    protected static (IReadOnlyList<double> Baseline, IReadOnlyList<double> Candidate) PairedPassRates(
+        IReadOnlyList<ITestRun> baselineRuns,
+        IReadOnlyList<ITestRun> candidateRuns)
+    {
+        var baseline = PassRateByCase(baselineRuns);
+        var candidate = PassRateByCase(candidateRuns);
+
+        // Ordered by case id so the pairing is deterministic run to run, which keeps the p-value
+        // reproducible for the same evidence.
+        var sharedCases = baseline.Keys.Intersect(candidate.Keys).OrderBy(id => id).ToArray();
+
+        return (
+            sharedCases.Select(id => baseline[id]).ToArray(),
+            sharedCases.Select(id => candidate[id]).ToArray());
+    }
+
+    /// <summary>Mean pass proportion per test case across every sample in one arm.</summary>
+    private static Dictionary<Guid, double> PassRateByCase(IReadOnlyList<ITestRun> runs)
+        => runs
+            .SelectMany(run => run.TestResults)
+            .GroupBy(result => result.TestCase.Id)
+            .ToDictionary(
+                group => group.Key,
+                group => group.Count(r => r.IsPass()) / (double)group.Count());
 
     /// <summary>
     /// Whether a run is trustworthy as A/B evidence: it must have produced a result for every case in
