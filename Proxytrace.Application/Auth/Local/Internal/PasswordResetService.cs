@@ -9,6 +9,7 @@ using Proxytrace.Domain;
 using Proxytrace.Domain.PasswordResetToken;
 using Proxytrace.Domain.User;
 using Proxytrace.Domain.UserTotpEnrollment;
+using Proxytrace.Common.Text;
 
 namespace Proxytrace.Application.Auth.Local.Internal;
 
@@ -119,7 +120,7 @@ internal sealed class PasswordResetService : IPasswordResetService
                 "logging is enabled — one-time link (valid {Minutes} min): {ResetUrl}. Hand it to the " +
                 "user over a trusted channel; anyone who can read this log within the TTL can take over " +
                 "the account.",
-                user.Email, reason, minutes, issued.ResetLink.Link);
+                user.Email.ToSingleLogLine(), reason, minutes, issued.ResetLink.Link);
             return;
         }
 
@@ -128,7 +129,7 @@ internal sealed class PasswordResetService : IPasswordResetService
             "Password reset for {Email} could not be emailed ({Reason}). The one-time reset link " +
             "(valid {Minutes} min, token {TokenHint}…) is NOT logged. To recover a locked-out account " +
             "when email is down, set Authentication:EmergencyLogResetLink=true and retry to log the full link.",
-            user.Email, reason, minutes, TokenHint(issued.TokenHash));
+            user.Email.ToSingleLogLine(), reason, minutes, TokenHint(issued.TokenHash));
     }
 
     public async Task<PasswordResetLink?> IssueResetLinkAsync(Guid userId, Func<string, string> buildResetUrl, CancellationToken cancellationToken = default)

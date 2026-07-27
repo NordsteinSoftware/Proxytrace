@@ -41,7 +41,9 @@ internal sealed class ExceptionHandlingMiddleware
             // without the alarming error-level log.
             if (ex is NotImplementedException)
             {
-                logger.LogInformation("Not-implemented endpoint called: {Path}", context.Request.Path);
+                logger.LogInformation(
+                    "Not-implemented endpoint called: {Path}",
+                    context.Request.Path.Value.ToSingleLogLine());
             }
             else
             {

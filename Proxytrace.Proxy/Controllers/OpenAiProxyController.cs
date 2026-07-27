@@ -216,7 +216,7 @@ public class OpenAiProxyController : ControllerBase
         }
         catch (Exception ex)
         {
-            logger.LogWarning(ex, "Upstream request to /v1/{Path} failed", path);
+            logger.LogWarning(ex, "Upstream request to /v1/{Path} failed", path.ToSingleLogLine());
             Response.StatusCode = StatusCodes.Status502BadGateway;
             return;
         }
@@ -293,7 +293,7 @@ public class OpenAiProxyController : ControllerBase
         }
         catch (Exception ex)
         {
-            logger.LogWarning(ex, "Upstream pass-through to /{Path} failed", path);
+            logger.LogWarning(ex, "Upstream pass-through to /{Path} failed", path.ToSingleLogLine());
             Response.StatusCode = StatusCodes.Status502BadGateway;
             return;
         }

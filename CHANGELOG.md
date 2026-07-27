@@ -47,6 +47,14 @@ follow [Semantic Versioning](https://semver.org). Ongoing work is collected unde
   its brief validity window it could be replayed against ordinary endpoints, including administrative
   ones. It is now restricted to the live-update endpoints it was minted for.
 
+- **The log can no longer be made to show entries that nobody wrote.** Several warnings recorded a
+  value taken straight from the caller — the requested URL path, an email address — and a caller who
+  percent-encoded a line break into it got that break back out in the log file. A request for
+  `/x%0D%0A…` was written as two lines, and a line-oriented log viewer rendered the second as an
+  entry of its own, letting anyone who could reach the app plant convincing but fabricated entries
+  and obscure what really happened. Line breaks are now stripped from these values before they are
+  logged.
+
 ### Changed
 
 - **Optimization proposals are now held to a stricter, correct standard of proof.** Two flaws made
