@@ -5,6 +5,7 @@ using System.Text;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using Proxytrace.Common.Text;
 using Proxytrace.Domain.ApiKey;
 using Proxytrace.Domain.Kiosk;
 using Proxytrace.Domain.ModelProvider;
@@ -269,7 +270,7 @@ public class OpenAiProxyController : ControllerBase
         {
             logger.LogWarning(
                 "API key for project {ProjectId} lacks the Passthrough scope; refusing to forward /{Path}",
-                buffered.Resolved.Project.Id, path);
+                buffered.Resolved.Project.Id, path.ToSingleLogLine());
             Response.StatusCode = StatusCodes.Status403Forbidden;
             return;
         }

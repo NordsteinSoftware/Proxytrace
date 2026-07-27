@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Proxytrace.Api.Middleware.Exceptions;
 using Proxytrace.Application.ErrorLog;
+using Proxytrace.Common.Text;
 
 namespace Proxytrace.Api.Middleware;
 
@@ -63,7 +64,7 @@ internal sealed class ExceptionHandlingMiddleware
                 logger.LogWarning(
                     ex,
                     "Unhandled exception after the response had already started for {Path}; cannot write an error body",
-                    context.Request.Path);
+                    context.Request.Path.Value.ToSingleLogLine());
                 return;
             }
 
