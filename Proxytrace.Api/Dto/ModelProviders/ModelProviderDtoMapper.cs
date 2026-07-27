@@ -11,16 +11,39 @@ namespace Proxytrace.Api.Dto.ModelProviders;
 /// </summary>
 public sealed class ModelProviderDtoMapper
 {
+    /// <summary>
+    /// Maps a provider, masking its upstream credential.
+    /// </summary>
+    /// <remarks>
+    /// This mapper has <b>no</b> variant that emits the cleartext key: it used to, and the result
+    /// was that every provider credential in the installation was sent to the browser on every
+    /// admin providers-page load — whether or not anyone pressed "reveal" — with nothing recording
+    /// who saw what. The key is now served only by the dedicated, audited reveal endpoint. Keep it
+    /// that way; do not add a "full" overload here.
+    /// </remarks>
     public ModelProviderDto ToDto(IModelProvider p) =>
-        new(p.Id, p.Name, p.Endpoint.ToString(), p.ApiKey, p.Kind, p.CreatedAt, p.UpdatedAt);
+        new(p.Id, p.Name, p.Endpoint.ToString(), Mask(p.ApiKey), p.Kind, p.CreatedAt, p.UpdatedAt);
 
     /// <summary>
-    /// Maps a provider without its upstream API key, for endpoints readable by non-admin
-    /// members (e.g. the by-id lookup used by Tracey tools). The secret must only ever be
-    /// returned from admin-gated endpoints.
+    /// Maps a provider without even the masked credential, for endpoints readable by non-admin
+    /// members (e.g. the by-id lookup used by Tracey tools).
     /// </summary>
     public ModelProviderDto ToRedactedDto(IModelProvider p) =>
         new(p.Id, p.Name, p.Endpoint.ToString(), string.Empty, p.Kind, p.CreatedAt, p.UpdatedAt);
+
+    /// <summary>
+    /// Renders a credential as a preview: enough to tell two keys apart and to confirm a rotation
+    /// took effect, never enough to use. Short keys are masked whole rather than leaking a
+    /// proportionally large share of themselves — self-hosted backends conventionally use values
+    /// like <c>EMPTY</c> or <c>ollama</c>.
+    /// </summary>
+    private static string Mask(string key)
+        => key.Length switch
+        {
+            0 => string.Empty,
+            <= 8 => new string('•', 8),
+            _ => key[..3] + new string('•', 8) + key[^4..],
+        };
 
     public ApiKeyDto ToKeyDto(IApiKey k)
         => ToKeyDto(k, plaintextKey: null);

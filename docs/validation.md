@@ -15,6 +15,18 @@ For referenced entities, cascade validation:
 foreach (var r in SystemEndpoint.Validate(validationContext)) yield return r;
 ```
 
+## Writing a new check
+
+A check returns a `ValidationResult` describing the failure, or `Validation.Success` when the value is
+fine — never `ValidationResult.Success` directly.
+
+That indirection is deliberate. The BCL represents success as a **null** `ValidationResult`, but
+declares `IValidatableObject.Validate` to return a non-nullable element type, so every check has to
+hand back a value the framework itself defines as null through a signature we cannot change. The
+resulting suppression is concentrated on the single `Validation.Success` member — the one sanctioned
+`!` in the repository (see the nullable-suppression rule in `CLAUDE.md`). Returning any genuinely
+non-null "success" sentinel instead would be read by `Validator` as a validation *failure*.
+
 For a value constrained to a closed set that isn't an enum (e.g. `User.Language` must be one of the
 `SupportedLanguages`), validate membership explicitly:
 ```csharp

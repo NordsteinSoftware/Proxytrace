@@ -49,6 +49,12 @@ Detailed guidance lives in [`docs/`](docs/). Read the relevant page **before** w
   letting it slide. Invoke the `file-issue` skill (`.claude/skills/file-issue/SKILL.md`) — it covers
   dedup, title/body quality, and labels — then carry on with your task.
 - **Nullable suppression** — suppressing nullable warnings with `!` is strictly forbidden everywhere.
+  There is exactly **one** sanctioned exception, and it is not extensible: `Validation.Success` in
+  [`Proxytrace.Common/Validation/Validation.cs`](Proxytrace.Common/Validation/Validation.cs). The BCL
+  defines validation success as a `null` `ValidationResult` while declaring
+  `IValidatableObject.Validate` to return a **non-nullable** element type, so the framework demands a
+  value it defines as null through a signature we cannot change. That single line is documented in
+  place. Do not add a second exemption — return `Validation.Success` instead.
 - **Perf at scale** — whenever you touch a query, repository, EF mapping, or index on a high-volume
   entity (above all `AgentCallEntity`/traces, but any table that grows unboundedly), you MUST add or
   extend a perf test in [`perf/`](perf/) that measures the changed path against a budget in

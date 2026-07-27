@@ -15,6 +15,7 @@ internal record TestRunGroup : DomainEntity<ITestRunGroup>, ITestRunGroup
     public bool IsSystemRun { get; }
     public Guid? ScheduleId { get; }
     public int SampleCount { get; }
+    public DateTimeOffset? OptimizationConsideredAt { get; private init; }
 
     public TestRunGroup(
         ITestSuite suite,
@@ -31,6 +32,7 @@ internal record TestRunGroup : DomainEntity<ITestRunGroup>, ITestRunGroup
         IsSystemRun = isSystemRun;
         ScheduleId = scheduleId;
         SampleCount = sampleCount;
+        OptimizationConsideredAt = null;
     }
 
     public TestRunGroup(
@@ -40,6 +42,7 @@ internal record TestRunGroup : DomainEntity<ITestRunGroup>, ITestRunGroup
         bool isSystemRun,
         Guid? scheduleId,
         int sampleCount,
+        DateTimeOffset? optimizationConsideredAt,
         IDomainEntityData existing,
         IRepository<ITestRunGroup> repository,
         ITestRunRepository testRuns) : base(existing, repository)
@@ -51,7 +54,11 @@ internal record TestRunGroup : DomainEntity<ITestRunGroup>, ITestRunGroup
         IsSystemRun = isSystemRun;
         ScheduleId = scheduleId;
         SampleCount = sampleCount;
+        OptimizationConsideredAt = optimizationConsideredAt;
     }
+
+    public Task<ITestRunGroup> MarkOptimizationConsidered(CancellationToken cancellationToken = default)
+        => ApplyAsync(this with { OptimizationConsideredAt = DateTimeOffset.UtcNow }, cancellationToken);
 
     public Task<IReadOnlyList<ITestRun>> GetTestRuns(CancellationToken cancellationToken = default)
         => testRuns.GetByGroupAsync(Id, cancellationToken);

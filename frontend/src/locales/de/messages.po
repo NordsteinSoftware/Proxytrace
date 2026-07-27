@@ -1519,6 +1519,9 @@ msgstr "Die Trace für diese Antwort konnte nicht geöffnet werden."
 msgid "Could not reach the provider."
 msgstr "Der Anbieter konnte nicht erreicht werden."
 
+msgid "Could not read the upstream API key."
+msgstr "Der Upstream-API-Schlüssel konnte nicht gelesen werden."
+
 msgid "Could not reset your password. Please try again."
 msgstr "Das Passwort konnte nicht zurückgesetzt werden. Bitte versuchen Sie es erneut."
 
@@ -3929,6 +3932,9 @@ msgstr "Provider-Konfiguration gelöscht"
 msgid "Provider Config Updated"
 msgstr "Provider-Config aktualisiert"
 
+msgid "Provider Key Revealed"
+msgstr "Provider-Schlüssel angezeigt"
+
 msgid "Provider Key Rotated"
 msgstr "Provider-Schlüssel rotiert"
 
@@ -5345,6 +5351,9 @@ msgstr "Trace gelöscht"
 msgid "Trace is still being captured — try again in a moment."
 msgstr "Trace wird noch erfasst — bitte in einem Moment erneut versuchen."
 
+msgid "Trace limit reached"
+msgstr "Trace-Limit erreicht"
+
 #. placeholder {0}: trace.model
 msgid "Trace preview · {0}"
 msgstr "Trace-Vorschau · {0}"
@@ -5508,6 +5517,12 @@ msgstr "Upstream-API-Schlüssel aktualisiert."
 
 msgid "Upstream key copied"
 msgstr "Upstream-Schlüssel kopiert"
+
+msgid "Upstream pass-through"
+msgstr "Upstream-Pass-through"
+
+msgid "Upstream pass-through — forward non-inference paths (such as /health) to the provider using its own credential. Not traced, and not checked by detectors."
+msgstr "Upstream-Pass-through — leitet Nicht-Inferenz-Pfade (etwa /health) mit den eigenen Zugangsdaten an den Provider weiter. Wird nicht als Trace erfasst und nicht von Detektoren geprüft."
 
 msgid "Use your resource’s OpenAI-compatible v1 endpoint. Model discovery lists the models you have deployed."
 msgstr "Verwenden Sie den OpenAI-kompatiblen v1-Endpunkt Ihrer Ressource. Die Modellauswahl zeigt die Modelle an, die Sie bereitgestellt haben."

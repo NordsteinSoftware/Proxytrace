@@ -1,5 +1,6 @@
 using System.Data.Common;
 using System.Security.Cryptography;
+using System.Text;
 using Proxytrace.Domain.Security;
 using Proxytrace.Domain;
 using Proxytrace.Domain.MfaBackupCode;
@@ -132,7 +133,7 @@ internal sealed class MfaService : IMfaService
         return await transaction.InvokeAsync<IReadOnlyList<string>>(async () =>
         {
             await enrollment.Confirm(matchedStep, cancellationToken);
-            var (display, hashes) = GenerateBackupCodes();
+            var (display, hashes) = GenerateBackupCodes(user);
             foreach (var hash in hashes)
             {
                 await createBackupCode(user, hash).AddAsync(cancellationToken);
@@ -182,8 +183,8 @@ internal sealed class MfaService : IMfaService
         var normalized = NormalizeBackupCode(code);
         if (normalized.Length > 0)
         {
-            var backup = await backupCodes.FindByCodeHashAsync(user.Id, hasher.Hash(normalized), cancellationToken);
-            if (backup is { IsConsumed: false })
+            var backup = await FindMatchingBackupCodeAsync(user, normalized, cancellationToken);
+            if (backup is not null)
             {
                 await backup.MarkConsumedAsync(cancellationToken);
                 challenges.Consume(challengeToken);
@@ -194,6 +195,67 @@ internal sealed class MfaService : IMfaService
         challenges.RegisterFailure(challengeToken);
         return null;
     }
+
+    /// <summary>
+    /// Finds the user's unconsumed backup code matching <paramref name="normalized"/>, or
+    /// <see langword="null"/>.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Codes are hashed with a <b>per-code salt</b>, so there is no hash to look the row up by —
+    /// the candidates have to be loaded and verified one at a time. That is the point: the previous
+    /// single-round unsalted SHA-256 supported a direct indexed lookup precisely because every code
+    /// in the installation hashed under the same function, which is what let one dump be attacked
+    /// against every user's codes simultaneously.
+    /// </para>
+    /// <para>
+    /// The scan is bounded by <see cref="BackupCodeCount"/> (10) and only runs after a TOTP code has
+    /// already failed, so the added verification cost lands on a rare recovery path, never on the
+    /// normal login. Consumed codes are filtered out first so a redeemed code is never re-verified.
+    /// </para>
+    /// </remarks>
+    private async Task<IMfaBackupCode?> FindMatchingBackupCodeAsync(
+        IUser user,
+        string normalized,
+        CancellationToken cancellationToken)
+    {
+        var candidates = await backupCodes.ListByUserAsync(user.Id, cancellationToken);
+        foreach (var candidate in candidates)
+        {
+            if (candidate.IsConsumed)
+            {
+                continue;
+            }
+
+            if (Matches(user, candidate.CodeHash, normalized))
+            {
+                return candidate;
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Verifies a presented code against a stored hash, accepting both the current salted PBKDF2
+    /// form and the legacy unsalted SHA-256 that predates it.
+    /// </summary>
+    /// <remarks>
+    /// Legacy rows are not rewritten: the raw code is unrecoverable, so a stored hash can only be
+    /// upgraded when the user redeems it — and redeeming consumes it, leaving nothing to upgrade.
+    /// Existing codes therefore keep working until they are used or the user regenerates them by
+    /// re-enrolling; only newly issued batches get the stronger hash.
+    /// </remarks>
+    private bool Matches(IUser user, string storedHash, string normalized)
+        => IsLegacySha256(storedHash)
+            ? CryptographicOperations.FixedTimeEquals(
+                Encoding.UTF8.GetBytes(storedHash),
+                Encoding.UTF8.GetBytes(hasher.Hash(normalized)))
+            : passwords.Verify(user, storedHash, normalized);
+
+    // A hex SHA-256 is exactly 64 hex characters; the PBKDF2 form is base64 and longer.
+    private static bool IsLegacySha256(string storedHash)
+        => storedHash.Length == 64 && storedHash.All(Uri.IsHexDigit);
 
     private Task<bool> RemoveEnrollmentAsync(Guid userId, CancellationToken cancellationToken)
         => transaction.InvokeAsync(async () =>
@@ -221,7 +283,18 @@ internal sealed class MfaService : IMfaService
         return new LoginResult(user, issued.Token, issued.ExpiresAt);
     }
 
-    private (IReadOnlyList<string> Display, IReadOnlyList<string> Hashes) GenerateBackupCodes()
+    /// <summary>
+    /// Mints a fresh batch of backup codes, returning the display forms (shown once) and the hashes
+    /// to store.
+    /// </summary>
+    /// <remarks>
+    /// Hashed through <see cref="IPasswordService"/> — PBKDF2 with a per-code salt — rather than the
+    /// unkeyed <see cref="ISecretHasher"/> used for Proxytrace's own 256-bit CSPRNG secrets. A code
+    /// is ~50 bits, sized to be typed by a human, which is well within reach of a GPU rig against a
+    /// single-round unsalted hash; and because that hash was the same function for everyone, one
+    /// dump could be attacked against every user's codes at once.
+    /// </remarks>
+    private (IReadOnlyList<string> Display, IReadOnlyList<string> Hashes) GenerateBackupCodes(IUser user)
     {
         var display = new List<string>(BackupCodeCount);
         var hashes = new List<string>(BackupCodeCount);
@@ -229,7 +302,7 @@ internal sealed class MfaService : IMfaService
         {
             var raw = RandomCode(BackupCodeChars);
             display.Add($"{raw[..5]}-{raw[5..]}");
-            hashes.Add(hasher.Hash(raw));
+            hashes.Add(passwords.Hash(user, raw));
         }
         return (display, hashes);
     }

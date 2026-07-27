@@ -1,5 +1,6 @@
 using JetBrains.Annotations;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Proxytrace.Domain.Statistics;
 using Proxytrace.Domain.AgentCall;
 using Proxytrace.Domain.ModelEndpoint;
@@ -15,15 +16,31 @@ namespace Proxytrace.Storage.Internal.Statistics;
 [UsedImplicitly]
 internal class AgentCallStatsQueries : IAgentCallStatsReader
 {
+    /// <summary>
+    /// Upper bound on the per-call rows <see cref="GetAgentDistributionsAsync"/> pulls into memory.
+    /// </summary>
+    /// <remarks>
+    /// The distributions are computed in C# (std-dev, and cost-per-conversation needs endpoint
+    /// pricing), so the rows have to be materialized. The window is caller-supplied and unbounded,
+    /// so without a cap a request spanning the whole history of a busy agent materializes every one
+    /// of its traces — a memory spike that grows with the trace table. The cap keeps that bounded;
+    /// distributions are statistical summaries, so the most recent N calls describe the shape of the
+    /// data. When the cap bites it is logged rather than silently applied.
+    /// </remarks>
+    private const int MaxDistributionSamples = 200_000;
+
     private readonly Func<StorageDbContext> contextFactory;
     private readonly IMapper<IModelEndpoint, ModelEndpointEntity> endpointMapper;
+    private readonly ILogger<AgentCallStatsQueries> logger;
 
     public AgentCallStatsQueries(
         Func<StorageDbContext> contextFactory,
-        IMapper<IModelEndpoint, ModelEndpointEntity> endpointMapper)
+        IMapper<IModelEndpoint, ModelEndpointEntity> endpointMapper,
+        ILogger<AgentCallStatsQueries> logger)
     {
         this.contextFactory = contextFactory;
         this.endpointMapper = endpointMapper;
+        this.logger = logger;
     }
 
     public async Task<StatisticsSummary> GetSummaryAsync(StatisticsFilter filter, CancellationToken cancellationToken = default)
@@ -701,15 +718,20 @@ internal class AgentCallStatsQueries : IAgentCallStatsReader
             .Where(v => v.AgentId == agentId)
             .Select(v => v.Id);
 
-        // Single materialise-and-compute pass. Scoped to one agent over a bounded window, so pulling
-        // the minimal per-call projection into memory is cheap. Std-dev needs no ordered-set aggregate
-        // (unlike the latency percentiles above), and cost-per-conversation needs C# endpoint pricing,
-        // so every distribution is computed here rather than splitting relational/in-memory paths.
+        // Single materialise-and-compute pass. Std-dev needs no ordered-set aggregate (unlike the
+        // latency percentiles above), and cost-per-conversation needs C# endpoint pricing, so every
+        // distribution is computed here rather than splitting relational/in-memory paths.
+        //
+        // The window is caller-supplied and unbounded, so the row set is capped at
+        // MaxDistributionSamples most-recent calls: a request spanning a busy agent's whole history
+        // would otherwise materialize its entire trace history at once.
         var calls = await context.Set<AgentCallEntity>()
             .AsNoTracking()
             .Where(c => versionIdsForAgent.Contains(c.AgentVersionId)
                 && c.CreatedAt >= from && c.CreatedAt <= to
                 && c.HttpStatus >= 200 && c.HttpStatus < 300)
+            .OrderByDescending(c => c.CreatedAt)
+            .ThenByDescending(c => c.Id)
             .Select(c => new
             {
                 ConvKey = c.ConversationId ?? c.Id,
@@ -721,11 +743,21 @@ internal class AgentCallStatsQueries : IAgentCallStatsReader
                 c.LatencyMs,
                 Tools = c.ResponseToolRequestCount,
             })
+            .Take(MaxDistributionSamples)
             .ToListAsync(cancellationToken);
 
         if (calls.Count == 0)
         {
             return AgentCallDistributions.Empty;
+        }
+
+        if (calls.Count == MaxDistributionSamples)
+        {
+            // Never truncate silently — the caller is looking at a sample, not the whole window.
+            logger.LogInformation(
+                "Distributions for agent {AgentId} over {From:o}–{To:o} hit the {Cap}-call sample cap; "
+                + "the returned distributions describe the most recent {Cap} calls in that window.",
+                agentId, from, to, MaxDistributionSamples, MaxDistributionSamples);
         }
 
         // Per-call metrics.

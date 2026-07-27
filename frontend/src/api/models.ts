@@ -747,10 +747,19 @@ export interface ProviderDto {
   id: string;
   name: string;
   endpoint: string;
-  upstreamApiKey: string;
+  /**
+   * Masked rendering of the upstream credential — enough to tell two keys apart, never enough to
+   * use. The cleartext key is fetched on demand from `providersApi.getUpstreamKey`, which is
+   * admin-gated and audited server-side.
+   */
+  upstreamApiKeyPreview: string;
   kind: ModelProviderKind;
   createdAt: string;
   updatedAt: string;
+}
+/** Cleartext upstream credential, returned only by the audited reveal endpoint. */
+export interface ProviderKeyDto {
+  upstreamApiKey: string;
 }
 /** A provider with its model endpoints and API keys embedded. */
 export interface ProviderWithDetailsDto {
@@ -775,7 +784,7 @@ export interface ModelEndpointDto {
   createdAt: string;
   updatedAt: string;
 }
-export type ApiKeyScope = 'Ingestion' | 'McpRead' | 'McpWrite' | 'ApiRead' | 'ApiWrite';
+export type ApiKeyScope = 'Ingestion' | 'Passthrough' | 'McpRead' | 'McpWrite' | 'ApiRead' | 'ApiWrite';
 export interface ApiKeyDto {
   id: string;
   name: string;
@@ -1186,7 +1195,12 @@ export type TestRunEvent =
   | GroupRunCompleteEvent;
 
 /* ── Notifications ── */
-export enum NotificationKind { Anomaly = 'Anomaly', ProposalReady = 'ProposalReady' }
+export enum NotificationKind {
+  Anomaly = 'Anomaly',
+  ProposalReady = 'ProposalReady',
+  /** The licensed monthly trace limit is reached and captures for this project are being dropped. */
+  TraceQuotaReached = 'TraceQuotaReached',
+}
 export enum NotificationSeverity { Info = 'Info', Warning = 'Warning', Critical = 'Critical' }
 export enum NotificationStatus { Unread = 'Unread', Read = 'Read', Dismissed = 'Dismissed' }
 export enum NotificationTargetKind {
@@ -1331,6 +1345,7 @@ export enum AuditAction {
   CustomAnomalyDetectorUpdated = 'CustomAnomalyDetectorUpdated',
   CustomAnomalyDetectorDeleted = 'CustomAnomalyDetectorDeleted',
   ProviderUpstreamKeyRotated = 'ProviderUpstreamKeyRotated',
+  ProviderUpstreamKeyRevealed = 'ProviderUpstreamKeyRevealed',
 }
 
 export enum AuditActorType {

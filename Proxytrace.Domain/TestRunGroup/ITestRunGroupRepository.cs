@@ -15,6 +15,20 @@ public interface ITestRunGroupRepository : IRepository<ITestRunGroup>
         IReadOnlyCollection<TestRunStatus> statuses,
         CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Returns terminal, non-system groups the optimizer has not considered yet, oldest first.
+    /// </summary>
+    /// <remarks>
+    /// Backs the optimizer's restart recovery. Its queue is an in-process channel, so a restart
+    /// discarded whatever was still in it — a deploy during a scheduled-run window silently dropped
+    /// that night's optimization. System runs are excluded because they are the optimizer's own A/B
+    /// runs and must never re-trigger it. Filters in SQL over the
+    /// (OptimizationConsideredAt, IsSystemRun, Status) index.
+    /// </remarks>
+    Task<IReadOnlyList<ITestRunGroup>> GetPendingOptimizationAsync(
+        int limit,
+        CancellationToken cancellationToken = default);
+
     Task<IReadOnlyList<ITestRunGroup>> GetByProjectAsync(Guid projectId, CancellationToken cancellationToken = default);
 
     Task<PagedResult<ITestRunGroup>> GetByAgentPagedAsync(

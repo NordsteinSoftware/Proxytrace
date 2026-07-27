@@ -1,3 +1,4 @@
+using Proxytrace.Common.Async;
 using Proxytrace.Domain.Statistics;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -37,7 +38,20 @@ public class TestSuitesController : ControllerBase
     private readonly IStatsReader<TestRunStats, TestRunStats.Filter> runStats;
     private readonly ILicenseService license;
     private readonly IProjectAccessGuard accessGuard;
+    private readonly IAsyncLock asyncLock;
     private readonly ILogger<Audit> audit;
+
+    /// <summary>
+    /// Lock key serializing the licensed-suite-count check against the create that follows it.
+    /// </summary>
+    /// <remarks>
+    /// The limit is installation-wide, so the key is a constant rather than per-project. Mirrors
+    /// <c>TheoryValidationService.SubmitAsync</c>, which serializes its own check-then-act quota the
+    /// same way. Like that one this is per-process: it closes the ordinary double-submit race, not a
+    /// race between two replicas — enforcing across replicas needs a database constraint, which a
+    /// count-based limit cannot express.
+    /// </remarks>
+    private const string SuiteQuotaLockKey = "license-quota:test-suites";
 
     public TestSuitesController(
         ITestSuiteRepository suiteRepository,
@@ -55,10 +69,12 @@ public class TestSuitesController : ControllerBase
         IStatsReader<TestRunStats, TestRunStats.Filter> runStats,
         ILicenseService license,
         IProjectAccessGuard accessGuard,
+        IAsyncLock asyncLock,
         ILogger<Audit> audit)
     {
         this.audit = audit;
         this.accessGuard = accessGuard;
+        this.asyncLock = asyncLock;
         this.suiteRepository = suiteRepository;
         this.agentRepository = agentRepository;
         this.agentCallRepository = agentCallRepository;
@@ -226,6 +242,10 @@ public class TestSuitesController : ControllerBase
         if (!await accessGuard.CanAccessProjectAsync(agent.Project.Id, cancellationToken))
             return NotFound();
 
+        // Held to the end of the method, so the count and the create that acts on it cannot be
+        // interleaved by a concurrent request — two simultaneous creates both used to observe
+        // "0 suites" and both proceed, taking a Free-tier install to two.
+        using IDisposable quotaLock = await asyncLock.LockAsync(SuiteQuotaLockKey, cancellationToken);
         license.Ensure(LicenseLimit.MaxTestSuites, await suiteRepository.CountAsync(cancellationToken));
 
         IReadOnlyCollection<IEvaluator> evaluators;
@@ -353,6 +373,10 @@ public class TestSuitesController : ControllerBase
         if (!await accessGuard.CanAccessProjectAsync(agent.Project.Id, cancellationToken))
             return NotFound();
 
+        // Held to the end of the method, so the count and the create that acts on it cannot be
+        // interleaved by a concurrent request — two simultaneous creates both used to observe
+        // "0 suites" and both proceed, taking a Free-tier install to two.
+        using IDisposable quotaLock = await asyncLock.LockAsync(SuiteQuotaLockKey, cancellationToken);
         license.Ensure(LicenseLimit.MaxTestSuites, await suiteRepository.CountAsync(cancellationToken));
 
         IReadOnlyCollection<IEvaluator> evaluators;

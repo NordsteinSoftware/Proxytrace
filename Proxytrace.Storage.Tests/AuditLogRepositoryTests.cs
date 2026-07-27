@@ -99,6 +99,24 @@ public sealed class AuditLogRepositoryTests : BaseTest<Module>
         paged.Items.Should().ContainSingle(e => e.ActorEmail == "alice@example.com");
     }
 
+    [TestMethod]
+    public async Task GetPagedNewestFirst_WithWildcardInActorSearch_MatchesItLiterally()
+    {
+        // % and _ are LIKE operators, so an unescaped search term made "%" match every actor and
+        // "a_b" match "axb". The pattern builder escapes them, so they are matched as typed.
+        var services = GetServices();
+        var repository = services.GetRequiredService<IAuditLogRepository>();
+
+        await SeedAsync(services, Guid.NewGuid(), email: "alice@example.com");
+        await SeedAsync(services, Guid.NewGuid(), email: "bob@example.com");
+
+        var paged = await repository.GetPagedNewestFirstAsync(
+            1, 50, action: null, actorSearch: "%", projectIds: null, includeGlobal: true,
+            targetType: null, targetId: null, from: null, to: null, CancellationToken);
+
+        paged.Total.Should().Be(0, "no actor email contains a literal percent sign");
+    }
+
     private async Task<IAuditLogEntry> SeedAsync(
         IServiceProvider services,
         Guid? projectId,

@@ -8,8 +8,7 @@ import { Spinner } from '../../../components/ui/Spinner';
 import useToast from '../../../hooks/useToast';
 import { cn } from '../../../lib/cn';
 import { ProviderConnectionTestError, providerConnectionErrorMessage } from '../../../lib/providerConnection';
-import { maskKey } from '../providerMeta';
-import { useRotateUpstreamKey } from '../hooks/useProviderMutations';
+import { useRevealUpstreamKey, useRotateUpstreamKey } from '../hooks/useProviderMutations';
 
 interface UpstreamKeyRowProps {
   provider: ProviderDto;
@@ -21,23 +20,35 @@ export function UpstreamKeyRow({ provider }: UpstreamKeyRowProps) {
   const { t, i18n } = useLingui();
   const { show: toast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
-  const [isRevealed, setIsRevealed] = useState(false);
+  // The cleartext key is held only while the user is looking at it, and never in the Query cache.
+  const [revealedKey, setRevealedKey] = useState<string | null>(null);
   const [draft, setDraft] = useState('');
   const [feedback, setFeedback] = useState<Feedback | null>(null);
   const editButtonRef = useRef<HTMLButtonElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const rotateKey = useRotateUpstreamKey(provider);
+  const revealKey = useRevealUpstreamKey(provider.id);
   const normalizedDraft = draft.trim();
-  const canSave = normalizedDraft.length > 0
-    && normalizedDraft !== provider.upstreamApiKey
-    && !rotateKey.isPending;
+  const canSave = normalizedDraft.length > 0 && !rotateKey.isPending;
   const inputSize = 'sm' as const;
 
   function startEditing() {
     setDraft('');
     setFeedback(null);
-    setIsRevealed(false);
+    setRevealedKey(null);
     setIsEditing(true);
+  }
+
+  function toggleReveal() {
+    if (revealedKey !== null) {
+      setRevealedKey(null);
+      return;
+    }
+    // Fetched only when actually asked for — each read is audited server-side.
+    revealKey.mutate(undefined, {
+      onSuccess: key => setRevealedKey(key),
+      onError: () => setFeedback({ tone: 'error', message: t`Could not read the upstream API key.` }),
+    });
   }
 
   function focusEditButton() {
@@ -51,7 +62,7 @@ export function UpstreamKeyRow({ provider }: UpstreamKeyRowProps) {
       onSuccess: result => {
         setDraft('');
         setIsEditing(false);
-        setIsRevealed(false);
+        setRevealedKey(null);
         focusEditButton();
         setFeedback(result.modelCount === 0
           ? { tone: 'warning', message: t`Key accepted, but the provider reported no models.` }
@@ -72,9 +83,21 @@ export function UpstreamKeyRow({ provider }: UpstreamKeyRowProps) {
   }
 
   function copyKey() {
-    void navigator.clipboard.writeText(provider.upstreamApiKey);
-    // eslint-disable-next-line lingui/no-unlocalized-strings -- toast tone token, not UI copy
-    toast(t`Upstream key copied`, 'success');
+    // Reuse an already-revealed key rather than spending a second audited read on it.
+    if (revealedKey !== null) {
+      void navigator.clipboard.writeText(revealedKey);
+      // eslint-disable-next-line lingui/no-unlocalized-strings -- toast tone token, not UI copy
+      toast(t`Upstream key copied`, 'success');
+      return;
+    }
+    revealKey.mutate(undefined, {
+      onSuccess: key => {
+        void navigator.clipboard.writeText(key);
+        // eslint-disable-next-line lingui/no-unlocalized-strings -- toast tone token, not UI copy
+        toast(t`Upstream key copied`, 'success');
+      },
+      onError: () => setFeedback({ tone: 'error', message: t`Could not read the upstream API key.` }),
+    });
   }
 
   return (
@@ -125,15 +148,16 @@ export function UpstreamKeyRow({ provider }: UpstreamKeyRowProps) {
         ) : (
           <>
             <code className="flex-1 font-mono text-body text-secondary overflow-hidden text-ellipsis whitespace-nowrap">
-              {isRevealed ? provider.upstreamApiKey : maskKey(provider.upstreamApiKey)}
+              {revealedKey ?? provider.upstreamApiKeyPreview}
             </code>
             <Button
               data-testid="provider-upstream-key-reveal-btn"
               size="sm"
               variant="ghost"
-              onClick={() => setIsRevealed(value => !value)}
+              loading={revealKey.isPending}
+              onClick={toggleReveal}
             >
-              {isRevealed ? <Trans>Hide</Trans> : <Trans>Reveal</Trans>}
+              {revealedKey !== null ? <Trans>Hide</Trans> : <Trans>Reveal</Trans>}
             </Button>
             <Button
               data-testid="provider-upstream-key-copy-btn"

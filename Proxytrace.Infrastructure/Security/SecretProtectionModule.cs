@@ -45,6 +45,18 @@ public sealed class SecretProtectionModule : Autofac.Module
             .As<ISecretHasher>()
             .SingleInstance();
 
+        // Blind index for the operator-entered upstream provider key. Keyed (HMAC), unlike
+        // ISecretHasher — that one covers 256-bit CSPRNG secrets a dump cannot reverse, while a
+        // provider key is whatever the operator typed, often "EMPTY" or "ollama" on a self-hosted
+        // backend. See ISecretIndexer.
+        builder.RegisterType<Internal.BlindIndexKey>()
+            .AsSelf()
+            .SingleInstance();
+
+        builder.RegisterType<Internal.HmacSecretIndexer>()
+            .As<ISecretIndexer>()
+            .SingleInstance();
+
         var dataProtectionDir = Environment.GetEnvironmentVariable(DataDirectoryVariable);
         builder.RegisterServiceCollection(services =>
         {

@@ -117,8 +117,8 @@ public class AgentsController : ControllerBase
             return NotFound();
         if (!await accessGuard.CanAccessProjectAsync(agent.Project.Id, cancellationToken))
             return NotFound();
-        var lastCallTimes = await agentCallRepository.GetLastCallTimesAsync(cancellationToken);
-        return agentDtoMapper.ToDto(agent, lastCallTimes.TryGetValue(agent.Id, out var t) ? t : null);
+        var lastCallTime = await agentCallRepository.GetLastCallTimeAsync(agent.Id, cancellationToken);
+        return agentDtoMapper.ToDto(agent, lastCallTime);
     }
 
     /// <summary>

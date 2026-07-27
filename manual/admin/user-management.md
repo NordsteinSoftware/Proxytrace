@@ -24,6 +24,16 @@ own** account from this page. Those actions are disabled in the UI and rejected 
 (HTTP 409), so the instance can never be locked out of administration.
 :::
 
+::: warning A user who owns API keys cannot be deleted outright
+Every API key records the person who created it. Deleting a user who still owns keys is **refused**,
+and the message lists the keys by name.
+
+This is deliberate: an API key is stored in a form that cannot be read back, so a deleted key cannot
+be restored — only replaced — and anything configured with it stops working immediately, with no
+indication beyond rejected requests. Before deleting the user, go to **Settings → Providers** and
+either delete the keys (updating whatever uses them) or reissue equivalents under another owner.
+:::
+
 ## Adding users (local mode)
 
 When Proxytrace uses local username/password authentication, users are onboarded by invitation —

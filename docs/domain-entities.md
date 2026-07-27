@@ -52,7 +52,15 @@ The boundary is sharp: **domain layer references the full entity, storage layer 
 
 - **1:N** — domain holds the parent as `IModelEndpoint SystemEndpoint { get; }`; storage holds `Guid SystemEndpoint`; mapper resolves the parent via the parent's repository in `Map(stored, ct)`. Configure with `HasOne<ModelEndpointEntity>().WithMany().HasForeignKey(e => e.SystemEndpoint).OnDelete(DeleteBehavior.Restrict)`.
 - **N:M** — domain holds `IReadOnlyCollection<IEvaluator> Evaluators { get; }`; storage uses a junction entity (e.g. `TestSuiteEvaluatorEntity` with `TestSuiteId`/`EvaluatorId`) and a navigation collection on the parent storage entity. Junction entities have **no domain counterpart** and are registered explicitly in `Proxytrace.Storage.Module`. The custom repository overrides `UpdateRelationsAsync` to sync the junction rows during `Update` (see `TestSuiteRepository`).
-- **Delete behavior** — `Restrict` for optional references, `Cascade` for owned children.
+- **Delete behavior** — `Restrict` for optional references, `Cascade` for owned children. **A row
+  that cannot be recreated is never an "owned child", however strong the ownership reads.**
+  `ApiKey → ModelProvider` and `ApiKey → User` were both `Cascade` on exactly that reasoning ("the
+  key acts as its owner, so it cannot outlive them") — but only the key's *hash* is stored, so the
+  cascade did not detach a key, it destroyed one: hard-deleting a provider, or offboarding an admin
+  who had minted an integration key, silently revoked credentials that can never be recovered, and
+  the failure surfaced later as unexplained 401s. Both are now `Restrict`, with
+  `UserAdministrationService` turning the resulting FK violation into a 409 naming the keys to
+  delete or reassign first. Ask "can this row be recreated?" before choosing `Cascade`.
 - **FK-free (denormalized snapshot)** — an entity that must **survive deletion of what it points at**
   deliberately holds **no** FK: it stores the referenced id as a plain `Guid?` column, so the row
   outlives its referent. `AuditLogEntry` is the reference example (`ActorUserId`, `ProjectId`,

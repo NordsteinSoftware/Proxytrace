@@ -608,6 +608,7 @@ internal sealed class StatisticsBackfillScenario : IDemoScenario
             isSystemRun: fresh.IsSystemRun,
             scheduleId: fresh.ScheduleId,
             sampleCount: fresh.SampleCount,
+            optimizationConsideredAt: fresh.OptimizationConsideredAt,
             existing: new BackdatedData(fresh.Id, groupTime, fresh.UpdatedAt));
         await backdatedGroup.UpdateAsync(cancellationToken);
     }

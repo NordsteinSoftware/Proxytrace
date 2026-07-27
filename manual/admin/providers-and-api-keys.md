@@ -44,6 +44,19 @@ custom or self-hosted endpoint is shown). The model
 list is **pulled from the provider** — there is no manual "add model" control; use reload (or wait
 for the periodic refresh) to pick up newly deployed models.
 
+### Viewing an upstream API key
+
+The **Upstream API key** row shows the stored credential masked — a few leading and trailing
+characters, enough to tell two keys apart and to confirm a rotation took effect.
+
+Choosing **Reveal** (or **Copy**) fetches the key itself. Only administrators can do this, and
+**every reveal is recorded in the audit log** as *Provider Key Revealed*, naming the administrator
+and the provider. The key value itself is never written to the audit log.
+
+The key is fetched only at the moment you ask for it. It is not part of the providers page's data,
+so simply opening the page — or leaving it open — does not put any provider credential in front of
+the browser.
+
 ### Rotating an upstream API key
 
 To replace the credential Proxytrace uses when forwarding requests to a provider:

@@ -47,6 +47,115 @@ follow [Semantic Versioning](https://semver.org). Ongoing work is collected unde
   its brief validity window it could be replayed against ordinary endpoints, including administrative
   ones. It is now restricted to the live-update endpoints it was minted for.
 
+### Changed
+
+- **Optimization proposals are now held to a stricter, correct standard of proof.** Two flaws made
+  the optimizer accept proposals it should not have. Repeating a test run several times — intended to
+  average out flaky results — was counted as if each repeat were fresh independent evidence, so the
+  statistical check grew *more* confident the more repeats were configured, which is backwards.
+  Separately, model-switch comparisons measured the proposed model against a previously recorded run
+  rather than a fresh one, so anything that had changed in between was attributed to the model.
+  Comparisons are now made case by case against a run executed at the same time, and repeats sharpen
+  each case's result without inflating confidence. **Some proposals that would previously have been
+  accepted will now be reported as unproven** — that is the correction, not a regression. Model
+  switches also now honour the configured number of samples, which they previously ignored.
+
+### Fixed
+
+- **One busy project can no longer use up the whole installation's monthly trace allowance.**
+  Reaching the licensed trace limit stopped capture everywhere at once, so a single heavy project
+  could exhaust the month and silently take every other project's tracing down with it — including
+  projects that had barely recorded anything. Each project is now measured against an equal share of
+  the limit, and only projects above their share stop being captured. **Dropping is also no longer
+  invisible:** the affected project gets a notification, and the Error Log records that the limit was
+  reached. The check also runs far more often as the limit approaches, so an installation overshoots
+  by much less than it could before.
+
+- **A restart no longer skips a scheduled night's optimization.** Finished test runs waited in an
+  in-memory queue to be analysed for improvement suggestions. Restarting the application — a deploy,
+  an upgrade, a host reboot — discarded whatever was still waiting, so a restart that happened to
+  land during a scheduled run window silently cancelled that night's analysis, with nothing recorded
+  to show it had been due. Runs that have not yet been analysed are now picked up on the next start.
+  Existing history is not retroactively analysed, and the demo installation is unaffected.
+
+- **Evaluator history no longer goes blank on a busy installation.** The recent-results list, the
+  latest result, and the search on an evaluator's detail page all worked by taking the most recent few
+  hundred test results from across the *entire* installation and then picking out the ones belonging
+  to that evaluator. Once anything else had produced more results than that window held, the page
+  showed nothing at all — and because the window was shared, one busy project's activity emptied
+  other projects' pages. Each evaluator's history is now looked up directly, so what you see depends
+  only on your own evaluator's results.
+
+- **Playground model settings now actually affect the request.** Temperature, top-p, penalties, max
+  tokens, seed, stop sequences, reasoning effort and choice count could all be set in the playground's
+  right-hand panel, but none of them were sent to the provider — every response came back with the
+  provider's defaults, with nothing to indicate the settings had been ignored. They are now included
+  in the request. Providers that do not accept a particular setting (reasoning models reject
+  temperature, for example) now say so, rather than the value being dropped in silence.
+
+- **Licence limits are no longer exceeded by two simultaneous requests.** The checks for the number
+  of test suites, user seats, and projects each counted what already existed and then created the new
+  item as a separate step. Two requests arriving at the same moment both counted the same "before"
+  figure and both went ahead, so an installation could end up one over its licensed limit — most
+  easily by double-clicking a create button. Each check now completes before the next can start.
+
+- **Pass rates no longer include test runs you never started.** When the optimizer evaluates a
+  proposed improvement it runs the suite itself, behind the scenes. Those internal runs are correctly
+  hidden from the run list — but their results were still counted in the pass-rate figures and in the
+  baseline that anomaly detection compares against. Pass rates therefore moved for reasons nobody
+  could see or investigate, and the baseline was skewed by runs deliberately testing unproven
+  changes. Internal runs are now excluded from both, and any already recorded are cleared on the next
+  start.
+
+- **Deleting a user no longer silently destroys the API keys they created.** API keys were tied to
+  the person who minted them, so removing that person — routine when somebody leaves — deleted their
+  keys along with the account. Keys cannot be recovered, only replaced, so every integration using
+  one stopped working with nothing to explain it but a rejected request. Deleting a user who still
+  owns keys is now refused, with a message listing them so they can be removed or reissued
+  deliberately first. Deleting a provider can no longer destroy its keys either.
+
+- **Two-factor backup codes are now stored the way passwords are.** The recovery codes issued when
+  two-factor authentication is switched on were stored as a single plain hash each. Because a backup
+  code is short enough to type by hand, and because every code was hashed the same way, one stolen
+  database could be attacked against every user's codes at once with ordinary graphics hardware. They
+  are now stored salted and deliberately slow, so each code has to be attacked on its own. Codes
+  issued before this release keep working; new ones — and any issued after re-enrolling — get the
+  stronger storage.
+
+- **A stolen database backup no longer reveals weak upstream provider keys.** Proxytrace stores each
+  provider's upstream key encrypted, alongside a fingerprint it uses to look the provider up when a
+  request arrives. That fingerprint was a plain hash, which is safe for the long random keys
+  Proxytrace generates itself but not for one an operator types in — self-hosted model servers are
+  commonly configured with values like `EMPTY` or `ollama`, and a plain hash of those is recovered
+  from a word list in seconds, defeating the encryption next to it. The fingerprint is now computed
+  with a secret held in the installation's data directory, which a database backup does not contain.
+  Existing installations are upgraded automatically on the next start and keep working throughout;
+  operators running the API and proxy as separate containers must have them share the data directory,
+  as they already must for encryption to work at all.
+
+- **Forwarding non-inference requests through the proxy now needs its own permission.** Proxytrace
+  relays any path under `/{project}/` that is not an LLM call — `/health` and anything else the
+  provider serves — straight to the provider using your real upstream credential. That reach is
+  broader than capturing traffic: on a provider that also serves account-management routes at the
+  same address, a key issued purely to record LLM calls could reach those too, and none of it is
+  traced, checked by detectors, or written to the audit log. Keys now need an explicit **Upstream
+  pass-through** capability for it. **Existing keys keep it, so nothing breaks on upgrade** — but new
+  keys must be granted it deliberately. Requests authenticated with the provider's own key are
+  unaffected, since they could reach the provider directly anyway.
+
+- **Provider credentials are no longer sent to the browser on every providers-page load.** The
+  Providers settings page received every configured provider's upstream key in full each time it
+  loaded, whether or not anyone pressed "Reveal" — so the secrets sat in browser memory, in the
+  browser's network log, and in any proxy or extension between, with no record of who had seen them.
+  The page now receives only a masked preview; choosing **Reveal** or **Copy** fetches the key
+  itself, and each of those reads is written to the audit log as *Provider Key Revealed*.
+
+- **The sign-in form no longer reveals which email addresses have an account.** Signing in with an
+  unknown address was rejected immediately, while a known address took noticeably longer because the
+  password actually had to be checked. Timing the two apart let an outsider work through a list of
+  addresses and learn which ones are registered — useful for targeting a phishing or password-spraying
+  attempt. Both answers now take the same work, and so the same time.
+
 - **The licence holder's email address is no longer readable without signing in.** The licence
   endpoint is deliberately public so the setup wizard and sign-in screen can show the edition, but it
   also returned the purchaser's email to anyone who asked. Signed-in users still see it.
@@ -85,6 +194,44 @@ follow [Semantic Versioning](https://semver.org). Ongoing work is collected unde
   written to a log or an error message. They now redact it, as the provider record already did.
 
 ### Fixed
+
+- **Editing a provider, project or agent now takes effect on captured traffic immediately.** Settings
+  that rarely change are held in a short-lived in-memory cache, but that cache was kept separately per
+  request — so saving a change refreshed only the copy belonging to the browser request that made it,
+  while the trace-capture path went on reading its own untouched copy for up to five minutes. Rotating
+  a provider's upstream API key was the sharpest case: capture kept authenticating with the old key,
+  and the calls it was recording failed, until the cache happened to expire. Saving a change now
+  refreshes every copy at once.
+
+- **Opening a single agent no longer gets slower as traces accumulate.** The agent page (and the
+  `get_agent` MCP tool) worked out when the agent was last used by scanning and grouping the entire
+  trace table across every agent, then picking one row out of the result. On a busy installation that
+  turned a page that should be instant into one that slowed down month after month. It now reads only
+  that agent's own traces.
+
+- **Resetting an installation's data no longer loads every trace into memory first.** The admin data
+  reset deleted traces by loading them all and marking each one removed, so resetting an installation
+  with millions of traces could exhaust memory before it finished. The deletion is now done by the
+  database in a single statement.
+
+- **The agent distribution charts no longer load an unlimited number of traces at once.** The time
+  range comes from the request, so asking for a wide enough range pulled an agent's entire history
+  into memory in one go. The charts are now computed from a bounded sample of the most recent traces
+  in the range, and the log records when that limit applies.
+
+- **Test runs no longer make far more provider calls at once than configured.** The parallelism
+  setting was applied separately to each of three nested stages — the runs in a group, the test cases
+  in a run, and the evaluators on a case — so the configured number was multiplied by itself three
+  times rather than respected: the default of 2 allowed up to 8 simultaneous calls. Installations
+  hitting provider rate limits during a run, or seeing sharper cost spikes than the setting implied,
+  were seeing this. The setting is now an absolute cap on simultaneous provider calls.
+
+- **Searching traces by model, and searching the error log, now ignores capitalisation.** Both
+  searches matched letter-for-letter against the database, so filtering traces for "GPT" found nothing
+  when the model was recorded as "gpt-4o", and an error search for "TimeoutException" missed entries
+  logged in another casing. Typing `%` or `_` in either box also acted as a wildcard rather than being
+  searched for. Both now match regardless of capitalisation, and those two characters are searched
+  literally.
 
 - **A schedule anchored to a non-UTC time no longer fires every minute.** The next-run calculation
   compared two timestamps by their wall-clock reading rather than the instant they represent, so an

@@ -819,6 +819,97 @@ public sealed class TestRunnerServiceTests : BaseTest<Module>
     }
 
     [TestMethod]
+    public async Task Run_AcrossNestedParallelLoops_NeverExceedsTheConfiguredDegreeOfModelCalls()
+    {
+        // The runner nests three parallel loops — runs, then that run's test cases, then that
+        // case's evaluators — and each was configured with the same MaxDegreeOfParallelism, so the
+        // setting multiplied instead of capping: at the default of 2 the loops permitted 2×2×2 = 8
+        // concurrent upstream calls. With several endpoints and several cases, the observed peak
+        // must stay within the configured value.
+        const int degree = 2;
+        var expectedOutput = new AssistantMessage([Content.FromText(MatchingText)], []);
+
+        var inFlight = 0;
+        var peak = 0;
+
+        var services = GetServices(config =>
+        {
+            config.RegisterInstance(new TestRunnerConfiguration { MaxDegreeOfParallelism = degree })
+                .As<TestRunnerConfiguration>();
+
+            config.Register(ct =>
+            {
+                IModelClient handler = Substitute.For<IModelClient>();
+                var completionFactory = ct.Resolve<ICompletion.Create>();
+                handler.CompleteAsync(Arg.Any<Conversation>(), Arg.Any<ModelOptions>(), Arg.Any<IReadOnlyDictionary<string, string>?>(), Arg.Any<CancellationToken>())
+                    .Returns(async _ =>
+                    {
+                        int current = Interlocked.Increment(ref inFlight);
+                        // Record the high-water mark without locking: retry until our observed
+                        // value is no longer higher than what is stored.
+                        int observed = Volatile.Read(ref peak);
+                        while (current > observed)
+                        {
+                            int won = Interlocked.CompareExchange(ref peak, current, observed);
+                            if (won == observed) break;
+                            observed = won;
+                        }
+
+                        // Hold the slot long enough for every other loop iteration to pile up, so a
+                        // missing cap shows as a peak above `degree` rather than as lucky timing.
+                        await Task.Delay(TimeSpan.FromMilliseconds(50), CancellationToken);
+                        Interlocked.Decrement(ref inFlight);
+                        return completionFactory(expectedOutput, null, TimeSpan.FromMilliseconds(1));
+                    });
+                return handler;
+            });
+        });
+
+        var suite = await BuildSuiteWithCasesAsync(services, expectedOutput, caseCount: 3, CancellationToken);
+        var endpoints = await CreateEndpoints(services, 3);
+        var runner = services.GetRequiredService<ITestRunnerService>();
+
+        await runner.RunInForegroundAsync(suite, endpoints, isSystemTestRun: true, cancellationToken: CancellationToken);
+
+        Volatile.Read(ref peak).Should().BeLessThanOrEqualTo(degree,
+            "the configured degree is an absolute cap on concurrent model calls, not a per-loop one");
+        Volatile.Read(ref peak).Should().BeGreaterThan(0, "the run must actually have called the model");
+    }
+
+    /// Builds a suite with <paramref name="caseCount"/> test cases, so a run exercises the
+    /// test-case loop nested inside the per-run loop.
+    private static async Task<ITestSuite> BuildSuiteWithCasesAsync(
+        IServiceProvider services,
+        AssistantMessage expectedOutput,
+        int caseCount,
+        CancellationToken ct)
+    {
+        var agentGenerator = services.GetRequiredService<IDomainEntityGenerator<IAgent>>();
+        var evaluatorGenerator = services.GetRequiredService<IDomainEntityGenerator<IExactMatchEvaluator>>();
+        var createTestCase = services.GetRequiredService<ITestCase.CreateNew>();
+        var testCaseRepo = services.GetRequiredService<IRepository<ITestCase>>();
+        var createTestSuite = services.GetRequiredService<ITestSuite.CreateNew>();
+        var testSuiteRepo = services.GetRequiredService<IRepository<ITestSuite>>();
+
+        var agent = await agentGenerator.GetOrCreateAsync(ct);
+        var evaluator = await evaluatorGenerator.CreateAsync(ct);
+
+        var testCases = new List<ITestCase>(caseCount);
+        for (var i = 0; i < caseCount; i++)
+        {
+            var input = Conversation.Create()
+                .With(new UserMessage([Content.FromText($"Question {i}")]));
+            var testCase = createTestCase(input, expectedOutput, sourceAgentCallId: null);
+            await testCaseRepo.AddAsync(testCase, ct);
+            testCases.Add(testCase);
+        }
+
+        var suite = createTestSuite("Parallelism Suite", agent, [evaluator], testCases);
+        await testSuiteRepo.AddAsync(suite, ct);
+        return suite;
+    }
+
+    [TestMethod]
     public async Task RunInBackground_WithSampleCountOutOfRange_Throws()
     {
         var expectedOutput = new AssistantMessage([Content.FromText(MatchingText)], []);

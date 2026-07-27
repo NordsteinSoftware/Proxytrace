@@ -118,4 +118,10 @@ public enum AuditAction
     // ProviderConfigUpdated so security review can find rotations without diffing configurations.
     // The key value itself is never recorded.
     ProviderUpstreamKeyRotated = 70,
+
+    // An administrator read a provider's upstream API key back in the clear. The key used to ship
+    // with every providers-page load, so nothing recorded who had actually seen it; it is now
+    // returned only from a dedicated endpoint, and each read lands here. The key value itself is
+    // never recorded.
+    ProviderUpstreamKeyRevealed = 71,
 }

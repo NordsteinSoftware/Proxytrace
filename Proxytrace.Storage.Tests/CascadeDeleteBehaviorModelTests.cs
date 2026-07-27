@@ -2,6 +2,7 @@ using AwesomeAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Proxytrace.Storage.Internal.Entities.AgentCall;
+using Proxytrace.Storage.Internal.Entities.ApiKey;
 using Proxytrace.Storage.Internal.Entities.ModelEndpoint;
 using Proxytrace.Storage.Internal.Entities.ModelProvider;
 using Proxytrace.Storage.Internal.Entities.TestRun;
@@ -38,6 +39,28 @@ public sealed class CascadeDeleteBehaviorModelTests : BaseTest<Module>
         DeleteBehaviorFor<ModelEndpointEntity>(nameof(ModelEndpointEntity.Provider))
             .Should().Be(DeleteBehavior.Restrict,
                 "a hard delete of a ModelProvider must never cascade through its endpoints to the traces table");
+    }
+
+    [TestMethod]
+    public void ApiKeyToModelProvider_IsRestrict_SoDeletingAProviderCannotDestroyItsKeys()
+    {
+        // Only the key's hash is stored, so a deleted API key is unrecoverable — it cannot be
+        // re-issued, only replaced, and every integration configured with it breaks at once with
+        // nothing but a 401 to go on.
+        DeleteBehaviorFor<ApiKeyEntity>(nameof(ApiKeyEntity.Provider))
+            .Should().Be(DeleteBehavior.Restrict,
+                "a hard delete of a ModelProvider must never cascade-delete the API keys issued for it");
+    }
+
+    [TestMethod]
+    public void ApiKeyToUser_IsRestrict_SoOffboardingAnOwnerCannotDestroyTheirKeys()
+    {
+        // Deleting a user used to silently revoke every key they had minted. The keys are
+        // unrecoverable, so that turned routine offboarding into an unannounced outage;
+        // UserAdministrationService now refuses the delete with a 409 naming the keys.
+        DeleteBehaviorFor<ApiKeyEntity>(nameof(ApiKeyEntity.Owner))
+            .Should().Be(DeleteBehavior.Restrict,
+                "deleting a user must never cascade-delete the API keys they own");
     }
 
     [TestMethod]

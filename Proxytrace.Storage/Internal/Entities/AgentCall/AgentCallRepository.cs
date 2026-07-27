@@ -353,10 +353,15 @@ internal class AgentCallRepository : AbstractRepository<IAgentCall, AgentCallEnt
 
         if (!string.IsNullOrWhiteSpace(filter.Model))
         {
-            var search = filter.Model;
+            // Lower both sides and escape the user's wildcards — see LikePattern. A bare
+            // EF.Functions.Like(m.Name, $"%{search}%") is case-sensitive on Postgres but
+            // case-insensitive on the in-memory test provider, so the tests pass while the
+            // production filter silently misses matches.
+            var pattern = LikePattern.Contains(filter.Model);
             var matchingEndpointIds = context.Set<ModelEndpointEntity>()
                 .Where(me => context.Set<ModelEntity>()
-                    .Any(m => m.Id == me.Model && EF.Functions.Like(m.Name, $"%{search}%")))
+                    .Any(m => m.Id == me.Model
+                              && EF.Functions.Like(m.Name.ToLower(), pattern, LikePattern.EscapeCharacter)))
                 .Select(me => me.Id);
             query = query.Where(e => matchingEndpointIds.Contains(e.EndpointId));
         }
@@ -497,6 +502,28 @@ internal class AgentCallRepository : AbstractRepository<IAgentCall, AgentCallEnt
                    select new { AgentId = g.Key, LastUsedAt = g.Max(e => e.CreatedAt) })
                 .ToDictionaryAsync(x => x.AgentId, x => x.LastUsedAt, cancellationToken);
         return result;
+    }
+
+    public async Task<DateTimeOffset?> GetLastCallTimeAsync(
+        Guid agentId,
+        CancellationToken cancellationToken = default)
+    {
+        var context = contextFactory();
+
+        // Filtered to this agent's versions, so the database scans that agent's calls via the
+        // AgentVersionId index instead of grouping the whole trace table the way
+        // GetLastCallTimesAsync must. Max over an empty set yields null, which is exactly the
+        // "never called" answer — hence the nullable projection rather than a Max on DateTimeOffset.
+        var versionIds = context.Set<AgentVersionEntity>()
+            .AsNoTracking()
+            .Where(v => v.AgentId == agentId)
+            .Select(v => v.Id);
+
+        return await context.Set<AgentCallEntity>()
+            .AsNoTracking()
+            .Where(c => versionIds.Contains(c.AgentVersionId))
+            .Select(c => (DateTimeOffset?)c.CreatedAt)
+            .MaxAsync(cancellationToken);
     }
 
     public async Task<IAgentCall?> FindLatestByConversationIdAsync(

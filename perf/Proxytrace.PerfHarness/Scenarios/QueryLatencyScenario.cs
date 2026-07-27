@@ -171,6 +171,14 @@ internal static class QueryLatencyScenario
         await Measure("agentDistributions",
             () => agentStats.GetAgentDistributionsAsync(agentId, from, now, cancellationToken));
 
+        // Last-call timestamps. The whole-table grouping backs the agents LIST; the filtered variant
+        // backs the single-agent GET, which used to run the grouping and so scaled with the trace
+        // table rather than with the one agent. Measuring both keeps that separation honest.
+        await Measure("agentLastCallTimesAll",
+            () => callRepo.GetLastCallTimesAsync(cancellationToken));
+        await Measure("agentLastCallTimeSingle",
+            () => callRepo.GetLastCallTimeAsync(agentId, cancellationToken));
+
         return results;
     }
 }

@@ -125,7 +125,7 @@ public sealed class TestRunGroupValidationTests : DomainTest<Module>
         var generator = services.GetRequiredService<IDomainEntityGenerator<ITestRunGroup>>();
         var existing = await generator.CreateAsync(CancellationToken);
 
-        var group = createExisting(existing.Suite, existing.Status, existing.CompletedAt, existing.IsSystemRun, existing.ScheduleId, existing.SampleCount, existing);
+        var group = createExisting(existing.Suite, existing.Status, existing.CompletedAt, existing.IsSystemRun, existing.ScheduleId, existing.SampleCount, existing.OptimizationConsideredAt, existing);
 
         group.Id.Should().Be(existing.Id);
         group.Suite.Should().Be(existing.Suite);
@@ -133,6 +133,7 @@ public sealed class TestRunGroupValidationTests : DomainTest<Module>
         group.CompletedAt.Should().Be(existing.CompletedAt);
         group.IsSystemRun.Should().Be(existing.IsSystemRun);
         group.ScheduleId.Should().Be(existing.ScheduleId);
+        group.OptimizationConsideredAt.Should().Be(existing.OptimizationConsideredAt);
         group.CreatedAt.Should().Be(existing.CreatedAt);
         group.UpdatedAt.Should().Be(existing.UpdatedAt);
     }

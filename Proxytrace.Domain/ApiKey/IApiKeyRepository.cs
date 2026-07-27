@@ -14,4 +14,14 @@ public interface IApiKeyRepository : IRepository<IApiKey>
     /// Returns all API keys belonging to the provider identified by <paramref name="providerId"/>.
     /// </summary>
     Task<IReadOnlyList<IApiKey>> GetByProviderAsync(Guid providerId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Returns the names of the API keys owned by <paramref name="ownerId"/>.
+    /// </summary>
+    /// <remarks>
+    /// Used to refuse a user deletion that would otherwise strand or destroy live credentials. Only
+    /// the names are returned — enough to tell the operator which integrations are affected, and
+    /// nothing that could be replayed.
+    /// </remarks>
+    Task<IReadOnlyList<string>> GetKeyNamesByOwnerAsync(Guid ownerId, CancellationToken cancellationToken = default);
 }

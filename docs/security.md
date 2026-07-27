@@ -45,9 +45,18 @@ and the lean ingestion proxy can reach without loading `Application`.
   `EmailSettingsStore.DecryptPassword`.
 - **`ISecretHasher`** — `Hash(value)` → hex SHA-256 (`Sha256SecretHasher`, delegating to the shared
   `Proxytrace.Common.Security.Sha256.HexHash`). Deterministic and **key-ring-independent**, so the
-  verify paths keep working even if `PROXYTRACE_DATA_DIR` is lost. Unkeyed SHA-256 is safe here
-  because the secrets are 256-bit CSPRNG values — a dump cannot reverse or forge them. **Not for
-  passwords** (use `IPasswordService`, which is salted + slow).
+  verify paths keep working even if `PROXYTRACE_DATA_DIR` is lost. Unkeyed SHA-256 is safe **only**
+  because every secret it covers is a 256-bit CSPRNG value Proxytrace generated itself (inbound API
+  keys, invite tokens, password-reset tokens) — a dump cannot reverse or forge them. **Not for
+  passwords** (use `IPasswordService`, which is salted + slow), and **not for anything a human
+  chooses** (see `ISecretIndexer`).
+- **`ISecretIndexer`** — `Index(value)` → `"hmac1:"` + hex HMAC-SHA256 (`HmacSecretIndexer`), for a
+  blind index over a secret that is **not** guaranteed to be high-entropy. Today that is exactly one
+  value: the **operator-entered upstream provider API key**. The CSPRNG argument above does not
+  apply to it — an operator types it in, and `OpenAiCompatible` self-hosted backends conventionally
+  use `EMPTY`, `ollama`, or `sk-1234`. Under an unkeyed hash a database dump yields those by
+  wordlist in seconds, undoing the column encryption sitting right beside them. The HMAC key is not
+  in the database, so the dump alone is no longer enough.
 
 `Sha256` lives in `Proxytrace.Common` so the `Domain` layer (entity generators) can hash without
 referencing `Application`.
@@ -76,7 +85,30 @@ value. Where a replayable secret also needs a by-value lookup, store a determini
 hash** column alongside the ciphertext and query that:
 
 - `ModelProvider.ApiKey` (ciphertext) + `ModelProviderEntity.ApiKeyLookupHash` (indexed) —
-  `FindByApiKeyAsync` hashes the presented key and matches the hash, then decrypts the row.
+  `FindByApiKeyAsync` indexes the presented key and matches the index, then decrypts the row.
+
+### The provider-key index is keyed (HMAC), and why it has two schemes
+
+This index uses `ISecretIndexer`, not `ISecretHasher`, for the entropy reason above. Two consequences
+follow, and both are load-bearing:
+
+- **The HMAC key lives in `PROXYTRACE_DATA_DIR/dataprotection-keys/blind-index.key`**, created once
+  with owner-only permissions (`BlindIndexKey`). It is a separate file rather than something derived
+  from the Data Protection ring because Data Protection deliberately exposes no stable raw key
+  material. **Every host that resolves provider credentials must mount the same volume** — the same
+  requirement the key ring already has. Deleting the file is how you rotate: restart, and the
+  startup backfill re-indexes from the decrypted keys.
+- **When no data directory is configured the index falls back to the legacy unkeyed form**, and says
+  so at Warning. It deliberately does *not* invent a per-process key: that would produce indexes
+  that stop matching after the next restart, silently breaking upstream authentication for every
+  provider. Development and the test harnesses therefore behave exactly as before.
+
+Stored values are **scheme-prefixed** (`hmac1:`) because a hex SHA-256 and a hex HMAC-SHA256 are both
+64 characters, so length cannot tell them apart. `FindByApiKeyAsync` matches **both** forms in one
+indexed query — rows predating the change keep authenticating until
+`SecretsBackfillService.ReindexProviderKeysAsync` upgrades them on the next start — and the prefix
+means the two can never collide onto the wrong provider. An undecryptable row is left untouched by
+that pass rather than re-indexed to the HMAC of an empty string.
 
 Hashed secrets need no separate column: the stored value *is* the hash, so the repository hashes the
 presented raw value before the equality lookup (`ApiKeyRepository.FindByKeyAsync`,
@@ -153,6 +185,27 @@ unreachable the proxy **fails closed** (the request errors) rather than serving 
 The per-request cost is a few indexed point lookups plus one Data Protection decrypt, guarded by the
 `proxyResolve*` budgets in `perf/perf-budgets.json`. Do not reintroduce positive caching on this
 path; the freshness guarantee is pinned by `ApiKeyResolverRotationTests`.
+
+## Proxy scopes: capture and pass-through are separate capabilities
+
+`ApiKeyScopes.Ingestion` admits a key to the ingestion proxy. It does **not** admit it to the
+untraced pass-through (`OpenAiProxyController.Passthrough`), which needs `ApiKeyScopes.Passthrough`.
+
+The split exists because the two differ in kind, not degree. Pass-through relays **any method and any
+path** to the provider's host origin with the organisation's real upstream credential attached, and
+is deliberately not evaluated by detectors, not traced, and not audited — Proxytrace does not
+interpret those payloads. On a provider serving account or organization-management routes at the same
+host, that is the provider account's reach, which should not follow from "may record LLM calls".
+
+Two properties to preserve:
+
+- **Existing keys were grandfathered** by `GrantPassthroughScopeToExistingApiKeys` (a data-only
+  migration ORing the bit into every key that already held `Ingestion`), so upgrading does not break
+  the documented `/health` setup. New keys must request the scope.
+- **The upstream-provider-key auth path is intentionally ungated.** `ResolvedApiKey.Scopes` is
+  `null` there, and the check skips: a caller holding the provider's own credential can call the
+  provider directly, so restricting which of its paths they reach *through Proxytrace* protects
+  nothing.
 
 ## Threat model
 
@@ -306,5 +359,10 @@ are committed on purpose — the test-signed e2e/perf license JWT, demo-data key
 
 `StoredLicense` JWT is left plaintext: it is a signed license token, not a credential, so encrypting
 it adds migration + decrypt-on-startup cost for no real secrecy gain. `User.PasswordHash` is already
-hashed via `IPasswordService`. Key rotation / re-encryption tooling and a keyed-HMAC blind index are
-deliberately not implemented.
+hashed via `IPasswordService`. Automated key rotation / bulk re-encryption tooling is deliberately
+not implemented.
+
+(A keyed-HMAC blind index *was* previously listed here as out of scope. It is now implemented for the
+one value that needed it — the operator-entered upstream provider key — because the "these are all
+256-bit CSPRNG secrets" justification never applied to that one. See the blind-index section above.
+The remaining indexes stay unkeyed, and that is correct for them.)

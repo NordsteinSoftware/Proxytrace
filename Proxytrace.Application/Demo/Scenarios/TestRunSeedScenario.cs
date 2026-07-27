@@ -156,6 +156,10 @@ internal sealed class TestRunSeedScenario : IDemoScenario
                 completedAt: now,
                 isSystemRun: isSystemRun,
                 scheduleId: null,
+                // Marked as already considered: these groups are seeded terminal, so the optimizer's
+                // restart recovery would otherwise treat every demo group as an unprocessed backlog
+                // and fire a real A/B run (and real LLM spend) on every boot.
+                optimizationConsideredAt: now,
                 sampleCount: 1,
                 existing: new SeedData(Guid.NewGuid(), now, now))
             .AddAsync(cancellationToken);
@@ -250,6 +254,7 @@ internal sealed class TestRunSeedScenario : IDemoScenario
                 status: TestRunStatus.Failed,
                 completedAt: now,
                 isSystemRun: false,
+                optimizationConsideredAt: now,
                 scheduleId: null,
                 sampleCount: 1,
                 existing: new SeedData(Guid.NewGuid(), now, now))

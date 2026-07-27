@@ -5,6 +5,7 @@ import { SCOPE_LETTER, SCOPE_ORDER } from '../keyScopes';
 
 const GRANTED: Record<ApiKeyScope, string> = {
   Ingestion: cn('border-transparent bg-[color-mix(in_srgb,var(--text-secondary)_16%,transparent)] text-primary'),
+  Passthrough: cn('border-[color-mix(in_srgb,var(--warn)_30%,transparent)] bg-[var(--warn-subtle)] text-[var(--warn)]'),
   McpRead: cn('border-[color-mix(in_srgb,var(--accent-primary)_30%,transparent)] bg-[var(--accent-subtle)] text-[var(--accent-hover)]'),
   McpWrite: cn('border-[color-mix(in_srgb,var(--warn)_30%,transparent)] bg-[var(--warn-subtle)] text-[var(--warn)]'),
   ApiRead: cn('border-[color-mix(in_srgb,var(--teal)_30%,transparent)] bg-[color-mix(in_srgb,var(--teal)_14%,transparent)] text-[var(--teal)]'),
@@ -22,6 +23,7 @@ export function KeyCapabilities({ scopes }: { scopes: ApiKeyScope[] }) {
   const { t } = useLingui();
   const names: Record<ApiKeyScope, string> = {
     Ingestion: t`Ingestion proxy`,
+    Passthrough: t`Upstream pass-through`,
     McpRead: t`MCP read`,
     McpWrite: t`MCP write`,
     ApiRead: t`REST API read`,

@@ -5,6 +5,7 @@ using System.Text;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using Proxytrace.Domain.ApiKey;
 using Proxytrace.Domain.Kiosk;
 using Proxytrace.Domain.ModelProvider;
 using Proxytrace.Domain.Project;
@@ -253,6 +254,23 @@ public class OpenAiProxyController : ControllerBase
         BufferedProxyRequest? buffered = await GuardAndBufferRequestAsync(path, project, cancellationToken);
         if (buffered is null)
         {
+            return;
+        }
+
+        // Pass-through needs its OWN scope, not merely the Ingestion scope that admitted the key to
+        // the proxy. Its reach differs in kind: any method and any path relayed to the provider
+        // origin with the organisation's real upstream credential attached — on a provider serving
+        // account or organization-management routes at the same host, that is the provider account's
+        // reach, and none of it is detected, traced or audited.
+        //
+        // A null Scopes means the caller authenticated with the provider's OWN key, in which case
+        // they can already call the provider directly and gating them here would protect nothing.
+        if (buffered.Resolved.Scopes is { } scopes && !scopes.HasFlag(ApiKeyScopes.Passthrough))
+        {
+            logger.LogWarning(
+                "API key for project {ProjectId} lacks the Passthrough scope; refusing to forward /{Path}",
+                buffered.Resolved.Project.Id, path);
+            Response.StatusCode = StatusCodes.Status403Forbidden;
             return;
         }
 

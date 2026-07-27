@@ -1,3 +1,4 @@
+using Proxytrace.Common.Async;
 using System.Security.Cryptography;
 using Proxytrace.Domain.Security;
 using Proxytrace.Domain;
@@ -17,6 +18,10 @@ internal sealed class InviteService : IInviteService
     private readonly IInvite.CreateNew createInvite;
     private readonly IUser.CreateNew createUser;
     private readonly IPasswordService passwords;
+    private readonly IAsyncLock asyncLock;
+
+    /// <summary>Lock key serializing the licensed-seat check against the invite it authorises.</summary>
+    private const string UserQuotaLockKey = "license-quota:users";
     private readonly ITransaction transaction;
     private readonly ILicenseService license;
     private readonly ISecretHasher hasher;
@@ -27,6 +32,7 @@ internal sealed class InviteService : IInviteService
         IInvite.CreateNew createInvite,
         IUser.CreateNew createUser,
         IPasswordService passwords,
+        IAsyncLock asyncLock,
         ITransaction transaction,
         ILicenseService license,
         ISecretHasher hasher)
@@ -36,6 +42,7 @@ internal sealed class InviteService : IInviteService
         this.createInvite = createInvite;
         this.createUser = createUser;
         this.passwords = passwords;
+        this.asyncLock = asyncLock;
         this.transaction = transaction;
         this.license = license;
         this.hasher = hasher;
@@ -47,6 +54,10 @@ internal sealed class InviteService : IInviteService
         IUser invitedBy,
         CancellationToken cancellationToken = default)
     {
+        // Held for the rest of the method: the count and the invite it authorises are check-then-act,
+        // so two concurrent invites both used to observe the pre-invite user count and both proceed,
+        // taking an install past its licensed seat limit. Per-process, like the other quota locks.
+        using IDisposable quotaLock = await asyncLock.LockAsync(UserQuotaLockKey, cancellationToken);
         license.Ensure(LicenseLimit.MaxUsers, await users.CountAsync(cancellationToken));
 
         // Persist only the hash of the token; the raw value is returned once so the caller can build

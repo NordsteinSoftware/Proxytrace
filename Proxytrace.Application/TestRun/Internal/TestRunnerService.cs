@@ -40,6 +40,29 @@ internal class TestRunnerService : BackgroundService, ITestRunnerService
     private readonly TestRunnerConfiguration configuration;
     private readonly ConcurrentDictionary<Guid, CancellationTokenSource> cancellationTokens = new();
 
+    /// <summary>
+    /// Caps how many upstream model calls this process has in flight at once.
+    /// </summary>
+    /// <remarks>
+    /// The three <c>Parallel.ForEachAsync</c> loops below nest — runs, then that run's test cases,
+    /// then that case's evaluators — and each was configured with the same
+    /// <see cref="TestRunnerConfiguration.MaxDegreeOfParallelism"/>. That <b>multiplies</b> rather
+    /// than caps: at the default of 2 the loops alone permit 2×2×2 = 8 concurrent upstream calls,
+    /// not the documented 2, so the setting understated the load put on the provider — and the
+    /// spend — by its own cube. This service is a singleton, so one semaphore around the calls that
+    /// actually leave the process gives the setting the meaning it claims, process-wide.
+    ///
+    /// Only genuine model calls are gated: local evaluators (exact match, contains, …) stay fully
+    /// parallel rather than queueing behind an LLM round trip. Nothing holds a permit while
+    /// acquiring another — a test case releases before its evaluators run — so the gate cannot
+    /// deadlock the nested loops.
+    ///
+    /// A <see cref="SemaphoreSlim"/> rather than the usual <c>IAsyncLock</c>: this is a counting
+    /// limit ("at most N at once"), and <c>IAsyncLock</c> only grants one holder per key, so it
+    /// cannot express it. Sanctioned exception — see the Concurrency section of docs/code-style.md.
+    /// </remarks>
+    private readonly SemaphoreSlim modelCallGate;
+
     private readonly Channel<Guid> channel = Channel.CreateUnbounded<Guid>(
         new UnboundedChannelOptions
         {
@@ -77,6 +100,27 @@ internal class TestRunnerService : BackgroundService, ITestRunnerService
         this.asyncLock = asyncLock;
         this.logger = logger;
         this.configuration = configuration;
+        this.modelCallGate = new SemaphoreSlim(Math.Max(1, configuration.MaxDegreeOfParallelism));
+    }
+
+    /// <summary>
+    /// Runs <paramref name="call"/> holding one <see cref="modelCallGate"/> permit, so concurrent
+    /// upstream calls stay within the configured degree of parallelism however the nested loops
+    /// happen to interleave.
+    /// </summary>
+    private async Task<T> ThroughModelCallGateAsync<T>(
+        Func<CancellationToken, Task<T>> call,
+        CancellationToken cancellationToken)
+    {
+        await modelCallGate.WaitAsync(cancellationToken);
+        try
+        {
+            return await call(cancellationToken);
+        }
+        finally
+        {
+            modelCallGate.Release();
+        }
     }
 
     public async Task<ITestRunGroup> RunInForegroundAsync(
@@ -364,9 +408,9 @@ internal class TestRunnerService : BackgroundService, ITestRunnerService
             using IModelClient client = agent.CreateClient(
                 customEndpoint: testRun.Endpoint,
                 skipIngestion: true);
-            ICompletion completion = await client.CompleteAsync(
-                testCase.Input,
-                cancellationToken: cancellationToken);
+            ICompletion completion = await ThroughModelCallGateAsync(
+                ct => client.CompleteAsync(testCase.Input, cancellationToken: ct),
+                cancellationToken);
 
             broadcaster.Publish(new InferenceDoneEvent(testRun.Id, testRun.Group.Id, testCase.Id));
 
@@ -431,7 +475,10 @@ internal class TestRunnerService : BackgroundService, ITestRunnerService
         var sw = Stopwatch.StartNew();
         try
         {
-            evaluation = await evaluator.EvaluateAsync(testResult, cancellationToken);
+            // Agentic evaluators call a model; the rest are local and must not queue behind one.
+            evaluation = evaluator.Kind == EvaluatorKind.Agentic
+                ? await ThroughModelCallGateAsync(ct => evaluator.EvaluateAsync(testResult, ct), cancellationToken)
+                : await evaluator.EvaluateAsync(testResult, cancellationToken);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {

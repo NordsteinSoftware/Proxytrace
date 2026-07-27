@@ -11,7 +11,7 @@ namespace Proxytrace.Storage.Internal.Entities.ModelProvider;
 [UsedImplicitly]
 internal class ModelProviderRepository : ArchivableRepository<IModelProvider, ModelProviderEntity>, IModelProviderRepository
 {
-    private readonly ISecretHasher hasher;
+    private readonly ISecretIndexer indexer;
 
     public ModelProviderRepository(
         IMapper<IModelProvider, ModelProviderEntity> mapper,
@@ -20,9 +20,9 @@ internal class ModelProviderRepository : ArchivableRepository<IModelProvider, Mo
         IEntityEventService entityEvents,
         IEntityCache<IModelProvider> cache,
         AmbientDbContext ambient,
-        ISecretHasher hasher) : base(mapper, contextFactory, transaction, entityEvents, ambient, cache)
+        ISecretIndexer indexer) : base(mapper, contextFactory, transaction, entityEvents, ambient, cache)
     {
-        this.hasher = hasher;
+        this.indexer = indexer;
     }
 
     // Archive-only: a hard delete would cascade through this provider's endpoints to every AgentCall
@@ -33,13 +33,20 @@ internal class ModelProviderRepository : ArchivableRepository<IModelProvider, Mo
     public async Task<IModelProvider?> FindByApiKeyAsync(string apiKey, CancellationToken cancellationToken = default)
     {
         // The plaintext key is encrypted (non-deterministic) at rest, so match on its deterministic
-        // blind-index hash instead. Intentionally unfiltered so an archived provider that still
-        // receives matching traffic keeps resolving, mirroring agent/endpoint attribution.
-        var lookupHash = hasher.Hash(apiKey);
+        // blind-index instead. Intentionally unfiltered so an archived provider that still receives
+        // matching traffic keeps resolving, mirroring agent/endpoint attribution.
+        //
+        // Both schemes are matched in one indexed query: rows written since the index became keyed
+        // carry the "hmac1:" form, while rows predating it still carry the bare SHA-256 until the
+        // startup backfill upgrades them. Accepting only the keyed form would make every provider on
+        // an install that has not finished backfilling fail to authenticate upstream. The two values
+        // cannot collide — the keyed one is prefixed — so this cannot match the wrong provider.
+        var keyed = indexer.Index(apiKey);
+        var legacy = indexer.LegacyIndex(apiKey);
         var entity = await contextFactory()
             .Set<ModelProviderEntity>()
             .AsNoTracking()
-            .Where(e => e.ApiKeyLookupHash == lookupHash)
+            .Where(e => e.ApiKeyLookupHash == keyed || e.ApiKeyLookupHash == legacy)
             .FirstOrDefaultAsync(cancellationToken);
 
         return await Map(entity, cancellationToken);

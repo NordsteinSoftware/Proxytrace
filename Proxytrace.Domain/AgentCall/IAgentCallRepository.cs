@@ -55,7 +55,25 @@ public interface IAgentCallRepository : IRepository<IAgentCall>
     /// Returns the timestamp of the most recent call for each agent, keyed by agent ID.
     /// Agents with no calls are omitted.
     /// </summary>
+    /// <remarks>
+    /// This aggregates the <b>entire</b> trace table. Only call it when every agent's timestamp is
+    /// genuinely needed (a listing); for a single agent use
+    /// <see cref="GetLastCallTimeAsync"/>, which is filtered.
+    /// </remarks>
     Task<IReadOnlyDictionary<Guid, DateTimeOffset>> GetLastCallTimesAsync(
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Returns the timestamp of the most recent call for a single agent, or <see langword="null"/>
+    /// when it has none.
+    /// </summary>
+    /// <remarks>
+    /// Filtered to the one agent's versions so the database aggregates only that agent's rows —
+    /// the single-agent GET is a hot path, and running the whole-table grouping there made its
+    /// cost grow with the trace table rather than with the agent.
+    /// </remarks>
+    Task<DateTimeOffset?> GetLastCallTimeAsync(
+        Guid agentId,
         CancellationToken cancellationToken = default);
 
     /// <summary>

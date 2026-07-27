@@ -56,6 +56,32 @@ internal class TestRunGroupRepository : AbstractRepository<ITestRunGroup, TestRu
         return await Map(stored, cancellationToken);
     }
 
+    public async Task<IReadOnlyList<ITestRunGroup>> GetPendingOptimizationAsync(
+        int limit,
+        CancellationToken cancellationToken = default)
+    {
+        if (limit <= 0)
+            return [];
+
+        // Terminal statuses only — a group still running has not finished producing the evidence the
+        // optimizer reads, and will be enqueued normally when it does. Oldest first so a backlog is
+        // worked in the order it accumulated. Bounded, so a long-dormant install does not enqueue its
+        // entire history (and its entire LLM cost) in one go on the first start after upgrading.
+        var context = contextFactory();
+        var stored = await context
+            .Set<TestRunGroupEntity>()
+            .AsNoTracking()
+            .Where(g => g.OptimizationConsideredAt == null
+                        && !g.IsSystemRun
+                        && (g.Status == TestRunStatus.Completed || g.Status == TestRunStatus.Failed))
+            .OrderBy(g => g.CreatedAt)
+            .ThenBy(g => g.Id)
+            .Take(limit)
+            .ToListAsync(cancellationToken);
+
+        return await Map(stored, cancellationToken);
+    }
+
     public async Task<IReadOnlyList<ITestRunGroup>> GetByProjectAsync(Guid projectId, CancellationToken cancellationToken = default)
     {
         var context = contextFactory();

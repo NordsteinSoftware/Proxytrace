@@ -76,7 +76,9 @@ internal sealed class PlaygroundService : IPlaygroundService
 
         SystemMessage systemMessage = new(request.SystemPrompt);
         IReadOnlyList<ToolSpecification> tools = ResolveTools(agent.Tools, request.Tools);
-        ModelOptions options = new(endpoint.Model.Name, tools);
+        // The parameters the user set in the right rail. They used to stop here: ModelOptions had
+        // nowhere to put them, so every control silently did nothing.
+        ModelOptions options = new(endpoint.Model.Name, tools, ToSampling(request.Parameters));
         Conversation conversation = BuildConversation(request.Messages);
 
         using IModelClient client = agent.CreateClient(endpoint, skipIngestion: true);
@@ -167,6 +169,25 @@ internal sealed class PlaygroundService : IPlaygroundService
     /// substitute description and per-arg description from the override.
     /// Tools in the override that don't match an agent tool by name are skipped (no schema available).
     /// </summary>
+    /// <summary>
+    /// Maps the playground's parameter panel onto the request's sampling overrides.
+    /// </summary>
+    /// <remarks>
+    /// A blank stop-sequence list is normalised to <see langword="null"/> so an untouched control
+    /// sends nothing at all rather than an empty array the provider then has to interpret.
+    /// </remarks>
+    private static ModelSamplingParameters ToSampling(PlaygroundModelParameters parameters)
+        => new(
+            Temperature: parameters.Temperature,
+            TopP: parameters.TopP,
+            FrequencyPenalty: parameters.FrequencyPenalty,
+            PresencePenalty: parameters.PresencePenalty,
+            MaxOutputTokens: parameters.MaxTokens,
+            Seed: parameters.Seed,
+            StopSequences: parameters.Stop is { Count: > 0 } stop ? stop : null,
+            ReasoningEffort: string.IsNullOrWhiteSpace(parameters.ReasoningEffort) ? null : parameters.ReasoningEffort,
+            ChoiceCount: parameters.N);
+
     private static IReadOnlyList<ToolSpecification> ResolveTools(
         IReadOnlyList<ToolSpecification> agentTools,
         IReadOnlyList<PlaygroundToolSpecification> overrides)

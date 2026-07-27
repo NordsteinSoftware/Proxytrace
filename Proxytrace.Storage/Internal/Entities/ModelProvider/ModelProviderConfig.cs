@@ -15,18 +15,22 @@ internal class ModelProviderConfig : AbstractEntityConfiguration<ModelProviderEn
     // ring — the design-time migration tooling builds the model via Configure() and never calls
     // Map(), so it must not force IDataProtectionProvider resolution.
     private readonly Lazy<ISecretProtector> protector;
-    private readonly ISecretHasher hasher;
+
+    // ISecretIndexer, not ISecretHasher: the upstream key is operator-entered, so it may be a
+    // dictionary word (self-hosted backends conventionally use "EMPTY"/"ollama"/"sk-1234"). An
+    // unkeyed index over that falls to a wordlist and undoes the encryption on the column beside it.
+    private readonly ISecretIndexer indexer;
     private readonly ILogger<ModelProviderConfig> logger;
 
     public ModelProviderConfig(
         IModelProvider.CreateExisting factory,
         Lazy<ISecretProtector> protector,
-        ISecretHasher hasher,
+        ISecretIndexer indexer,
         ILogger<ModelProviderConfig> logger)
     {
         this.factory = factory;
         this.protector = protector;
-        this.hasher = hasher;
+        this.indexer = indexer;
         this.logger = logger;
     }
 
@@ -40,7 +44,9 @@ internal class ModelProviderConfig : AbstractEntityConfiguration<ModelProviderEn
         builder.Property(e => e.Endpoint).HasMaxLength(2048).IsRequired();
         // Ciphertext is far larger than the plaintext key — drop the 512 cap.
         builder.Property(e => e.ApiKey).IsRequired();
-        builder.Property(e => e.ApiKeyLookupHash).HasMaxLength(64);
+        // Wide enough for the scheme-prefixed keyed index ("hmac1:" + 64 hex chars) as well as the
+        // bare 64-char legacy hash that predates it.
+        builder.Property(e => e.ApiKeyLookupHash).HasMaxLength(128);
         builder.Property(e => e.Kind).IsRequired();
         builder.HasIndex(e => e.IsArchived);
     }
@@ -55,7 +61,7 @@ internal class ModelProviderConfig : AbstractEntityConfiguration<ModelProviderEn
             Name = domain.Name,
             Endpoint = domain.Endpoint.ToString(),
             ApiKey = protector.Value.Protect(domain.ApiKey),
-            ApiKeyLookupHash = hasher.Hash(domain.ApiKey),
+            ApiKeyLookupHash = indexer.Index(domain.ApiKey),
             Kind = domain.Kind,
             IsArchived = domain.IsArchived,
             CreatedAt = domain.CreatedAt,

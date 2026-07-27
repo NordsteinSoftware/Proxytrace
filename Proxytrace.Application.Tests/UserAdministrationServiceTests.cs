@@ -133,8 +133,55 @@ public sealed class UserAdministrationServiceTests : BaseTest<Module>
         removed.Should().BeFalse();
     }
 
+    [TestMethod]
+    public async Task RemoveAsync_WhenTheUserOwnsApiKeys_IsRefusedAndKeepsTheUser()
+    {
+        // Deleting a user used to cascade-delete every API key they owned. Only the key hash is
+        // stored, so those keys are unrecoverable — routine offboarding silently revoked live
+        // integrations, which surfaced later as unexplained 401s. The delete is now refused with a
+        // message naming the keys so an operator deals with them deliberately.
+        IServiceProvider services = GetServices(Register);
+        var service = services.GetRequiredService<IUserAdministrationService>();
+        var acting = await CreateUserAsync(services, UserRole.Admin);
+        var target = await CreateUserAsync(services, UserRole.Member);
+        await CreateApiKeyAsync(services, target, "ci-pipeline");
+
+        var act = () => service.RemoveAsync(acting.Id, target.Id, CancellationToken);
+
+        (await act.Should().ThrowAsync<UserAdministrationException>())
+            .Which.Message.Should().Contain("ci-pipeline");
+
+        (await services.GetRequiredService<IRepository<IUser>>().ContainsAsync(target.Id, CancellationToken))
+            .Should().BeTrue("the user must survive a refused deletion");
+    }
+
+    [TestMethod]
+    public async Task RemoveAsync_WhenTheUserOwnsNoApiKeys_StillDeletes()
+    {
+        IServiceProvider services = GetServices(Register);
+        var service = services.GetRequiredService<IUserAdministrationService>();
+        var acting = await CreateUserAsync(services, UserRole.Admin);
+        var target = await CreateUserAsync(services, UserRole.Member);
+
+        var removed = await service.RemoveAsync(acting.Id, target.Id, CancellationToken);
+
+        removed.Should().BeTrue();
+    }
+
     private static void Register(ContainerBuilder builder) =>
         builder.RegisterType<UserAdministrationService>().As<IUserAdministrationService>();
+
+    private async Task CreateApiKeyAsync(IServiceProvider services, IUser owner, string name)
+    {
+        var project = await services.GetRequiredService<IDomainEntityGenerator<Domain.Project.IProject>>()
+            .GetOrCreateAsync(CancellationToken);
+        var provider = await services.GetRequiredService<IDomainEntityGenerator<Domain.ModelProvider.IModelProvider>>()
+            .GetOrCreateAsync(CancellationToken);
+        var create = services.GetRequiredService<Domain.ApiKey.IApiKey.CreateNew>();
+        var key = create(name, $"hash-{Guid.NewGuid():N}", "prefix", project, provider,
+            Domain.ApiKey.ApiKeyScopes.Ingestion, owner);
+        await services.GetRequiredService<Domain.ApiKey.IApiKeyRepository>().AddAsync(key, CancellationToken);
+    }
 
     private async Task<IUser> CreateUserAsync(IServiceProvider services, UserRole role)
     {

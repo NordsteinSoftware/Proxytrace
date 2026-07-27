@@ -351,6 +351,40 @@ commit**, queuing the second call through `AmbientDbContext.RegisterPostCommit` 
 `Notify` uses for change events. Every write path (add, add-range, update, upsert, remove,
 remove-all, archive/unarchive, and bypass writes such as `AgentRepository.SetCurrentVersionIdAsync`)
 goes through those two helpers; do not call `cache?.Invalidate(...)` directly.
+
+## Schema drift is caught by a test, not at startup
+
+`RelationalEventId.PendingModelChangesWarning` is suppressed in `Storage.Module`. EF raises it from
+`Migrate()` and treats it as an **error**, so an un-migrated model change would stop the app from
+booting on a customer's deployment — and the EF Core 10 tools can produce snapshot/runtime
+divergences that are metadata-only, turning a cosmetic mismatch into an outage.
+
+The safety net lives in `MigrationDriftTests` instead: it asserts `HasPendingModelChanges()` is
+`false` against the Npgsql model — the same comparison `Migrate()` makes — so drift fails CI, in
+front of whoever can add the migration. **If you change an EF model without adding a migration, that
+test goes red.** Do not remove the suppression without keeping the test, and do not weaken the test
+to make a model change pass; add the migration.
+
+### The cache is per-scope; its invalidation is process-wide
+
+`IEntityCache<T>` is registered **`InstancePerLifetimeScope`**, not as a singleton, and that is
+deliberate: a cached domain entity holds the `IRepository<TSelf>` it was materialized from (see
+`DomainEntity<TSelf>`), and that repository's `Func<StorageDbContext>` closes over the lifetime scope
+it was resolved in. A root-container cache would therefore hand later callers entities whose
+repository points at a **disposed** request scope, so `UpdateAsync`/`ReloadAsync` on them would throw.
+
+Scope-local caches on their own, however, made write-through invalidation scope-local too — a real
+defect, because singleton services (notably the ingestion executor) resolve their repositories, and
+so their cache, from the **root** scope, while an admin's write invalidates only its own **request**
+scope. Rotating a provider's upstream API key left ingestion authenticating with the stale key for up
+to the full TTL.
+
+The two requirements are separated: the cached **instances** stay scope-local, while each entry's
+**validity** is decided by `EntityCacheVersions<T>`, a **singleton** counter shared by every scope. A
+write bumps the counter, and every scope's copy of that entry misses on its next read.
+`EntityCacheVersions` bounds its per-id map; dropping a version fails safe, since a forgotten id reads
+back as version 0 and no live entry can match it. When adding a cacheable entity you get both
+registrations automatically — do not "fix" the cache's lifetime to `SingleInstance`.
 The `AddEmailSettings` migration adds the `EmailSettingsEntity` table: the single-row operator
 SMTP/email configuration (mirrors the `StoredLicenseEntity` single-row pattern). Columns: `Id` uuid
 PK, `Enabled` boolean, `SmtpHost` / `FromAddress` / `FromName` non-nullable text, `SmtpPort`

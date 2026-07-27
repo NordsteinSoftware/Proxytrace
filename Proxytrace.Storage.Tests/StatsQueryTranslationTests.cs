@@ -40,6 +40,7 @@ public sealed class StatsQueryTranslationTests
             "Host=localhost;Database=translation-check;Username=none;Password=none")));
         builder.RegisterStub<ISecretProtector>();
         builder.RegisterStub<ISecretHasher>();
+        builder.RegisterStub<ISecretIndexer>();
         builder.RegisterStub<IAgentNameGenerator>();
         builder.RegisterStub<IProviderClient>();
         builder.RegisterInstance(NullLoggerFactory.Instance).As<ILoggerFactory>();

@@ -135,6 +135,80 @@ public sealed class TestResultRepositoryTests : BaseTest<Module>
         row.Score.Should().Be(EvaluationScore.Good);
     }
 
+    [TestMethod]
+    public async Task GetRecentByEvaluator_WhenOtherEvaluatorsHaveManyNewerResults_StillFindsItsOwn()
+    {
+        // The window used to be the most recent N results across the WHOLE install, filtered by
+        // evaluator only afterwards. Once anything else produced N newer results, an evaluator's
+        // own history silently returned empty — and it was cross-tenant: a busy project's runs
+        // evicted everyone else's. Filtering by evaluator in SQL makes the answer depend only on
+        // this evaluator's own history.
+        var services = GetServices();
+        var evaluatorGen = services.GetRequiredService<IDomainEntityGenerator<IEvaluator>>();
+        var repo = services.GetRequiredService<ITestResultRepository>();
+
+        var mine = await evaluatorGen.CreateAsync(CancellationToken);
+        var noisy = await evaluatorGen.CreateAsync(CancellationToken);
+
+        await PersistResult(services, mine, EvaluationScore.Good);
+
+        // Bury it under far more recent results belonging to a different evaluator than any
+        // plausible global window would have held.
+        for (var i = 0; i < 250; i++)
+        {
+            await PersistResult(services, noisy, EvaluationScore.Good);
+        }
+
+        var recent = await repo.GetRecentByEvaluatorAsync(mine.Id, count: 10, cancellationToken: CancellationToken);
+        var latest = await repo.GetLatestByEvaluatorAsync(mine.Id, CancellationToken);
+
+        recent.Should().ContainSingle("this evaluator has exactly one result, however much else ran since");
+        latest.Should().NotBeNull();
+        latest?.Evaluations.Should().Contain(e => e.Evaluator.Id == mine.Id);
+    }
+
+    [TestMethod]
+    public async Task SearchByEvaluator_WhenOtherEvaluatorsHaveManyNewerResults_StillFindsItsOwn()
+    {
+        var services = GetServices();
+        var evaluatorGen = services.GetRequiredService<IDomainEntityGenerator<IEvaluator>>();
+        var repo = services.GetRequiredService<ITestResultRepository>();
+
+        var mine = await evaluatorGen.CreateAsync(CancellationToken);
+        var noisy = await evaluatorGen.CreateAsync(CancellationToken);
+
+        await PersistResult(services, mine, EvaluationScore.Bad, reasoning: "needle-in-a-haystack");
+
+        for (var i = 0; i < 250; i++)
+        {
+            await PersistResult(services, noisy, EvaluationScore.Good, reasoning: "unrelated");
+        }
+
+        var matches = await repo.SearchByEvaluatorAsync(mine.Id, "needle-in-a-haystack", count: 10, CancellationToken);
+
+        matches.Should().ContainSingle();
+    }
+
+    [TestMethod]
+    public async Task GetRecentByEvaluator_WithAScoreFilter_ReturnsOnlyMatchingResults()
+    {
+        // The score filter moved into SQL alongside the evaluator filter — assert it still holds.
+        var services = GetServices();
+        var evaluator = await services.GetRequiredService<IDomainEntityGenerator<IEvaluator>>()
+            .CreateAsync(CancellationToken);
+        var repo = services.GetRequiredService<ITestResultRepository>();
+
+        await PersistResult(services, evaluator, EvaluationScore.Good);
+        await PersistResult(services, evaluator, EvaluationScore.Bad);
+        await PersistResult(services, evaluator, EvaluationScore.Bad);
+
+        var bad = await repo.GetRecentByEvaluatorAsync(
+            evaluator.Id, count: 10, score: EvaluationScore.Bad, cancellationToken: CancellationToken);
+
+        bad.Should().HaveCount(2);
+        bad.Should().OnlyContain(r => r.Evaluations.Any(e => e.Score == EvaluationScore.Bad));
+    }
+
     private sealed record BackdatedData(Guid Id, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt) : IDomainEntityData;
 
     private async Task<ITestCase> PersistResult(

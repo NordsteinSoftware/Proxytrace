@@ -1,3 +1,4 @@
+using Proxytrace.Domain.ApiKey;
 using Proxytrace.Domain.ModelProvider;
 using Proxytrace.Domain.Project;
 
@@ -31,4 +32,14 @@ public interface IApiKeyResolver
 /// which authentication path matched (a Proxytrace-issued <see cref="Domain.ApiKey.IApiKey"/>
 /// or the provider's own upstream <see cref="IModelProvider.ApiKey"/>).
 /// </summary>
-public sealed record ResolvedApiKey(IProject Project, IModelProvider Provider);
+/// <param name="Scopes">
+/// The capabilities of the Proxytrace-issued key that authenticated the call, or
+/// <see langword="null"/> when the caller authenticated with the provider's <b>own</b> upstream
+/// credential.
+/// </param>
+/// <remarks>
+/// Null means "unscoped, and legitimately so": a caller holding the provider's own key can already
+/// call the provider directly, so restricting which of the provider's paths they may reach through
+/// Proxytrace would protect nothing.
+/// </remarks>
+public sealed record ResolvedApiKey(IProject Project, IModelProvider Provider, ApiKeyScopes? Scopes = null);

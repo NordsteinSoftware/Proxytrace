@@ -213,7 +213,7 @@ validate normally via `SubmitAsync`:
 | System-prompt theory | `.../Validation/SystemPromptTheoryValidator.cs` |
 | Tool-update theory | `.../Validation/ToolUpdateTheoryValidator.cs` |
 | Model-switch theory | `.../Validation/ModelSwitchTheoryValidator.cs` |
-| Two-proportion stats / p-value | `.../Validation/ProportionStats.cs` |
+| Paired significance test / p-value | `.../Validation/ProportionStats.cs` |
 | Evidence assembly | `Optimization/Internal/Evidence/OptimizerEvidenceBuilder.cs` |
 
 Validation runs the **baseline and candidate fresh, back to back**, against the same suite and
@@ -224,19 +224,84 @@ agent on the alternate endpoint. The candidate run is linked to the theory while
 via the `CandidateRunObserver` callback, and is flagged `isSystemTestRun` so it stays out of the
 user's run list.
 
-Each arm runs `OptimizationOptions.AbSampleCount` times (default **3**) and the samples are
-**pooled** — passes and totals summed across them — before the significance test. One sample per arm
-caps the evidence at the suite's case count, which on a small suite cannot resolve anything but an
-enormous effect: an 11-case suite improving 5/11 → 8/11 lands at p≈0.19 and is discarded, while the
-same effect pooled over three samples (15/33 → 24/33) is significant. The cost is proportional —
+Each arm runs `OptimizationOptions.AbSampleCount` times (default **3**). The cost is proportional —
 each extra sample is another full suite run per arm.
+
+#### The significance test is paired on the test case, not pooled over replays
+
+This is worth understanding before changing anything here, because the obvious implementation is
+wrong in a direction that always errs toward accepting.
+
+The samples used to be **pooled**: passes and totals summed across replays, then fed to a
+two-proportion test. That treats `cases × replays` as that many independent trials — but replays of
+the *same* test case are not independent of each other, and a case that deterministically passes
+contributes the identical outcome every time. The sample size was therefore inflated by the replay
+count and the standard error shrank by roughly √(replays), so **the gate got easier to pass the more
+samples an operator configured** — exactly backwards, and it meant raising `AbSampleCount` quietly
+bought acceptances rather than confidence.
+
+The unit of independence is the **test case**, and both arms run the same ones, so the analysis is
+**paired**: per case, take the difference in pass proportion across its replays and test whether the
+mean difference differs from zero — a paired t-test with n = the number of test cases. Replays still
+earn their keep (they sharpen each case's proportion, narrowing the spread of the differences) but
+they no longer manufacture sample size. Because n is routinely well under 30, the test uses the
+**t distribution**, not the normal approximation, whose thinner tails would understate the p-value
+and reintroduce the same over-acceptance.
+
+Two consequences to keep in mind:
+
+- **Pass rates are still reported pooled** ("of everything attempted, this fraction passed"), which
+  is what a reader expects to see. Only the *verdict* is paired. Do not feed `SumPassCounts` to a
+  significance test — use `PairedPassRates`.
+- **A p-value can be undefined**, and that is meaningful rather than missing: fewer than two paired
+  cases (one case cannot evidence a difference between arms), or no difference in any case. Where
+  every case moves the same way by exactly the same amount, the t statistic is unbounded and the
+  test falls back to the two-sided **sign test** — ten cases all flipping to passing gives p ≈ 0.002,
+  while two cases agreeing gives 0.5, which is the honest reading of a coin toss.
+
+An 11-case suite improving 5/11 → 8/11 is three cases flipping, and lands at p ≈ 0.08 — suggestive
+but unproven, at one sample per arm or at three. That is the correct answer; the previous pooled
+figure of 15/33 → 24/33 "reaching significance" was an artefact of counting the same evidence three
+times.
+
+#### Both queues survive a restart
+
+The optimizer queue and the theory queue are both **in-process channels**, so a restart discards
+whatever is still in them. Each therefore re-queues its backlog on start, from a durable marker:
+
+| Queue | Marker | Recovery |
+|-------|--------|----------|
+| Theory validation | `TheoryStatus` (Proposed/Validating) | `TheoryValidationService.RecoverInFlightTheoriesAsync` |
+| Optimizer (theory discovery) | `ITestRunGroup.OptimizationConsideredAt` | `OptimizerService.RecoverPendingGroupsAsync` |
+
+The group marker exists solely for this: without it there was nothing to distinguish "never
+considered" from "considered and produced no theories", so a deploy during a scheduled-run window
+silently dropped that night's optimization. It is set **after** the theories are submitted, so a
+crash mid-discovery leaves the group pending and retries it; and it is set **even when discovery
+found nothing**, or every barren group would be reprocessed on every boot forever.
+
+Two guards worth preserving when touching this:
+
+- **Recovery is capped** (50 groups per start, remainder deferred and logged), so a long-dormant
+  install does not enqueue its entire history — and its entire LLM cost — on the first start after
+  upgrading. For the same reason the migration that added the column **backfills existing rows as
+  already considered**: history is not a backlog.
+- **Recovery is skipped in kiosk mode**, exactly as the theory queue's is — kiosk storage is
+  in-memory and demo-seeded on every start, so its only "backlog" is the seed.
 
 The outcome (`TheoryValidationOutcome`) records baseline pass rate, projected pass rate, p-value,
 and candidate run id **regardless of result**:
-- **Won** — improvement is real (beyond sampling noise: the two-proportion p-value must be
+- **Won** — improvement is real (beyond sampling noise: the paired p-value must be
   ≤ `OptimizationOptions.SignificanceLevel` = 0.05) → spawns a **Draft `OptimizationProposal`**
   carrying the A/B comparison as evidence. Model-switch theories instead require *no* pass-rate
   regression plus a genuine cost or latency win — equal-quality-but-pricier is not a win.
+  **Their evidence gate is directional and deliberately different:** a model switch claims *parity*
+  on quality, so demanding a statistically significant *difference* would be backwards — it would
+  reject the ideal result (identical answers, materially cheaper) and admit only switches that
+  measurably changed the output. A null p-value there usually means the arms agreed on every case,
+  which is the best outcome available. What is gated instead is the *size of the paired comparison*
+  (at least two paired cases), so parity is never concluded from evidence that could not have shown
+  a difference at all.
 - **Rejected** — the A/B ran cleanly but showed no significant improvement → theory marked
   Invalidated; metrics still kept so the same idea isn't retried (dedup).
 - **Could not test** — the comparison never happened: a run was incomplete (unreachable/unauthorized
@@ -255,8 +320,8 @@ configuration — tests, tooling — still resolve it:
 
 | Setting | Default | Effect |
 |---------|---------|--------|
-| `AbSampleCount` | `3` | Runs per arm, pooled before the significance test (max `ITestRunGroup.MaxSampleCount`). |
-| `SignificanceLevel` | `0.05` | Maximum two-sided p-value that counts as a real difference. |
+| `AbSampleCount` | `3` | Runs per arm (max `ITestRunGroup.MaxSampleCount`). Sharpens each case's pass proportion; does **not** increase the significance test's sample size — see above. |
+| `SignificanceLevel` | `0.05` | Maximum two-sided paired p-value that counts as a real difference. |
 | `RequireStatisticalSignificance` | `true` | When false, beating the baseline is enough — the p-value is still computed and stored. |
 
 `OptimizationOptions.KioskShowcase` is the one place the gate is dropped: the demo runs one sample

@@ -40,6 +40,11 @@ internal class TestRunGroupConfig : AbstractEntityConfiguration<TestRunGroupEnti
         builder
             .Property(e => e.SampleCount)
             .HasDefaultValue(1);
+
+        // Serves the optimizer's restart recovery, which asks for terminal, non-system groups that
+        // have not been considered yet. Leading on the marker keeps that an index range read over
+        // the small unconsidered tail rather than a scan of every group ever run.
+        builder.HasIndex(e => new { e.OptimizationConsideredAt, e.IsSystemRun, e.Status });
     }
 
     public async Task<ITestRunGroup> Map(TestRunGroupEntity stored, CancellationToken cancellationToken = default)
@@ -50,6 +55,7 @@ internal class TestRunGroupConfig : AbstractEntityConfiguration<TestRunGroupEnti
             isSystemRun: stored.IsSystemRun,
             scheduleId: stored.ScheduleId,
             sampleCount: stored.SampleCount,
+            optimizationConsideredAt: stored.OptimizationConsideredAt,
             existing: stored);
 
     public Task<TestRunGroupEntity> Map(ITestRunGroup domain, CancellationToken cancellationToken = default)
@@ -62,6 +68,7 @@ internal class TestRunGroupConfig : AbstractEntityConfiguration<TestRunGroupEnti
             IsSystemRun = domain.IsSystemRun,
             ScheduleId = domain.ScheduleId,
             SampleCount = domain.SampleCount,
+            OptimizationConsideredAt = domain.OptimizationConsideredAt,
             CreatedAt = domain.CreatedAt,
             UpdatedAt = domain.UpdatedAt,
         }.ToTaskResult();
