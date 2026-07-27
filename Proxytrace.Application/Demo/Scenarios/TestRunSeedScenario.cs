@@ -284,6 +284,9 @@ internal sealed class TestRunSeedScenario : IDemoScenario
         {
             ("customer-support-tone", c => c.RequireGpt54Endpoint(), 0.90),
             ("data-analytics-queries", c => c.RequireGpt54MiniEndpoint(), 0.88),
+            // The triage candidate stays on the cheap model: the theory it backs rewrites the
+            // system prompt (pinning a taxonomy), it does not switch the endpoint.
+            ("email-triage-priority", c => c.RequireGpt54MiniEndpoint(), 0.62),
         };
 
         foreach (var (suiteKey, selectEndpoint, passRate) in candidates)

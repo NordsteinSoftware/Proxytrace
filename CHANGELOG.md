@@ -62,6 +62,11 @@ follow [Semantic Versioning](https://semver.org). Ongoing work is collected unde
 
 ### Fixed
 
+- **The demo showcase no longer displays A/B tests that never finish.** Two of the seeded improvement
+  theories claimed their A/B test was running, so the proposals board showed a pulsing "A/B in flight"
+  row and a progress bar that never moved — the demo deliberately never executes those tests. Both now
+  arrive with their result already in: one proven and waiting for a promote decision, one disproven.
+
 - **One busy project can no longer use up the whole installation's monthly trace allowance.**
   Reaching the licensed trace limit stopped capture everywhere at once, so a single heavy project
   could exhaust the month and silently take every other project's tracing down with it — including

@@ -174,6 +174,25 @@ internal sealed class OptimizationProposalSeedScenario : IDemoScenario
                     evidence,
                     ab)),
 
+            // Backs the validated triage taxonomy theory (OptimizationTheorySeedScenario): the
+            // prompt fix the loop measured for the defective agent, waiting on a promote decision.
+            new(
+                SelectAgent: c => c.RequireEmailTriageAgent(),
+                Status: ProposalStatus.Draft,
+                BuildDraft: (_, agent, evidence, ab) => createSystemPrompt(
+                    agent,
+                    Priority.Critical,
+                    "The prompt defines no category taxonomy and no priority rules, so the model invents both. "
+                    + "Pinning an explicit taxonomy and P1–P4 definitions recovers most of the failing cases.",
+                    "You are an email triage assistant for a SaaS company. Classify every email into exactly one "
+                    + "of: Outage, Bug, Billing, Compliance, Account Access, Feature Request, How-To. Assign "
+                    + "priority P1 (outage, data loss, legal deadline) to P4 (nice-to-have). Escalate P1 immediately. "
+                    + "Never state plan or billing details you have not looked up.",
+                    0.25,
+                    0.62,
+                    evidence,
+                    ab)),
+
             new(
                 SelectAgent: c => c.RequireCodeReviewAgent(),
                 Status: ProposalStatus.Draft,

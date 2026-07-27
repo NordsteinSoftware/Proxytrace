@@ -14,6 +14,12 @@ namespace Proxytrace.Application.Demo.Scenarios;
 /// Seeds the optimization-theory pipeline so the proposals board shows hypotheses spread across
 /// every lifecycle column. Validated theories link to the Draft proposals seeded just before
 /// (Order 40) so the board's "Promote" action has a real target.
+/// <para>
+/// No theory is seeded <see cref="TheoryStatus.Validating"/>: the kiosk skips the validation
+/// queue's restart recovery (see <c>TheoryValidationService.RecoverInFlightTheoriesAsync</c>), so
+/// such a theory would sit mid-A/B forever — a pulsing "A/B in flight" row and a progress bar that
+/// never resolves. Every theory here is either queued (Proposed) or already decided.
+/// </para>
 /// </summary>
 internal sealed class OptimizationTheorySeedScenario : IDemoScenario
 {
@@ -86,26 +92,6 @@ internal sealed class OptimizationTheorySeedScenario : IDemoScenario
                 arguments: ToolArguments.None)],
             EvidenceFor(triage)), TheoryStatus.Proposed, cancellationToken);
 
-        // ── Validating: A/B test in flight ────────────────────────────────────────────────
-        await SeedAsync(createSystemPrompt(
-            triage, SuiteFor(triage), TheorySource.Optimizer, Priority.Critical,
-            "The prompt defines no category taxonomy and no priority rules, so the model invents both. "
-            + "Pinning an explicit taxonomy and P1–P4 definitions should recover the failing cases.",
-            "You are an email triage assistant for a SaaS company. Classify every email into exactly one "
-            + "of: Outage, Bug, Billing, Compliance, Account Access, Feature Request, How-To. Assign "
-            + "priority P1 (outage, data loss, legal deadline) to P4 (nice-to-have). Escalate P1 immediately. "
-            + "Never state plan or billing details you have not looked up.",
-            EvidenceFor(triage)), TheoryStatus.Validating, cancellationToken);
-
-        await SeedAsync(createToolUpdate(
-            support, SuiteFor(support), TheorySource.TraceyAi, Priority.High,
-            "Giving the agent a typed lookup_shipping_carrier tool will eliminate fabricated carrier tracking instructions.",
-            [new ToolSpecification(
-                name: "lookup_shipping_carrier",
-                description: "Resolve the carrier and tracking URL for a shipment id.",
-                arguments: ToolArguments.None)],
-            EvidenceFor(support)), TheoryStatus.Validating, cancellationToken);
-
         // ── Validated: confirmed, ready to ship ───────────────────────────────────────────
         await SeedAsync(createSystemPrompt(
             support, SuiteFor(support), TheorySource.Optimizer, Priority.High,
@@ -123,12 +109,35 @@ internal sealed class OptimizationTheorySeedScenario : IDemoScenario
             EvidenceFor(support)),
             TheoryStatus.Validated, cancellationToken, baseline: 0.71, projected: 0.78, pValue: 0.03);
 
+        // The defective triage agent's fix, measured: it backs the Draft triage prompt proposal
+        // seeded at Order 40 and is the board's headline "needs decision" row.
+        await SeedAsync(createSystemPrompt(
+            triage, SuiteFor(triage), TheorySource.Optimizer, Priority.Critical,
+            "The prompt defines no category taxonomy and no priority rules, so the model invents both. "
+            + "Pinning an explicit taxonomy and P1–P4 definitions should recover the failing cases.",
+            "You are an email triage assistant for a SaaS company. Classify every email into exactly one "
+            + "of: Outage, Bug, Billing, Compliance, Account Access, Feature Request, How-To. Assign "
+            + "priority P1 (outage, data loss, legal deadline) to P4 (nice-to-have). Escalate P1 immediately. "
+            + "Never state plan or billing details you have not looked up.",
+            EvidenceFor(triage)),
+            TheoryStatus.Validated, cancellationToken, baseline: 0.25, projected: 0.62, pValue: 0.01);
+
         // ── Rejected: disproven by A/B ────────────────────────────────────────────────────
         await SeedAsync(createModelSwitch(
             analytics, SuiteFor(analytics), TheorySource.Optimizer, Priority.Low,
             "Lowering temperature 0.7 → 0.2 will make repeated classifications consistent.",
             ctx.RequireGpt54MiniEndpoint(), EvidenceFor(analytics)),
             TheoryStatus.Invalidated, cancellationToken, baseline: 0.89, projected: 0.90, pValue: 0.41);
+
+        await SeedAsync(createToolUpdate(
+            support, SuiteFor(support), TheorySource.TraceyAi, Priority.High,
+            "Giving the agent a typed lookup_shipping_carrier tool will eliminate fabricated carrier tracking instructions.",
+            [new ToolSpecification(
+                name: "lookup_shipping_carrier",
+                description: "Resolve the carrier and tracking URL for a shipment id.",
+                arguments: ToolArguments.None)],
+            EvidenceFor(support)),
+            TheoryStatus.Invalidated, cancellationToken, baseline: 0.83, projected: 0.84, pValue: 0.52);
     }
 
     private ITestSuite SuiteFor(IAgent agent)
