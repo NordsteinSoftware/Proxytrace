@@ -44,4 +44,17 @@ public interface ITestRunRepository : IRepository<ITestRun>
         int pageSize,
         bool includeSystem = false,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Runs across several projects, paged as one list, newest first. Backs an unfiltered list
+    /// request from a caller who may read more than one project: the page has to be computed over
+    /// the union, so merging per-project pages afterwards would not produce a correct page (#482).
+    /// <paramref name="includeSystem"/> behaves as in <see cref="GetAllPagedAsync"/>.
+    /// </summary>
+    Task<PagedResult<ITestRun>> GetByProjectsPagedAsync(
+        IReadOnlyCollection<Guid> projectIds,
+        int page,
+        int pageSize,
+        bool includeSystem = false,
+        CancellationToken cancellationToken = default);
 }

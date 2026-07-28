@@ -7,9 +7,16 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Proxytrace.Api.Controllers;
 using Proxytrace.Api.Dto.TestRuns;
 using Proxytrace.Application.Streaming;
+using NSubstitute;
 using Proxytrace.Domain;
 using Proxytrace.Domain.Agent;
+using Proxytrace.Domain.Inference;
+using Proxytrace.Domain.ModelEndpoint;
+using Proxytrace.Domain.Project;
+using Proxytrace.Domain.Prompt;
 using Proxytrace.Domain.TestRun;
+using Proxytrace.Domain.TestRunGroup;
+using Proxytrace.Domain.TestSuite;
 using Proxytrace.Testing;
 
 namespace Proxytrace.Api.Tests;
@@ -160,11 +167,108 @@ public sealed class TestRunsControllerTests : BaseTest<Module>
         controller.Response.StatusCode.Should().Be(404);
     }
 
-    private static TestRunsController ResolveController(IServiceProvider services) => new(
+    [TestMethod]
+    public async Task GetAll_AsNonAdminWithoutAgentFilter_ReturnsOwnProjectsRunsOnly()
+    {
+        // #482: an unfiltered list from a non-admin used to short-circuit to an empty page, so a
+        // REST API key — confined to one project, and with no reason to send an agent filter — was
+        // told its own project had no runs.
+        IServiceProvider services = GetServices();
+        var mine = await SeedRunInNewProjectAsync(services, "mine");
+        await SeedRunInNewProjectAsync(services, "theirs");
+
+        var controller = ResolveController(services, ScopedGuard(mine.Group.Suite.Agent.Project.Id));
+        var result = await controller.GetAll(cancellationToken: CancellationToken);
+
+        result.Items.Should().ContainSingle().Which.Id.Should().Be(mine.Id);
+        result.Total.Should().Be(1);
+    }
+
+    [TestMethod]
+    public async Task GetAll_AsNonAdminInSeveralProjectsWithoutAgentFilter_ReturnsTheUnion()
+    {
+        IServiceProvider services = GetServices();
+        var first = await SeedRunInNewProjectAsync(services, "first");
+        var second = await SeedRunInNewProjectAsync(services, "second");
+        await SeedRunInNewProjectAsync(services, "outsider");
+
+        // A member of two projects: the page must be computed over the union of both, not one of
+        // them and not the whole instance.
+        var controller = ResolveController(
+            services,
+            ScopedGuard(first.Group.Suite.Agent.Project.Id, second.Group.Suite.Agent.Project.Id));
+        var result = await controller.GetAll(cancellationToken: CancellationToken);
+
+        result.Items.Select(i => i.Id).Should().BeEquivalentTo([first.Id, second.Id]);
+        result.Total.Should().Be(2);
+    }
+
+    [TestMethod]
+    public async Task GetAll_AsNonAdminWithoutAccessibleProjects_ReturnsEmpty()
+    {
+        IServiceProvider services = GetServices();
+        await SeedRunInNewProjectAsync(services, "theirs");
+
+        var controller = ResolveController(services, ScopedGuard());
+        var result = await controller.GetAll(cancellationToken: CancellationToken);
+
+        result.Items.Should().BeEmpty();
+        result.Total.Should().Be(0);
+    }
+
+    // A run whose whole chain (project → agent → suite → group → run) is freshly created, so the
+    // project id is unique to it and can be handed to ScopedGuard.
+    private async Task<ITestRun> SeedRunInNewProjectAsync(IServiceProvider services, string name)
+    {
+        var endpoint = await services.GetRequiredService<IDomainEntityGenerator<IModelEndpoint>>()
+            .GetOrCreateAsync(CancellationToken);
+        var project = await services.GetRequiredService<IProjectRepository>().AddAsync(
+            services.GetRequiredService<IProject.CreateNew>()($"P-{name}-{Guid.NewGuid():N}", endpoint, []),
+            CancellationToken);
+
+        var agent = await services.GetRequiredService<IAgentRepository>().AddAsync(
+            services.GetRequiredService<IAgent.CreateNew>()(
+                $"A-{name}",
+                services.GetRequiredService<IPromptTemplate.Create>()($"T-{name}", "You are a test agent."),
+                [],
+                endpoint,
+                project,
+                services.GetRequiredService<IModelParameters.Create>()(null, null, null, null, null)),
+            CancellationToken);
+
+        var suite = await services.GetRequiredService<IRepository<ITestSuite>>().AddAsync(
+            services.GetRequiredService<ITestSuite.CreateNew>()($"S-{name}", agent, [], []),
+            CancellationToken);
+        var group = await services.GetRequiredService<IRepository<ITestRunGroup>>().AddAsync(
+            services.GetRequiredService<ITestRunGroup.CreateNew>()(suite, isSystemRun: false, null, sampleCount: 1),
+            CancellationToken);
+
+        return await services.GetRequiredService<ITestRunRepository>().AddAsync(
+            services.GetRequiredService<ITestRun.CreateNew>()(group, endpoint, sampleIndex: 0),
+            CancellationToken);
+    }
+
+    // A non-admin scoped to a specific set of projects: the scope set is non-null (not admin) and
+    // contains exactly those projects. No arguments means a member of nothing.
+    private static Proxytrace.Api.Auth.IProjectAccessGuard ScopedGuard(params Guid[] projectIds)
+    {
+        var guard = Substitute.For<Proxytrace.Api.Auth.IProjectAccessGuard>();
+        guard.CanAccessProjectAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+            .Returns(ci => projectIds.Contains(ci.Arg<Guid>()));
+        guard.GetAccessibleProjectIdsAsync(Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<IReadOnlyCollection<Guid>?>(projectIds));
+        return guard;
+    }
+
+    private static TestRunsController ResolveController(IServiceProvider services)
+        => ResolveController(services, services.GetRequiredService<Proxytrace.Api.Auth.IProjectAccessGuard>());
+
+    private static TestRunsController ResolveController(
+        IServiceProvider services, Proxytrace.Api.Auth.IProjectAccessGuard guard) => new(
         services.GetRequiredService<ITestRunRepository>(),
         services.GetRequiredService<IAgentRepository>(),
         services.GetRequiredService<ITestResultBroadcaster>(),
         services.GetRequiredService<TestRunDtoMapper>(),
-        services.GetRequiredService<Proxytrace.Api.Auth.IProjectAccessGuard>(),
+        guard,
         NullLogger<Audit>.Instance);
 }

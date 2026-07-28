@@ -60,11 +60,16 @@ public class TestRunsController : ControllerBase
             return pagedByAgent.Map(mapper.ToDto);
         }
 
-        // No agent filter enumerates across all tenants — admins only; non-admins get nothing.
-        if (await accessGuard.GetAccessibleProjectIdsAsync(cancellationToken) is not null)
+        // No agent filter: the caller's own reach is the scope — every project for an admin (null),
+        // their memberships otherwise, so an unfiltered request answers with that caller's runs
+        // instead of an empty page (#482).
+        var scope = await accessGuard.ResolveListScopeAsync(requestedProjectId: null, cancellationToken);
+        if (scope.IsEmpty())
             return new PagedResult<TestRunDto>([], 0, page, pageSize);
 
-        var paged = await repository.GetAllPagedAsync(page, pageSize, includeSystem, cancellationToken);
+        var paged = scope is null
+            ? await repository.GetAllPagedAsync(page, pageSize, includeSystem, cancellationToken)
+            : await repository.GetByProjectsPagedAsync(scope, page, pageSize, includeSystem, cancellationToken);
         return paged.Map(mapper.ToDto);
     }
 

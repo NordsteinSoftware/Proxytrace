@@ -149,10 +149,11 @@ follow [Semantic Versioning](https://semver.org). Ongoing work is collected unde
   succeeded and returned an empty list. The callers who hit this were the ones with no reason to
   name a project in the first place — a REST API key, which is confined to a single project, and
   integrations driving `/api/*` directly — so a service could ask for its traces, agents, suites,
-  runs or evaluators and be told, with a perfectly successful response, that there were none. An
-  unfiltered request is now answered with the caller's own projects, and a caller who belongs to
-  several gets all of them as one correctly paged list. The web app was never affected, because it
-  always names the current project.
+  runs, evaluators or optimization proposals and be told, with a perfectly successful response, that
+  there were none. An unfiltered request is now answered with the caller's own projects, and a
+  caller who belongs to several gets all of them as one correctly paged list. This now also covers
+  the two lists that were still left out: individual test runs and optimization proposals. The web
+  app was never affected, because it always names the current project.
 
 - **The Agent Playground no longer asks for an agent that is gone.** The playground remembers which
   agent you had selected, and it kept asking the server for that agent even after it had been

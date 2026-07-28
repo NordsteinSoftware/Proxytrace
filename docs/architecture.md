@@ -105,6 +105,13 @@ repository method (`GetByProjectsPagedAsync`) rather than merging per-project pa
 splits a scope into the `(ProjectId, ProjectIds)` pair `AgentCallFilter` takes, so the hot traces
 query keeps its equality predicate whenever the scope names a single project.
 
+An endpoint that can also be narrowed by a **related** entity (`agentId`, `suiteId`) resolves the
+scope first and then checks that entity against it — it never replaces the scope, and a named entity
+the caller may not reach collapses the scope to empty. `TestRunGroupsController.ListScopeAsync` and
+`ProposalsController.ListScopeAsync` are the shape to copy. An endpoint with *no* `projectId`
+parameter at all still resolves a scope (`ResolveListScopeAsync(requestedProjectId: null)`) — that is
+how `GET /api/test-runs` answers a non-admin with their own runs instead of nothing.
+
 Aggregates built on `StatisticsFilter` take the same `(ProjectId, ProjectIds)` pair (#483), so the
 traces overview aggregates over a multi-project scope like the lists beside it. `ToFilterScope()`
 feeds both filters, so a scope naming one project keeps the single-project predicate in both. The set
