@@ -17,6 +17,15 @@ public interface IOptimizationProposalRepository : IRepository<IOptimizationProp
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Proposals across several projects as one list, newest first. Backs an unfiltered list request
+    /// from a caller who may read more than one project (#482), so the set is applied in SQL rather
+    /// than by concatenating per-project reads.
+    /// </summary>
+    Task<IReadOnlyList<IOptimizationProposal>> GetByProjectsAsync(
+        IReadOnlyCollection<Guid> projectIds,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Returns the most-recently-updated proposal for the given agent with the specified
     /// <see cref="IOptimizationProposal.ContentHash"/>, or null if none exists.
     /// Used by the optimizer to detect duplicate suggestions.
