@@ -82,6 +82,22 @@ public class AgentCallsController : ControllerBase
         return agent is not null && scope.Contains(agent.Project.Id) ? scope : [];
     }
 
+    // The agents the overview lists: one project's when the scope names one (the indexed load),
+    // the union of the caller's projects when it spans several, and every agent for an unrestricted
+    // admin. Mirrors EvaluatorsController.ListScopedAsync — the agents table is small and bounded by
+    // the licensed agent limit, so narrowing a multi-project scope in memory is cheap.
+    private async Task<IReadOnlyList<IAgent>> ScopedAgentsAsync(
+        IReadOnlyCollection<Guid>? scope,
+        CancellationToken cancellationToken)
+    {
+        if (scope.IsEmpty())
+            return [];
+        if (scope.SingleProject() is { } projectId)
+            return await agentRepository.GetByProjectAsync(projectId, cancellationToken);
+        var all = await agentRepository.GetAllAsync(cancellationToken);
+        return scope is null ? all : all.Where(a => scope.Contains(a.Project.Id)).ToArray();
+    }
+
     // Truncate a caller-supplied session key and pair it with its derived id, so the seed endpoint
     // carries both as one value and never has to re-check the key for null.
     private static (Guid Id, string Key) DeriveSession(Guid projectId, string sessionKey)
@@ -210,23 +226,15 @@ public class AgentCallsController : ControllerBase
         if (scope.IsEmpty())
             return new TracesOverviewDto([], [], []);
 
-        // Unlike the trace lists, the aggregates below go through StatisticsFilter, which filters by
-        // a single project (partly in raw SQL). A scope spanning several projects therefore has
-        // nothing it can safely aggregate over — running unscoped would mix in other tenants' rows —
-        // so those callers still get an empty overview. Every single-project caller, including an
-        // unfiltered REST API key, is served. Tracked in #483.
-        var scopedProjectId = scope.SingleProject();
-        if (scope is not null && scopedProjectId is null)
-            return new TracesOverviewDto([], [], []);
+        // A scope naming exactly one project keeps the single-project filter, so the common case —
+        // the web UI, which always sends a projectId, and a REST API key, confined to one project —
+        // runs the unchanged indexed by-one-project aggregate. A caller who may read several and
+        // named none aggregates over that set instead of getting an empty overview (#483).
+        var (scopedProjectId, scopedProjectIds) = scope.ToFilterScope();
+        var latencyFilter = new StatisticsFilter(from, null, scopedProjectId, agentId, ProjectIds: scopedProjectIds);
+        var breakdownFilter = new StatisticsFilter(from, null, scopedProjectId, ProjectIds: scopedProjectIds);
 
-        var latencyFilter = new StatisticsFilter(from, null, scopedProjectId, agentId);
-        var breakdownFilter = new StatisticsFilter(from, null, scopedProjectId);
-
-        // Scope the agent load to the project when filtered, instead of loading every agent and
-        // discarding the rest in memory.
-        Task<IReadOnlyList<IAgent>> agentsTask = scopedProjectId.HasValue
-            ? agentRepository.GetByProjectAsync(scopedProjectId.Value, cancellationToken)
-            : agentRepository.GetAllAsync(cancellationToken);
+        Task<IReadOnlyList<IAgent>> agentsTask = ScopedAgentsAsync(scope, cancellationToken);
         Task<IReadOnlyDictionary<Guid, DateTimeOffset>> lastCallTask = repository.GetLastCallTimesAsync(cancellationToken);
         Task<IReadOnlyList<AgentBreakdownStat>> breakdownTask = statistics.GetAgentBreakdownAsync(breakdownFilter, cancellationToken);
         Task<IReadOnlyList<LatencyStat>> latencyTask = statistics.GetLatencyAsync(latencyFilter, cancellationToken);

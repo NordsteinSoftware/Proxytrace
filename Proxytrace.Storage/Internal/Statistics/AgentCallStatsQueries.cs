@@ -215,7 +215,12 @@ internal class AgentCallStatsQueries : IAgentCallStatsReader
     /// <see cref="Query"/> for the raw-SQL percentile paths. Kept in lockstep with the table/column
     /// names in <c>AgentCallConfig</c>/<c>AgentVersionConfig</c>/<c>AgentConfig</c>.
     /// </summary>
-    private static (string Where, IReadOnlyList<(string Name, object Value)> Parameters) BuildLatencyWhere(
+    /// <remarks>
+    /// <c>internal</c> rather than private so <c>StatisticsFilterWhereTests</c> can assert the
+    /// generated fragment directly: the behavioural tests run on the in-memory provider, where the
+    /// percentile paths fall back to LINQ, so this SQL is otherwise only exercised in production.
+    /// </remarks>
+    internal static (string Where, IReadOnlyList<(string Name, object Value)> Parameters) BuildLatencyWhere(
         StorageDbContext context, StatisticsFilter filter)
     {
         var clauses = new List<string>();
@@ -230,6 +235,16 @@ internal class AgentCallStatsQueries : IAgentCallStatsReader
         {
             clauses.Add("\"AgentVersionId\" IN (SELECT \"Id\" FROM \"AgentVersionEntity\" WHERE \"Project\" = @projectId)");
             parameters.Add(("@projectId", projectId));
+        }
+        if (filter.ProjectIds is { Count: > 0 } projectIds)
+        {
+            // Multi-project scope (#483). The ids go over as ONE uuid[] parameter compared with
+            // = ANY — never interpolated into the statement, and never a variable-length IN list,
+            // so the SQL text is constant regardless of how many projects the caller belongs to
+            // (Npgsql maps Guid[] to uuid[]). Separate from the single-project clause above so a
+            // one-project scope keeps its equality predicate rather than a single-element array.
+            clauses.Add("\"AgentVersionId\" IN (SELECT \"Id\" FROM \"AgentVersionEntity\" WHERE \"Project\" = ANY(@projectIds))");
+            parameters.Add(("@projectIds", projectIds.ToArray()));
         }
         if (filter.EndpointId is { } endpointId)
         {
@@ -877,6 +892,19 @@ internal class AgentCallStatsQueries : IAgentCallStatsReader
                 .Where(v => v.Project == projectId)
                 .Select(v => v.Id);
             query = query.Where(c => versionIdsForProject.Contains(c.AgentVersionId));
+        }
+        // Multi-project scope (#483): an unfiltered aggregate from a caller who may read several
+        // projects. Same shape as the single-project branch above — a semi-join against
+        // AgentVersion(Project), with IN instead of = — so it stays server-side rather than
+        // degenerating into a client-side filter over every trace row. Kept separate from that
+        // branch so a scope naming exactly one project keeps its equality predicate and its plan.
+        if (filter.ProjectIds is { Count: > 0 } projectIds)
+        {
+            IQueryable<Guid> versionIdsForProjects = context.Set<AgentVersionEntity>()
+                .AsNoTracking()
+                .Where(v => projectIds.Contains(v.Project))
+                .Select(v => v.Id);
+            query = query.Where(c => versionIdsForProjects.Contains(c.AgentVersionId));
         }
         if (filter.From is { } from)
         {

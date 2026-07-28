@@ -6,6 +6,7 @@ using Proxytrace.Domain;
 using Proxytrace.Domain.Completion;
 using Proxytrace.Domain.Evaluation;
 using Proxytrace.Domain.Evaluator;
+using Proxytrace.Domain.Project;
 using Proxytrace.Domain.TestCase;
 using Proxytrace.Domain.TestResult;
 using Proxytrace.Domain.Usage;
@@ -40,7 +41,7 @@ public sealed class EvaluatorStatsQueriesTests : BaseTest<Module>
         IServiceProvider services = GetServices();
         var reader = services.GetRequiredService<IEvaluatorStatsReader>();
 
-        var result = await reader.GetSparklinesAsync(Guid.NewGuid(), From, To, StatisticsBucket.Daily, CancellationToken);
+        var result = await reader.GetSparklinesAsync([Guid.NewGuid()], From, To, StatisticsBucket.Daily, CancellationToken);
 
         result.Should().BeEmpty();
     }
@@ -89,11 +90,43 @@ public sealed class EvaluatorStatsQueriesTests : BaseTest<Module>
             .FirstAsync(CancellationToken);
 
         var (from, to) = NowWindow();
-        var result = await reader.GetSparklinesAsync(projectId, from, to, StatisticsBucket.Daily, CancellationToken);
+        var result = await reader.GetSparklinesAsync([projectId], from, to, StatisticsBucket.Daily, CancellationToken);
 
         var sparkline = result.Should().ContainSingle(s => s.EvaluatorId == evaluator.Id).Subject;
         sparkline.Points.Sum(p => p.Total).Should().Be(2);
         sparkline.Points.Sum(p => p.Passed).Should().Be(1);
+    }
+
+    [TestMethod]
+    public async Task GetSparklines_WithSeveralProjects_CoversEveryScopedProjectAndNothingElse()
+    {
+        IServiceProvider services = GetServices();
+        var reader = services.GetRequiredService<IEvaluatorStatsReader>();
+
+        // A caller who may read two projects and filtered by none (#483): before the reader took a
+        // set, the overview could only sparkline one project, so this caller saw none at all.
+        var (firstProject, first) = await CreateEvaluatorInNewProject(services);
+        var (secondProject, second) = await CreateEvaluatorInNewProject(services);
+        var (_, outsider) = await CreateEvaluatorInNewProject(services);
+
+        await PersistResult(services, first, EvaluationScore.Good);
+        await PersistResult(services, second, EvaluationScore.Bad);
+        await PersistResult(services, outsider, EvaluationScore.Excellent);
+
+        var (from, to) = NowWindow();
+        var result = await reader.GetSparklinesAsync(
+            [firstProject, secondProject], from, to, StatisticsBucket.Daily, CancellationToken);
+
+        result.Select(s => s.EvaluatorId).Should().BeEquivalentTo(new[] { first.Id, second.Id });
+    }
+
+    private async Task<(Guid ProjectId, IEvaluator Evaluator)> CreateEvaluatorInNewProject(IServiceProvider services)
+    {
+        var project = await services.GetRequiredService<IDomainEntityGenerator<IProject>>().CreateAsync(CancellationToken);
+        var evaluator = await services.GetRequiredService<IRepository<IEvaluator>>().AddAsync(
+            services.GetRequiredService<IExactMatchEvaluator.CreateNew>()(project),
+            CancellationToken);
+        return (project.Id, evaluator);
     }
 
     [TestMethod]

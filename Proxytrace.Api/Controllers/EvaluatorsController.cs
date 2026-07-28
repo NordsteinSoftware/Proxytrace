@@ -146,13 +146,15 @@ public class EvaluatorsController : ControllerBase
         if (scope.IsEmpty())
             return new EvaluatorsOverviewDto([], [], []);
 
-        // The sparkline query is per-project, so it runs whenever the scope narrows to exactly one
-        // — which now includes an unfiltered REST API key, confined to its own project.
-        var singleProject = scope.SingleProject();
+        // The sparkline query is project-scoped, so it runs for every restricted scope — one
+        // project's when the request named one (or the caller is a REST API key, confined to its
+        // own), and the caller's whole membership otherwise (#483). An unrestricted admin scope
+        // (null) still gets no sparklines: there is no project set to key them on, and the
+        // instance-wide series is not what that view shows.
         Task<IReadOnlyList<IEvaluator>> evaluatorsTask = ListScopedAsync(scope, cancellationToken);
         Task<IReadOnlyList<ITestSuite>> suitesTask = ListScopedSuitesAsync(scope, cancellationToken);
-        Task<IReadOnlyList<EvaluatorSparklineStat>> sparklinesTask = singleProject is { } sparklineProject && from.HasValue && to.HasValue
-            ? evaluatorStats.GetSparklinesAsync(sparklineProject, from.Value, to.Value, bucket, cancellationToken)
+        Task<IReadOnlyList<EvaluatorSparklineStat>> sparklinesTask = scope is { Count: > 0 } sparklineProjects && from.HasValue && to.HasValue
+            ? evaluatorStats.GetSparklinesAsync(sparklineProjects, from.Value, to.Value, bucket, cancellationToken)
             : Task.FromResult<IReadOnlyList<EvaluatorSparklineStat>>([]);
 
         await Task.WhenAll(evaluatorsTask, suitesTask, sparklinesTask);

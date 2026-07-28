@@ -4,6 +4,7 @@ using Proxytrace.Domain.Kiosk;
 using Proxytrace.Domain.ModelProvider;
 using Proxytrace.Domain.Notification;
 using Proxytrace.Domain.Notifications;
+using Proxytrace.Domain.User;
 using Proxytrace.Domain.UserTotpEnrollment;
 using Proxytrace.Testing;
 
@@ -91,9 +92,31 @@ public sealed class SecretRedactionToStringTests : DomainTest<Module>
     }
 
     [TestMethod]
+    public void User_ToString_RedactsPasswordHash()
+    {
+        IServiceProvider services = GetServices();
+        var create = services.GetRequiredService<IUser.CreateNew>();
+
+        var user = create(
+            email: "operator@example.com",
+            externalSubject: "https://issuer.example.com|subject-1234",
+            passwordHash: "AQAAAAIAAYagAAAAEsuper-secret-password-hash",
+            role: UserRole.Admin);
+
+        var text = user.ToString();
+
+        text.Should().NotBeNull();
+        text.Should().NotContain("AQAAAAIAAYagAAAAEsuper-secret-password-hash");
+        text.Should().Contain("PasswordHash = ***");
+        // Identifiers are not secrets: they stay readable so a log line still says who this is.
+        text.Should().Contain("operator@example.com")
+            .And.Contain("https://issuer.example.com|subject-1234");
+    }
+
+    [TestMethod]
     public async Task ModelProvider_ToString_RedactsApiKey()
     {
-        // Pins the reference implementation the four peers above mirror.
+        // Pins the reference implementation the five peers above mirror.
         IServiceProvider services = GetServices();
         var provider = await services
             .GetRequiredService<IDomainEntityGenerator<IModelProvider>>()

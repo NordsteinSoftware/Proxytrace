@@ -83,6 +83,30 @@ scan — only the narrow scalar columns are read, never the request/response JSO
 dev seed (2026-07) was 276.9ms / 170.6ms; budgets sit ~45% above. A jump toward seconds means either
 the per-endpoint fold started round-tripping or the planner lost its statistics (see #246 below).
 
+### Multi-project scope (`agentCallsListByProjects`, `statsAgentBreakdownByProjects`, `statsLatencyPercentilesByProjects`)
+
+A caller who may read several projects and names none is scoped to the **set** of their projects
+(#482 for the lists, #483 for the aggregates). The thing to protect is that the set is applied *in
+the database*: it is the same semi-join against `AgentVersion(Project)` as the single-project branch
+with `IN` instead of `=`, so each metric must stay in the same class as its single-project twin.
+Filtering a scope client-side would materialize every row — the exact failure this suite exists to
+catch — and it only bites at scale, because a correctness test on a handful of in-memory rows passes
+either way.
+
+The two aggregate metrics are measured as a **pair** because `StatisticsFilter` has two translation
+paths that can regress independently: `AgentCallStatsQueries.Query()` (LINQ; backs
+`statsAgentBreakdownByProjects`) and the hand-built raw-SQL `BuildLatencyWhere()` behind the latency
+percentiles (backs `statsLatencyPercentilesByProjects`), where the ids travel as **one `uuid[]`
+parameter** compared with `= ANY(@projectIds)` — never interpolated, so the statement text stays
+constant however many projects the caller belongs to.
+
+The **single-project path is deliberately preserved**: a scope naming exactly one project still
+filters by `ProjectId` (`ProjectListScope.ToFilterScope()`), because `= ANY` over a one-element array
+can plan differently from `=`. The common case — the web UI, which always sends a `projectId`, and
+every REST API key, confined to one — is therefore bit-for-bit the query it was. All three set
+budgets are their single-project twins plus headroom for the wider subquery and are **uncalibrated
+placeholders** until a full 1M run lands.
+
 ### Retention's session reconciliation (`sessionRemovalDeltas`)
 
 Trace retention has to give the denormalized session counters back what the traces it deletes

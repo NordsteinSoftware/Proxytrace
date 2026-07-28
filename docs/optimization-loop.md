@@ -141,13 +141,24 @@ A/B-test card both go through it, so the surfaces can't drift). A wall-clock `Co
 measure would fold in the run's queue wait, the evaluator passes, and the parallel-execution overlap
 between cases, so it is deliberately **not** used for latency.
 
-When a group completes, `TestRunnerService` calls `IOptimizerService.EnqueueAsync(group)`
-(`TestRunnerService.cs:178`). `TestRunGroupsController` can also enqueue on demand.
+When a group completes, `TestRunnerService.ExecuteGroupAsync` calls
+`IOptimizerService.EnqueueAsync(group)`. `TestRunGroupsController` can also enqueue on demand.
 
 The same completion point also feeds **anomaly detection** (a parallel, independent pipeline — see
 below): `TestRunnerService` calls `IAnomalyDetectionService.EnqueueAsync(group)` on both the success
 and the failure path (a failed group is itself the most important anomaly). Anomaly detection raises
 user notifications rather than theories; it does not participate in the theory→proposal loop.
+
+**Each path only settles a group it actually settled.** Both the success path and the generic
+failure handler check `group.Status.IsTerminal()` under the per-group lock and do their terminal
+work — the `SetCompleted`/`SetFailed` transition, the `PublishGroupComplete` broadcast, *and* the
+enqueues — only when that check let them through. A group is settled exactly once, by exactly one
+of them, so it gets exactly **one** terminal SSE event and **one** anomaly-detection pass. This
+matters because the failure handler is reachable with the group already terminal: a racing
+`CancelAsync` may have settled it `Cancelled`, or the fault may have come from the *tail* of the
+success path (an enqueue) with the group already `Completed`. Broadcasting or enqueueing from there
+re-sent the terminal event carrying the state the group was already in rather than `Failed`, and
+re-ran detection, so one genuine anomaly was flagged and notified twice (#486).
 `Proxytrace.Application/Anomaly/` holds `IAnomalyDetectionService` (a hosted background queue, a
 structural copy of `OptimizerService`), the pure `IAnomalyDetector` rule engine (run failed /
 endpoint unavailable, pass-rate drop or latency increase vs a rolling baseline computed from
@@ -155,6 +166,15 @@ endpoint unavailable, pass-rate drop or latency increase vs a rolling baseline c
 baseline — shared with the kiosk demo seeder, which runs the same rule engine over its seeded
 incident groups), and `AnomalyDetectionConfiguration` (thresholds + baseline window). Detected
 anomalies are delivered through `INotificationService` → the dashboard notification channel.
+
+**Both enqueues are handed `CancellationToken.None`, deliberately.** The group's transition to a
+terminal state happens *inside* the per-group `IAsyncLock`, but the two `EnqueueAsync` calls run
+outside it. Passing the run's linked (cancellable) token there opened a silent hole: a `CancelAsync`
+landing in that window tripped the token, both enqueues were skipped, and `SettleCancelledAsync` then
+found an already-terminal group and no-op'd — so the group read `Completed` forever with neither
+optimization nor anomaly detection ever run, and no error surfaced (#476). Once a group is durably
+terminal the downstream jobs are **owed**, so they must not be cancellable by a racing cancel. Keep
+it that way on both the success and the failure path.
 
 **Sampling and the loop — cohort aggregation.** The per-run `TestRunStats` projection is left
 **unchanged** (one row per `TestRun`); the loop aggregates at read time so N samples never produce N

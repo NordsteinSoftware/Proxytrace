@@ -136,10 +136,19 @@ record equality; only its textual rendering is masked.
 
 Current overrides: `ModelProvider` (`ApiKey`, the reference implementation), `EmailSettings`
 (`Password`), `UserTotpEnrollment` (`Secret`), `KioskEndpointOptions` and `ResolvedKioskEndpoint`
-(`ApiKey`). Note the accessibility differs: a sealed record deriving from `object` must declare
-`private bool PrintMembers(StringBuilder)`, one deriving from another record
+(`ApiKey`), `User` (`PasswordHash`). Note the accessibility differs: a sealed record deriving from
+`object` must declare `private bool PrintMembers(StringBuilder)`, one deriving from another record
 `protected override bool PrintMembers(StringBuilder)` (and must chain to `base.PrintMembers`).
-`Proxytrace.Domain.Tests/SecretRedactionToStringTests` pins all five.
+`Proxytrace.Domain.Tests/SecretRedactionToStringTests` pins all six.
+
+Only **credentials** are masked — identifiers stay readable, so a redacted record is still useful for
+telling *who* or *what* a log line is about. Hence `User.Email` and `User.ExternalSubject` (the OIDC
+subject: a stable identifier, not something you can authenticate with) render in full, the way
+`EmailSettings.Username` does. `User` matters more than its own logging sites suggest: it is printed
+transitively by every record holding an `IUser` (`UserTotpEnrollment.User`, `ApiKey.Owner`). Its
+`PasswordHash` is a salted, slow `IPasswordService` hash rather than a plaintext, so masking it is
+defence in depth — but a hash in the operator Error Log or a support bundle is an offline-cracking
+target.
 
 ## Backfill of pre-existing rows
 
@@ -292,6 +301,19 @@ be induced to make.
   plain-HTTP deployment on a host that is **not** `localhost` — browsers treat `http://localhost` as
   a secure context and accept `Secure` cookies there, so the local Docker/e2e/kiosk stacks
   (`http://localhost:5101`, `:5103`) work with the default.
+
+This setting is the mirror image of `ForwardedHeaders` / `RateLimiting` above: it is read from the
+**container's** configuration view (`Proxytrace.Api/Module.cs`), the one that also sees
+`appsettings.local.json`. That view must agree with the host about which environment this is, so the
+environment name comes from `HostEnvironmentName` (`Proxytrace.Api/Configuration/`), which resolves
+it exactly as `WebApplicationBuilder` does — **`DOTNET_ENVIRONMENT` ahead of
+`ASPNETCORE_ENVIRONMENT`**, from the process environment rather than from a JSON file — and the
+module layers `appsettings.{Environment}.json` in between `appsettings.json` and
+`appsettings.local.json`, where the host layers it. Both divergences were real: the reversed
+precedence made a Production host compute `Development` (and drop `Secure`) when the two variables
+were set and disagreed, and the missing environment file meant an operator's
+`appsettings.Production.json` was silently ignored here while being honoured everywhere the host
+config is read.
 
 ## In-process auth/MFA/rate-limit state is single-instance by design
 

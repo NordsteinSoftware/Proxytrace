@@ -90,6 +90,13 @@ loads without a price (shown as `—`).
 Every stored price is normalised to **EUR per 1M tokens** and is refreshed from the catalogue on
 each reload.
 
+If either feed is unreachable — the catalogue **or** the exchange-rate feed — models still load, they
+simply load without prices. Proxytrace makes **one** attempt against the failing feed and then pauses
+for about half a minute before trying it again, instead of retrying once per discovered model. A
+reload during a feed outage therefore finishes promptly rather than appearing to hang; run it again
+once the feed is back to fill the prices in. A successfully fetched exchange rate is reused for the
+rest of the day, so a healthy day needs a single rate lookup.
+
 Operators can point the pricing feeds at different sources via the `Pricing` section of
 `appsettings` (see [Configuration](/admin/configuration)): `Pricing:LiteLlmFeedUrl` and
 `Pricing:FxApiUrl`.
@@ -121,7 +128,9 @@ Each key also carries explicit **capabilities** (least privilege), chosen when y
 
 A REST key is confined to its own project, so list endpoints that take an optional `projectId` return
 that project's rows whether or not you pass one — there is no need to repeat the project on every
-call, and a key can never widen its reach by omitting it.
+call, and a key can never widen its reach by omitting it. The confinement holds for the projects
+themselves: `GET /api/projects` lists only the key's project, and reading any other project (or its
+members) answers `404`, regardless of what the key's owner could see when signed in.
 
 A key works only on the surfaces it was granted: an ingestion-only key cannot drive MCP or the REST API,
 an MCP-only key cannot proxy LLM traffic or drive REST, and a REST key cannot drive MCP. Keys issued

@@ -74,7 +74,7 @@ public sealed class PricingServiceTests
     {
         var fxProvider = Substitute.For<IFxRateProvider>();
         fxProvider.GetUsdToEurAsync(Arg.Any<CancellationToken>()).Returns(fx);
-        var liteLlm = new LiteLlmCatalogResolver(new HttpClient(new StubHandler(catalog)), new PricingOptions(), fxProvider, Substitute.For<IAsyncLock>());
+        var liteLlm = new LiteLlmCatalogResolver(new HttpClient(new StubHandler(catalog)), new PricingOptions(), fxProvider, Substitute.For<IAsyncLock>(), new MutableClock());
         return new PricingService(liteLlm);
     }
 
