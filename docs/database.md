@@ -81,6 +81,17 @@ Set the connection string in:
   database needed), and `StatisticsFilterParityTests` locks the `StatisticsFilter` member list so
   the LINQ chokepoint (`Query()`) and the raw-SQL percentile `WHERE` builder (`BuildLatencyWhere`)
   cannot silently diverge when the filter gains a member.
+- **Project scope is one id *or* a set, and both are applied in SQL.** `StatisticsFilter` carries
+  `ProjectId` **and** `ProjectIds`, mirroring `AgentCallFilter` (#482/#483): a scope naming exactly
+  one project keeps the equality predicate against `AgentVersion(Project)` — the common, indexed
+  case, so its plan is untouched — while a caller who may read several and named none filters on the
+  set. Both translation paths must honour it: `Query()` as a semi-join with `IN`, and
+  `BuildLatencyWhere()` as `"Project" = ANY(@projectIds)` with the ids passed as a **single `Guid[]`
+  parameter** (Npgsql maps it to `uuid[]`). Never interpolate ids into that SQL — the statement text
+  must stay constant regardless of how many projects the caller belongs to. An empty set means "not
+  restricted by a set", not "match nothing"; endpoints short-circuit an empty scope before building
+  a filter at all (`ProjectListScope.IsEmpty`). `StatisticsFilterWhereTests` covers the raw-SQL
+  fragment, which the in-memory provider never reaches.
 - **The dashboard composite is served from a short-TTL, single-flight, in-process cache**
   (`DashboardStatistics`). The dashboard fans out ~12 statistics queries per request and every open
   viewer polls it every 30 s, three of those queries being full-window scans — without sharing, N

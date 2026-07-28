@@ -210,6 +210,63 @@ public sealed class AgentCallsControllerTests : BaseTest<Module>
         result.Total.Should().Be(2);
     }
 
+    [TestMethod]
+    public async Task GetOverview_AsNonAdminInSeveralProjectsWithoutFilter_AggregatesTheUnion()
+    {
+        // #483: the overview's aggregates go through StatisticsFilter, which used to carry a single
+        // project id (partly applied in raw SQL). A caller who may read several projects and named
+        // none therefore got an empty overview instead of an aggregate over their own projects.
+        IServiceProvider services = GetServices();
+        var first = await SeedAgentInNewProjectAsync(services, "first");
+        var second = await SeedAgentInNewProjectAsync(services, "second");
+        var outsider = await SeedAgentInNewProjectAsync(services, "outsider");
+        await SeedCallWithToolsAsync(services, first, []);
+        await SeedCallWithToolsAsync(services, second, []);
+        await SeedCallWithToolsAsync(services, outsider, []);
+
+        var controller = ResolveController(services, ScopedGuard(first.Project.Id, second.Project.Id));
+        var overview = await controller.GetOverview(cancellationToken: CancellationToken);
+
+        overview.AgentBreakdown.Select(b => b.AgentId).Should().BeEquivalentTo([first.Id, second.Id]);
+        overview.Agents.Select(a => a.Id).Should().BeEquivalentTo([first.Id, second.Id]);
+        // The latency percentiles are the raw-SQL path in production; the third project's call must
+        // not be in the sample either.
+        overview.Latency.Sum(l => l.SampleCount).Should().Be(2);
+    }
+
+    [TestMethod]
+    public async Task GetOverview_AsNonAdminInOneProjectWithoutFilter_AggregatesThatProjectOnly()
+    {
+        // The single-project scope (the web UI, and every REST API key — confined to one project)
+        // keeps going through the filter's by-one-project branch, unchanged by #483.
+        IServiceProvider services = GetServices();
+        var mine = await SeedAgentInNewProjectAsync(services, "mine");
+        var theirs = await SeedAgentInNewProjectAsync(services, "theirs");
+        await SeedCallWithToolsAsync(services, mine, []);
+        await SeedCallWithToolsAsync(services, theirs, []);
+
+        var controller = ResolveController(services, ScopedGuard(mine.Project.Id));
+        var overview = await controller.GetOverview(cancellationToken: CancellationToken);
+
+        overview.AgentBreakdown.Should().ContainSingle().Which.AgentId.Should().Be(mine.Id);
+        overview.Agents.Select(a => a.Id).Should().Equal(mine.Id);
+    }
+
+    [TestMethod]
+    public async Task GetOverview_AsNonMember_ReturnsEmptyWithoutQuerying()
+    {
+        IServiceProvider services = GetServices();
+        var agent = await SeedAgentInNewProjectAsync(services, "theirs");
+        await SeedCallWithToolsAsync(services, agent, []);
+
+        var controller = ResolveController(services, DenyingGuard());
+        var overview = await controller.GetOverview(cancellationToken: CancellationToken);
+
+        overview.Agents.Should().BeEmpty();
+        overview.AgentBreakdown.Should().BeEmpty();
+        overview.Latency.Should().BeEmpty();
+    }
+
     /// <summary>
     /// An agent in a project of its own, so a test can tell two tenants' rows apart.
     /// </summary>

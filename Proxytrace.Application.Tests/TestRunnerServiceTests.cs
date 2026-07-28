@@ -4,6 +4,9 @@ using Autofac;
 using AwesomeAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
+using NSubstitute.ExceptionExtensions;
+using Proxytrace.Application.Anomaly;
+using Proxytrace.Application.Optimization;
 using Proxytrace.Application.Streaming;
 using Proxytrace.Application.TestRun;
 using Proxytrace.Domain;
@@ -270,6 +273,179 @@ public sealed class TestRunnerServiceTests : BaseTest<Module>
         // user cancelled, and no duplicate from the execution unwinding alongside the canceller.
         groupEvents.Should().ContainSingle()
             .Which.GroupStatus.Should().Be(TestRunStatus.Cancelled);
+    }
+
+    [TestMethod]
+    public async Task RunInForeground_WhenCancelLandsAfterTheGroupCompleted_StillEnqueuesOptimizerAndAnomalyDetection()
+    {
+        // Regression for #476. The group transitions to Completed *inside* the per-group lock, but
+        // the optimizer / anomaly-detection enqueues ran outside it on the linked (cancellable)
+        // token. A cancel landing in that window tripped the token, both enqueues were skipped,
+        // SettleCancelledAsync then saw an already-terminal group and no-op'd — leaving the group
+        // reporting Completed forever with no optimization and no anomaly detection ever run, and
+        // nothing surfaced to say so.
+        //
+        // The window is opened deterministically from PublishGroupComplete, which the runner calls
+        // inside the lock immediately after SetCompleted. Cancelling the *caller's* token trips the
+        // very same linked token CancelAsync would, and is the only safe way to do it from here:
+        // CancelAsync re-enters the group lock this callback runs under.
+        var expectedOutput = new AssistantMessage([Content.FromText(MatchingText)], []);
+
+        using var cts = new CancellationTokenSource();
+
+        var broadcaster = Substitute.For<ITestResultBroadcaster>();
+        broadcaster.When(b => b.PublishGroupComplete(Arg.Any<GroupRunCompleteEvent>()))
+            .Do(ci =>
+            {
+                var groupEvent = ci.Arg<GroupRunCompleteEvent>();
+                ArgumentNullException.ThrowIfNull(groupEvent);
+                if (groupEvent.GroupStatus == TestRunStatus.Completed)
+                    cts.Cancel();
+            });
+
+        // Both fakes honour the token they are handed, exactly as the real implementations do —
+        // each enqueue is a ChannelWriter.WriteAsync, which faults immediately on an already
+        // cancelled token rather than queueing the group.
+        CancellationToken optimizerToken = default;
+        CancellationToken anomalyToken = default;
+
+        var optimizer = Substitute.For<IOptimizerService>();
+        optimizer.EnqueueAsync(Arg.Any<ITestRunGroup>(), Arg.Any<CancellationToken>())
+            .Returns(call =>
+            {
+                optimizerToken = call.Arg<CancellationToken>();
+                optimizerToken.ThrowIfCancellationRequested();
+                return Task.CompletedTask;
+            });
+
+        var anomalyDetection = Substitute.For<IAnomalyDetectionService>();
+        anomalyDetection.EnqueueAsync(Arg.Any<ITestRunGroup>(), Arg.Any<CancellationToken>())
+            .Returns(call =>
+            {
+                anomalyToken = call.Arg<CancellationToken>();
+                anomalyToken.ThrowIfCancellationRequested();
+                return Task.CompletedTask;
+            });
+
+        var services = GetServices(config =>
+        {
+            RegisterFakeModelClient(config, expectedOutput);
+            config.RegisterInstance(broadcaster).As<ITestResultBroadcaster>();
+            config.RegisterInstance(optimizer).As<IOptimizerService>();
+            config.RegisterInstance(anomalyDetection).As<IAnomalyDetectionService>();
+        });
+
+        var suite = await BuildSuiteAsync(services, expectedOutput, CancellationToken);
+        var endpoint = (await CreateEndpoints(services, 1))[0];
+        var runner = services.GetRequiredService<ITestRunnerService>();
+
+        // isSystemTestRun stays false — internal A/B runs deliberately skip both pipelines.
+        var group = await runner.RunInForegroundAsync(suite, [endpoint], cancellationToken: cts.Token);
+
+        cts.IsCancellationRequested.Should()
+            .BeTrue("the test must have cancelled inside the completion window for this to prove anything");
+        group.Status.Should().Be(TestRunStatus.Completed);
+
+        await optimizer.Received(1).EnqueueAsync(Arg.Any<ITestRunGroup>(), Arg.Any<CancellationToken>());
+        await anomalyDetection.Received(1).EnqueueAsync(Arg.Any<ITestRunGroup>(), Arg.Any<CancellationToken>());
+        optimizerToken.IsCancellationRequested.Should()
+            .BeFalse("a durably Completed group owes its downstream jobs — a racing cancel must not skip them");
+        anomalyToken.IsCancellationRequested.Should().BeFalse();
+
+        var stored = await services.GetRequiredService<ITestRunGroupRepository>()
+            .GetAsync(group.Id, CancellationToken);
+        stored.Status.Should().Be(TestRunStatus.Completed);
+    }
+
+    [TestMethod]
+    public async Task RunInForeground_WhenAnEnqueueFaultsAfterTheGroupCompleted_DoesNotRepeatTheTerminalEventOrDetection()
+    {
+        // Regression for #486. The generic catch assumed it had been reached from a *non-terminal*
+        // group: PublishGroupComplete sat outside the `if (!group.Status.IsTerminal())` guard and the
+        // anomaly enqueue followed unconditionally. But the tail of the try runs after the group is
+        // already durably Completed, so a fault raised there re-published the terminal event —
+        // carrying Completed a second time, not Failed — and detected the same group twice, which
+        // flags and notifies a genuine anomaly twice.
+        //
+        // The fault is injected into the anomaly enqueue itself because it is the *last* statement of
+        // the success path, so both duplicates are observable from one run: the success-path enqueue
+        // has already happened, making a second one distinguishable from the first. Each enqueue now
+        // also absorbs its own failure (see the sibling test below), so this pins the outcome from
+        // both directions: whichever layer catches the fault, the group settles exactly once.
+        var expectedOutput = new AssistantMessage([Content.FromText(MatchingText)], []);
+
+        var broadcaster = Substitute.For<ITestResultBroadcaster>();
+        var groupEvents = new ConcurrentQueue<GroupRunCompleteEvent>();
+        broadcaster.When(b => b.PublishGroupComplete(Arg.Any<GroupRunCompleteEvent>()))
+            .Do(ci =>
+            {
+                var groupEvent = ci.Arg<GroupRunCompleteEvent>();
+                ArgumentNullException.ThrowIfNull(groupEvent);
+                groupEvents.Enqueue(groupEvent);
+            });
+
+        // The real enqueue is a ChannelWriter.WriteAsync; a completed or disposed writer faults it.
+        var anomalyDetection = Substitute.For<IAnomalyDetectionService>();
+        anomalyDetection.EnqueueAsync(Arg.Any<ITestRunGroup>(), Arg.Any<CancellationToken>())
+            .Throws(new InvalidOperationException("the anomaly queue is gone"));
+
+        var services = GetServices(config =>
+        {
+            RegisterFakeModelClient(config, expectedOutput);
+            config.RegisterInstance(broadcaster).As<ITestResultBroadcaster>();
+            config.RegisterInstance(anomalyDetection).As<IAnomalyDetectionService>();
+        });
+
+        var suite = await BuildSuiteAsync(services, expectedOutput, CancellationToken);
+        var endpoint = (await CreateEndpoints(services, 1))[0];
+        var runner = services.GetRequiredService<ITestRunnerService>();
+
+        // isSystemTestRun stays false, so the enqueues — and with them the fault — actually run.
+        var group = await runner.RunInForegroundAsync(suite, [endpoint], cancellationToken: CancellationToken);
+
+        // A fault landing after the group settled cannot un-settle it, and the failure path must not
+        // pretend otherwise: no second terminal event, and no second pass of anomaly detection.
+        group.Status.Should().Be(TestRunStatus.Completed);
+        var stored = await services.GetRequiredService<ITestRunGroupRepository>()
+            .GetAsync(group.Id, CancellationToken);
+        stored.Status.Should().Be(TestRunStatus.Completed);
+
+        groupEvents.Should().ContainSingle("a group has exactly one terminal event")
+            .Which.GroupStatus.Should().Be(TestRunStatus.Completed);
+        await anomalyDetection.Received(1).EnqueueAsync(Arg.Any<ITestRunGroup>(), Arg.Any<CancellationToken>());
+    }
+
+    [TestMethod]
+    public async Task RunInForeground_WhenTheOptimizerEnqueueFaults_StillEnqueuesAnomalyDetection()
+    {
+        // The two downstream jobs a completed group owes are unrelated, so failing to hand it to one
+        // must not cost it the other. They used to be bare sequential awaits: an optimizer fault
+        // skipped the anomaly enqueue and fell into the generic catch, which happened to enqueue it
+        // there instead. That accidental compensation is gone now that the catch only settles a group
+        // it actually transitioned (#486), so each enqueue owns its own failure.
+        var expectedOutput = new AssistantMessage([Content.FromText(MatchingText)], []);
+
+        var optimizer = Substitute.For<IOptimizerService>();
+        optimizer.EnqueueAsync(Arg.Any<ITestRunGroup>(), Arg.Any<CancellationToken>())
+            .Throws(new InvalidOperationException("the optimizer queue is gone"));
+
+        var anomalyDetection = Substitute.For<IAnomalyDetectionService>();
+
+        var services = GetServices(config =>
+        {
+            RegisterFakeModelClient(config, expectedOutput);
+            config.RegisterInstance(optimizer).As<IOptimizerService>();
+            config.RegisterInstance(anomalyDetection).As<IAnomalyDetectionService>();
+        });
+
+        var suite = await BuildSuiteAsync(services, expectedOutput, CancellationToken);
+        var endpoint = (await CreateEndpoints(services, 1))[0];
+        var runner = services.GetRequiredService<ITestRunnerService>();
+
+        var group = await runner.RunInForegroundAsync(suite, [endpoint], cancellationToken: CancellationToken);
+
+        group.Status.Should().Be(TestRunStatus.Completed);
+        await anomalyDetection.Received(1).EnqueueAsync(Arg.Any<ITestRunGroup>(), Arg.Any<CancellationToken>());
     }
 
     [TestMethod]

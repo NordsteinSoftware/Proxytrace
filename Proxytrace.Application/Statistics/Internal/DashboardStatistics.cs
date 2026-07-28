@@ -164,16 +164,20 @@ internal class DashboardStatistics : IDashboardStatistics
         Task<StatisticsBucket> tokenBucketTask = Task.Run(() => ResolveTokenBucketAsync(filter, cancellationToken), cancellationToken);
         Task<IReadOnlyList<TokenUsageStat>> tokenUsageTask = Task.Run(async () => await GetTokenUsageAsync(filter, await tokenBucketTask, cancellationToken), cancellationToken);
         Task<IReadOnlyList<AgentTokenUsageStat>> tokenByAgentTask = Task.Run(async () => await GetTokenUsageByAgentAsync(filter, await tokenBucketTask, cancellationToken), cancellationToken);
+        // The recent-traces list carries the same project scope as the aggregates — including a
+        // multi-project one (#483), which the trace filter applies as a set (#482).
         Task<(IReadOnlyList<IAgentCall> Items, int Total)> recentTask = Task.Run(() => agentCalls.GetFilteredAsync(
-            new AgentCallFilter(ProjectId: filter.ProjectId, From: filter.From, IncludeSystemAgents: !filter.ExcludeSystemAgents),
+            new AgentCallFilter(
+                ProjectId: filter.ProjectId,
+                From: filter.From,
+                IncludeSystemAgents: !filter.ExcludeSystemAgents,
+                ProjectIds: filter.ProjectIds),
             page: 1,
             pageSize: recentTraceCount,
             cancellationToken), cancellationToken);
-        // Scope the agent load to the project when filtered, instead of loading every agent and
+        // Scope the agent load to the filter's projects, instead of loading every agent and
         // discarding the rest in memory. The unfiltered (global) dashboard still needs all agents.
-        Task<IReadOnlyList<IAgent>> agentsTask = Task.Run(() => filter.ProjectId is { } projectId
-            ? agents.GetByProjectAsync(projectId, cancellationToken)
-            : agents.GetAllAsync(cancellationToken), cancellationToken);
+        Task<IReadOnlyList<IAgent>> agentsTask = Task.Run(() => GetScopedAgentsAsync(filter, cancellationToken), cancellationToken);
         Task<IReadOnlyDictionary<Guid, DateTimeOffset>> lastCallTimesTask = Task.Run(() => agentCalls.GetLastCallTimesAsync(cancellationToken), cancellationToken);
         Task<IReadOnlyList<int>> pulseTask = Task.Run(() => GetPulseAsync(filter, cancellationToken), cancellationToken);
 
@@ -292,13 +296,36 @@ internal class DashboardStatistics : IDashboardStatistics
         return new DashboardTrends(trends.Traces, trends.LatencyMs, trends.Throughput, passRate);
     }
 
+    /// <summary>
+    /// The agents the filter's project scope covers: one project's agents when it names a project,
+    /// the union of the scope's projects when it spans several (#483), and every agent when it is
+    /// unscoped (the admin-only global dashboard).
+    /// </summary>
+    /// <remarks>
+    /// The multi-project case loads all agents and narrows in memory, mirroring how the agent and
+    /// evaluator listings scope themselves — the agents table is small and bounded by the licensed
+    /// agent limit, unlike the trace table its aggregates run over.
+    /// </remarks>
+    private async Task<IReadOnlyList<IAgent>> GetScopedAgentsAsync(StatisticsFilter filter, CancellationToken cancellationToken)
+    {
+        if (filter.ProjectId is { } projectId)
+        {
+            return await agents.GetByProjectAsync(projectId, cancellationToken);
+        }
+
+        IReadOnlyList<IAgent> all = await agents.GetAllAsync(cancellationToken);
+        return filter.ProjectIds is { Count: > 0 } projectIds
+            ? all.Where(a => projectIds.Contains(a.Project.Id)).ToArray()
+            : all;
+    }
+
     private async Task<TestRunStats.Filter> ToRunFilterAsync(StatisticsFilter filter, CancellationToken cancellationToken)
     {
         IReadOnlyCollection<Guid>? agentIds = null;
-        if (filter.ProjectId is { } projectId)
+        if (filter.ProjectId is not null || filter.ProjectIds is { Count: > 0 })
         {
-            IReadOnlyList<IAgent> projectAgents = await agents.GetByProjectAsync(projectId, cancellationToken);
-            agentIds = projectAgents.Select(a => a.Id).ToArray();
+            IReadOnlyList<IAgent> scopedAgents = await GetScopedAgentsAsync(filter, cancellationToken);
+            agentIds = scopedAgents.Select(a => a.Id).ToArray();
         }
 
         return new TestRunStats.Filter(

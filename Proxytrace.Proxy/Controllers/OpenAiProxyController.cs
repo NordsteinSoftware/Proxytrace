@@ -92,7 +92,7 @@ public class OpenAiProxyController : ControllerBase
 
     // Response side of the same transparency rule: every upstream header is relayed to the client
     // EXCEPT hop-by-hop headers and the framing headers Kestrel must own. Content-Length is dropped
-    // because the streaming path normalizes CRLF line endings to LF, so the relayed byte count can
+    // because the streaming path normalizes CRLF/CR line endings to LF, so the relayed byte count can
     // legitimately differ from upstream's.
     private static readonly IReadOnlyCollection<string> StrippedResponseHeaders = new HashSet<string>(
     [
@@ -212,6 +212,11 @@ public class OpenAiProxyController : ControllerBase
             // (bounded only by HttpClient.MaxResponseContentBufferSize, ~2 GB by default) — which is
             // exactly the unbounded residency ProxyBufferedResponseAsync's chunked copy exists to
             // avoid. Both paths read the body as a stream, so neither needs the eager buffer.
+            //
+            // The price is that HttpClient.Timeout stops applying the moment the headers land, so it
+            // no longer bounds the body download (#475). ProxyBufferedResponseAsync restores that
+            // bound at its copy loop, using this client's own configured timeout — read off the
+            // instance rather than re-declared here so the two can never drift apart.
             upstreamResponse = await client.SendAsync(upstream, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
         }
         catch (Exception ex)
@@ -233,7 +238,7 @@ public class OpenAiProxyController : ControllerBase
             }
             else
             {
-                await ProxyBufferedResponseAsync(resolved.Provider, resolved.Project, requestBody, upstreamResponse, sw, sessionId, conversationId, agentName, cancellationToken);
+                await ProxyBufferedResponseAsync(resolved.Provider, resolved.Project, requestBody, upstreamResponse, sw, sessionId, conversationId, agentName, client.Timeout, cancellationToken);
             }
         }
     }
@@ -585,6 +590,7 @@ public class OpenAiProxyController : ControllerBase
         string? sessionId,
         string? conversationId,
         string? agentName,
+        TimeSpan upstreamBodyTimeout,
         CancellationToken cancellationToken)
     {
         // Stream the upstream body straight through to the client instead of materializing it as a
@@ -599,14 +605,28 @@ public class OpenAiProxyController : ControllerBase
         var buffer = ArrayPool<byte>.Shared.Rent(CopyChunkBytes);
         var chars = ArrayPool<char>.Shared.Rent(Encoding.UTF8.GetMaxCharCount(buffer.Length));
 
+        // #475: HttpClient.Timeout covers only up to the response headers, and the SendAsync above
+        // deliberately returns at that point (ResponseHeadersRead), so nothing upstream of here bounds
+        // the body download — SocketsHttpHandler has no read-timeout knob either. Without this an
+        // upstream that sends headers and then stalls pins a proxy request, a socket and a thread-pool
+        // continuation until the *client* gives up, because `cancellationToken` is RequestAborted.
+        // The budget is the "openai" client's own timeout (Proxytrace.Proxy/Module.cs), passed in
+        // rather than re-declared, so the header phase and the body phase can never drift apart.
+        using var bodyTimeout = new CancellationTokenSource(upstreamBodyTimeout);
+        using var linkedTokens = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, bodyTimeout.Token);
+        var bodyToken = linkedTokens.Token;
+
+        // What gets recorded for the call: upstream's own status, unless we cut the body short.
+        var capturedStatus = upstreamResponse.StatusCode;
+
         try
         {
-            await using var upstreamStream = await upstreamResponse.Content.ReadAsStreamAsync(cancellationToken);
+            await using var upstreamStream = await upstreamResponse.Content.ReadAsStreamAsync(bodyToken);
 
             int read;
-            while ((read = await upstreamStream.ReadAsync(buffer.AsMemory(), cancellationToken)) > 0)
+            while ((read = await upstreamStream.ReadAsync(buffer.AsMemory(), bodyToken)) > 0)
             {
-                await Response.Body.WriteAsync(buffer.AsMemory(0, read), cancellationToken);
+                await Response.Body.WriteAsync(buffer.AsMemory(0, read), bodyToken);
 
                 // Bound the captured copy: decode this chunk and append only while under the cap. The
                 // Decoder carries a multi-byte UTF-8 sequence split across a chunk boundary between
@@ -618,6 +638,26 @@ public class OpenAiProxyController : ControllerBase
                 }
             }
         }
+        // Our timeout only, never a client abort: the filter requires that the *body* budget tripped
+        // and that the request token did not, so a disconnecting client still propagates its
+        // cancellation exactly as before (there is nobody left to answer) while a stalled upstream is
+        // reported — to the client and to the trace — as the gateway timeout it is.
+        catch (OperationCanceledException) when (bodyTimeout.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
+        {
+            capturedStatus = HttpStatusCode.GatewayTimeout;
+            logger.LogWarning(
+                "Upstream stalled while sending the response body; aborted after {TimeoutSeconds:F0}s",
+                upstreamBodyTimeout.TotalSeconds);
+
+            // The status is only ours to set while nothing has reached the wire. Once the first bytes
+            // are out, upstream's status stands and the client gets a truncated body — but the trace
+            // published below still records the timeout either way.
+            if (!Response.HasStarted)
+            {
+                Response.Clear();
+                Response.StatusCode = StatusCodes.Status504GatewayTimeout;
+            }
+        }
         finally
         {
             ArrayPool<char>.Shared.Return(chars);
@@ -627,7 +667,7 @@ public class OpenAiProxyController : ControllerBase
             // Capture is decoupled from the client request lifetime: the upstream call has already
             // completed, so a client disconnect/timeout here must not drop the captured call.
             // Publish with CancellationToken.None rather than the request-aborted token.
-            await EnqueueSafeAsync(provider, project, requestBody, captured.ToString(), sw.Elapsed, upstreamResponse.StatusCode, sessionId, conversationId, agentName, CancellationToken.None);
+            await EnqueueSafeAsync(provider, project, requestBody, captured.ToString(), sw.Elapsed, capturedStatus, sessionId, conversationId, agentName, CancellationToken.None);
         }
     }
 
@@ -649,16 +689,21 @@ public class OpenAiProxyController : ControllerBase
         await using var upstreamStream = await upstreamResponse.Content.ReadAsStreamAsync(cancellationToken);
         using var reader = new StreamReader(upstreamStream, Encoding.UTF8, leaveOpen: true);
 
-        // Read fixed-size chunks and split on '\n' ourselves rather than calling ReadLineAsync, which
-        // grows an unbounded internal buffer until it finds a newline. Whether the response is really
-        // an event stream is decided by the *request* (`"stream": true`), never by the upstream, so a
-        // provider that ignores the flag — or a WAF/error page in front of it — can answer with one
-        // multi-megabyte single-line body, which ReadLineAsync would materialize whole as a string and
-        // WriteSseSegmentAsync would then rent 3x its length on top of. A line that grows past
-        // MaxForwardedLineChars is flushed as a raw, unterminated segment instead: the client still
-        // receives every byte, but nothing unbounded is ever resident.
+        // Read fixed-size chunks and split on the line terminator ourselves rather than calling
+        // ReadLineAsync, which grows an unbounded internal buffer until it finds one. Whether the
+        // response is really an event stream is decided by the *request* (`"stream": true`), never by
+        // the upstream, so a provider that ignores the flag — or a WAF/error page in front of it — can
+        // answer with one multi-megabyte single-line body, which ReadLineAsync would materialize whole
+        // as a string and WriteSseSegmentAsync would then rent 3x its length on top of. A line that
+        // grows past MaxForwardedLineChars is flushed as a raw, unterminated segment instead: the
+        // client still receives every byte, but nothing unbounded is ever resident.
         var chunk = ArrayPool<char>.Shared.Rent(StreamReadChunkChars);
         var pending = new StringBuilder();
+
+        // Carries one bit of splitter state across a chunk boundary: the previous chunk ended on a
+        // '\r' that terminated a line, so a '\n' opening this chunk is the second half of that same
+        // CRLF and must be swallowed rather than read as a second, empty line (#480).
+        var pendingCarriageReturn = false;
 
         try
         {
@@ -666,17 +711,46 @@ public class OpenAiProxyController : ControllerBase
             while ((read = await reader.ReadAsync(chunk.AsMemory(0, StreamReadChunkChars), cancellationToken)) > 0)
             {
                 var start = 0;
+                if (pendingCarriageReturn)
+                {
+                    pendingCarriageReturn = false;
+                    if (chunk[0] == '\n')
+                    {
+                        start = 1;
+                    }
+                }
+
                 while (start < read)
                 {
-                    var newline = Array.IndexOf(chunk, '\n', start, read - start);
-                    if (newline < 0)
+                    // SSE terminates a line with LF, CRLF *or* a lone CR, and the ReadLineAsync this
+                    // loop replaced honoured all three — so split on either character (#480). A
+                    // CR-only stream that is only split on '\n' is held back until the
+                    // MaxForwardedLineChars flush or EOF, which defeats incremental delivery.
+                    var offset = chunk.AsSpan(start, read - start).IndexOfAny('\r', '\n');
+                    if (offset < 0)
                     {
                         pending.Append(chunk, start, read - start);
                         break;
                     }
 
-                    pending.Append(chunk, start, newline - start);
-                    start = newline + 1;
+                    var terminator = start + offset;
+                    pending.Append(chunk, start, terminator - start);
+                    start = terminator + 1;
+
+                    // CRLF is one terminator, not two. The '\n' may be the first character of the
+                    // *next* chunk, in which case the flag above carries the state across the seam.
+                    if (chunk[terminator] == '\r')
+                    {
+                        if (start >= read)
+                        {
+                            pendingCarriageReturn = true;
+                        }
+                        else if (chunk[start] == '\n')
+                        {
+                            start++;
+                        }
+                    }
+
                     await EmitSseSegmentAsync(pending, accumulated, terminated: true, cancellationToken);
                 }
 
@@ -708,21 +782,17 @@ public class OpenAiProxyController : ControllerBase
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     // Drains the pending segment: appends it to the bounded capture buffer and forwards it to the
-    // client. `terminated` distinguishes a real line (a '\n' was seen upstream, so one is written and
-    // a trailing '\r' is dropped — the CRLF→LF normalization StreamReader.ReadLine used to do) from a
-    // length-forced flush of an over-long line, which is written raw so the forwarded bytes stay
-    // faithful and no newline is invented.
+    // client. `terminated` distinguishes a real line (a terminator was seen upstream — LF, CRLF or a
+    // lone CR, all written back as the single '\n' StreamReader.ReadLine used to normalize them to)
+    // from a length-forced flush of an over-long line, which is written raw so the forwarded bytes
+    // stay faithful and no newline is invented. The splitter consumes the terminator characters
+    // themselves, so `pending` never carries one into here.
     private async Task EmitSseSegmentAsync(
         StringBuilder pending,
         StringBuilder accumulated,
         bool terminated,
         CancellationToken cancellationToken)
     {
-        if (terminated && pending.Length > 0 && pending[^1] == '\r')
-        {
-            pending.Length--;
-        }
-
         var segment = pending.ToString();
         pending.Clear();
 

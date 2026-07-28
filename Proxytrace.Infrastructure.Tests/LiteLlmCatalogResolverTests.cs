@@ -22,12 +22,18 @@ public sealed class LiteLlmCatalogResolverTests
         }
         """;
 
+    /// <summary>
+    /// Comfortably longer than the resolver's (private) FailedFetchRetryInterval — advancing the test
+    /// clock by this expires the negative cache a failed fetch armed.
+    /// </summary>
+    private static readonly TimeSpan PastNegativeCache = TimeSpan.FromMinutes(5);
+
     [TestMethod]
     public async Task Resolve_KnownModel_ConvertsUsdPerTokenToEurPer1M()
     {
         var fx = Substitute.For<IFxRateProvider>();
         fx.GetUsdToEurAsync(Arg.Any<CancellationToken>()).Returns(0.9m);
-        var sut = new LiteLlmCatalogResolver(new HttpClient(new StubHandler(HttpStatusCode.OK, Catalog)), new PricingOptions(), fx, Substitute.For<IAsyncLock>());
+        var sut = new LiteLlmCatalogResolver(new HttpClient(new StubHandler(HttpStatusCode.OK, Catalog)), new PricingOptions(), fx, Substitute.For<IAsyncLock>(), new MutableClock());
 
         var price = await sut.ResolveAsync(["gpt-4o"], TestContext.CancellationToken);
 
@@ -42,7 +48,7 @@ public sealed class LiteLlmCatalogResolverTests
     {
         var fx = Substitute.For<IFxRateProvider>();
         fx.GetUsdToEurAsync(Arg.Any<CancellationToken>()).Returns(1.0m);
-        var sut = new LiteLlmCatalogResolver(new HttpClient(new StubHandler(HttpStatusCode.OK, Catalog)), new PricingOptions(), fx, Substitute.For<IAsyncLock>());
+        var sut = new LiteLlmCatalogResolver(new HttpClient(new StubHandler(HttpStatusCode.OK, Catalog)), new PricingOptions(), fx, Substitute.For<IAsyncLock>(), new MutableClock());
 
         // azure/gpt-4o has input/output but no cache_read_input_token_cost.
         var price = await sut.ResolveAsync(["azure/gpt-4o"], TestContext.CancellationToken);
@@ -56,7 +62,7 @@ public sealed class LiteLlmCatalogResolverTests
     {
         var fx = Substitute.For<IFxRateProvider>();
         fx.GetUsdToEurAsync(Arg.Any<CancellationToken>()).Returns(1.0m);
-        var sut = new LiteLlmCatalogResolver(new HttpClient(new StubHandler(HttpStatusCode.OK, Catalog)), new PricingOptions(), fx, Substitute.For<IAsyncLock>());
+        var sut = new LiteLlmCatalogResolver(new HttpClient(new StubHandler(HttpStatusCode.OK, Catalog)), new PricingOptions(), fx, Substitute.For<IAsyncLock>(), new MutableClock());
 
         // azure/gpt-4o (0.000003) precedes gpt-4o (0.0000025) → azure entry wins.
         var price = await sut.ResolveAsync(["azure/gpt-4o", "gpt-4o"], TestContext.CancellationToken);
@@ -69,7 +75,7 @@ public sealed class LiteLlmCatalogResolverTests
     {
         var fx = Substitute.For<IFxRateProvider>();
         fx.GetUsdToEurAsync(Arg.Any<CancellationToken>()).Returns(1.0m);
-        var sut = new LiteLlmCatalogResolver(new HttpClient(new StubHandler(HttpStatusCode.OK, Catalog)), new PricingOptions(), fx, Substitute.For<IAsyncLock>());
+        var sut = new LiteLlmCatalogResolver(new HttpClient(new StubHandler(HttpStatusCode.OK, Catalog)), new PricingOptions(), fx, Substitute.For<IAsyncLock>(), new MutableClock());
 
         // azure/gpt-5 is absent → falls back to gpt-4o.
         var price = await sut.ResolveAsync(["azure/gpt-5", "gpt-4o"], TestContext.CancellationToken);
@@ -82,7 +88,7 @@ public sealed class LiteLlmCatalogResolverTests
     {
         var fx = Substitute.For<IFxRateProvider>();
         fx.GetUsdToEurAsync(Arg.Any<CancellationToken>()).Returns(0.9m);
-        var sut = new LiteLlmCatalogResolver(new HttpClient(new StubHandler(HttpStatusCode.OK, Catalog)), new PricingOptions(), fx, Substitute.For<IAsyncLock>());
+        var sut = new LiteLlmCatalogResolver(new HttpClient(new StubHandler(HttpStatusCode.OK, Catalog)), new PricingOptions(), fx, Substitute.For<IAsyncLock>(), new MutableClock());
 
         var price = await sut.ResolveAsync(["does-not-exist"], TestContext.CancellationToken);
 
@@ -94,7 +100,7 @@ public sealed class LiteLlmCatalogResolverTests
     {
         var fx = Substitute.For<IFxRateProvider>();
         fx.GetUsdToEurAsync(Arg.Any<CancellationToken>()).Returns((decimal?)null);
-        var sut = new LiteLlmCatalogResolver(new HttpClient(new StubHandler(HttpStatusCode.OK, Catalog)), new PricingOptions(), fx, Substitute.For<IAsyncLock>());
+        var sut = new LiteLlmCatalogResolver(new HttpClient(new StubHandler(HttpStatusCode.OK, Catalog)), new PricingOptions(), fx, Substitute.For<IAsyncLock>(), new MutableClock());
 
         var price = await sut.ResolveAsync(["gpt-4o"], TestContext.CancellationToken);
 
@@ -106,19 +112,110 @@ public sealed class LiteLlmCatalogResolverTests
     {
         var fx = Substitute.For<IFxRateProvider>();
         fx.GetUsdToEurAsync(Arg.Any<CancellationToken>()).Returns(1.0m);
+        var clock = new MutableClock();
         var handler = new SequencedHandler(
             _ => throw new HttpRequestException("transient"),
-            _ => new HttpResponseMessage(HttpStatusCode.OK)
-            { Content = new StringContent(Catalog, Encoding.UTF8, "application/json") });
-        var sut = new LiteLlmCatalogResolver(new HttpClient(handler), new PricingOptions(), fx, Substitute.For<IAsyncLock>());
+            _ => Ok());
+        var sut = new LiteLlmCatalogResolver(new HttpClient(handler), new PricingOptions(), fx, Substitute.For<IAsyncLock>(), clock);
 
         // First fetch fails: fail-soft to Unknown, but the empty result must not be cached...
         ModelPrice first = await sut.ResolveAsync(["gpt-4o"], TestContext.CancellationToken);
-        // ...so the next call re-fetches and picks the catalog up.
+        // ...so once the short negative cache expires the next call re-fetches and picks the catalog up.
+        clock.Advance(PastNegativeCache);
         ModelPrice second = await sut.ResolveAsync(["gpt-4o"], TestContext.CancellationToken);
 
         first.Should().Be(ModelPrice.Unknown);
         second.InputTokenCost.Should().Be(2.5m);
+    }
+
+    [TestMethod]
+    public async Task Resolve_DuringCatalogOutage_AttemptsOnlyOneFetchForRepeatedCalls()
+    {
+        var fx = Substitute.For<IFxRateProvider>();
+        fx.GetUsdToEurAsync(Arg.Any<CancellationToken>()).Returns(1.0m);
+        var handler = new SequencedHandler(_ => throw new HttpRequestException("catalog is down"));
+        var sut = new LiteLlmCatalogResolver(new HttpClient(handler), new PricingOptions(), fx, Substitute.For<IAsyncLock>(), new MutableClock());
+
+        // A provider exposing many models resolves a price per model; the outage must not turn that
+        // into one outbound fetch attempt per model (#478).
+        for (int i = 0; i < 10; i++)
+        {
+            ModelPrice price = await sut.ResolveAsync(["gpt-4o"], TestContext.CancellationToken);
+            price.Should().Be(ModelPrice.Unknown);
+        }
+
+        handler.CallCount.Should().Be(1);
+    }
+
+    [TestMethod]
+    public async Task Resolve_AfterNegativeCacheExpires_RetriesTheFetch()
+    {
+        var fx = Substitute.For<IFxRateProvider>();
+        fx.GetUsdToEurAsync(Arg.Any<CancellationToken>()).Returns(1.0m);
+        var clock = new MutableClock();
+        var handler = new SequencedHandler(_ => throw new HttpRequestException("catalog is down"));
+        var sut = new LiteLlmCatalogResolver(new HttpClient(handler), new PricingOptions(), fx, Substitute.For<IAsyncLock>(), clock);
+
+        await sut.ResolveAsync(["gpt-4o"], TestContext.CancellationToken);
+        await sut.ResolveAsync(["gpt-4o"], TestContext.CancellationToken);
+        handler.CallCount.Should().Be(1, "the second call is still inside the negative-cache window");
+
+        clock.Advance(PastNegativeCache);
+        await sut.ResolveAsync(["gpt-4o"], TestContext.CancellationToken);
+
+        handler.CallCount.Should().Be(2);
+    }
+
+    [TestMethod]
+    public async Task Resolve_WhenCancelled_DoesNotArmTheNegativeCache()
+    {
+        var fx = Substitute.For<IFxRateProvider>();
+        fx.GetUsdToEurAsync(Arg.Any<CancellationToken>()).Returns(1.0m);
+        using var cts = new CancellationTokenSource();
+        var handler = new SequencedHandler(
+            ct =>
+            {
+                cts.Cancel();
+                ct.ThrowIfCancellationRequested();
+                throw new InvalidOperationException("unreachable");
+            },
+            _ => Ok());
+        var sut = new LiteLlmCatalogResolver(new HttpClient(handler), new PricingOptions(), fx, Substitute.For<IAsyncLock>(), new MutableClock());
+
+        await FluentActions
+            .Invoking(() => sut.ResolveAsync(["gpt-4o"], cts.Token))
+            .Should().ThrowAsync<OperationCanceledException>();
+
+        // Caller-initiated cancellation is not a catalog failure, so the very next call must fetch
+        // again rather than sit out the negative-cache window.
+        ModelPrice price = await sut.ResolveAsync(["gpt-4o"], TestContext.CancellationToken);
+
+        price.InputTokenCost.Should().Be(2.5m);
+        handler.CallCount.Should().Be(2);
+    }
+
+    [TestMethod]
+    public async Task Resolve_SuccessfulFetchAfterFailure_CachesTheCatalog()
+    {
+        var fx = Substitute.For<IFxRateProvider>();
+        fx.GetUsdToEurAsync(Arg.Any<CancellationToken>()).Returns(1.0m);
+        var clock = new MutableClock();
+        var handler = new SequencedHandler(
+            _ => throw new HttpRequestException("transient"),
+            _ => Ok(),
+            _ => throw new InvalidOperationException("catalog must not be fetched after it was cached"));
+        var sut = new LiteLlmCatalogResolver(new HttpClient(handler), new PricingOptions(), fx, Substitute.For<IAsyncLock>(), clock);
+
+        await sut.ResolveAsync(["gpt-4o"], TestContext.CancellationToken);
+        clock.Advance(PastNegativeCache);
+        await sut.ResolveAsync(["gpt-4o"], TestContext.CancellationToken);
+        // The recovered catalog is cached for good — a later call neither re-fetches nor is affected
+        // by the earlier failure.
+        clock.Advance(PastNegativeCache);
+        ModelPrice third = await sut.ResolveAsync(["gpt-4o"], TestContext.CancellationToken);
+
+        third.InputTokenCost.Should().Be(2.5m);
+        handler.CallCount.Should().Be(2);
     }
 
     [TestMethod]
@@ -130,7 +227,7 @@ public sealed class LiteLlmCatalogResolverTests
             _ => new HttpResponseMessage(HttpStatusCode.OK)
             { Content = new StringContent(Catalog, Encoding.UTF8, "application/json") },
             _ => throw new InvalidOperationException("catalog must not be fetched twice"));
-        var sut = new LiteLlmCatalogResolver(new HttpClient(handler), new PricingOptions(), fx, Substitute.For<IAsyncLock>());
+        var sut = new LiteLlmCatalogResolver(new HttpClient(handler), new PricingOptions(), fx, Substitute.For<IAsyncLock>(), new MutableClock());
 
         await sut.ResolveAsync(["gpt-4o"], TestContext.CancellationToken);
         ModelPrice second = await sut.ResolveAsync(["gpt-4o"], TestContext.CancellationToken);
@@ -151,12 +248,15 @@ public sealed class LiteLlmCatalogResolverTests
             ct.ThrowIfCancellationRequested();
             throw new InvalidOperationException("unreachable");
         });
-        var sut = new LiteLlmCatalogResolver(new HttpClient(handler), new PricingOptions(), fx, Substitute.For<IAsyncLock>());
+        var sut = new LiteLlmCatalogResolver(new HttpClient(handler), new PricingOptions(), fx, Substitute.For<IAsyncLock>(), new MutableClock());
 
         await FluentActions
             .Invoking(() => sut.ResolveAsync(["gpt-4o"], cts.Token))
             .Should().ThrowAsync<OperationCanceledException>();
     }
+
+    private static HttpResponseMessage Ok() =>
+        new(HttpStatusCode.OK) { Content = new StringContent(Catalog, Encoding.UTF8, "application/json") };
 
     private sealed class StubHandler(HttpStatusCode status, string body) : HttpMessageHandler
     {

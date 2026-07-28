@@ -13,11 +13,21 @@ public static class ProviderEndpoints
     /// True when the endpoint host indicates an Azure OpenAI resource. Matched as a domain suffix,
     /// not a substring: a substring test also accepts lookalike hosts such as
     /// <c>my-azure.com.example.net</c>, and misclassifying one as Azure makes the proxy attach the
-    /// provider credential in a second <c>api-key</c> header on top of the bearer.
+    /// provider credential in a second <c>api-key</c> header on top of the bearer. A single trailing
+    /// DNS root dot is normalized away first — <see cref="Uri.Host"/> (like <see cref="Uri.IdnHost"/>
+    /// and <see cref="Uri.DnsSafeHost"/>) preserves it, so the fully-qualified
+    /// <c>resource.openai.azure.com.</c> would otherwise fail the suffix match. Exactly one dot is
+    /// trimmed: <c>resource.azure.com..</c> is not a legal hostname and stays unmatched.
     /// </summary>
-    public static bool IsAzure(Uri endpoint) =>
-        endpoint.Host.Equals(AzureDomain, StringComparison.OrdinalIgnoreCase)
-        || endpoint.Host.EndsWith($".{AzureDomain}", StringComparison.OrdinalIgnoreCase);
+    public static bool IsAzure(Uri endpoint)
+    {
+        string host = endpoint.Host;
+        if (host.EndsWith('.'))
+            host = host[..^1];
+
+        return host.Equals(AzureDomain, StringComparison.OrdinalIgnoreCase)
+            || host.EndsWith($".{AzureDomain}", StringComparison.OrdinalIgnoreCase);
+    }
 
     private const string AzureDomain = "azure.com";
 

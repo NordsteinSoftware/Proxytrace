@@ -34,6 +34,10 @@ public sealed class StatisticsFilterParityTests : BaseTest<Module>
         nameof(StatisticsFilter.AgentId),
         nameof(StatisticsFilter.EndpointId),
         nameof(StatisticsFilter.ExcludeSystemAgents),
+        // #483: the multi-project scope. Query() applies it as a semi-join against
+        // AgentVersion(Project); BuildLatencyWhere() as "= ANY(@projectIds)" over one uuid[]
+        // parameter — see StatisticsFilterWhereTests.
+        nameof(StatisticsFilter.ProjectIds),
     ];
 
     [TestMethod]

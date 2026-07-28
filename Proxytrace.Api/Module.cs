@@ -47,9 +47,18 @@ internal sealed class Module : Autofac.Module
         
         builder.RegisterModule<Infrastructure.Module>();
 
+        // The container owns a second view of configuration because the host's does not read
+        // appsettings.local.json (the machine-local override holding the generated signing key —
+        // see Program.cs). It must otherwise mirror the host's view: the environment-specific
+        // appsettings.{Environment}.json is layered in exactly where the host layers it, between
+        // the base file and the more specific local override, so an operator who adds
+        // appsettings.Production.json gets it honoured here too. See docs/security.md.
+        var environmentName = HostEnvironmentName.Resolve();
+
         ConfigurationBuilder configurationBuilder = new ConfigurationBuilder();
         IConfiguration configuration = configurationBuilder
             .AddJsonFile("appsettings.json", optional: false, reloadOnChange: false)
+            .AddJsonFile($"appsettings.{environmentName}.json", optional: true, reloadOnChange: false)
             .AddJsonFile("appsettings.local.json", optional: true, reloadOnChange: false)
             .AddEnvironmentVariables()
             .Build();
@@ -289,7 +298,7 @@ internal sealed class Module : Autofac.Module
                 .WithToolsFromAssembly(typeof(Module).Assembly)
                 .WithPromptsFromAssembly(typeof(Module).Assembly));
 
-        ConfigureAuth(builder, configuration, kiosk);
+        ConfigureAuth(builder, configuration, kiosk, environmentName);
 
         SearchConfiguration searchConfiguration =
             configuration.GetSection("Search").Get<SearchConfiguration>() ?? new SearchConfiguration();
@@ -319,7 +328,11 @@ internal sealed class Module : Autofac.Module
         builder.RegisterInstance(new DashboardCacheOptions { TtlSeconds = statisticsOptions.DashboardCacheTtlSeconds });
     }
 
-    private void ConfigureAuth(ContainerBuilder builder, IConfiguration configuration, KioskOptions kiosk)
+    private void ConfigureAuth(
+        ContainerBuilder builder,
+        IConfiguration configuration,
+        KioskOptions kiosk,
+        string environmentName)
     {
         var authOptions = configuration.GetSection("Authentication").Get<AuthOptions>() ?? new AuthOptions();
         builder.RegisterInstance(authOptions);
@@ -331,10 +344,12 @@ internal sealed class Module : Autofac.Module
         // http:// — browsers do accept Secure cookies on localhost, but a dev host that is not
         // localhost would otherwise silently fail to log in). Override with
         // Authentication:SessionCookie:Secure for a deliberate plain-HTTP deployment. See docs/security.md.
-        var environmentName = configuration["ASPNETCORE_ENVIRONMENT"]
-                              ?? configuration["DOTNET_ENVIRONMENT"]
-                              ?? "Production";
-        var isDevelopment = string.Equals(environmentName, "Development", StringComparison.OrdinalIgnoreCase);
+        //
+        // environmentName comes from HostEnvironmentName, which resolves it the way the host does —
+        // DOTNET_ENVIRONMENT ahead of ASPNETCORE_ENVIRONMENT. Reading it here in the opposite order
+        // made a Production host compute Development when both were set and disagreed, silently
+        // dropping Secure from the 7-day session cookie on an HTTPS install.
+        var isDevelopment = HostEnvironmentName.IsDevelopment(environmentName);
         builder
             .RegisterInstance(new SessionCookieOptions
             {

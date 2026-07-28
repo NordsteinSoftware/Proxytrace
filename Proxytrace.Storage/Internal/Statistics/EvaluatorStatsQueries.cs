@@ -61,17 +61,24 @@ internal class EvaluatorStatsQueries : IEvaluatorStatsReader
     }
 
     public async Task<IReadOnlyList<EvaluatorSparklineStat>> GetSparklinesAsync(
-        Guid projectId,
+        IReadOnlyCollection<Guid> projectIds,
         DateTimeOffset from,
         DateTimeOffset to,
         StatisticsBucket bucket,
         CancellationToken cancellationToken = default)
     {
+        if (projectIds.Count == 0)
+        {
+            return [];
+        }
+
         StorageDbContext context = contextFactory();
 
+        // The owning-project filter runs in SQL for one project or several alike (#483); the
+        // evaluations query below is unchanged — it was already keyed on the resulting evaluator ids.
         Guid[] evaluatorIds = await context.Set<EvaluatorEntity>()
             .AsNoTracking()
-            .Where(e => e.Project == projectId)
+            .Where(e => projectIds.Contains(e.Project))
             .Select(e => e.Id)
             .ToArrayAsync(cancellationToken);
 

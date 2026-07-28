@@ -55,6 +55,27 @@ follow [Semantic Versioning](https://semver.org). Ongoing work is collected unde
   and obscure what really happened. Line breaks are now stripped from these values before they are
   logged.
 
+- **A REST API key is now confined to its own project on the project pages too.** The confinement
+  above was applied everywhere except the project endpoints themselves, which still judged a key
+  purely by who created it. Since keys are issued by an administrator, a key made for one project
+  could therefore list every project in the installation, open another project's details, and read
+  another project's **member email addresses**. Those three endpoints now apply the same rule as the
+  rest of the application: a key sees its own project and nothing else.
+
+- **A stored password can no longer end up in the log.** Whenever a user account was written to the
+  operator log — directly, or as part of something that mentions one, such as an API key's owner —
+  the scrambled form of that user's password went with it. It is scrambled rather than readable, so
+  nobody could have logged in with what was written, but it is exactly the material an attacker
+  wants for an offline guessing attack, and it should never leave the database. It is now masked
+  wherever an account is written out, the same way provider keys and mail passwords already were.
+
+- **The login session cookie no longer risks losing its "HTTPS only" marking.** The marking is
+  decided from which environment the application says it is running in, and that was worked out
+  differently in two places. Where an installation set both of the standard environment variables to
+  conflicting values, the two disagreed and the cookie could be sent without the marking on an
+  HTTPS installation, allowing it to travel over a plaintext connection. Both places now agree, and
+  environment-specific settings files are honoured everywhere.
+
 ### Changed
 
 - **Optimization proposals are now held to a stricter, correct standard of proof.** Two flaws made
@@ -69,6 +90,58 @@ follow [Semantic Versioning](https://semver.org). Ongoing work is collected unde
   switches also now honour the configured number of samples, which they previously ignored.
 
 ### Fixed
+
+- **A stalled provider no longer ties up the proxy indefinitely.** The five-minute limit on an
+  upstream call stopped applying as soon as the provider sent its response headers, so a provider
+  that answered and then went quiet mid-reply held the request, its connection and its worker open
+  until the calling application itself gave up — which, for a patient client, was never. Enough of
+  these and the proxy runs out of capacity. The limit now covers the whole reply, and a provider
+  that stalls is reported as a gateway timeout and recorded as one on the trace.
+
+- **A price-feed outage no longer makes refreshing a provider's models appear to hang.** Model
+  prices come from a public price list and a public exchange-rate feed, and a provider's models were
+  priced one at a time. If either feed was unreachable, every single model triggered its own full
+  retry, one after another — so a provider offering hundreds of models turned one refresh into
+  hundreds of doomed attempts against an already-failing address, and the refresh looked frozen. A
+  failed lookup is now remembered briefly for both feeds, so an outage costs one attempt instead of
+  hundreds, while a brief blip still recovers on the next refresh.
+
+- **Someone who belongs to several projects now gets a traces overview without naming one.** Asking
+  for the traces overview without specifying a project returned an empty overview for anyone who is
+  not an administrator and belongs to more than one project — the figures were only ever computed
+  for a single project at a time. The overview, and the evaluator sparklines beside it, are now
+  aggregated across every project the caller may see. The web app was never affected, because it
+  always names the current project.
+
+- **Closing a page with live updates no longer files an entry in the Error Log.** Navigating away
+  from — or simply closing — a view that streams live updates was recorded as an application error,
+  complete with an error reference that pointed at nothing an operator could act on. Ordinary
+  disconnects are now recognized as such and left out of the log; genuine faults are recorded exactly
+  as before.
+
+- **A test run that fails to hand off its results no longer reports itself finished twice.** If
+  something went wrong in the moment after a run group finished, the group announced its completion a
+  second time and was analysed for anomalies a second time — so a real anomaly could be flagged and
+  notified twice, while the log claimed the run had failed even though it is shown as completed. A
+  group now announces itself and queues its follow-up work exactly once, and a failure to queue one
+  of the two follow-up jobs no longer costs it the other.
+
+- **A test run that is cancelled just as it finishes no longer skips its follow-up analysis.** If a
+  cancellation arrived in the instant a run group was completing, the group was reported as
+  Completed but neither the optimizer nor anomaly detection ever looked at it — so that run silently
+  produced no improvement proposals and no anomaly flags, with nothing to show anything had been
+  missed. Once a group has finished, its follow-up work now always runs.
+
+- **A response that fails halfway through is no longer delivered as if it were complete.** When an
+  error struck after the server had already begun sending a reply, the connection was closed
+  tidily, so the caller received a well-formed but cut-off answer and had no way to tell it apart
+  from a genuinely short one — a truncated result could be consumed as real data. Such a failure now
+  breaks the connection, which callers and client libraries report as an error.
+
+- **An Azure OpenAI endpoint written in its fully-qualified form is now recognized.** A host name
+  ending in a dot — `resource.openai.azure.com.`, a legal way to write an absolute name — was not
+  detected as Azure, so model discovery used the wrong route and the Azure credential header was
+  left off, showing up as an empty model list and rejected calls with nothing pointing at the cause.
 
 - **A REST API key now sees its own project's data without having to name the project.** List
   endpoints take an optional project filter, and leaving it out was meant to mean "everything I am

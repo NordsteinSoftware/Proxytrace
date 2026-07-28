@@ -172,6 +172,21 @@ internal static class QueryLatencyScenario
         await Measure("anomalyTimeline",
             () => statsReader.GetAnomalyCountsByAgentAsync(filter, StatisticsBucket.Daily, cancellationToken));
 
+        // Multi-project scope (#483): the traces overview as a caller who may read several projects
+        // and named none. Both aggregates that overview runs are measured because they translate the
+        // scope through DIFFERENT paths — the agent breakdown through the LINQ chokepoint (a
+        // semi-join against AgentVersion(Project), IN instead of =), the latency percentiles through
+        // the raw-SQL "= ANY(@projectIds)". Each must stay in the same class as its single-project
+        // twin; a climb toward the unfiltered full-scan band means the set stopped being applied in
+        // the database. Measured against a two-element scope (one real project plus one absent id)
+        // so the set genuinely has to be evaluated.
+        var projectsFilter = new StatisticsFilter(
+            From: from, To: now, ProjectIds: [projectId ?? Guid.Empty, Guid.NewGuid()]);
+        await Measure("statsAgentBreakdownByProjects",
+            () => statsReader.GetAgentBreakdownAsync(projectsFilter, cancellationToken));
+        await Measure("statsLatencyPercentilesByProjects",
+            () => statsReader.GetLatencyAsync(projectsFilter, cancellationToken));
+
         // Per-agent overview page.
         await Measure("agentOverview",
             () => agentStats.GetAgentOverviewAsync(agentId, from, now, StatisticsBucket.Daily, cancellationToken));

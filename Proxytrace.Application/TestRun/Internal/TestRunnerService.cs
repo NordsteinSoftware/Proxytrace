@@ -234,6 +234,23 @@ internal class TestRunnerService : BackgroundService, ITestRunnerService
         return group;
     }
 
+    /// <summary>
+    /// Hands a durably completed group to one downstream job, absorbing a failure to enqueue it.
+    /// The group is already terminal and already broadcast, so nothing here may unwind that — and the
+    /// jobs are independent, so one failing must not cost the group the other.
+    /// </summary>
+    private async Task EnqueueCompletedGroupAsync(string job, Func<Task> enqueue, Guid groupId)
+    {
+        try
+        {
+            await enqueue();
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to enqueue {Job} for completed test run group {GroupId}", job, groupId);
+        }
+    }
+
     private async Task<ITestRunGroup> ExecuteGroupAsync(
         ITestRunGroup group,
         IAgent? customAgent = null,
@@ -284,8 +301,24 @@ internal class TestRunnerService : BackgroundService, ITestRunnerService
 
             if (!isSystemTestRun)
             {
-                await optimizer.EnqueueAsync(group, cancellationToken);
-                await anomalyDetection.EnqueueAsync(group, cancellationToken);
+                // CancellationToken.None on purpose, exactly like the failure path below. The group
+                // is already durably Completed and its completion already broadcast, so a CancelAsync
+                // landing in this window has nothing left to cancel: SettleCancelledAsync sees a
+                // terminal group and no-ops. Handing the linked (cancellable) token to the enqueues
+                // let that race skip both jobs silently — the group read Completed forever with no
+                // optimization and no anomaly detection ever run, and no error surfaced. Once the
+                // group is Completed the downstream work is owed, so it must not be cancellable.
+                //
+                // Independently, too: the two jobs are unrelated, so a failure to enqueue one must not
+                // cost the group the other. They used to be bare sequential awaits, which meant an
+                // optimizer failure skipped anomaly detection and fell into the generic catch — where
+                // an unconditional enqueue happened to run it anyway. That compensation is gone now
+                // that the catch only settles a group it actually transitioned (#486), so each enqueue
+                // owns its own failure here.
+                await EnqueueCompletedGroupAsync(
+                    "optimization", () => optimizer.EnqueueAsync(group, CancellationToken.None), group.Id);
+                await EnqueueCompletedGroupAsync(
+                    "anomaly detection", () => anomalyDetection.EnqueueAsync(group, CancellationToken.None), group.Id);
             }
             return group;
         }
@@ -311,21 +344,32 @@ internal class TestRunnerService : BackgroundService, ITestRunnerService
             logger.LogError(ex, "Test run group {GroupId} failed", group.Id);
             try
             {
+                bool transitionedToFailed = false;
+
                 // Same check-then-act as the cancel path: a user cancelling while the group is
-                // failing must not collide with this transition or its broadcast.
+                // failing must not collide with this transition or its broadcast. The broadcast
+                // belongs *inside* the guard, not after it: this handler is also reachable with the
+                // group already terminal — settled Cancelled by that racing CancelAsync, or settled
+                // Completed above when the fault came from the tail of the try (an enqueue). Whoever
+                // settled it already published its one terminal event, so re-publishing here sent a
+                // second one, carrying the state it was already in rather than Failed (#486).
                 using (IDisposable sync = await asyncLock.LockAsync(group.Id, CancellationToken.None))
                 {
                     group = await group.ReloadAsync(CancellationToken.None);
                     if (!group.Status.IsTerminal())
                     {
                         group = await group.SetFailed(CancellationToken.None);
+                        broadcaster.PublishGroupComplete(GroupRunCompleteEvent.Create(group));
+                        transitionedToFailed = true;
                     }
-                    broadcaster.PublishGroupComplete(GroupRunCompleteEvent.Create(group));
                 }
 
-                // A failed group is the most important anomaly. The success-path enqueue above is
-                // skipped when we land here, so detect from the failure path too.
-                if (!isSystemTestRun)
+                // A failed group is the most important anomaly, and the success-path enqueue never
+                // ran for one. Only *this* call's Failed transition owes that work: a group that was
+                // already terminal was settled elsewhere, which enqueued detection itself (the
+                // success path) or deliberately did not (a cancel) — either way, enqueueing again
+                // here would detect the same group twice and notify on it twice.
+                if (transitionedToFailed && !isSystemTestRun)
                 {
                     await anomalyDetection.EnqueueAsync(group, CancellationToken.None);
                 }

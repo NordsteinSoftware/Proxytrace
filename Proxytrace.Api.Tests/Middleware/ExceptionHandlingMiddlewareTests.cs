@@ -3,7 +3,9 @@ using System.Text.Json;
 using AwesomeAssertions;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using Proxytrace.Api.Middleware;
@@ -18,7 +20,10 @@ namespace Proxytrace.Api.Tests.Middleware;
 [TestClass]
 public sealed class ExceptionHandlingMiddlewareTests
 {
-    private static ExceptionHandlingMiddleware Create(RequestDelegate next, bool isDevelopment = false)
+    private static ExceptionHandlingMiddleware Create(
+        RequestDelegate next,
+        bool isDevelopment = false,
+        ILogger<ExceptionHandlingMiddleware>? logger = null)
     {
         var env = Substitute.For<IWebHostEnvironment>();
         env.EnvironmentName.Returns(isDevelopment ? "Development" : "Production");
@@ -35,7 +40,7 @@ public sealed class ExceptionHandlingMiddlewareTests
         ];
 
         return new ExceptionHandlingMiddleware(
-            next, NullLogger<ExceptionHandlingMiddleware>.Instance, mappers, env);
+            next, logger ?? NullLogger<ExceptionHandlingMiddleware>.Instance, mappers, env);
     }
 
     private static async Task<(int Status, string Body)> InvokeAsync(ExceptionHandlingMiddleware middleware)
@@ -48,6 +53,32 @@ public sealed class ExceptionHandlingMiddlewareTests
         ctx.Response.Body.Seek(0, SeekOrigin.Begin);
         using var reader = new StreamReader(ctx.Response.Body);
         return (ctx.Response.StatusCode, await reader.ReadToEndAsync());
+    }
+
+    /// <summary>
+    /// Runs the middleware against a context whose response has already started, and hands back the
+    /// lifetime feature so the test can observe whether the connection was reset, plus the recorded
+    /// log levels so it can observe whether the fault was captured into the Error Log.
+    /// </summary>
+    private static async Task<(IHttpRequestLifetimeFeature Lifetime, RecordingLogger Log)>
+        InvokeAfterResponseStartedAsync(Exception thrown, bool clientDisconnected = false)
+    {
+        var response = Substitute.For<IHttpResponseFeature>();
+        response.HasStarted.Returns(true);
+        response.Headers.Returns(new HeaderDictionary());
+
+        var lifetime = Substitute.For<IHttpRequestLifetimeFeature>();
+        lifetime.RequestAborted.Returns(
+            clientDisconnected ? new CancellationToken(canceled: true) : CancellationToken.None);
+
+        var ctx = new DefaultHttpContext();
+        ctx.Features.Set(response);
+        ctx.Features.Set(lifetime);
+        ctx.Request.Path = "/api/agent-calls/stream";
+
+        var log = new RecordingLogger();
+        await Create(_ => throw thrown, logger: log).InvokeAsync(ctx);
+        return (lifetime, log);
     }
 
     private static JsonElement Error(string body)
@@ -223,6 +254,93 @@ public sealed class ExceptionHandlingMiddlewareTests
         await FluentActions
             .Invoking(() => InvokeAsync(middleware))
             .Should().ThrowAsync<OperationCanceledException>();
+    }
+
+    [TestMethod]
+    public async Task InvokeAsync_ExceptionAfterResponseStarted_AbortsTheConnection()
+    {
+        // Returning normally would let the framework close the response cleanly, so the client would
+        // read a truncated body as a complete one. The reset is the only remaining failure signal.
+        var (lifetime, _) = await InvokeAfterResponseStartedAsync(new InvalidOperationException("boom"));
+
+        lifetime.Received(1).Abort();
+    }
+
+    [TestMethod]
+    public async Task InvokeAsync_ExceptionAfterResponseStarted_CapturesAnError()
+    {
+        // A genuine mid-stream fault on a live connection keeps its Error-level capture, so the
+        // Error Log row (and the errorId that deep-links to it) still exists for an operator.
+        var (_, log) = await InvokeAfterResponseStartedAsync(new InvalidOperationException("boom"));
+
+        log.Levels.Should().Contain(LogLevel.Error);
+    }
+
+    [TestMethod]
+    public async Task InvokeAsync_ExceptionAfterResponseStarted_DoesNotRethrow()
+    {
+        await FluentActions
+            .Invoking(() => InvokeAfterResponseStartedAsync(new InvalidOperationException("boom")))
+            .Should().NotThrowAsync();
+    }
+
+    [TestMethod]
+    public async Task InvokeAsync_ExceptionAfterClientDisconnected_DoesNotAbort()
+    {
+        // The connection is already gone — resetting it again would only add noise.
+        var (lifetime, _) = await InvokeAfterResponseStartedAsync(
+            new IOException("connection reset"), clientDisconnected: true);
+
+        lifetime.DidNotReceive().Abort();
+    }
+
+    [TestMethod]
+    public async Task InvokeAsync_ExceptionAfterClientDisconnected_DoesNotCaptureAnError()
+    {
+        // Every Error/Critical entry becomes an ApplicationError row, so an Error-level log here
+        // would put one Error Log entry in front of operators per closed browser tab — for a
+        // routine disconnect nobody can act on.
+        var (_, log) = await InvokeAfterResponseStartedAsync(
+            new IOException("connection reset"), clientDisconnected: true);
+
+        log.Levels.Should().NotContain(LogLevel.Error);
+    }
+
+    [TestMethod]
+    public async Task InvokeAsync_ExceptionAfterClientDisconnected_LogsOnceAtDebug()
+    {
+        var (_, log) = await InvokeAfterResponseStartedAsync(
+            new IOException("connection reset"), clientDisconnected: true);
+
+        log.Levels.Should().ContainSingle().Which.Should().Be(LogLevel.Debug);
+    }
+
+    /// <summary>
+    /// Records the level of every entry the middleware writes. Only Error/Critical entries are
+    /// picked up by the error-log capture pipeline, so the recorded levels tell a test whether a
+    /// fault was captured as an <c>ApplicationError</c> row.
+    /// </summary>
+    private sealed class RecordingLogger : ILogger<ExceptionHandlingMiddleware>
+    {
+        public List<LogLevel> Levels { get; } = [];
+
+        public IDisposable BeginScope<TState>(TState state) where TState : notnull => NullScope.Instance;
+
+        public bool IsEnabled(LogLevel logLevel) => true;
+
+        public void Log<TState>(
+            LogLevel logLevel, EventId eventId, TState state, Exception? exception,
+            Func<TState, Exception?, string> formatter)
+            => Levels.Add(logLevel);
+
+        private sealed class NullScope : IDisposable
+        {
+            public static readonly NullScope Instance = new();
+
+            public void Dispose()
+            {
+            }
+        }
     }
 
     private sealed class FakeDbException : DbException
