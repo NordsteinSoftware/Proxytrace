@@ -163,3 +163,9 @@ in the repository's `GetPagedNewestFirstAsync(projectIds, includeGlobal, …)`.
    in-memory providers; do not emit with `projectId: null`, which would wrongly make the edit a
    global/admin-only row project members cannot see).
 4. Add the new action's label to the frontend audit-log filter and `manual/admin/audit-log.md`.
+
+Currently recorded ranges worth knowing about: **71–75** are the cost-budget actions —
+`CostLimitCreated`/`Updated`/`Deleted` (admin-initiated, from `CostLimitsController`) and
+`CostBudgetSoftLimitReached`/`CostBudgetHardLimitReached` (System actor, from `CostBudgetGuard`).
+The two crossings are audited *in addition to* their notification, so the record survives
+notification acknowledgement and retention. See [`cost-controls.md`](cost-controls.md).

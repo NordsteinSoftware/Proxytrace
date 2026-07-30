@@ -1200,6 +1200,8 @@ export enum NotificationKind {
   ProposalReady = 'ProposalReady',
   /** The licensed monthly trace limit is reached and captures for this project are being dropped. */
   TraceQuotaReached = 'TraceQuotaReached',
+  /** A configured monthly cost budget crossed its soft (Warning) or hard (Critical) threshold. */
+  CostBudget = 'CostBudget',
 }
 export enum NotificationSeverity { Info = 'Info', Warning = 'Warning', Critical = 'Critical' }
 export enum NotificationStatus { Unread = 'Unread', Read = 'Read', Dismissed = 'Dismissed' }
@@ -1346,6 +1348,11 @@ export enum AuditAction {
   CustomAnomalyDetectorDeleted = 'CustomAnomalyDetectorDeleted',
   ProviderUpstreamKeyRotated = 'ProviderUpstreamKeyRotated',
   ProviderUpstreamKeyRevealed = 'ProviderUpstreamKeyRevealed',
+  CostLimitCreated = 'CostLimitCreated',
+  CostLimitUpdated = 'CostLimitUpdated',
+  CostLimitDeleted = 'CostLimitDeleted',
+  CostBudgetSoftLimitReached = 'CostBudgetSoftLimitReached',
+  CostBudgetHardLimitReached = 'CostBudgetHardLimitReached',
 }
 
 export enum AuditActorType {

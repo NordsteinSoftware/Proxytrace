@@ -124,4 +124,13 @@ public enum AuditAction
     // returned only from a dedicated endpoint, and each read lands here. The key value itself is
     // never recorded.
     ProviderUpstreamKeyRevealed = 71,
+
+    // Monthly cost-budget configuration (admin-initiated) and the guard's threshold crossings
+    // (System actor). The crossings are audited in addition to the notification so the record
+    // survives notification acknowledgement/retention.
+    CostLimitCreated = 72,
+    CostLimitUpdated = 73,
+    CostLimitDeleted = 74,
+    CostBudgetSoftLimitReached = 75,
+    CostBudgetHardLimitReached = 76,
 }

@@ -452,6 +452,19 @@ PostgreSQL-only; the in-memory provider ignores it. **Caveat:** if two rows alre
 case (`Foo@x.com` and `foo@x.com`), the `UPDATE` collides with the unique index and fails — those
 duplicate accounts must be merged/removed first (none are expected in practice).
 
+The `AddApiKeyCostScope` migration adds the third budget scope (per inbound API key) and the trace
+attribution it needs. Two **nullable** `uuid` columns: `CostLimitEntity.ApiKey` (a real FK to
+`ApiKeyEntity`, `OnDelete: Cascade` — revoking a key drops its budget) and
+`AgentCallEntity.ApiKeyId` (**no** FK, the same FK-free pattern as `SessionId` — a revoked key must
+never cascade away telemetry). It also adds the partial unique index
+`(Project, ApiKey) WHERE "ApiKey" IS NOT NULL` and **re-creates** the project-scope index with a
+tightened filter — from `"Agent" IS NULL` to `"Agent" IS NULL AND "ApiKey" IS NULL` — without which
+a key-scoped row would collide with the project-wide budget. Both column adds are metadata-only in
+PostgreSQL, so the one on the high-volume traces table does not rewrite it. Going-forward only:
+`ApiKeyId` is not backfillable (the information was never captured), so pre-existing traces stay
+unattributed and the Costs page reports them as such. No index is added on `AgentCallEntity.ApiKeyId`
+— see [`cost-controls.md`](cost-controls.md) for why.
+
 The `AddDetectorBlockUpstream` migration adds the non-nullable
 `CustomAnomalyDetectorEntity.BlockUpstream` boolean column with a SQL default of `false`
 (via `HasDefaultValue(false)` in `CustomAnomalyDetectorConfig`), backfilling pre-existing detectors

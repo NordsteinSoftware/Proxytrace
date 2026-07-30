@@ -52,11 +52,12 @@ describe('fmtPct100', () => {
 
 describe('fmtCost', () => {
   it('returns em dash for null', () => expect(fmtCost(null)).toBe('—'))
-  it('formats exact zero as euro', () => expect(fmtCost(0)).toBe('€0.0000'))
-  it('formats tiny cost as less-than', () => expect(fmtCost(0.0005)).toBe('<€0.001'))
-  it('formats normal cost', () => expect(fmtCost(0.0123)).toBe('€0.0123'))
-  it('drops to cents from one euro up', () => expect(fmtCost(1.3841)).toBe('€1.38'))
-  it('keeps 4 decimals just below one euro', () => expect(fmtCost(0.9999)).toBe('€0.9999'))
+  it('formats exact zero with two decimals', () => expect(fmtCost(0)).toBe('€0.00'))
+  it('formats a sub-cent amount as less-than, never €0.00', () => expect(fmtCost(0.0005)).toBe('<€0.01'))
+  it('rounds a half-cent up rather than calling it sub-cent', () => expect(fmtCost(0.005)).toBe('€0.01'))
+  it('keeps two decimals below one euro', () => expect(fmtCost(0.0123)).toBe('€0.01'))
+  it('keeps two decimals above one euro', () => expect(fmtCost(1.3841)).toBe('€1.38'))
+  it('rounds up just below one euro', () => expect(fmtCost(0.9999)).toBe('€1.00'))
   it('groups thousands', () => expect(fmtCost(12345.678)).toBe('€12,345.68'))
 })
 

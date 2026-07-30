@@ -18,7 +18,8 @@ export type LicenseFeature =
   | 'AuditLog'
   | 'Tracey'
   | 'ScheduledTestRuns'
-  | 'CustomAnomalyDetectors';
+  | 'CustomAnomalyDetectors'
+  | 'CostControls';
 
 /** Quantitative caps a license may impose. Mirrors backend `LicenseLimit`. */
 export type LicenseLimit =

@@ -66,6 +66,15 @@ public interface IAgentCall : IDomainEntity<IAgentCall>, ISearchable
     /// </summary>
     OutlierFlags OutlierFlags { get; }
 
+    /// <summary>
+    /// The inbound Proxytrace API key this call was authenticated with, or <see langword="null"/>
+    /// when it cannot be attributed to one — a call made through the upstream-key path, or any call
+    /// ingested before key attribution existed. Backs the per-key cost breakdown and key-scoped
+    /// budgets. FK-free correlation id, like <see cref="SessionId"/>: revoking a key must never
+    /// cascade away the irreplaceable telemetry it produced.
+    /// </summary>
+    Guid? ApiKeyId { get; }
+
     SearchKind ISearchable.SearchKind => SearchKind.AgentCall;
 
     public delegate IAgentCall CreateNew(
@@ -80,7 +89,8 @@ public interface IAgentCall : IDomainEntity<IAgentCall>, ISearchable
         IModelParameters? modelParameters = null,
         Guid? conversationId = null,
         Guid? sessionId = null,
-        OutlierFlags outlierFlags = OutlierFlags.None);
+        OutlierFlags outlierFlags = OutlierFlags.None,
+        Guid? apiKeyId = null);
 
     public delegate IAgentCall CreateExisting(
         IAgent agent,
@@ -95,5 +105,6 @@ public interface IAgentCall : IDomainEntity<IAgentCall>, ISearchable
         IDomainEntityData existing,
         Guid? conversationId = null,
         Guid? sessionId = null,
-        OutlierFlags outlierFlags = OutlierFlags.None);
+        OutlierFlags outlierFlags = OutlierFlags.None,
+        Guid? apiKeyId = null);
 }

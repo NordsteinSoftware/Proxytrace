@@ -137,6 +137,20 @@ A key works only on the surfaces it was granted: an ingestion-only key cannot dr
 an MCP-only key cannot proxy LLM traffic or drive REST, and a REST key cannot drive MCP. Keys issued
 before these capabilities existed are **ingestion-only**.
 
+A project may hold **several keys for the same provider** — they are distinguished by their name.
+That is the usual way to separate applications, environments or customers that share one project,
+and it is what makes per-key cost reporting useful.
+
+::: tip Keys are a spend boundary too
+Every proxied call records which key it authenticated with, so the [Costs](/guide/costs) page can
+break spend down per key — and you can set a **monthly budget scoped to a single key**. Because
+every call has to present a key, that is the one budget scope a client cannot slip past by omitting
+a header. Issuing one key per application is what makes that possible.
+
+Traffic that authenticates with the **upstream provider's own key** (above) has no Proxytrace key to
+attribute, so it appears as *Unattributed* spend and is covered by the project budget instead.
+:::
+
 ### Issuing a key
 
 1. Open **Providers**.

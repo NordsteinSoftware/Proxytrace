@@ -6,7 +6,7 @@ import { cn } from '../../lib/cn';
 /** The rail's page-code vocabulary: one unique mono two-letter glyph per destination, rendered
  *  where an icon used to sit. Technical glyphs — never translated, never user copy. */
 export type NavCode =
-  | 'TY' | 'DB' | 'TR' | 'AN' | 'AG' | 'PG' | 'TS'
+  | 'TY' | 'DB' | 'TR' | 'AN' | 'CO' | 'AG' | 'PG' | 'TS'
   | 'EV' | 'EP' | 'RN' | 'PR' | 'AU' | 'SE' | 'DC';
 
 export interface NavEntry {
@@ -43,6 +43,8 @@ export const navGroups: NavGroup[] = [
       { label: msg`Dashboard`, code: 'DB', to: '/dashboard' },
       { label: msg`Traces`, code: 'TR', to: '/traces' },
       { label: msg`Anomalies`, code: 'AN', to: '/anomalies' },
+      // No requiresFeature: the page (and the budget list) is free; only *changing* a budget is licensed.
+      { label: msg`Costs`, code: 'CO', to: '/costs' },
     ],
   },
   {

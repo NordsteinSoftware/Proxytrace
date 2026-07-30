@@ -127,6 +127,7 @@ public sealed class OpenAiProxyRoutingTests
         builder.Services.AddSingleton(httpClientFactory ?? new FakeHttpClientFactory("""{"status":"ok"}"""));
         builder.Services.AddSingleton<IApiKeyResolver>(ResolverForAnyKey());
         builder.Services.AddSingleton(Substitute.For<IRequestBlocker>());
+        builder.Services.AddSingleton(Substitute.For<IBudgetBlocker>());
         builder.Services.AddSingleton(new KioskOptions());
         builder.Services.AddSingleton(new KioskEndpointOptions());
         builder.Services.AddControllers().AddApplicationPart(typeof(OpenAiProxyController).Assembly);

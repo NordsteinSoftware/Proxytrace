@@ -23,4 +23,11 @@ public enum NotificationKind
     /// symptom was traces quietly going missing.
     /// </remarks>
     TraceQuotaReached,
+
+    /// <summary>
+    /// A configured monthly cost budget crossed one of its thresholds. The severity distinguishes
+    /// the two: <c>Warning</c> for the soft limit, <c>Critical</c> for the hard limit (which also
+    /// blocks further proxied calls for the rest of the month).
+    /// </summary>
+    CostBudget,
 }

@@ -393,6 +393,220 @@ internal class AgentCallStatsQueries : IAgentCallStatsReader
             .ToArray();
     }
 
+    public async Task<IReadOnlyList<ProjectAgentCostStat>> GetCostByProjectAndAgentAsync(
+        StatisticsFilter filter,
+        CancellationToken cancellationToken = default)
+    {
+        StorageDbContext context = contextFactory();
+        IQueryable<AgentCallEntity> q = Query(context, filter);
+
+        // An AgentCall carries no project, only an AgentVersionId — the project (and the agent) hang
+        // off AgentVersion, so the grouping keys come from a join. Grouping by endpoint as well keeps
+        // pricing derived: token sums per model are enough to cost the group in C#, so the wire
+        // carries O(projects × agents × endpoints) rows rather than O(calls).
+        var rows = await q
+            .Join(
+                context.Set<AgentVersionEntity>().AsNoTracking(),
+                c => c.AgentVersionId,
+                v => v.Id,
+                (c, v) => new { Call = c, Version = v })
+            .GroupBy(x => new { x.Version.Project, x.Version.AgentId, x.Call.EndpointId })
+            .Select(g => new
+            {
+                g.Key.Project,
+                g.Key.AgentId,
+                g.Key.EndpointId,
+                Input = g.Sum(x => (long?)x.Call.InputTokens ?? 0L),
+                Output = g.Sum(x => (long?)x.Call.OutputTokens ?? 0L),
+                Cached = g.Sum(x => (long?)x.Call.CachedInputTokens ?? 0L),
+            })
+            .ToListAsync(cancellationToken);
+
+        Dictionary<Guid, IModelEndpoint> endpoints = await LoadEndpointsAsync(
+            context, rows.Select(r => r.EndpointId).Distinct().ToArray(), cancellationToken);
+
+        return rows
+            .GroupBy(r => new { r.Project, r.AgentId })
+            .Select(g => new ProjectAgentCostStat(
+                ProjectId: g.Key.Project,
+                AgentId: g.Key.AgentId,
+                CostEur: g.Sum(r => CostOf(endpoints, r.EndpointId, r.Input, r.Output, r.Cached))))
+            .OrderBy(s => s.ProjectId)
+            .ThenBy(s => s.AgentId)
+            .ToArray();
+    }
+
+    public async Task<IReadOnlyList<AgentCostPoint>> GetCostSeriesByAgentAsync(
+        StatisticsFilter filter,
+        StatisticsBucket bucket,
+        CancellationToken cancellationToken = default)
+    {
+        StorageDbContext context = contextFactory();
+        IQueryable<AgentCallEntity> q = Query(context, filter);
+
+        double widthMs = bucket.WidthMilliseconds();
+
+        var rows = await q
+            .Join(
+                context.Set<AgentVersionEntity>().AsNoTracking(),
+                c => c.AgentVersionId,
+                v => v.Id,
+                (c, v) => new { Call = c, Version = v })
+            .GroupBy(x => new
+            {
+                Bucket = (int)Math.Floor((x.Call.CreatedAt - DateTimeOffset.UnixEpoch).TotalMilliseconds / widthMs),
+                x.Version.AgentId,
+                x.Call.EndpointId,
+            })
+            .Select(g => new
+            {
+                g.Key.Bucket,
+                g.Key.AgentId,
+                g.Key.EndpointId,
+                Input = g.Sum(x => (long?)x.Call.InputTokens ?? 0L),
+                Output = g.Sum(x => (long?)x.Call.OutputTokens ?? 0L),
+                Cached = g.Sum(x => (long?)x.Call.CachedInputTokens ?? 0L),
+            })
+            .ToListAsync(cancellationToken);
+
+        Dictionary<Guid, IModelEndpoint> endpoints = await LoadEndpointsAsync(
+            context, rows.Select(r => r.EndpointId).Distinct().ToArray(), cancellationToken);
+
+        return rows
+            .GroupBy(r => new { r.Bucket, r.AgentId })
+            .Select(g => new AgentCostPoint(
+                BucketStart: bucket.BucketStartFromIndex(g.Key.Bucket),
+                AgentId: g.Key.AgentId,
+                CostEur: g.Sum(r => CostOf(endpoints, r.EndpointId, r.Input, r.Output, r.Cached))))
+            .OrderBy(p => p.BucketStart)
+            .ThenBy(p => p.AgentId)
+            .ToArray();
+    }
+
+    public async Task<IReadOnlyList<ProjectApiKeyCostStat>> GetCostByApiKeyAsync(
+        StatisticsFilter filter,
+        CancellationToken cancellationToken = default)
+    {
+        StorageDbContext context = contextFactory();
+        IQueryable<AgentCallEntity> q = Query(context, filter);
+
+        // ApiKeyId lives on the call itself, but the project still comes from the joined AgentVersion
+        // (an AgentCall carries no project). Grouping by endpoint as well keeps pricing derived, so
+        // the wire carries O(projects × keys × endpoints) rows rather than O(calls). Calls with no
+        // key group under a null key — the unattributed remainder, kept rather than filtered out so
+        // the per-key figures still sum to the project total.
+        var rows = await q
+            .Join(
+                context.Set<AgentVersionEntity>().AsNoTracking(),
+                c => c.AgentVersionId,
+                v => v.Id,
+                (c, v) => new { Call = c, Version = v })
+            .GroupBy(x => new { x.Version.Project, x.Call.ApiKeyId, x.Call.EndpointId })
+            .Select(g => new
+            {
+                g.Key.Project,
+                g.Key.ApiKeyId,
+                g.Key.EndpointId,
+                Input = g.Sum(x => (long?)x.Call.InputTokens ?? 0L),
+                Output = g.Sum(x => (long?)x.Call.OutputTokens ?? 0L),
+                Cached = g.Sum(x => (long?)x.Call.CachedInputTokens ?? 0L),
+            })
+            .ToListAsync(cancellationToken);
+
+        Dictionary<Guid, IModelEndpoint> endpoints = await LoadEndpointsAsync(
+            context, rows.Select(r => r.EndpointId).Distinct().ToArray(), cancellationToken);
+
+        return rows
+            .GroupBy(r => new { r.Project, r.ApiKeyId })
+            .Select(g => new ProjectApiKeyCostStat(
+                ProjectId: g.Key.Project,
+                ApiKeyId: g.Key.ApiKeyId,
+                CostEur: g.Sum(r => CostOf(endpoints, r.EndpointId, r.Input, r.Output, r.Cached))))
+            .OrderBy(s => s.ProjectId)
+            .ThenBy(s => s.ApiKeyId)
+            .ToArray();
+    }
+
+    public async Task<IReadOnlyList<ApiKeyCostPoint>> GetCostSeriesByApiKeyAsync(
+        StatisticsFilter filter,
+        StatisticsBucket bucket,
+        CancellationToken cancellationToken = default)
+    {
+        StorageDbContext context = contextFactory();
+        IQueryable<AgentCallEntity> q = Query(context, filter);
+
+        double widthMs = bucket.WidthMilliseconds();
+
+        // No AgentVersion join here: unlike the (project, agent) series, both grouping keys —
+        // the bucket and the key id — are columns of the call itself, and the window is already
+        // project-scoped by the filter.
+        var rows = await q
+            .GroupBy(c => new
+            {
+                Bucket = (int)Math.Floor((c.CreatedAt - DateTimeOffset.UnixEpoch).TotalMilliseconds / widthMs),
+                c.ApiKeyId,
+                c.EndpointId,
+            })
+            .Select(g => new
+            {
+                g.Key.Bucket,
+                g.Key.ApiKeyId,
+                g.Key.EndpointId,
+                Input = g.Sum(x => (long?)x.InputTokens ?? 0L),
+                Output = g.Sum(x => (long?)x.OutputTokens ?? 0L),
+                Cached = g.Sum(x => (long?)x.CachedInputTokens ?? 0L),
+            })
+            .ToListAsync(cancellationToken);
+
+        Dictionary<Guid, IModelEndpoint> endpoints = await LoadEndpointsAsync(
+            context, rows.Select(r => r.EndpointId).Distinct().ToArray(), cancellationToken);
+
+        return rows
+            .GroupBy(r => new { r.Bucket, r.ApiKeyId })
+            .Select(g => new ApiKeyCostPoint(
+                BucketStart: bucket.BucketStartFromIndex(g.Key.Bucket),
+                ApiKeyId: g.Key.ApiKeyId,
+                CostEur: g.Sum(r => CostOf(endpoints, r.EndpointId, r.Input, r.Output, r.Cached))))
+            .OrderBy(p => p.BucketStart)
+            .ThenBy(p => p.ApiKeyId)
+            .ToArray();
+    }
+
+    public async Task<bool> HasUnpricedEndpointsAsync(
+        StatisticsFilter filter,
+        CancellationToken cancellationToken = default)
+    {
+        StorageDbContext context = contextFactory();
+
+        // Only the distinct endpoint ids of the window cross the wire (one row per endpoint), then a
+        // single indexed lookup decides pricing — no per-call work either side.
+        List<Guid> endpointIds = await Query(context, filter)
+            .Select(c => c.EndpointId)
+            .Distinct()
+            .ToListAsync(cancellationToken);
+
+        if (endpointIds.Count == 0)
+            return false;
+
+        return await context.Set<ModelEndpointEntity>()
+            .AsNoTracking()
+            .AnyAsync(
+                e => endpointIds.Contains(e.Id) && e.InputTokenCost == null && e.OutputTokenCost == null,
+                cancellationToken);
+    }
+
+    /// <summary>
+    /// Prices one token group from its endpoint. An endpoint with no configured price contributes
+    /// zero (the same choice GetCostEstimateAsync/GetAgentWindowAsync make) — the undercount is
+    /// surfaced separately via <see cref="HasUnpricedEndpointsAsync"/> rather than guessed at.
+    /// </summary>
+    private static decimal CostOf(
+        Dictionary<Guid, IModelEndpoint> endpoints, Guid endpointId, long input, long output, long cached)
+        => endpoints.TryGetValue(endpointId, out IModelEndpoint? e)
+            ? e.CalculateCost(new TokenUsage(
+                (ulong)Math.Max(input, 0L), (ulong)Math.Max(output, 0L), (ulong)Math.Max(cached, 0L))) ?? 0m
+            : 0m;
+
     public async Task<IReadOnlyList<AgentTokenUsageStat>> GetTokenUsageByAgentAsync(StatisticsFilter filter, StatisticsBucket bucket, CancellationToken cancellationToken = default)
     {
         StorageDbContext context = contextFactory();

@@ -136,6 +136,11 @@ If the project has [blocking anomaly detectors](/guide/anomaly-dashboard#blockin
 configured (an Enterprise feature — e.g. a password-pattern guard), the proxy rejects a matching
 request **before it reaches the provider** with HTTP `403` and an OpenAI-style error whose `code`
 is `proxytrace_blocked`. The blocked call still appears as a flagged trace.
+
+A second, separate reason a request can be refused before it reaches the provider is an exhausted
+[monthly cost budget](/guide/costs) — HTTP `403` with `code` `proxytrace_budget_exceeded`. Note
+that **agent-scoped** budgets can only match traffic that sends the `x-proxytrace-agent` header
+above; a project-wide budget applies to every call regardless.
 :::
 
 ## Header forwarding

@@ -209,6 +209,7 @@ public sealed class OpenAiProxyBlockingTests
             stream,
             ResolverFor(ApiKey()),
             new RequestBlocker(ruleProvider),
+            Substitute.For<IBudgetBlocker>(),
             new KioskOptions(),
             new KioskEndpointOptions(),
             NullLogger<OpenAiProxyController>.Instance);

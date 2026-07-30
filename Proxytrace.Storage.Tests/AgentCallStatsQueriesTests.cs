@@ -762,6 +762,58 @@ public sealed class AgentCallStatsQueriesTests : BaseTest<Module>
             CancellationToken);
     }
 
+    [TestMethod]
+    public async Task GetCostByApiKey_GroupsPerKey_AndKeepsUnattributedAsItsOwnRow()
+    {
+        IServiceProvider services = GetServices();
+        var reader = services.GetRequiredService<IAgentCallStatsReader>();
+
+        var endpointSeedGen = services.GetRequiredService<IDomainObjectGenerator<IModelEndpoint>>();
+        var seed = await endpointSeedGen.CreateAsync(CancellationToken);
+        var createEndpoint = services.GetRequiredService<IModelEndpoint.CreateNew>();
+        var endpointRepo = services.GetRequiredService<IRepository<IModelEndpoint>>();
+        IModelEndpoint endpoint = await endpointRepo.AddAsync(
+            createEndpoint(seed.Model, seed.Provider, inputTokenCost: 2.5m, outputTokenCost: 10m, cachedInputTokenCost: 1m),
+            CancellationToken);
+
+        var agent = await services.GetRequiredService<IDomainEntityGenerator<IAgent>>().CreateAsync(CancellationToken);
+        var conversationGen = services.GetRequiredService<IDomainObjectGenerator<Conversation>>();
+        var completionGen = services.GetRequiredService<IDomainObjectGenerator<ICompletion>>();
+        var sampleResponse = (await completionGen.CreateAsync(CancellationToken)).Response;
+        var createCompletion = services.GetRequiredService<ICompletion.Create>();
+        var createCall = services.GetRequiredService<IAgentCall.CreateNew>();
+        var callRepo = services.GetRequiredService<IRepository<IAgentCall>>();
+
+        var keyA = Guid.NewGuid();
+        var keyB = Guid.NewGuid();
+        var usage = new TokenUsage(1000, 500, 0);
+
+        // Two calls on key A, one on key B, one unattributed (the upstream-key path).
+        foreach (Guid? attribution in new Guid?[] { keyA, keyA, keyB, null })
+        {
+            var response = createCompletion(sampleResponse, usage, TimeSpan.FromMilliseconds(10));
+            var request = await conversationGen.CreateAsync(CancellationToken);
+            await callRepo.AddAsync(
+                createCall(agent, agent.CurrentVersion, endpoint, request, response, apiKeyId: attribution),
+                CancellationToken);
+        }
+
+        var rows = await reader.GetCostByApiKeyAsync(new StatisticsFilter(), CancellationToken);
+
+        decimal? unitCost = endpoint.CalculateCost(usage);
+        unitCost.Should().NotBeNull();
+        decimal oneCall = unitCost.GetValueOrDefault();
+
+        rows.Should().HaveCount(3);
+        rows.Single(r => r.ApiKeyId == keyA).CostEur.Should().Be(oneCall * 2);
+        rows.Single(r => r.ApiKeyId == keyB).CostEur.Should().Be(oneCall);
+
+        // The unattributed remainder is a real row, not a dropped one — otherwise the per-key
+        // figures would silently fail to sum to the project total.
+        rows.Single(r => r.ApiKeyId == null).CostEur.Should().Be(oneCall);
+        rows.Sum(r => r.CostEur).Should().Be(oneCall * 4);
+    }
+
     private async Task<IAgentCall> SeedCallAsync(
         IServiceProvider services, IAgent agent, IModelEndpoint endpoint, AssistantMessage sample,
         Guid? conversationId, TokenUsage usage, double latencyMs, int toolCount, HttpStatusCode status)

@@ -74,6 +74,12 @@ internal class AgentCallConfig : AbstractEntityConfiguration<AgentCallEntity>, I
         builder.HasIndex(e => e.ResponseToolRequestCount);
         builder.HasIndex(e => e.CacheHitRate);
 
+        // ApiKeyId gets NO index on purpose. It is only ever a GROUP BY key of the per-key cost
+        // aggregates, which are already bounded by (project via AgentVersionId, CreatedAt) — the
+        // grouping adds no row selection to index. An index would only pay off for a traces-list
+        // *filter* on the key, which does not exist; on this table that is a write-path cost per
+        // ingested call for nothing.
+
         // Partial index serving the "outliers only" trace filter (WHERE OutlierFlags <> 0). Outliers
         // are a small fraction of rows, so a filtered index stays tiny and is the cheapest way to page
         // them on this high-volume table. The filter is relational metadata; the in-memory provider
@@ -140,7 +146,8 @@ internal class AgentCallConfig : AbstractEntityConfiguration<AgentCallEntity>, I
             existing: stored,
             conversationId: stored.ConversationId,
             sessionId: stored.SessionId,
-            outlierFlags: stored.OutlierFlags);
+            outlierFlags: stored.OutlierFlags,
+            apiKeyId: stored.ApiKeyId);
     }
 
     public Task<AgentCallEntity> Map(IAgentCall domain, CancellationToken cancellationToken = default)
@@ -162,6 +169,7 @@ internal class AgentCallConfig : AbstractEntityConfiguration<AgentCallEntity>, I
             ConversationId = domain.ConversationId,
             SessionId = domain.SessionId,
             OutlierFlags = domain.OutlierFlags,
+            ApiKeyId = domain.ApiKeyId,
             RequestPreview = AgentCallPreview.Build(domain.Request),
             ResponseToolRequestCount = domain.Response?.Response is AssistantMessage assistant
                 ? assistant.ToolRequests.Count

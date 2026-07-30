@@ -4,6 +4,8 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Proxytrace.Common.DependencyInjection;
+using Proxytrace.Common.Time;
+using Proxytrace.Domain.CostLimitBreach;
 using Proxytrace.Domain.CustomAnomaly;
 using Proxytrace.Licensing;
 using Proxytrace.Proxy.Internal;
@@ -52,6 +54,27 @@ public sealed class Module : Autofac.Module
 
         builder.RegisterType<RequestBlocker>()
             .As<IRequestBlocker>()
+            .InstancePerLifetimeScope();
+
+        // Monthly cost budgets: same shape and lifetime reasoning as the blocking-rule provider
+        // above — a per-call storage repository behind a singleton IMemoryCache, TTL from config.
+        builder.Register(ctx =>
+        {
+            var config = ctx.Resolve<IConfiguration>();
+            var ttlSeconds = config.GetSection("BudgetBlockCache").GetValue<int?>("TtlSeconds") ?? 30;
+            return new CachedBudgetBlockProvider(
+                ctx.Resolve<ICostLimitBreachRepository>(),
+                ctx.Resolve<ILicenseService>(),
+                ctx.Resolve<IMemoryCache>(),
+                ctx.Resolve<IClock>(),
+                TimeSpan.FromSeconds(ttlSeconds),
+                ctx.Resolve<ILogger<CachedBudgetBlockProvider>>());
+        })
+        .As<IBudgetBlockProvider>()
+        .InstancePerLifetimeScope();
+
+        builder.RegisterType<BudgetBlocker>()
+            .As<IBudgetBlocker>()
             .InstancePerLifetimeScope();
 
         builder.RegisterServiceCollection(services =>

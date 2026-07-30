@@ -14,6 +14,8 @@ using Proxytrace.Application.Auth.Local;
 using Proxytrace.Application.Auth.Local.Internal;
 using Proxytrace.Application.Cleanup;
 using Proxytrace.Application.Cleanup.Internal;
+using Proxytrace.Application.CostControl;
+using Proxytrace.Application.CostControl.Internal;
 using Proxytrace.Application.CustomAnomaly;
 using Proxytrace.Application.CustomAnomaly.Internal;
 using Proxytrace.Application.Demo;
@@ -322,6 +324,38 @@ public sealed class Module : Autofac.Module
                     return kiosk.Enabled
                         ? new NullHostedService()
                         : sc.GetRequiredService<TraceQuotaGuard>();
+                }));
+        }
+
+        // Cost budgets. The guard is a singleton so the hosted-service registration and any direct
+        // resolve share one instance, mirroring TraceQuotaGuard above.
+        builder.Register(_ => new CostControlOptions())
+            .As<CostControlOptions>()
+            .SingleInstance()
+            .IfNotRegistered(typeof(CostControlOptions));
+
+        builder.RegisterType<CostStatistics>()
+            .As<ICostStatistics>()
+            .SingleInstance()
+            .IfNotRegistered(typeof(CostStatistics));
+
+        builder.RegisterType<CostBudgetGuard>()
+            .AsSelf()
+            .SingleInstance()
+            .IfNotRegistered(typeof(CostBudgetGuard));
+
+        const string costBudgetGuardKey = "Proxytrace.Application.CostBudgetGuard.Registered";
+        if (!builder.Properties.ContainsKey(costBudgetGuardKey))
+        {
+            builder.Properties[costBudgetGuardKey] = true;
+            builder.RegisterServiceCollection(services =>
+                services.AddSingleton<IHostedService>(sc =>
+                {
+                    // The kiosk demo has no budgets to enforce and no operator to notify.
+                    var kiosk = sc.GetRequiredService<KioskOptions>();
+                    return kiosk.Enabled
+                        ? new NullHostedService()
+                        : sc.GetRequiredService<CostBudgetGuard>();
                 }));
         }
 

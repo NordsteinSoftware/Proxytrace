@@ -34,6 +34,7 @@ export default defineConfig({
             { text: 'Sessions', link: '/guide/sessions' },
             { text: 'Finding Outliers', link: '/guide/outliers' },
             { text: 'Anomaly Dashboard', link: '/guide/anomaly-dashboard' },
+            { text: 'Costs & Budgets', link: '/guide/costs' },
             { text: 'Agents', link: '/guide/agents' },
             { text: 'Test Suites & Cases', link: '/guide/test-suites-and-cases' },
             { text: 'Evaluators', link: '/guide/evaluators' },

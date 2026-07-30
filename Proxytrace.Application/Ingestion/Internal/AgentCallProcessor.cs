@@ -140,8 +140,9 @@ internal sealed class AgentCallProcessor : IAgentCallProcessor
             }
 
             // A proxy-blocked call never reached the provider: it carries no usable metrics for the
-            // statistical baseline, so it is flagged Blocked instead of outlier-evaluated.
-            var outlierFlags = job.BlockedByDetectorId is not null
+            // statistical baseline, so it is flagged Blocked instead of outlier-evaluated. Both
+            // pre-upstream rejections qualify — a detector trigger and an exhausted cost budget.
+            var outlierFlags = job.BlockedByDetectorId is not null || job.BlockedByBudget
                 ? OutlierFlags.Blocked
                 : await DetectOutliersAsync(
                     agent, parsed.Response, isTurn2Plus: priorConversationCall is not null, cancellationToken);
@@ -167,7 +168,8 @@ internal sealed class AgentCallProcessor : IAgentCallProcessor
                 modelParameters: parsed.ModelParameters,
                 conversationId: conversationId,
                 sessionId: session?.Id,
-                outlierFlags: outlierFlags);
+                outlierFlags: outlierFlags,
+                apiKeyId: job.ApiKeyId);
 
             call = await agentCallRepository.AddAsync(call, cancellationToken);
 

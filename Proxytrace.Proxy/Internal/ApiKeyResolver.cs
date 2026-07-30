@@ -46,7 +46,7 @@ internal sealed class ApiKeyResolver : IApiKeyResolver
             // so match canonical slug to canonical slug rather than rejecting "/Development".
             return !string.IsNullOrEmpty(projectSlug) && apiKey.Project.Name.ToSlug() != projectSlug.ToSlug()
                 ? null
-                : new ResolvedApiKey(apiKey.Project, apiKey.Provider, apiKey.Scopes);
+                : new ResolvedApiKey(apiKey.Project, apiKey.Provider, apiKey.Id, apiKey.Scopes);
         }
 
         // Upstream-provider-key path: caller authenticated with the provider's own credentials. The

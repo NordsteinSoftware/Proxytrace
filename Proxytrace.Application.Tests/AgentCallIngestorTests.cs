@@ -216,6 +216,60 @@ public sealed class AgentCallIngestorTests : BaseTest<Module>
     }
 
     [TestMethod]
+    public async Task IngestAsync_WhenApiKeyIdProvided_StampsItOnTheTrace()
+    {
+        var services = GetServices();
+        var executor = services.GetRequiredService<IIngestionExecutor>();
+        var callRepo = services.GetRequiredService<IAgentCallRepository>();
+        var (provider, project) = await GetProviderAndProjectAsync(services);
+        var apiKeyId = Guid.NewGuid();
+
+        await executor.IngestAsync(
+            new IngestMessage(
+                ProviderId: provider.Id,
+                ProjectId: project.Id,
+                RequestBody: ChatTurn1RequestBody,
+                ResponseBody: ChatTurn1ResponseBody,
+                DurationMs: 100,
+                HttpStatus: (int)HttpStatusCode.OK,
+                SessionId: null,
+                ApiKeyId: apiKeyId),
+            CancellationToken);
+
+        var calls = (await callRepo.GetFilteredAsync(
+            new AgentCallFilter { ProjectId = project.Id }, 1, 10, CancellationToken)).Items;
+
+        // A raw id with no FK: the trace must keep its attribution even after the key is revoked,
+        // which is what makes the per-key spend breakdown honest about history.
+        calls.Should().ContainSingle().Which.ApiKeyId.Should().Be(apiKeyId);
+    }
+
+    [TestMethod]
+    public async Task IngestAsync_WithNoApiKeyId_LeavesTheTraceUnattributed()
+    {
+        var services = GetServices();
+        var executor = services.GetRequiredService<IIngestionExecutor>();
+        var callRepo = services.GetRequiredService<IAgentCallRepository>();
+        var (provider, project) = await GetProviderAndProjectAsync(services);
+
+        // The upstream-key auth path, and every message already in the stream across a deploy.
+        await executor.IngestAsync(
+            new IngestMessage(
+                ProviderId: provider.Id,
+                ProjectId: project.Id,
+                RequestBody: ChatTurn1RequestBody,
+                ResponseBody: ChatTurn1ResponseBody,
+                DurationMs: 100,
+                HttpStatus: (int)HttpStatusCode.OK,
+                SessionId: null),
+            CancellationToken);
+
+        var calls = (await callRepo.GetFilteredAsync(
+            new AgentCallFilter { ProjectId = project.Id }, 1, 10, CancellationToken)).Items;
+        calls.Should().ContainSingle().Which.ApiKeyId.Should().BeNull();
+    }
+
+    [TestMethod]
     public async Task InProcessExecutor_PersistsCallDirectly_WithoutTheStream()
     {
         // The in-process path the Tracey chat passthrough uses: persist a captured call directly,

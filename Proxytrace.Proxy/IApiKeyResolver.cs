@@ -32,14 +32,27 @@ public interface IApiKeyResolver
 /// which authentication path matched (a Proxytrace-issued <see cref="Domain.ApiKey.IApiKey"/>
 /// or the provider's own upstream <see cref="IModelProvider.ApiKey"/>).
 /// </summary>
+/// <param name="Project">The project to attribute the captured call to.</param>
+/// <param name="Provider">The upstream provider to forward the request to.</param>
+/// <param name="ApiKeyId">
+/// The id of the Proxytrace-issued key that authenticated the request, or <see langword="null"/> on
+/// the upstream-key path, where no such key exists. Carried through to the trace so spend can be
+/// attributed per key, and used by the proxy's key-scoped budget block — which is therefore inert
+/// for upstream-key traffic.
+/// </param>
 /// <param name="Scopes">
 /// The capabilities of the Proxytrace-issued key that authenticated the call, or
 /// <see langword="null"/> when the caller authenticated with the provider's <b>own</b> upstream
 /// credential.
 /// </param>
 /// <remarks>
-/// Null means "unscoped, and legitimately so": a caller holding the provider's own key can already
-/// call the provider directly, so restricting which of the provider's paths they may reach through
-/// Proxytrace would protect nothing.
+/// A null <paramref name="Scopes"/> means "unscoped, and legitimately so": a caller holding the
+/// provider's own key can already call the provider directly, so restricting which of the
+/// provider's paths they may reach through Proxytrace would protect nothing. <paramref name="ApiKeyId"/>
+/// is null on that same path, for the same reason — there is no Proxytrace-issued key to attribute to.
 /// </remarks>
-public sealed record ResolvedApiKey(IProject Project, IModelProvider Provider, ApiKeyScopes? Scopes = null);
+public sealed record ResolvedApiKey(
+    IProject Project,
+    IModelProvider Provider,
+    Guid? ApiKeyId = null,
+    ApiKeyScopes? Scopes = null);

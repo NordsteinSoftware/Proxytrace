@@ -149,6 +149,47 @@ public record CostEstimateStat(
     decimal? OutputCostEur,
     decimal? TotalCostEur);
 
+/// <summary>
+/// Derived spend of one agent within one project over a window. The project comes from the call's
+/// <c>AgentVersion</c> (an <c>AgentCall</c> has no project of its own), so one row exists per
+/// (project, agent) pair that had traffic — the shape the cost-budget guard evaluates and the
+/// Costs page renders as its agent breakdown.
+/// </summary>
+public record ProjectAgentCostStat(
+    Guid ProjectId,
+    Guid AgentId,
+    decimal CostEur);
+
+/// <summary>
+/// Derived spend of one agent in one time bucket. Aggregated per (bucket, agent, endpoint) in SQL
+/// and priced in C#, so the result is O(buckets × agents × endpoints) and never O(calls).
+/// </summary>
+public record AgentCostPoint(
+    DateTimeOffset BucketStart,
+    Guid AgentId,
+    decimal CostEur);
+
+/// <summary>
+/// Derived spend attributed to one inbound API key within one project over a window. A null
+/// <see cref="ApiKeyId"/> is the unattributed remainder — traffic authenticated with the provider's
+/// own upstream key, plus any call ingested before key attribution existed. It is a real group
+/// rather than a dropped row, so per-key figures always reconcile with the project total.
+/// </summary>
+public record ProjectApiKeyCostStat(
+    Guid ProjectId,
+    Guid? ApiKeyId,
+    decimal CostEur);
+
+/// <summary>
+/// Derived spend attributed to one inbound API key in one time bucket. Aggregated per
+/// (bucket, key, endpoint) in SQL and priced in C#, so the result is O(buckets × keys × endpoints)
+/// and never O(calls). A null <see cref="ApiKeyId"/> is the unattributed series.
+/// </summary>
+public record ApiKeyCostPoint(
+    DateTimeOffset BucketStart,
+    Guid? ApiKeyId,
+    decimal CostEur);
+
 public record AgentTimeSeriesPoint(
     DateTimeOffset BucketStart,
     int TraceCount,

@@ -72,6 +72,11 @@ export const AUDIT_ACTION_LABEL: Record<AuditAction, MessageDescriptor> = {
   [AuditAction.CustomAnomalyDetectorDeleted]: msg`Anomaly Detector Deleted`,
   [AuditAction.ProviderUpstreamKeyRotated]: msg`Provider Key Rotated`,
   [AuditAction.ProviderUpstreamKeyRevealed]: msg`Provider Key Revealed`,
+  [AuditAction.CostLimitCreated]: msg`Cost Budget Created`,
+  [AuditAction.CostLimitUpdated]: msg`Cost Budget Updated`,
+  [AuditAction.CostLimitDeleted]: msg`Cost Budget Deleted`,
+  [AuditAction.CostBudgetSoftLimitReached]: msg`Cost Budget Warning`,
+  [AuditAction.CostBudgetHardLimitReached]: msg`Cost Budget Exceeded`,
 };
 
 export const AUDIT_ACTOR_TYPE_LABEL: Record<AuditActorType, MessageDescriptor> = {
@@ -155,4 +160,9 @@ export const ACTION_COLOR: Record<AuditAction, string> = {
   [AuditAction.CustomAnomalyDetectorDeleted]: 'var(--danger)',
   [AuditAction.ProviderUpstreamKeyRotated]: 'var(--warn)',
   [AuditAction.ProviderUpstreamKeyRevealed]: 'var(--warn)',
+  [AuditAction.CostLimitCreated]: 'var(--success)',
+  [AuditAction.CostLimitUpdated]: 'var(--warn)',
+  [AuditAction.CostLimitDeleted]: 'var(--danger)',
+  [AuditAction.CostBudgetSoftLimitReached]: 'var(--warn)',
+  [AuditAction.CostBudgetHardLimitReached]: 'var(--danger)',
 };

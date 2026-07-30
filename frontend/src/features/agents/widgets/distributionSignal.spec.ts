@@ -39,7 +39,7 @@ describe('hasDistributionSignal', () => {
     expect(hasDistributionSignal(dist(0.05), fmtPct)).toBe(true); // 5%
   });
 
-  it('keeps a tiny-but-real cost shown as "<€0.001"', () => {
+  it('keeps a tiny-but-real cost shown as "<€0.01"', () => {
     expect(hasDistributionSignal(dist(0.0003), fmtCost)).toBe(true);
   });
 

@@ -17,11 +17,26 @@ namespace Proxytrace.Messaging;
 /// already in the stream keep deserializing during a rolling deploy.
 /// </para>
 /// <para>
+/// <c>BlockedByBudget</c> marks the other pre-upstream rejection: the project (or the named agent)
+/// had already crossed its hard monthly cost budget. The trace is still recorded — flagged blocked,
+/// carrying the 403 body — but it is deliberately not attributed to a detector, and since the call
+/// never reached the provider it contributes ~no tokens and so cannot inflate the very spend figure
+/// that blocked it.
+/// </para>
+/// <para>
 /// <c>SessionId</c> carries the client's <c>x-proxytrace-session-id</c> value — the debugging-session
 /// key (one app run / user session, spanning agents and conversations). <c>ConversationId</c> carries
 /// the <c>x-proxytrace-conversation-id</c> value — the thread key. When no conversation id is sent,
 /// ingestion falls back to the session key for conversation grouping (byte-identical to pre-split
 /// clients).
+/// </para>
+/// <para>
+/// <c>ApiKeyId</c> identifies the Proxytrace-issued key the caller authenticated with, so spend can
+/// be attributed per key. It is <see langword="null"/> for calls made through the upstream-key path
+/// (where no such key exists) and for same-origin producers like Tracey; those calls are counted by
+/// project- and agent-scoped budgets only. Like the fields above it is a trailing optional, so
+/// messages already in the stream keep deserializing across a rolling deploy — they simply arrive
+/// unattributed.
 /// </para>
 /// </summary>
 public sealed record IngestMessage(
@@ -36,4 +51,6 @@ public sealed record IngestMessage(
     Guid? BlockedByDetectorId = null,
     string? BlockedDetectorName = null,
     string? BlockedTriggerPattern = null,
-    string? ConversationId = null);
+    string? ConversationId = null,
+    bool BlockedByBudget = false,
+    Guid? ApiKeyId = null);

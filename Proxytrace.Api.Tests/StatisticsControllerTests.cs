@@ -121,11 +121,100 @@ public sealed class StatisticsControllerTests : BaseTest<Module>
         dto.Counts.TotalProposalCount.Should().Be(4);
     }
 
+    // ── cost overview ─────────────────────────────────────────────────────────
+
+    [TestMethod]
+    public async Task GetCostOverview_MissingFromTo_ReturnsBadRequest()
+    {
+        var controller = ResolveController();
+
+        var result = await controller.GetCostOverview(
+            projectId: Guid.NewGuid(), from: null, to: null, cancellationToken: CancellationToken);
+
+        result.Result.Should().BeOfType<BadRequestObjectResult>();
+    }
+
+    [TestMethod]
+    public async Task GetCostOverview_FromNotBeforeTo_ReturnsBadRequest()
+    {
+        var controller = ResolveController();
+        var now = DateTimeOffset.UtcNow;
+
+        var result = await controller.GetCostOverview(
+            projectId: Guid.NewGuid(), from: now, to: now.AddDays(-1), cancellationToken: CancellationToken);
+
+        result.Result.Should().BeOfType<BadRequestObjectResult>();
+    }
+
+    [TestMethod]
+    public async Task GetCostOverview_WhenProjectInaccessible_ReturnsNotFound()
+    {
+        var controller = ResolveController(accessGuard: DenyingGuard());
+        var now = DateTimeOffset.UtcNow;
+
+        // Cost figures are always project-scoped: there is no cross-tenant aggregate to fall back to.
+        var result = await controller.GetCostOverview(
+            projectId: Guid.NewGuid(), from: now.AddDays(-30), to: now, cancellationToken: CancellationToken);
+
+        result.Result.Should().BeOfType<NotFoundResult>();
+    }
+
+    [TestMethod]
+    public async Task GetCostOverview_WithWindow_MapsEveryPartOfThePayload()
+    {
+        var projectId = Guid.NewGuid();
+        var agentId = Guid.NewGuid();
+        var limitId = Guid.NewGuid();
+        var bucketStart = new DateTimeOffset(2026, 7, 1, 0, 0, 0, TimeSpan.Zero);
+
+        var costStatistics = Substitute.For<Proxytrace.Application.CostControl.ICostStatistics>();
+        costStatistics.GetCostOverviewAsync(
+                Arg.Any<Guid>(), Arg.Any<DateTimeOffset>(), Arg.Any<DateTimeOffset>(),
+                Arg.Any<StatisticsBucket>(), Arg.Any<CancellationToken>())
+            .Returns(new Proxytrace.Application.CostControl.CostOverview(
+                MonthToDateSpendEur: 12.5m,
+                PreviousMonthSpendEur: 30m,
+                Series: [new AgentCostPoint(bucketStart, agentId, 12.5m)],
+                AgentTotals: [new Proxytrace.Application.CostControl.AgentCostTotal(agentId, "Support bot", 12.5m)],
+                ApiKeySeries: [],
+                ApiKeyTotals: [],
+                Budgets:
+                [
+                    new Proxytrace.Application.CostControl.CostBudgetStatus(
+                        limitId, null, null, null, null, 10m, 100m, true, 12.5m,
+                        SoftBreached: true, HardBreached: false),
+                ],
+                HasUnpricedEndpoints: true));
+
+        var controller = ResolveController(costStatistics: costStatistics);
+        var now = DateTimeOffset.UtcNow;
+
+        var result = await controller.GetCostOverview(
+            projectId, from: now.AddDays(-30), to: now,
+            bucket: StatisticsBucket.Daily, cancellationToken: CancellationToken);
+
+        Proxytrace.Api.Dto.Costs.CostOverviewDto? maybeDto = result.Value;
+        ArgumentNullException.ThrowIfNull(maybeDto);
+        Proxytrace.Api.Dto.Costs.CostOverviewDto dto = maybeDto;
+        dto.MonthToDateSpendEur.Should().Be(12.5m);
+        dto.PreviousMonthSpendEur.Should().Be(30m);
+        dto.Series.Should().ContainSingle().Which.AgentId.Should().Be(agentId);
+        dto.AgentTotals.Should().ContainSingle().Which.AgentName.Should().Be("Support bot");
+        dto.Budgets.Should().ContainSingle().Which.SoftBreached.Should().BeTrue();
+        dto.HasUnpricedEndpoints.Should().BeTrue();
+        dto.Bucket.Should().Be("daily");
+
+        await costStatistics.Received(1).GetCostOverviewAsync(
+            projectId, Arg.Any<DateTimeOffset>(), Arg.Any<DateTimeOffset>(),
+            StatisticsBucket.Daily, Arg.Any<CancellationToken>());
+    }
+
     private StatisticsController ResolveController(
         IDashboardStatistics? dashboard = null,
         IAgentStatistics? agentStatistics = null,
         IAgentRepository? agents = null,
-        Proxytrace.Api.Auth.IProjectAccessGuard? accessGuard = null)
+        Proxytrace.Api.Auth.IProjectAccessGuard? accessGuard = null,
+        Proxytrace.Application.CostControl.ICostStatistics? costStatistics = null)
     {
         var toolDtoMapper = new ToolDtoMapper();
         var agentRepo = agents ?? Substitute.For<IAgentRepository>();
@@ -138,6 +227,7 @@ public sealed class StatisticsControllerTests : BaseTest<Module>
         return new StatisticsController(
             dashboard ?? Substitute.For<IDashboardStatistics>(),
             agentStatistics ?? Substitute.For<IAgentStatistics>(),
+            costStatistics ?? Substitute.For<Proxytrace.Application.CostControl.ICostStatistics>(),
             agentRepo,
             new AgentCallDtoMapper(toolDtoMapper),
             new AgentDtoMapper(toolDtoMapper),

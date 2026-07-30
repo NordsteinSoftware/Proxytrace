@@ -5,7 +5,9 @@ using Proxytrace.Api.Auth;
 using Proxytrace.Api.Configuration;
 using Proxytrace.Api.Dto.AgentCalls;
 using Proxytrace.Api.Dto.Agents;
+using Proxytrace.Api.Dto.Costs;
 using Proxytrace.Api.Dto.Statistics;
+using Proxytrace.Application.CostControl;
 using Proxytrace.Application.Statistics;
 using Proxytrace.Domain.Agent;
 
@@ -18,6 +20,7 @@ public class StatisticsController : ControllerBase
 {
     private readonly IDashboardStatistics dashboard;
     private readonly IAgentStatistics agentStatistics;
+    private readonly ICostStatistics costStatistics;
     private readonly IAgentRepository agents;
     private readonly AgentCallDtoMapper agentCallDtoMapper;
     private readonly AgentDtoMapper agentDtoMapper;
@@ -27,6 +30,7 @@ public class StatisticsController : ControllerBase
     public StatisticsController(
         IDashboardStatistics dashboard,
         IAgentStatistics agentStatistics,
+        ICostStatistics costStatistics,
         IAgentRepository agents,
         AgentCallDtoMapper agentCallDtoMapper,
         AgentDtoMapper agentDtoMapper,
@@ -35,6 +39,7 @@ public class StatisticsController : ControllerBase
     {
         this.dashboard = dashboard;
         this.agentStatistics = agentStatistics;
+        this.costStatistics = costStatistics;
         this.agents = agents;
         this.agentCallDtoMapper = agentCallDtoMapper;
         this.agentDtoMapper = agentDtoMapper;
@@ -132,6 +137,59 @@ public class StatisticsController : ControllerBase
         return rows
             .Select(r => new AgentAnomalyStatDto(r.BucketStart, r.AgentId, r.StaticCount, r.CustomCount))
             .ToArray();
+    }
+
+    /// <summary>
+    /// The Costs page payload for one project: month-to-date and previous-month spend, the
+    /// per-agent cost series and totals over the requested window, and the project's budgets joined
+    /// with this month's breach state. Free for every project member — only *changing* a budget is
+    /// licensed.
+    /// </summary>
+    [HttpGet("cost-overview")]
+    public async Task<ActionResult<CostOverviewDto>> GetCostOverview(
+        [FromQuery] Guid projectId,
+        [FromQuery] DateTimeOffset? from = null,
+        [FromQuery] DateTimeOffset? to = null,
+        [FromQuery] StatisticsBucket bucket = StatisticsBucket.Daily,
+        CancellationToken cancellationToken = default)
+    {
+        if (from is null || to is null)
+            return BadRequest("Query parameters 'from' and 'to' are required.");
+        if (from.Value >= to.Value)
+            return BadRequest("Query parameter 'from' must be before 'to'.");
+
+        // Cost figures are always project-scoped: unlike the dashboard there is no cross-tenant
+        // aggregate to fall back to, so an inaccessible project is a 404 and nothing else.
+        if (!await accessGuard.CanAccessProjectAsync(projectId, cancellationToken))
+            return NotFound();
+
+        CostOverview overview = await costStatistics.GetCostOverviewAsync(
+            projectId, from.Value, to.Value, bucket, cancellationToken);
+
+        return new CostOverviewDto(
+            MonthToDateSpendEur: overview.MonthToDateSpendEur,
+            PreviousMonthSpendEur: overview.PreviousMonthSpendEur,
+            Series: overview.Series
+                .Select(p => new AgentCostPointDto(p.BucketStart, p.AgentId, p.CostEur)).ToArray(),
+            AgentTotals: overview.AgentTotals
+                .Select(t => new AgentCostTotalDto(t.AgentId, t.AgentName, t.CostEur)).ToArray(),
+            ApiKeySeries: overview.ApiKeySeries
+                .Select(p => new ApiKeyCostPointDto(p.BucketStart, p.ApiKeyId, p.CostEur)).ToArray(),
+            ApiKeyTotals: overview.ApiKeyTotals
+                .Select(t => new ApiKeyCostTotalDto(t.ApiKeyId, t.ApiKeyName, t.KeyPrefix, t.CostEur)).ToArray(),
+            Budgets: overview.Budgets
+                .Select(b => new CostBudgetStatusDto(
+                    b.CostLimitId, b.AgentId, b.AgentName, b.ApiKeyId, b.ApiKeyName,
+                    b.SoftLimitEur, b.HardLimitEur,
+                    b.Enabled, b.MonthToDateSpendEur, b.SoftBreached, b.HardBreached))
+                .ToArray(),
+            HasUnpricedEndpoints: overview.HasUnpricedEndpoints,
+            Bucket: bucket switch
+            {
+                StatisticsBucket.FiveMinutes => "fiveMinutes",
+                StatisticsBucket.Hourly => "hourly",
+                _ => "daily",
+            });
     }
 
     [HttpGet("agents/{agentId:guid}/overview")]

@@ -19,6 +19,7 @@ const KIND_LABEL: Record<NotificationKind, MessageDescriptor> = {
   [NotificationKind.Anomaly]: msg`Anomaly`,
   [NotificationKind.ProposalReady]: msg`Proposal ready`,
   [NotificationKind.TraceQuotaReached]: msg`Trace limit reached`,
+  [NotificationKind.CostBudget]: msg`Cost budget`,
 };
 
 const STATUS_LABEL: Record<NotificationStatus, MessageDescriptor> = {

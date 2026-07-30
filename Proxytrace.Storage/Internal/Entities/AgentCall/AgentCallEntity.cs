@@ -22,6 +22,12 @@ internal record AgentCallEntity : Entity
     public required Guid? ConversationId { get; init; }
     public required Guid? SessionId { get; init; }
 
+    // The inbound Proxytrace API key this call authenticated with, or null when unattributable (the
+    // upstream-key auth path, or any row written before key attribution existed). Deliberately
+    // FK-free — like SessionId/ConversationId — so revoking a key never cascades away telemetry.
+    // Backs the per-key cost breakdown and key-scoped budgets.
+    public Guid? ApiKeyId { get; init; }
+
     // Outlier characteristics flagged at ingestion (bitmask). 0 = not an outlier. Persisted as a
     // single byte; a partial index (see AgentCallConfig) serves the "outliers only" trace filter.
     public OutlierFlags OutlierFlags { get; init; }
