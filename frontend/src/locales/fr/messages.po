@@ -281,7 +281,7 @@ msgstr "{0} jugé"
 
 #. placeholder {0}: fmtCost(remaining)
 msgid "{0} left this month"
-msgstr ""
+msgstr "{0} restant ce mois-ci"
 
 #. placeholder {0}: data.messages.length
 msgid "{0} messages"
@@ -391,7 +391,7 @@ msgstr "rétention des Traces de {0} jours"
 #. placeholder {1}: last.toLocaleString()
 #. placeholder {2}: total.toLocaleString()
 msgid "{0}–{1} of {2}"
-msgstr ""
+msgstr "{0}–{1} sur {2}"
 
 #. placeholder {0}: m.name
 #. placeholder {1}: fmtTokens(m.tokens)
@@ -462,7 +462,7 @@ msgid "{argCount, plural, one {# arg} other {# args}}"
 msgstr "{argCount, plural, one {# arg} other {# args}}"
 
 msgid "{blockedCount, plural, one {# budget blocking calls} other {# budgets blocking calls}}"
-msgstr ""
+msgstr "{blockedCount, plural, one {# appel de blocage de budget} other {# appels de blocage de budgets}}"
 
 msgid "{cat}-based"
 msgstr "basé sur {cat}"
@@ -715,7 +715,7 @@ msgid "95th percentile latency"
 msgstr "Latence au 95e centile"
 
 msgid "A budget's scope is fixed. To retarget it, delete this budget and create a new one."
-msgstr ""
+msgstr "Le périmètre d'un budget est fixe. Pour le réaffecter, supprimez ce budget et créez-en un nouveau."
 
 msgid "A call is flagged when a metric is this many standard deviations from the agent's recent mean. Lower is more sensitive."
 msgstr "Un call est signalé lorsqu’une métrique se situe à ce nombre d’écarts types de la moyenne récente de l’Agent. Une valeur plus basse est plus sensible."
@@ -727,7 +727,7 @@ msgid "A call is sent to the judge only when one of these matches."
 msgstr "Un appel est envoyé au judge uniquement lorsqu’une de ces correspondances se produit."
 
 msgid "A disabled budget keeps its configuration but stops warning and blocking."
-msgstr ""
+msgstr "Un budget désactivé conserve sa configuration mais cesse d'avertir et de bloquer."
 
 msgid "A grader model scores responses on a fixed 1–5 scale (Terrible → Excellent) with optional reasoning. Pick a preset or write your own rubric."
 msgstr "Un modèle évaluateur attribue une note aux réponses sur une échelle fixe de 1 à 5 (Terrible → Excellent) avec un raisonnement facultatif. Choisissez un preset ou rédigez votre propre rubric."
@@ -996,10 +996,10 @@ msgid "All users are already members."
 msgstr "Tous les utilisateurs sont déjà membres."
 
 msgid "Amounts must be greater than zero."
-msgstr ""
+msgstr "Les montants doivent être supérieurs à zéro."
 
 msgid "An administrator can set monthly spend limits for this project."
-msgstr ""
+msgstr "Un administrateur peut définir des limites de dépenses mensuelles pour ce projet."
 
 msgid "An identical theory or proposal already exists for this agent."
 msgstr "Une théorie ou proposition identique existe déjà pour cet Agent."
@@ -1047,7 +1047,7 @@ msgid "Any OpenAI-compatible server: vLLM, Ollama, LiteLLM, OpenRouter, a gatewa
 msgstr "Tout serveur OpenAI-compatible : vLLM, Ollama, LiteLLM, OpenRouter, une passerelle, …"
 
 msgid "API key"
-msgstr ""
+msgstr "API key"
 
 msgid "API Key"
 msgstr "API Key"
@@ -1077,7 +1077,7 @@ msgid "Apply to all agents"
 msgstr "Appliquer à tous les Agents"
 
 msgid "Approaching limit"
-msgstr ""
+msgstr "Limite bientôt atteinte"
 
 msgid "Approximate tokens (chars / 4)"
 msgstr "Tokens approximatifs (caractères / 4)"
@@ -1234,22 +1234,22 @@ msgid "Blocking"
 msgstr "Bloquant"
 
 msgid "Blocking an agent only catches calls that send the agent header. Traffic without it is held by the project budget. An agent's spend also counts toward the project budget."
-msgstr ""
+msgstr "Bloquer un agent ne capture que les appels qui envoient l'en-tête agent. Le trafic sans cet en-tête est retenu par le budget du projet. Les dépenses d'un agent comptent également dans le budget du projet."
 
 msgid "Blocking calls"
-msgstr ""
+msgstr "Appels bloqués"
 
 msgid "Boundary inputs, unusual conversations, rare tool combinations."
 msgstr "Entrées limites, conversations inhabituelles, rares combinaisons de Tool."
 
 msgid "Budget created"
-msgstr ""
+msgstr "Budget créé"
 
 msgid "Budget deleted"
-msgstr ""
+msgstr "Budget supprimé"
 
 msgid "Budget saved"
-msgstr ""
+msgstr "Budget enregistré"
 
 msgid "Build"
 msgstr "Construire"
@@ -1261,10 +1261,10 @@ msgid "Building table…"
 msgstr "Construction du tableau…"
 
 msgid "By agent"
-msgstr ""
+msgstr "Par agent"
 
 msgid "By API key"
-msgstr ""
+msgstr "Par API key"
 
 msgid "Cache hit (t≥2)"
 msgstr "Cache hit (t≥2)"
@@ -1533,31 +1533,31 @@ msgid "Cost (LLM judge)"
 msgstr "Coût (LLM judge)"
 
 msgid "Cost budget"
-msgstr ""
+msgstr "Budget de coût"
 
 msgid "Cost Budget Created"
-msgstr ""
+msgstr "Budget de coût créé"
 
 msgid "Cost Budget Deleted"
-msgstr ""
+msgstr "Budget de coût supprimé"
 
 msgid "Cost Budget Exceeded"
-msgstr ""
+msgstr "Budget de coût dépassé"
 
 msgid "Cost Budget Updated"
-msgstr ""
+msgstr "Budget de coût mis à jour"
 
 msgid "Cost Budget Warning"
-msgstr ""
+msgstr "Alerte budget de coût"
 
 msgid "Cost budgets & alerting"
-msgstr ""
+msgstr "Budgets de coûts et alertes"
 
 msgid "Cost over time"
 msgstr "Coût au fil du temps"
 
 msgid "Costs"
-msgstr ""
+msgstr "Coûts"
 
 msgid "Could not be tested"
 msgstr "N’a pas pu être testée"
@@ -1581,13 +1581,13 @@ msgid "Could not list models from the provider: {modelsError}. Enter the model n
 msgstr "Impossible de lister les models du Provider : {modelsError}. Saisissez le nom du model manuellement."
 
 msgid "Could not load the agent breakdown."
-msgstr ""
+msgstr "Impossible de charger la répartition par agent."
 
 msgid "Could not load the API key breakdown."
-msgstr ""
+msgstr "Impossible de charger la répartition par API key."
 
 msgid "Could not load the cost series."
-msgstr ""
+msgstr "Impossible de charger la série de coûts."
 
 msgid "Could not load the request for this case."
 msgstr "Impossible de charger la requête pour ce cas."
@@ -1645,7 +1645,7 @@ msgid "Couldn’t submit the theory."
 msgstr "Impossible de soumettre la Theory."
 
 msgid "Covers every call in the project, including traffic that names no agent — which makes it the reliable backstop behind any agent or key budget."
-msgstr ""
+msgstr "Couvre chaque appel du projet, y compris le trafic qui ne nomme aucun agent — ce qui en fait le filet de sécurité fiable derrière tout budget d'agent ou de clé."
 
 msgid "Create"
 msgstr "Créer"
@@ -1753,7 +1753,7 @@ msgid "current"
 msgstr "actuel"
 
 msgid "Current calendar month (UTC)"
-msgstr ""
+msgstr "Mois calendaire actuel (UTC)"
 
 msgid "Current license"
 msgstr "Licence actuelle"
@@ -1831,7 +1831,7 @@ msgid "Delete all non-model data"
 msgstr "Supprimer toutes les données non-model"
 
 msgid "Delete budget"
-msgstr ""
+msgstr "Supprimer le budget"
 
 msgid "Delete conversation"
 msgstr "Supprimer la conversation"
@@ -1867,7 +1867,7 @@ msgstr "Supprimer le Suite"
 
 #. placeholder {0}: deleting.agentName ?? deleting.apiKeyName ?? projectScopeLabel
 msgid "Delete the budget for \"{0}\"?"
-msgstr ""
+msgstr "Supprimer le budget pour \"{0}\" ?"
 
 msgid "Delete this conversation?"
 msgstr "Supprimer cette conversation ?"
@@ -2020,7 +2020,7 @@ msgid "Edit expected output"
 msgstr "Modifier le résultat attendu"
 
 msgid "Edit monthly budget"
-msgstr ""
+msgstr "Modifier le budget mensuel"
 
 msgid "Edit name"
 msgstr "Modifier le nom"
@@ -2071,7 +2071,7 @@ msgid "Enabled"
 msgstr "Activé"
 
 msgid "End of results"
-msgstr ""
+msgstr "Fin des résultats"
 
 msgid "End-to-end latency"
 msgstr "Latence de bout en bout"
@@ -2095,7 +2095,7 @@ msgid "Endpoint URL"
 msgstr "URL de l'Endpoint"
 
 msgid "Enter a number, or leave the field empty to unset the threshold."
-msgstr ""
+msgstr "Saisissez un nombre, ou laissez le champ vide pour désactiver le seuil."
 
 msgid "Enter the 6-digit code from your authenticator app, or one of your backup codes."
 msgstr "Saisissez le code à 6 chiffres de votre application d'authentification, ou l'un de vos codes de secours."
@@ -2182,16 +2182,16 @@ msgid "every"
 msgstr "chaque"
 
 msgid "Every agent in this project already has a budget. Edit one instead."
-msgstr ""
+msgstr "Chaque agent de ce projet a déjà un budget. Modifiez-en un à la place."
 
 msgid "Every API key in this project already has a budget. Edit one instead."
-msgstr ""
+msgstr "Chaque API key de ce projet a déjà un budget. Modifiez-en un à la place."
 
 msgid "Every proxied call authenticates with a key, so this block cannot be bypassed — except by callers using the provider's own key, which the project budget holds. A key's spend also counts toward the project budget."
-msgstr ""
+msgstr "Chaque appel proxy est authentifié avec une clé, donc ce blocage ne peut être contourné — sauf par les appelants utilisant la clé propre du provider, que le budget du projet retient. Les dépenses d'une clé comptent également dans le budget du projet."
 
 msgid "Every scope already has a budget — edit or delete one to change it."
-msgstr ""
+msgstr "Chaque périmètre a déjà un budget — modifiez-en ou supprimez-en un pour le changer."
 
 msgid "Every trigger needs a pattern."
 msgstr "Chaque trigger a besoin d’un pattern."
@@ -2376,7 +2376,7 @@ msgid "From name"
 msgstr "Nom d’expéditeur"
 
 msgid "Full calendar month"
-msgstr ""
+msgstr "Mois calendaire complet"
 
 msgid "Full proxy setup guide →"
 msgstr "Guide complet de configuration du proxy →"
@@ -2433,7 +2433,7 @@ msgid "Grok models via xAI’s OpenAI-compatible API."
 msgstr "Modèles Grok via l’API compatible OpenAI de xAI."
 
 msgid "Hard limit"
-msgstr ""
+msgstr "Limite stricte"
 
 msgid "Have a license key?"
 msgstr "Vous avez une clé de licence ?"
@@ -2487,7 +2487,7 @@ msgid "How many of the agent's most recent successful calls form the baseline."
 msgstr "Nombre de calls réussis les plus récents de l’Agent qui servent de base."
 
 msgid "How this scope is enforced"
-msgstr ""
+msgstr "Comment ce scope est appliqué"
 
 msgid "HTTP status"
 msgstr "Statut HTTP"
@@ -2941,7 +2941,7 @@ msgid "matched <0>“{0}”</0>"
 msgstr "correspond à <0>“{0}”</0>"
 
 msgid "matching filters"
-msgstr ""
+msgstr "filtres correspondants"
 
 msgid "Matching requests are rejected at the proxy before reaching the provider"
 msgstr "Les requêtes correspondantes sont rejetées au proxy avant d'atteindre le fournisseur"
@@ -2975,13 +2975,13 @@ msgid "MCP write — let agents curate suites, start runs and change proposals"
 msgstr "Écriture MCP — permettre aux agents de gérer les Suite, lancer des Runs et modifier des Proposal"
 
 msgid "Measured over the <0>UTC calendar month</0>. Resets on the 1st, when alerts re-arm and any block lifts."
-msgstr ""
+msgstr "Mesuré sur le <0>mois calendaire UTC</0>. Réinitialisation le 1er, lorsque les alertes se réarment et que tout blocage est levé."
 
 msgid "Measuring spend"
-msgstr ""
+msgstr "Mesure des dépenses"
 
 msgid "Measuring this month's spend…"
-msgstr ""
+msgstr "Mesure des dépenses de ce mois…"
 
 msgid "Medium"
 msgstr "Moyen"
@@ -3089,10 +3089,10 @@ msgid "Monitor"
 msgstr "Surveiller"
 
 msgid "Month to date"
-msgstr ""
+msgstr "Mois en cours"
 
 msgid "Monthly budgets"
-msgstr ""
+msgstr "Budgets mensuels"
 
 msgid "Monthly trace quota reached — new traces are being dropped until the quota resets next month."
 msgstr "Quota mensuel de traces atteint — les nouvelles traces sont ignorées jusqu'à la réinitialisation du quota le mois prochain."
@@ -3171,7 +3171,7 @@ msgid "New"
 msgstr "Nouveau"
 
 msgid "New budget"
-msgstr ""
+msgstr "Nouveau budget"
 
 msgid "New conversation"
 msgstr "Nouvelle conversation"
@@ -3186,7 +3186,7 @@ msgid "New message role"
 msgstr "Nouveau rôle de message"
 
 msgid "New monthly budget"
-msgstr ""
+msgstr "Nouveau budget mensuel"
 
 msgid "New password"
 msgstr "Nouveau mot de passe"
@@ -3201,7 +3201,7 @@ msgid "New suite"
 msgstr "Nouvelle Suite"
 
 msgid "New traces available. Scroll to the top to refresh."
-msgstr ""
+msgstr "Nouvelles Traces disponibles. Faites défiler vers le haut pour actualiser."
 
 msgid "Next"
 msgstr "Suivant"
@@ -3268,19 +3268,19 @@ msgid "No API keys yet"
 msgstr "Aucune API key pour le moment"
 
 msgid "No attributed spend yet"
-msgstr ""
+msgstr "Aucune dépense attribuée pour l'instant"
 
 msgid "No audit events"
 msgstr "Aucun événement d'audit"
 
 msgid "No blocking"
-msgstr ""
+msgstr "Aucun blocage"
 
 msgid "No budget is blocking"
-msgstr ""
+msgstr "Aucun budget ne bloque"
 
 msgid "No budgets configured"
-msgstr ""
+msgstr "Aucun budget configuré"
 
 msgid "No cases match this filter."
 msgstr "Aucun cas ne correspond à ce filtre."
@@ -3346,7 +3346,7 @@ msgid "No input messages."
 msgstr "Aucun message d'entrée."
 
 msgid "No longer available"
-msgstr ""
+msgstr "Plus disponible"
 
 msgid "No matches"
 msgstr "Aucune correspondance"
@@ -3470,7 +3470,7 @@ msgid "No sessions yet"
 msgstr "Aucune session pour le moment"
 
 msgid "No spend in this window"
-msgstr ""
+msgstr "Aucune dépense dans cette fenêtre"
 
 msgid "No stacktrace captured for this entry."
 msgstr "Aucune stacktrace capturée pour cette entrée."
@@ -3557,7 +3557,7 @@ msgid "No versions yet."
 msgstr "Aucune version pour le moment."
 
 msgid "No warning"
-msgstr ""
+msgstr "Aucun avertissement"
 
 msgid "No written reasoning."
 msgstr "Aucun raisonnement écrit."
@@ -3734,13 +3734,13 @@ msgid "Order"
 msgstr "Ordre"
 
 msgid "Other"
-msgstr ""
+msgstr "Autre"
 
 msgid "Other agents"
-msgstr ""
+msgstr "Autres Agents"
 
 msgid "Other keys"
-msgstr ""
+msgstr "Autres clés"
 
 msgid "out"
 msgstr "sortie"
@@ -3996,7 +3996,7 @@ msgid "Previous case"
 msgstr "Cas précédent"
 
 msgid "Previous month"
-msgstr ""
+msgstr "Mois précédent"
 
 msgid "Previous trace"
 msgstr "Trace précédente"
@@ -4023,7 +4023,7 @@ msgid "Project Renamed"
 msgstr "Projet renommé"
 
 msgid "Projected month end"
-msgstr ""
+msgstr "Fin de mois projetée"
 
 msgid "Projects"
 msgstr "Projets"
@@ -4127,7 +4127,7 @@ msgid "Providers, Models & Endpoints"
 msgstr "Providers, Models et Endpoints"
 
 msgid "Proxied calls with a priced model endpoint appear here."
-msgstr ""
+msgstr "Les appels Proxied avec un endpoint de modèle tarifé apparaissent ici."
 
 #. placeholder {0}: data.latestVersion
 #. placeholder {1}: data.currentVersion
@@ -4561,7 +4561,7 @@ msgid "Save your backup codes"
 msgstr "Enregistrer vos codes de secours"
 
 msgid "Saving clears this budget's alert state, so the next check re-evaluates against the new thresholds."
-msgstr ""
+msgstr "La sauvegarde efface l'état d'alerte de ce budget, donc la prochaine vérification réévalue par rapport aux nouveaux seuils."
 
 msgid "Saving…"
 msgstr "Enregistrement…"
@@ -4600,7 +4600,7 @@ msgid "Schema is appended automatically — only describe what to grade and what
 msgstr "Le schéma est ajouté automatiquement — décrivez uniquement ce qu’il faut évaluer et ce que signifie chaque score."
 
 msgid "Scope"
-msgstr ""
+msgstr "Scope"
 
 msgid "Scoped agents"
 msgstr "Agents ciblés"
@@ -4649,7 +4649,7 @@ msgid "Search all past evaluations…"
 msgstr "Rechercher toutes les évaluations passées…"
 
 msgid "Search API keys…"
-msgstr ""
+msgstr "Rechercher API keys…"
 
 msgid "Search audit log by actor email"
 msgstr "Rechercher dans le journal d'audit par e-mail de l'auteur"
@@ -4772,10 +4772,10 @@ msgid "Select an agent to view details."
 msgstr "Sélectionnez un Agent pour voir les détails."
 
 msgid "Select an agent…"
-msgstr ""
+msgstr "Sélectionner un Agent…"
 
 msgid "Select an API key…"
-msgstr ""
+msgstr "Sélectionner une API key…"
 
 msgid "Select an evaluator"
 msgstr "Sélectionnez un evaluator"
@@ -4809,7 +4809,7 @@ msgid "selected model"
 msgstr "modèle sélectionné"
 
 msgid "Selected window"
-msgstr ""
+msgstr "Fenêtre sélectionnée"
 
 msgid "Send"
 msgstr "Envoyer"
@@ -4854,13 +4854,13 @@ msgid "Session not found"
 msgstr "Session introuvable"
 
 msgid "Set a monthly limit to be warned — or to stop calls — before spend runs away."
-msgstr ""
+msgstr "Définissez une limite mensuelle pour être averti — ou pour arrêter les appels — avant que les dépenses ne s'emballent."
 
 msgid "Set a password for your account"
 msgstr "Définir un mot de passe pour votre compte"
 
 msgid "Set at least a soft or a hard limit."
-msgstr ""
+msgstr "Définissez au moins une limite soft ou hard."
 
 msgid "Set new password"
 msgstr "Définir un nouveau mot de passe"
@@ -4922,7 +4922,7 @@ msgid "Showing the most recent buckets — narrow the range for the full window.
 msgstr "Affichage des buckets les plus récents — réduisez la plage pour voir la fenêtre complète."
 
 msgid "Showing the most recent buckets — narrow the window or widen the bucket for the full range."
-msgstr ""
+msgstr "Affichage des buckets les plus récents — réduisez la fenêtre ou élargissez le bucket pour la plage complète."
 
 msgid "Shown"
 msgstr "Affichées"
@@ -4961,16 +4961,16 @@ msgid "Snippet length (characters)"
 msgstr "Longueur de l'extrait (caractères)"
 
 msgid "Soft limit"
-msgstr ""
+msgstr "Soft limit"
 
 msgid "Soft limit only — never blocks"
-msgstr ""
+msgstr "Soft limit uniquement — ne bloque jamais"
 
 msgid "Soft limit reached"
-msgstr ""
+msgstr "Soft limit atteint"
 
 msgid "Some calls in this window ran on a model endpoint with no configured price. They add nothing to the figures below, so the totals understate real spend."
-msgstr ""
+msgstr "Certains appels dans cette fenêtre ont été exécutés sur un endpoint de modèle sans prix configuré. Ils n'ajoutent rien aux chiffres ci-dessous, donc les totaux sous-estiment les dépenses réelles."
 
 msgid "Some HTML was removed for safety"
 msgstr "Du HTML a été supprimé pour des raisons de sécurité"
@@ -4991,19 +4991,19 @@ msgid "Speed"
 msgstr "Vitesse"
 
 msgid "Spend"
-msgstr ""
+msgstr "Dépenses"
 
 msgid "Spend by agent"
-msgstr ""
+msgstr "Dépenses par Agent"
 
 msgid "Spend by API key"
-msgstr ""
+msgstr "Dépenses par API key"
 
 msgid "Spend over time"
-msgstr ""
+msgstr "Dépenses au fil du temps"
 
 msgid "Spend resets on the 1st (UTC). Alerts re-arm and blocks lift automatically."
-msgstr ""
+msgstr "Les dépenses sont réinitialisées le 1er (UTC). Les alertes se réarment et les blocages sont levés automatiquement."
 
 msgid "Split by model"
 msgstr "Répartir par modèle"
@@ -5076,7 +5076,7 @@ msgid "Stored encrypted. Used only to forward proxied requests upstream."
 msgstr "Stocké chiffré. Utilisé uniquement pour transférer les requêtes proxy vers l’amont."
 
 msgid "Straight-line from spend so far"
-msgstr ""
+msgstr "Ligne droite des dépenses actuelles"
 
 msgid "Streaming…"
 msgstr "Diffusion…"
@@ -5272,10 +5272,10 @@ msgid "Text response"
 msgstr "Réponse textuelle"
 
 msgid "That agent is no longer available for a budget. Pick another."
-msgstr ""
+msgstr "Cet agent n'est plus disponible pour un budget. Choisissez-en un autre."
 
 msgid "That API key is no longer available for a budget. Pick another."
-msgstr ""
+msgstr "Cette clé API n'est plus disponible pour un budget. Choisissez-en une autre."
 
 msgid "That key was rejected by the provider."
 msgstr "Cette API key a été rejetée par le fournisseur."
@@ -5318,10 +5318,10 @@ msgid "The native OpenAI API — works out of the box."
 msgstr "L’API native OpenAI — fonctionne immédiatement."
 
 msgid "The soft limit must not exceed the hard limit."
-msgstr ""
+msgstr "La limite souple ne doit pas dépasser la limite dure."
 
 msgid "The soft limit warns. The hard limit warns and rejects further proxied calls until the month resets or you raise it."
-msgstr ""
+msgstr "La limite souple prévient. La limite dure prévient et rejette les appels proxy ultérieurs jusqu'à la réinitialisation du mois ou jusqu'à ce que vous l'augmentiez."
 
 msgid "Theories appear here when an optimizer, you, or Tracey AI proposes a change to validate."
 msgstr "Les Theories apparaissent ici lorsqu’un optimizer, vous ou Tracey AI proposez une modification à valider."
@@ -5432,19 +5432,19 @@ msgid "This permanently deletes the run and its results. This action cannot be u
 msgstr "Cela supprime définitivement le Run et ses résultats. Cette action est irréversible."
 
 msgid "This project already has a budget. Edit that one to change its limits."
-msgstr ""
+msgstr "Ce projet a déjà un budget. Modifiez-le pour changer ses limites."
 
 msgid "This project has no agents yet. One appears once a call arrives naming it in the <0>x-proxytrace-agent</0> header."
-msgstr ""
+msgstr "Ce projet n'a pas encore d'agents. Un apparaît dès qu'un appel arrive en le nommant dans l'en-tête <0>x-proxytrace-agent</0>."
 
 msgid "This project has no inbound API keys yet. Create one under Providers first."
-msgstr ""
+msgstr "Ce projet n'a pas encore de clés API entrantes. Créez-en d'abord une sous Providers."
 
 msgid "This provider kind does not support connection testing."
 msgstr "Ce type de fournisseur ne prend pas en charge le test de connexion."
 
 msgid "This removes the budget and lifts any block it is applying. Spend keeps being tracked. This cannot be undone."
-msgstr ""
+msgstr "Cela supprime le budget et lève tout blocage qu'il applique. Les dépenses continuent d'être suivies. Cela ne peut pas être annulé."
 
 msgid "This removes the detector and its review history. This can't be undone."
 msgstr "Cela supprime le détecteur et son historique de revue. Cette action est irréversible."
@@ -5528,7 +5528,7 @@ msgid "Tolerance"
 msgstr "Tolérance"
 
 msgid "Too early in the month to project"
-msgstr ""
+msgstr "Trop tôt dans le mois pour projeter"
 
 msgid "Too many attempts. Please wait a few minutes and try again."
 msgstr "Trop de tentatives. Veuillez patienter quelques minutes puis réessayer."
@@ -5716,10 +5716,10 @@ msgid "Type your answer…"
 msgstr "Saisissez votre réponse…"
 
 msgid "Unattributed"
-msgstr ""
+msgstr "Non attribué"
 
 msgid "Unattributed spend came through the provider's own key, or was recorded before per-key tracking existed. A key budget cannot cap it — the project budget is what holds it."
-msgstr ""
+msgstr "Les dépenses non attribuées sont passées par la propre clé du fournisseur, ou ont été enregistrées avant l'existence du suivi par clé. Un budget par clé ne peut pas les limiter — c'est le budget du projet qui les contient."
 
 msgid "Undo"
 msgstr "Annuler"
@@ -5779,7 +5779,7 @@ msgid "Upgrade to schedule"
 msgstr "Passer à la planification"
 
 msgid "Upgrade to set budgets"
-msgstr ""
+msgstr "Mettez à niveau pour définir des budgets"
 
 msgid "Upstream API key"
 msgstr "API key amont"
@@ -6011,7 +6011,7 @@ msgid "Which agent should this suite test?"
 msgstr "Quel Agent ce Suite doit-elle tester ?"
 
 msgid "Whole project"
-msgstr ""
+msgstr "Projet entier"
 
 msgid "Why this change"
 msgstr "Pourquoi ce changement"
@@ -6035,7 +6035,7 @@ msgid "Wipes runtime/trace data while preserving configuration. This action cann
 msgstr "Efface les données d'exécution/trace tout en conservant la configuration. Cette action est irréversible."
 
 msgid "Within budget"
-msgstr ""
+msgstr "Dans les limites du budget"
 
 msgid "Working…"
 msgstr "Travail en cours…"
