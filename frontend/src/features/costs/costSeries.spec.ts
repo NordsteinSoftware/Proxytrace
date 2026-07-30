@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import type { AgentCostPointDto, AgentCostTotalDto } from '../../api/costs';
+import type { AgentCostTotalDto, ApiKeyCostTotalDto } from '../../api/costs';
 import {
   MAX_BUCKETS,
+  type CostSeriesPoint,
+  agentPoints,
+  apiKeyPoints,
   densifyCostSeries,
   monthDelta,
   monthStartIso,
@@ -10,6 +13,7 @@ import {
   resolveCostWindow,
   toStackedCostData,
   topAgents,
+  topApiKeys,
   totalOf,
 } from './costSeries';
 
@@ -17,8 +21,8 @@ const DAY = 24 * 60 * 60 * 1000;
 const AGENT_A = 'aaaaaaaa-0000-0000-0000-000000000001';
 const AGENT_B = 'bbbbbbbb-0000-0000-0000-000000000002';
 
-function point(iso: string, agentId: string, costEur: number): AgentCostPointDto {
-  return { bucketStart: iso, agentId, costEur };
+function point(iso: string, seriesKey: string | null, costEur: number): CostSeriesPoint {
+  return { bucketStart: iso, seriesKey, costEur };
 }
 
 describe('resolveCostWindow', () => {
@@ -86,7 +90,7 @@ describe('densifyCostSeries', () => {
 
     const dense = densifyCostSeries(rows, from, to, 'daily');
 
-    expect(dense.buckets[1].cells).toEqual([{ agentId: AGENT_A, costEur: 4 }]);
+    expect(dense.buckets[1].cells).toEqual([{ seriesKey: AGENT_A, costEur: 4 }]);
   });
 
   it('orders a bucket cells by spend, descending', () => {
@@ -97,7 +101,7 @@ describe('densifyCostSeries', () => {
 
     const dense = densifyCostSeries(rows, from, to, 'daily');
 
-    expect(dense.buckets[0].cells.map(c => c.agentId)).toEqual([AGENT_B, AGENT_A]);
+    expect(dense.buckets[0].cells.map(c => c.seriesKey)).toEqual([AGENT_B, AGENT_A]);
   });
 
   it('ignores rows outside the window', () => {
@@ -133,13 +137,45 @@ describe('toStackedCostData', () => {
       'daily',
     );
 
-    const data = toStackedCostData(dense, 'daily', id => (id === AGENT_A ? 'Support bot' : id));
+    const data = toStackedCostData(dense, 'daily', id => (id === AGENT_A ? 'Support bot' : String(id)));
 
     expect(data).toHaveLength(1);
     expect(data[0].segments).toHaveLength(1);
     expect(data[0].segments[0].label).toBe('Support bot');
     expect(data[0].segments[0].value).toBe(3);
     expect(data[0].segments[0].color).toMatch(/^#/);
+  });
+
+  it('renders the unattributed series muted rather than as a palette colour', () => {
+    const dense = densifyCostSeries(
+      [point('2026-07-01T00:00:00.000Z', null, 3)],
+      '2026-07-01T00:00:00.000Z',
+      '2026-07-01T23:00:00.000Z',
+      'daily',
+    );
+
+    const data = toStackedCostData(dense, 'daily', () => 'Unattributed');
+
+    // A remainder is not a peer of the named series, and must not look like one.
+    expect(data[0].segments[0].color).toBe('var(--text-muted)');
+  });
+});
+
+describe('point adapters', () => {
+  it('maps agent rows onto the shared series shape', () => {
+    const mapped = agentPoints([{ bucketStart: '2026-07-01T00:00:00.000Z', agentId: AGENT_A, costEur: 2 }]);
+
+    expect(mapped).toEqual<CostSeriesPoint[]>([
+      { bucketStart: '2026-07-01T00:00:00.000Z', seriesKey: AGENT_A, costEur: 2 },
+    ]);
+  });
+
+  it('preserves a null API key as a real series key', () => {
+    const mapped = apiKeyPoints([{ bucketStart: '2026-07-01T00:00:00.000Z', apiKeyId: null, costEur: 2 }]);
+
+    // Null is the unattributed group, not missing data — dropping it would break reconciliation
+    // with the project total.
+    expect(mapped[0].seriesKey).toBeNull();
   });
 });
 
@@ -191,5 +227,29 @@ describe('topAgents', () => {
 
     expect(rows.map(r => r.agentName)).toEqual(['B']);
     expect(otherEur).toBe(4);
+  });
+});
+
+describe('topApiKeys', () => {
+  const totals: ApiKeyCostTotalDto[] = [
+    { apiKeyId: 'k1', apiKeyName: 'CI', keyPrefix: 'proxytrace-aa', costEur: 3 },
+    { apiKeyId: 'k2', apiKeyName: 'Prod', keyPrefix: 'proxytrace-bb', costEur: 7 },
+    { apiKeyId: null, apiKeyName: null, keyPrefix: null, costEur: 99 },
+  ];
+
+  it('separates the unattributed remainder from the ranked keys', () => {
+    const { rows, unattributedEur } = topApiKeys(totals, 5);
+
+    // Unattributed is by far the largest here; it must not head the ranking as if it were a key.
+    expect(rows.map(r => r.apiKeyName)).toEqual(['Prod', 'CI']);
+    expect(unattributedEur).toBe(99);
+  });
+
+  it('folds the ranked tail while keeping unattributed separate', () => {
+    const { rows, otherEur, unattributedEur } = topApiKeys(totals, 1);
+
+    expect(rows.map(r => r.apiKeyName)).toEqual(['Prod']);
+    expect(otherEur).toBe(3);
+    expect(unattributedEur).toBe(99);
   });
 });

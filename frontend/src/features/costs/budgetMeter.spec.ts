@@ -1,12 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import type { CostBudgetStatusDto } from '../../api/costs';
 import { budgetMeter, parseAmount, remainingEur, sortBudgets, validateBudget } from './budgetMeter';
+import type { BudgetRow } from './budgetPatch';
 
-function budget(overrides: Partial<CostBudgetStatusDto> = {}): CostBudgetStatusDto {
+function budget(overrides: Partial<BudgetRow> = {}): BudgetRow {
   return {
     costLimitId: 'limit-1',
     agentId: null,
     agentName: null,
+    apiKeyId: null,
+    apiKeyName: null,
     softLimitEur: 80,
     hardLimitEur: 100,
     enabled: true,
@@ -73,6 +75,22 @@ describe('budgetMeter', () => {
     // A disabled limit stops blocking immediately; the meter must not imply it is still enforcing.
     expect(budgetMeter(budget({ enabled: false, hardBreached: true })).state).toBe('disabled');
   });
+
+  it('reports an unmeasured budget as measuring, with an empty bar rather than a fabricated one', () => {
+    // A budget just created optimistically: configured, but its spend is not known until the
+    // overview refetch lands. Rendering it as 0 would claim the whole limit is still available.
+    const meter = budgetMeter(budget({ monthToDateSpendEur: null }));
+
+    expect(meter.state).toBe('measuring');
+    expect(meter.fill).toBe(0);
+    expect(meter.consumed).toBeNull();
+    // The scale is configuration, not measurement, so it is still known.
+    expect(meter.scaleEur).toBe(100);
+  });
+
+  it('still reports a known breach on an unmeasured budget', () => {
+    expect(budgetMeter(budget({ monthToDateSpendEur: null, hardBreached: true })).state).toBe('hard');
+  });
 });
 
 describe('remainingEur', () => {
@@ -86,6 +104,11 @@ describe('remainingEur', () => {
 
   it('returns null without a hard limit', () => {
     expect(remainingEur(budget({ hardLimitEur: null }))).toBeNull();
+  });
+
+  it('returns null while spend is unmeasured', () => {
+    // "€100 left this month" is a claim the client cannot make before the refetch measures spend.
+    expect(remainingEur(budget({ monthToDateSpendEur: null }))).toBeNull();
   });
 });
 

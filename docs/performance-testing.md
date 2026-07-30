@@ -123,6 +123,25 @@ to that + ~30-45%. Regression signature: a climb toward seconds means the join s
 and version rows are being materialised per call, or planner statistics went stale after a bulk
 seed. See [`cost-controls.md`](cost-controls.md).
 
+### Per-key cost aggregates (`statsCostByApiKey`, `statsCostSeriesByApiKey`)
+
+Key-scoped budgets and the Costs page's per-key breakdown add two more windowed aggregates.
+`statsCostByApiKey` mirrors `statsCostByAgent` (same `AgentVersionEntity` join, the key id instead
+of the agent in the grouping); `statsCostSeriesByApiKey` needs **no join at all**, since both its
+grouping keys — the time bucket and `ApiKeyId` — are columns of the call itself, so its budget is
+set tighter than its per-agent sibling to make a regression that reintroduced a join visible rather
+than absorbed.
+
+These two exist mainly to keep an explicit design decision honest: **`AgentCallEntity.ApiKeyId`
+carries no index**, because it is only ever a `GROUP BY` key over a window already bounded by
+`(project, CreatedAt)` — an index would buy nothing on the read side and cost a write on every
+ingested call. If that assumption ever stops holding, these are where it shows.
+
+The seeder attributes `ApiKeyRate` (85%) of calls across an `ApiKeyPoolSize` (12) pool of synthetic
+key ids, leaving the rest in the null/unattributed group, so result cardinality is realistic rather
+than one giant null group. The ids are synthetic because `ApiKeyId` is FK-free — no `ApiKeyEntity`
+rows are needed. Both budgets are **placeholders marked RECALIBRATE**, same as the per-agent pair.
+
 ## Budgets (`perf/perf-budgets.json`)
 
 The single source of absolute budgets, shared by all three scopes (the DB-layer runner and benchmarks

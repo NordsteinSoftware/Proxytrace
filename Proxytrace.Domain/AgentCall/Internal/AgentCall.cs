@@ -25,6 +25,7 @@ internal record AgentCall : DomainEntity<IAgentCall>, IAgentCall
     public Guid? ConversationId { get; }
     public Guid? SessionId { get; }
     public OutlierFlags OutlierFlags { get; }
+    public Guid? ApiKeyId { get; }
     public IProject Project => Agent.Project;
 
     public AgentCall(
@@ -40,6 +41,7 @@ internal record AgentCall : DomainEntity<IAgentCall>, IAgentCall
         Guid? conversationId,
         Guid? sessionId,
         OutlierFlags outlierFlags,
+        Guid? apiKeyId,
         IRepository<IAgentCall> repository) : base(repository)
     {
         Agent = agent;
@@ -54,6 +56,7 @@ internal record AgentCall : DomainEntity<IAgentCall>, IAgentCall
         ConversationId = conversationId;
         SessionId = sessionId;
         OutlierFlags = outlierFlags;
+        ApiKeyId = apiKeyId;
     }
 
     public AgentCall(
@@ -70,6 +73,7 @@ internal record AgentCall : DomainEntity<IAgentCall>, IAgentCall
         Guid? conversationId,
         Guid? sessionId,
         OutlierFlags outlierFlags,
+        Guid? apiKeyId,
         IRepository<IAgentCall> repository) : base(existing, repository)
     {
         Agent = agent;
@@ -84,6 +88,7 @@ internal record AgentCall : DomainEntity<IAgentCall>, IAgentCall
         ConversationId = conversationId;
         SessionId = sessionId;
         OutlierFlags = outlierFlags;
+        ApiKeyId = apiKeyId;
     }
 
     public override IEnumerable<ValidationResult> Validate(ValidationContext validationContext)

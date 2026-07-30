@@ -4,6 +4,7 @@ import { QUERY_KEYS } from '../../../api/query-keys';
 import useCurrentProject from '../../../hooks/useCurrentProject';
 import type { StatisticsBucket } from '../../../lib/time-range';
 import type { TimeRange } from '../../../lib/timeRange';
+import type { CostOverviewCache } from '../budgetPatch';
 import { quantizedCostWindow } from '../costSeries';
 
 /**
@@ -16,7 +17,9 @@ export function useCostOverview(timeRange: TimeRange, bucket: StatisticsBucket) 
   const { currentProjectId } = useCurrentProject();
   const { from, to } = quantizedCostWindow(timeRange, bucket);
 
-  const query = useQuery({
+  // Typed as the *cache* shape, not the wire shape: a budget mutation patches this entry
+  // optimistically, and a budget it has just created has no measured spend yet (see `BudgetRow`).
+  const query = useQuery<CostOverviewCache>({
     queryKey: QUERY_KEYS.costOverview(currentProjectId, `${from}|${to}|${bucket}`),
     queryFn: () =>
       costsApi.overview({ projectId: currentProjectId ?? '', from, to, bucket }),

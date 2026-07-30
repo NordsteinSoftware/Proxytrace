@@ -30,6 +30,14 @@ namespace Proxytrace.Messaging;
 /// ingestion falls back to the session key for conversation grouping (byte-identical to pre-split
 /// clients).
 /// </para>
+/// <para>
+/// <c>ApiKeyId</c> identifies the Proxytrace-issued key the caller authenticated with, so spend can
+/// be attributed per key. It is <see langword="null"/> for calls made through the upstream-key path
+/// (where no such key exists) and for same-origin producers like Tracey; those calls are counted by
+/// project- and agent-scoped budgets only. Like the fields above it is a trailing optional, so
+/// messages already in the stream keep deserializing across a rolling deploy — they simply arrive
+/// unattributed.
+/// </para>
 /// </summary>
 public sealed record IngestMessage(
     Guid ProviderId,
@@ -44,4 +52,5 @@ public sealed record IngestMessage(
     string? BlockedDetectorName = null,
     string? BlockedTriggerPattern = null,
     string? ConversationId = null,
-    bool BlockedByBudget = false);
+    bool BlockedByBudget = false,
+    Guid? ApiKeyId = null);

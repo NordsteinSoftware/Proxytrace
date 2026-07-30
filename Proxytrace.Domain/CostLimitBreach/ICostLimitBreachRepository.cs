@@ -6,7 +6,21 @@ namespace Proxytrace.Domain.CostLimitBreach;
 /// proxy neither has nor needs. <see cref="AgentName"/> is the only pre-upstream attribution signal
 /// (the <c>x-proxytrace-agent</c> header), mirroring <c>BlockingDetectorRule</c>.
 /// </summary>
-public sealed record BudgetHardBlock(Guid CostLimitId, Guid? AgentId, string? AgentName);
+/// <summary>
+/// One exhausted hard budget the proxy must enforce. Exactly one scope is set: both
+/// <paramref name="AgentId"/> and <paramref name="ApiKeyId"/> null means the project-wide budget,
+/// which applies to every call.
+/// </summary>
+/// <param name="AgentName">
+/// The scoped agent's name, resolved here because agent matching happens against the
+/// <c>x-proxytrace-agent</c> header value. Key matching needs no such lookup — the proxy already
+/// holds the authenticating key's id, so it compares ids directly.
+/// </param>
+public sealed record BudgetHardBlock(
+    Guid CostLimitId,
+    Guid? AgentId,
+    string? AgentName,
+    Guid? ApiKeyId = null);
 
 public interface ICostLimitBreachRepository : IRepository<ICostLimitBreach>
 {

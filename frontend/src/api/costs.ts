@@ -1,13 +1,19 @@
 import { api, qs } from './client';
 import type { StatisticsBucket } from '../lib/time-range';
 
-/** One configured monthly budget. Mirrors backend `CostLimitDto`. */
+/**
+ * One configured monthly budget. Mirrors backend `CostLimitDto`. At most one of `agentId` /
+ * `apiKeyId` is set — both null is the project-wide budget.
+ */
 export interface CostLimitDto {
   id: string;
   projectId: string;
-  /** Null for the project-wide budget; set for an agent override. */
+  /** Null unless this is an agent override. */
   agentId: string | null;
   agentName: string | null;
+  /** Null unless this is an API key override. */
+  apiKeyId: string | null;
+  apiKeyName: string | null;
   softLimitEur: number | null;
   hardLimitEur: number | null;
   enabled: boolean;
@@ -18,6 +24,7 @@ export interface CostLimitDto {
 export interface CreateCostLimitRequest {
   projectId: string;
   agentId: string | null;
+  apiKeyId?: string | null;
   softLimitEur: number | null;
   hardLimitEur: number | null;
   enabled: boolean;
@@ -42,11 +49,32 @@ export interface AgentCostTotalDto {
   costEur: number;
 }
 
+/**
+ * Derived spend of one inbound API key in one time bucket. A null `apiKeyId` is the unattributed
+ * series — traffic authenticated with the provider's own upstream key, and traces ingested before
+ * key attribution existed.
+ */
+export interface ApiKeyCostPointDto {
+  bucketStart: string;
+  apiKeyId: string | null;
+  costEur: number;
+}
+
+/** Window spend attributed to one inbound API key; null `apiKeyId` is the unattributed remainder. */
+export interface ApiKeyCostTotalDto {
+  apiKeyId: string | null;
+  apiKeyName: string | null;
+  keyPrefix: string | null;
+  costEur: number;
+}
+
 /** A budget joined with this month's spend and breach state. */
 export interface CostBudgetStatusDto {
   costLimitId: string;
   agentId: string | null;
   agentName: string | null;
+  apiKeyId: string | null;
+  apiKeyName: string | null;
   softLimitEur: number | null;
   hardLimitEur: number | null;
   enabled: boolean;
@@ -61,6 +89,8 @@ export interface CostOverviewDto {
   previousMonthSpendEur: number;
   series: AgentCostPointDto[];
   agentTotals: AgentCostTotalDto[];
+  apiKeySeries: ApiKeyCostPointDto[];
+  apiKeyTotals: ApiKeyCostTotalDto[];
   budgets: CostBudgetStatusDto[];
   /**
    * True when some traffic in the window ran on an endpoint with no configured price. Those calls

@@ -180,6 +180,31 @@ export class ProxytraceApiClient {
     return { keyValue: dto.plaintextKey ?? '' };
   }
 
+  /**
+   * Like {@link createProviderApiKey} but returns the key's **identity** rather than its secret —
+   * the id is what a key-scoped cost budget references.
+   */
+  async createApiKeyForProject(
+    providerId: string,
+    keyName: string,
+    projectId: string,
+  ): Promise<{ id: string; name: string; keyPrefix: string }> {
+    const res = await this.request.post(`/api/providers/${providerId}/keys`, {
+      headers: this.headers(),
+      data: { name: keyName, projectId },
+    });
+    if (!res.ok()) throw new Error(`create api key failed: ${res.status()} ${await res.text()}`);
+    return res.json();
+  }
+
+  /** First provider id created during setup. */
+  async firstProviderId(): Promise<string> {
+    const providers = await this.listProviders();
+    const provider = providers[0];
+    if (!provider) throw new Error('no provider found — setup may not have completed');
+    return provider.id;
+  }
+
   async getAgentCalls(params?: { page?: number; pageSize?: number }): Promise<{ total: number; items: Record<string, unknown>[] }> {
     const qs = new URLSearchParams();
     if (params?.page != null) qs.set('page', String(params.page));
@@ -1189,9 +1214,14 @@ export class ProxytraceApiClient {
     return res.json();
   }
 
+  /**
+   * Creates a budget. The scope is exactly one of project-wide (neither id), `agentId`, or
+   * `apiKeyId` — passing both is rejected with a 400 by design.
+   */
   async createCostLimit(opts: {
     projectId: string;
     agentId?: string | null;
+    apiKeyId?: string | null;
     softLimitEur?: number | null;
     hardLimitEur?: number | null;
     enabled?: boolean;
@@ -1201,6 +1231,7 @@ export class ProxytraceApiClient {
       data: {
         projectId: opts.projectId,
         agentId: opts.agentId ?? null,
+        apiKeyId: opts.apiKeyId ?? null,
         softLimitEur: opts.softLimitEur ?? null,
         hardLimitEur: opts.hardLimitEur ?? null,
         enabled: opts.enabled ?? true,
@@ -1208,6 +1239,11 @@ export class ProxytraceApiClient {
     });
     if (!res.ok()) throw new Error(`create cost limit failed: ${res.status()} ${await res.text()}`);
     return res.json();
+  }
+
+  /** Like {@link createCostLimit} but returns the raw response, for asserting rejection statuses. */
+  async tryCreateCostLimit(data: Record<string, unknown>) {
+    return this.request.post('/api/cost-limits', { headers: this.headers(), data });
   }
 
   async updateCostLimit(
@@ -1249,6 +1285,8 @@ export interface CostLimitDto {
   projectId: string;
   agentId: string | null;
   agentName: string | null;
+  apiKeyId: string | null;
+  apiKeyName: string | null;
   softLimitEur: number | null;
   hardLimitEur: number | null;
   enabled: boolean;
@@ -1262,10 +1300,20 @@ export interface CostOverviewDto {
   previousMonthSpendEur: number;
   series: Array<{ bucketStart: string; agentId: string; costEur: number }>;
   agentTotals: Array<{ agentId: string; agentName: string; costEur: number }>;
+  /** Per-key series; a null `apiKeyId` is the unattributed group. */
+  apiKeySeries: Array<{ bucketStart: string; apiKeyId: string | null; costEur: number }>;
+  apiKeyTotals: Array<{
+    apiKeyId: string | null;
+    apiKeyName: string | null;
+    keyPrefix: string | null;
+    costEur: number;
+  }>;
   budgets: Array<{
     costLimitId: string;
     agentId: string | null;
     agentName: string | null;
+    apiKeyId: string | null;
+    apiKeyName: string | null;
     softLimitEur: number | null;
     hardLimitEur: number | null;
     enabled: boolean;

@@ -30,4 +30,13 @@ public interface ICostStatistics
     Task<IReadOnlyList<ProjectAgentCostStat>> GetMonthToDateSpendAsync(
         DateTimeOffset monthStart,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Month-to-date derived spend per (project, inbound API key) across every project — the input
+    /// for key-scoped budgets. Fetched separately from the per-agent figures so neither aggregate
+    /// pays for the other's grouping; the guard only calls this when a key-scoped budget exists.
+    /// </summary>
+    Task<IReadOnlyList<ProjectApiKeyCostStat>> GetMonthToDateSpendByApiKeyAsync(
+        DateTimeOffset monthStart,
+        CancellationToken cancellationToken = default);
 }

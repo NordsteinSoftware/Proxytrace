@@ -30,9 +30,11 @@ items off and keep it current as you capture.
 Open the manual page. List the *minimum* screenshots that illustrate the prose (e.g. the list view,
 the primary create/edit dialog, one detail view). Fewer is better.
 
-**Skip pages the kiosk can't represent** — login, user management, licensing-admin, and
-deployment/ops pages with no product UI (kiosk has no auth/users). Leave those without screenshots
-or handle case-by-case.
+**Skip pages the kiosk can't represent** — login/MFA, user management, invites, and deployment/ops
+pages with no product UI: the kiosk has no sign-in and exactly one seeded user. Leave those without
+screenshots or handle case-by-case. `/settings/*` *is* reachable — the demo user is an administrator
+and the kiosk runs on an Enterprise override license, so admin-only and licensed surfaces (settings,
+cost budgets, Tracey) render fully rather than locked.
 
 ### 2. Preflight
 - `docker info` succeeds (else stop).

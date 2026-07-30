@@ -166,6 +166,15 @@ internal static class QueryLatencyScenario
         // The Costs page's cost-over-time chart: the same join, additionally keyed by time bucket.
         await Measure("statsCostSeriesByAgent",
             () => statsReader.GetCostSeriesByAgentAsync(filter, StatisticsBucket.Daily, cancellationToken));
+        // Key-scoped budget input and the Costs page's per-key breakdown. ApiKeyId carries NO index
+        // on this table by design — it is only ever a GROUP BY key over a window already bounded by
+        // project and time — so this measurement is what proves that decision still holds at scale.
+        await Measure("statsCostByApiKey",
+            () => statsReader.GetCostByApiKeyAsync(filter, cancellationToken));
+        // The same breakdown keyed by time bucket. Unlike its per-agent sibling this needs no
+        // AgentVersion join, so it should not be slower than statsCostSeriesByAgent.
+        await Measure("statsCostSeriesByApiKey",
+            () => statsReader.GetCostSeriesByApiKeyAsync(filter, StatisticsBucket.Daily, cancellationToken));
         await Measure("statsCallTrends",
             () => statsReader.GetCallTrendsAsync(filter, 20, from, now, cancellationToken));
         await Measure("statsPulse",

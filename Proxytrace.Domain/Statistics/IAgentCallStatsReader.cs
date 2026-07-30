@@ -40,6 +40,21 @@ public interface IAgentCallStatsReader
     Task<IReadOnlyList<AgentCostPoint>> GetCostSeriesByAgentAsync(StatisticsFilter filter, StatisticsBucket bucket, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Derived spend grouped by (project, inbound API key) over the filtered window — the key-scoped
+    /// budget guard's input and the Costs page's per-key breakdown. Kept separate from
+    /// <see cref="GetCostByProjectAndAgentAsync"/> rather than folded in as another grouping key: the
+    /// combined aggregate would return the (agent × key) cross product, multiplying the rows the
+    /// guard reads every tick for two figures that are each wanted on their own.
+    /// </summary>
+    Task<IReadOnlyList<ProjectApiKeyCostStat>> GetCostByApiKeyAsync(StatisticsFilter filter, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Derived spend per (bucket, inbound API key) over the filtered window — the Costs page's
+    /// cost-over-time series when grouped by key instead of by agent.
+    /// </summary>
+    Task<IReadOnlyList<ApiKeyCostPoint>> GetCostSeriesByApiKeyAsync(StatisticsFilter filter, StatisticsBucket bucket, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Whether any call in the filtered window was served by an endpoint with no configured price.
     /// Those calls contribute nothing to derived spend, so budgets and the Costs page undercount —
     /// the flag lets the UI say so instead of presenting an incomplete estimate as exact.

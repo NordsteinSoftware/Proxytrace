@@ -13,13 +13,33 @@ follow [Semantic Versioning](https://semver.org). Ongoing work is collected unde
 
 - **Cost tracking and budgets.** A new **Costs** page (under Monitor in the sidebar) shows what your
   agents are actually spending: month-to-date and previous-month totals, a straight-line month-end
-  projection, spend over time stacked per agent, and a per-agent breakdown. Alongside it you can now
-  set **monthly spend budgets** — one for the whole project and, optionally, one per agent — with two
-  independent thresholds. Reaching the **soft limit** raises a warning notification; reaching the
-  **hard limit** raises a critical notification *and* makes the proxy reject further LLM calls for
-  that scope with an OpenAI-shaped `403` (`proxytrace_budget_exceeded`) until the month resets or you
-  raise the limit. Blocked calls are still recorded as flagged traces and, since they never reach the
-  provider, cost nothing.
+  projection, spend over time (stacked per agent or per API key), and breakdowns by agent and by API
+  key. Alongside it you can now set **monthly spend budgets**, scoped to the whole project, a single
+  agent, or a single inbound API key, with two independent thresholds. Reaching the **soft limit**
+  raises a warning notification; reaching the **hard limit** raises a critical notification *and*
+  makes the proxy reject further LLM calls for that scope with an OpenAI-shaped `403`
+  (`proxytrace_budget_exceeded`) until the month resets or you raise the limit. Blocked calls are
+  still recorded as flagged traces and, since they never reach the provider, cost nothing.
+
+  **Per-key budgets are the scope that cannot be bypassed.** Agent-scoped blocking can only match
+  traffic that sends the `x-proxytrace-agent` header, but every proxied call must authenticate with
+  a key — so scoping a budget to an application's key caps that application whatever it sends. Two
+  caveats, both surfaced in the UI rather than hidden: callers authenticating with the *provider's
+  own* key have no Proxytrace key to attribute (that spend shows as **Unattributed** and is held by
+  the project budget), and per-key figures start from this release, since older traces never
+  recorded which key produced them. Rotating a key creates a new key, so its budget must be
+  re-created.
+
+  **Setting a budget is a two-step scope picker**, reached from **New budget** in the top-right of
+  the *Monthly budgets* card: first *Whole project*, *Agent* or *API key*, then
+  — for the latter two — which one, from a searchable list that stays usable with hundreds of
+  agents. Each scope holds at most one budget, so the dialog opens on a scope that is still free and
+  tells you plainly when the one you picked is already taken (or has nothing to point at yet) rather
+  than letting Save fail. An existing budget shows its scope by name and read-only, since a budget's
+  scope is fixed once created. Deleting one moved to the budget's own row, behind a confirmation.
+  Adding, editing or removing a budget updates the meter list **immediately** instead of waiting for
+  the page's spend figures to be recomputed; a brand-new budget shows *Measuring spend* until its
+  first reading lands, rather than a €0.00 that would imply the whole limit is still free.
 
   Budgets run on the UTC calendar month and reset on the 1st: alerts re-arm and blocks lift by
   themselves, with no cleanup to run. Each threshold alerts once per month, so an ongoing overspend
@@ -34,8 +54,39 @@ follow [Semantic Versioning](https://semver.org). Ongoing work is collected unde
   Viewing the page and any configured budgets is free on every plan and open to all project members;
   **creating or changing** a budget requires an administrator and an **Enterprise** license. An
   install that loses its license keeps its budget configuration — nothing fires and nothing blocks
-  until the license is restored. Note that agent-scoped blocking can only match traffic that sends
-  the `x-proxytrace-agent` header, so a project-wide budget is the reliable backstop.
+  until the license is restored. A project-wide budget remains the reliable backstop: it is the only
+  scope that covers every call, including traffic an agent or key budget cannot attribute.
+
+### Changed
+
+- **Amounts of money are always shown with two decimals.** Costs below €1 used to be printed with
+  four — so a single column could mix *€0.0004* and *€12,345.68*, and a zero total read as
+  *€0.0000*, which does not look like money at all. Every cost readout (the Costs page, agent and
+  suite summaries, run comparisons) now uses the same two-decimal shape, so figures line up and can
+  be compared at a glance. A real amount smaller than a cent shows as *<€0.01* rather than rounding
+  down to a misleading *€0.00*; the exact figure for a single call is still on the trace itself.
+
+- **Demo (kiosk) mode now signs you in as an administrator.** Kiosk has always run on a perpetual
+  Enterprise license, but its demo user was a plain member, so admin-gated features — **Settings**
+  and, newly, **cost budgets** — stayed hidden or locked and looked like they were missing from the
+  product. The demo user is now an administrator, so the whole feature set is reachable. What an
+  interactive kiosk visitor may change is still bounded by demo mode itself; a read-only kiosk (no
+  `Kiosk:Endpoint` configured) continues to reject every write regardless of role.
+
+### Fixed
+
+- **Error messages from the API reached you intact.** When a request failed, the browser read the
+  response body as JSON first and only then fell back to plain text — but the first read consumes
+  the body, so the fallback always came up empty. Any failure whose explanation was not JSON was
+  reduced to a bare status line like *"409 Conflict"*, which told you nothing about what to do. The
+  body is now read once and parsed afterwards, so the server's actual sentence is what you see —
+  reduced to the relevant sentence for the standard problem documents ASP.NET returns, and capped in
+  length so an oversized body cannot produce a notification taller than the window.
+
+- **Esc and Tab behave inside a dropdown that sits in a dialog.** Pressing Esc to close an open
+  select or search list also closed the surrounding dialog, discarding whatever had been typed into
+  it; Tab inside an open list jumped back to the dialog's first field. Both now affect only the list
+  you have open.
 
 ## [1.9.0] - 2026-07-26
 

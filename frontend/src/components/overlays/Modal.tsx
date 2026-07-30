@@ -17,6 +17,9 @@ const FOCUSABLE_SELECTOR = [
   'select:not([disabled])',
   '[tabindex]:not([tabindex="-1"])',
 ].join(',');
+
+/** The wrapper Radix renders portalled popper content into (`@radix-ui/react-popper`). */
+const RADIX_PORTAL_SELECTOR = '[data-radix-popper-content-wrapper]';
 /* eslint-enable lingui/no-unlocalized-strings */
 
 /** Visible, focusable descendants of the panel, in DOM (tab) order. */
@@ -56,14 +59,22 @@ export function Modal({ title, onClose, children, footer, headerActions, maxWidt
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
+        // A Radix layer inside the panel (Select, Combobox, Menu, Tooltip) dismisses itself on Esc
+        // in the *capture* phase and marks the event handled. Without this check the same keypress
+        // also closed the dialog, so dismissing an open dropdown threw the draft away.
+        if (e.defaultPrevented) return;
         onClose();
         return;
       }
       if (e.key !== 'Tab') return;
       const panel = panelRef.current;
       if (!panel) return;
-      const items = getFocusable(panel);
       const active = document.activeElement;
+      // Radix portals its popover/menu content to `document.body`, i.e. outside the panel. It runs
+      // its own focus management there, so the trap must stand down — otherwise Tab inside an open
+      // Combobox list is yanked straight back to the dialog's first field.
+      if (active?.closest(RADIX_PORTAL_SELECTOR)) return;
+      const items = getFocusable(panel);
       if (items.length === 0) {
         e.preventDefault();
         panel.focus();

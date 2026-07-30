@@ -81,11 +81,17 @@ internal sealed class CoreSeedScenario : IDemoScenario
 
     public async Task SeedAsync(CancellationToken cancellationToken)
     {
+        // Admin, not Member: the kiosk runs on a perpetual Enterprise override license so it can
+        // showcase the whole product, and several surfaces (cost budgets, settings) are gated on
+        // the Admin role on top of that license. A Member demo user would see those features
+        // permanently locked, which reads as a missing feature rather than a demo boundary. What
+        // an interactive kiosk visitor may actually change is bounded by KioskReadOnlyMiddleware,
+        // not by this role — and an interactive kiosk is documented as a single-user/private demo.
         var demoUser = await userFactory(
             kiosk.DemoUserEmail,
             externalSubject: null,
             passwordHash: "kiosk-no-login",
-            role: UserRole.Member).AddAsync(cancellationToken);
+            role: UserRole.Admin).AddAsync(cancellationToken);
 
         var openAiProvider = await providers.AddAsync(providerFactory(
             "OpenAI (demo)",

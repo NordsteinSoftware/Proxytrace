@@ -75,7 +75,7 @@ internal class CostLimitBreachRepository
                 l => l.Id,
                 (b, l) => new { Breach = b, Limit = l })
             .Where(x => x.Limit.Enabled && x.Limit.Project == projectId && x.Limit.HardLimitEur != null)
-            .Select(x => new { x.Limit.Id, x.Limit.Agent })
+            .Select(x => new { x.Limit.Id, x.Limit.Agent, x.Limit.ApiKey })
             .ToListAsync(cancellationToken);
 
         if (rows.Count == 0)
@@ -96,7 +96,10 @@ internal class CostLimitBreachRepository
             .Select(r => new BudgetHardBlock(
                 CostLimitId: r.Id,
                 AgentId: r.Agent,
-                AgentName: r.Agent is { } id && agentNames.TryGetValue(id, out var name) ? name : null))
+                AgentName: r.Agent is { } id && agentNames.TryGetValue(id, out var name) ? name : null,
+                // No name lookup for the key: enforcement compares the authenticating key's id, so
+                // the name would only ever be dead weight on the hot path.
+                ApiKeyId: r.ApiKey))
             .ToList();
     }
 }

@@ -176,10 +176,13 @@ public sealed class StatisticsControllerTests : BaseTest<Module>
                 PreviousMonthSpendEur: 30m,
                 Series: [new AgentCostPoint(bucketStart, agentId, 12.5m)],
                 AgentTotals: [new Proxytrace.Application.CostControl.AgentCostTotal(agentId, "Support bot", 12.5m)],
+                ApiKeySeries: [],
+                ApiKeyTotals: [],
                 Budgets:
                 [
                     new Proxytrace.Application.CostControl.CostBudgetStatus(
-                        limitId, null, null, 10m, 100m, true, 12.5m, SoftBreached: true, HardBreached: false),
+                        limitId, null, null, null, null, 10m, 100m, true, 12.5m,
+                        SoftBreached: true, HardBreached: false),
                 ],
                 HasUnpricedEndpoints: true));
 

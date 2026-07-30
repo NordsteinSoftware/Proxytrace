@@ -14,4 +14,11 @@ public interface IApiKeyRepository : IRepository<IApiKey>
     /// Returns all API keys belonging to the provider identified by <paramref name="providerId"/>.
     /// </summary>
     Task<IReadOnlyList<IApiKey>> GetByProviderAsync(Guid providerId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Returns all API keys belonging to the project identified by <paramref name="projectId"/> —
+    /// the naming lookup behind the Costs page's per-key spend breakdown and the key picker in the
+    /// budget editor.
+    /// </summary>
+    Task<IReadOnlyList<IApiKey>> GetByProjectAsync(Guid projectId, CancellationToken cancellationToken = default);
 }

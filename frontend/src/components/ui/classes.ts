@@ -44,6 +44,16 @@ export const formInputCls = cn(
 );
 
 /**
+ * A field-shaped box that shows a value the user cannot change (a locked scope, a pre-selected
+ * suite). Deliberately **not** a `disabled` control: `formInputCls` dims those to 50% opacity, and
+ * a value the user still has to read must not be dimmed (DESIGN §7, contrast). Pair it with a line
+ * of copy saying *why* it is fixed.
+ */
+export const readonlyFieldCls = cn(
+  'w-full px-3 py-2 bg-card-2 border border-border rounded-md text-title text-primary truncate',
+);
+
+/**
  * Top-right overlay control revealed on hover/focus of a `group` parent.
  * Used for the per-message copy button in trace detail blocks.
  */

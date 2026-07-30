@@ -18,7 +18,7 @@ public sealed class CostLimitBreachValidationTests : DomainTest<Module>
     {
         var factory = services.GetRequiredService<ICostLimit.CreateNew>();
         var repository = services.GetRequiredService<ICostLimitRepository>();
-        return await repository.AddAsync(factory(project, agent, 50m, 100m, true), cancellationToken);
+        return await repository.AddAsync(factory(project, agent, null, 50m, 100m, true), cancellationToken);
     }
 
     [TestMethod]
@@ -166,7 +166,7 @@ public sealed class CostLimitBreachValidationTests : DomainTest<Module>
         var breaches = services.GetRequiredService<ICostLimitBreachRepository>();
         IProject project = await GetOrCreate<IProject>(services);
 
-        ICostLimit limit = await limits.AddAsync(createLimit(project, null, null, 100m, true), CancellationToken);
+        ICostLimit limit = await limits.AddAsync(createLimit(project, null, null, null, 100m, true), CancellationToken);
         await breaches.AddAsync(factory(limit, ThisMonth, CostThreshold.Hard, 150m), CancellationToken);
 
         // Disabling the limit must lift the block immediately, without deleting the breach record.

@@ -7,6 +7,7 @@ using Proxytrace.Api.Auth.Licensing;
 using Proxytrace.Api.Dto.Costs;
 using Proxytrace.Domain;
 using Proxytrace.Domain.Agent;
+using Proxytrace.Domain.ApiKey;
 using Proxytrace.Domain.AuditLog;
 using Proxytrace.Domain.CostLimit;
 using Proxytrace.Domain.CostLimitBreach;
@@ -31,6 +32,7 @@ public class CostLimitsController : ControllerBase
     private readonly ICostLimitBreachRepository breaches;
     private readonly IProjectRepository projects;
     private readonly IAgentRepository agents;
+    private readonly IApiKeyRepository apiKeys;
     private readonly ICostLimit.CreateNew createCostLimit;
     private readonly ITransaction transaction;
     private readonly IProjectAccessGuard accessGuard;
@@ -41,6 +43,7 @@ public class CostLimitsController : ControllerBase
         ICostLimitBreachRepository breaches,
         IProjectRepository projects,
         IAgentRepository agents,
+        IApiKeyRepository apiKeys,
         ICostLimit.CreateNew createCostLimit,
         ITransaction transaction,
         IProjectAccessGuard accessGuard,
@@ -50,6 +53,7 @@ public class CostLimitsController : ControllerBase
         this.breaches = breaches;
         this.projects = projects;
         this.agents = agents;
+        this.apiKeys = apiKeys;
         this.createCostLimit = createCostLimit;
         this.transaction = transaction;
         this.accessGuard = accessGuard;
@@ -102,6 +106,11 @@ public class CostLimitsController : ControllerBase
             if (!await accessGuard.CanAccessProjectAsync(project.Id, cancellationToken))
                 return NotFound();
 
+            // A budget has exactly one scope. Rejected here as a readable 400 rather than left to
+            // surface as a domain validation error from the repository.
+            if (request.AgentId is not null && request.ApiKeyId is not null)
+                return BadRequest("A budget is scoped to an agent or to an API key, not to both.");
+
             IAgent? agent = null;
             if (request.AgentId is { } agentId)
             {
@@ -110,19 +119,30 @@ public class CostLimitsController : ControllerBase
                     return BadRequest($"Agent {agentId} not found.");
             }
 
+            IApiKey? apiKey = null;
+            if (request.ApiKeyId is { } apiKeyId)
+            {
+                apiKey = await apiKeys.FindAsync(apiKeyId, cancellationToken);
+                if (apiKey is null || apiKey.Project.Id != project.Id)
+                    return BadRequest($"API key {apiKeyId} not found.");
+            }
+
             // Checked here as well as by the partial unique indexes: the index turns a race into a
             // 500, this turns the ordinary "already configured" case into a readable 409.
             IReadOnlyList<ICostLimit> existing = await costLimits.GetByProjectAsync(project.Id, cancellationToken);
-            if (existing.Any(l => l.Agent?.Id == request.AgentId))
-                return Conflict(request.AgentId is null
-                    ? "This project already has a budget."
-                    : "This agent already has a budget.");
+            if (existing.Any(l => l.Agent?.Id == request.AgentId && l.ApiKey?.Id == request.ApiKeyId))
+                return Conflict((request.AgentId, request.ApiKeyId) switch
+                {
+                    (not null, _) => "This agent already has a budget.",
+                    (_, not null) => "This API key already has a budget.",
+                    _ => "This project already has a budget.",
+                });
 
             ICostLimit saved = await costLimits.AddAsync(
-                createCostLimit(project, agent, request.SoftLimitEur, request.HardLimitEur, request.Enabled),
+                createCostLimit(project, agent, apiKey, request.SoftLimitEur, request.HardLimitEur, request.Enabled),
                 cancellationToken);
 
-            created = (saved.Id, agent?.Name ?? project.Name, project.Id, BuildAuditDetails(saved));
+            created = (saved.Id, ScopeLabel(saved), project.Id, BuildAuditDetails(saved));
             return CreatedAtAction(nameof(Get), new { id = saved.Id }, ToDto(saved));
         });
 
@@ -162,7 +182,7 @@ public class CostLimitsController : ControllerBase
             // limit would never warn again this month.
             await breaches.DeleteForLimitAsync(saved.Id, cancellationToken);
 
-            updated = (saved.Id, saved.Agent?.Name ?? saved.Project.Name, saved.Project.Id, BuildAuditDetails(saved));
+            updated = (saved.Id, ScopeLabel(saved), saved.Project.Id, BuildAuditDetails(saved));
             return ToDto(saved);
         });
 
@@ -185,7 +205,7 @@ public class CostLimitsController : ControllerBase
         if (!await accessGuard.CanAccessProjectAsync(limit.Project.Id, cancellationToken))
             return NotFound();
 
-        string label = limit.Agent?.Name ?? limit.Project.Name;
+        string label = ScopeLabel(limit);
         Guid projectId = limit.Project.Id;
 
         bool removed = await transaction.InvokeAsync(async () =>
@@ -218,10 +238,18 @@ public class CostLimitsController : ControllerBase
         return null;
     }
 
+    /// <summary>
+    /// Names what the budget is scoped to, for the audit entry: the agent, the key, or — for the
+    /// project-wide budget — the project itself.
+    /// </summary>
+    private static string ScopeLabel(ICostLimit limit)
+        => limit.Agent?.Name ?? limit.ApiKey?.Name ?? limit.Project.Name;
+
     private static string BuildAuditDetails(ICostLimit limit)
         => JsonSerializer.Serialize(new
         {
             agentId = limit.Agent?.Id,
+            apiKeyId = limit.ApiKey?.Id,
             softLimitEur = limit.SoftLimitEur,
             hardLimitEur = limit.HardLimitEur,
             enabled = limit.Enabled,
@@ -233,6 +261,8 @@ public class CostLimitsController : ControllerBase
             ProjectId: limit.Project.Id,
             AgentId: limit.Agent?.Id,
             AgentName: limit.Agent?.Name,
+            ApiKeyId: limit.ApiKey?.Id,
+            ApiKeyName: limit.ApiKey?.Name,
             SoftLimitEur: limit.SoftLimitEur,
             HardLimitEur: limit.HardLimitEur,
             Enabled: limit.Enabled,

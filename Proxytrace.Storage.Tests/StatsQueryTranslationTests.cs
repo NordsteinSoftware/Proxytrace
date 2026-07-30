@@ -248,6 +248,73 @@ public sealed class StatsQueryTranslationTests
     }
 
     [TestMethod]
+    public void CostByApiKeyAggregate_TranslatesToServerSideGroupBy()
+    {
+        using IContainer container = BuildPostgresContainer();
+        var context = container.Resolve<StorageDbContext>();
+
+        // The GetCostByApiKeyAsync shape. ApiKeyId is a column of the call itself, but the project
+        // still comes from the AgentVersion join. Grouping by a NULLABLE key must not push the
+        // aggregate client-side — the null group is the unattributed remainder and has to be
+        // computed in SQL like every other group.
+        string sql = context.Set<AgentCallEntity>()
+            .AsNoTracking()
+            .Join(
+                context.Set<AgentVersionEntity>().AsNoTracking(),
+                c => c.AgentVersionId,
+                v => v.Id,
+                (c, v) => new { Call = c, Version = v })
+            .GroupBy(x => new { x.Version.Project, x.Call.ApiKeyId, x.Call.EndpointId })
+            .Select(g => new
+            {
+                g.Key.Project,
+                g.Key.ApiKeyId,
+                g.Key.EndpointId,
+                Input = g.Sum(x => (long?)x.Call.InputTokens ?? 0L),
+                Output = g.Sum(x => (long?)x.Call.OutputTokens ?? 0L),
+                Cached = g.Sum(x => (long?)x.Call.CachedInputTokens ?? 0L),
+            })
+            .ToQueryString();
+
+        sql.Should().Contain("GROUP BY");
+        sql.Should().ContainEquivalentOf("sum(");
+    }
+
+    [TestMethod]
+    public void CostSeriesByApiKeyAggregate_TranslatesToServerSideGroupBy()
+    {
+        using IContainer container = BuildPostgresContainer();
+        var context = container.Resolve<StorageDbContext>();
+
+        double widthMs = TimeSpan.FromDays(1).TotalMilliseconds;
+
+        // The GetCostSeriesByApiKeyAsync shape. Unlike the per-agent series this needs no join —
+        // both grouping keys are columns of the call — so a regression that reintroduced one would
+        // show up here as a changed plan, not just slower SQL.
+        string sql = context.Set<AgentCallEntity>()
+            .AsNoTracking()
+            .GroupBy(c => new
+            {
+                Bucket = (int)Math.Floor((c.CreatedAt - DateTimeOffset.UnixEpoch).TotalMilliseconds / widthMs),
+                c.ApiKeyId,
+                c.EndpointId,
+            })
+            .Select(g => new
+            {
+                g.Key.Bucket,
+                g.Key.ApiKeyId,
+                g.Key.EndpointId,
+                Input = g.Sum(x => (long?)x.InputTokens ?? 0L),
+                Output = g.Sum(x => (long?)x.OutputTokens ?? 0L),
+                Cached = g.Sum(x => (long?)x.CachedInputTokens ?? 0L),
+            })
+            .ToQueryString();
+
+        sql.Should().Contain("GROUP BY");
+        sql.Should().ContainEquivalentOf("sum(");
+    }
+
+    [TestMethod]
     public void CostSeriesByAgentAggregate_BucketedAndJoined_TranslatesToServerSideGroupBy()
     {
         using IContainer container = BuildPostgresContainer();

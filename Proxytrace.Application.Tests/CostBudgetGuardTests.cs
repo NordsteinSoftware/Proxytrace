@@ -11,6 +11,7 @@ using Proxytrace.Common.Time;
 using Proxytrace.Domain.AuditLog;
 using Proxytrace.Domain;
 using Proxytrace.Domain.Agent;
+using Proxytrace.Domain.ApiKey;
 using Proxytrace.Domain.CostLimit;
 using Proxytrace.Domain.CostLimitBreach;
 using Proxytrace.Domain.Notification;
@@ -39,11 +40,17 @@ public sealed class CostBudgetGuardTests : BaseTest<Module>
         return license;
     }
 
-    private static ICostStatistics SpendOf(params ProjectAgentCostStat[] rows)
+    private static ICostStatistics SpendOf(
+        ProjectAgentCostStat[] rows,
+        ProjectApiKeyCostStat[]? keyRows = null)
     {
         var stats = Substitute.For<ICostStatistics>();
         stats.GetMonthToDateSpendAsync(Arg.Any<DateTimeOffset>(), Arg.Any<CancellationToken>())
             .Returns(Task.FromResult<IReadOnlyList<ProjectAgentCostStat>>(rows));
+        // Always stubbed, even when empty: an unstubbed Task-returning member hands back a task
+        // whose result is null, which would NRE the moment a key-scoped limit made the guard ask.
+        stats.GetMonthToDateSpendByApiKeyAsync(Arg.Any<DateTimeOffset>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<IReadOnlyList<ProjectApiKeyCostStat>>(keyRows ?? []));
         return stats;
     }
 
@@ -312,6 +319,105 @@ public sealed class CostBudgetGuardTests : BaseTest<Module>
 
     // ── helpers ───────────────────────────────────────────────────────────────
 
+    [TestMethod]
+    public async Task Evaluate_WhenKeyScopedSpendCrossesHardLimit_RecordsHardBreachForThatKey()
+    {
+        var notifications = Substitute.For<INotificationService>();
+        var clock = new FixedClock(new DateTimeOffset(2026, 7, 15, 12, 0, 0, TimeSpan.Zero));
+
+        IServiceProvider services = GetServices(builder =>
+        {
+            builder.RegisterInstance(notifications).As<INotificationService>();
+            builder.RegisterInstance(LicensedService()).As<ILicenseService>();
+            builder.RegisterInstance(clock).As<IClock>();
+        });
+
+        IApiKey apiKey = await services.GetRequiredService<IDomainEntityGenerator<IApiKey>>()
+            .GetOrCreateAsync(CancellationToken);
+        ICostLimit limit = await AddLimitAsync(
+            services, apiKey.Project, agent: null, soft: null, hard: 25m, apiKey: apiKey);
+
+        CostBudgetGuard guard = BuildGuard(
+            services,
+            spend: [],
+            keySpend: [new ProjectApiKeyCostStat(apiKey.Project.Id, apiKey.Id, 30m)]);
+
+        await guard.EvaluateAsync(CancellationToken);
+
+        await notifications.Received(1).NotifyAsync(
+            Arg.Is<NotificationRequest>(r => r != null
+                && r.Kind == NotificationKind.CostBudget
+                && r.Severity == NotificationSeverity.Critical),
+            Arg.Any<CancellationToken>());
+
+        var breaches = services.GetRequiredService<ICostLimitBreachRepository>();
+        IReadOnlyList<ICostLimitBreach> recorded =
+            await breaches.GetForMonthAsync(CostMonth.StartOf(clock.UtcNow), CancellationToken);
+        recorded.Should().ContainSingle()
+            .Which.Should().Match<ICostLimitBreach>(b =>
+                b.Threshold == CostThreshold.Hard && b.CostLimit.Id == limit.Id);
+    }
+
+    [TestMethod]
+    public async Task Evaluate_KeyScopedLimit_IgnoresSpendOfOtherKeys()
+    {
+        var notifications = Substitute.For<INotificationService>();
+        var clock = new FixedClock(new DateTimeOffset(2026, 7, 15, 12, 0, 0, TimeSpan.Zero));
+
+        IServiceProvider services = GetServices(builder =>
+        {
+            builder.RegisterInstance(notifications).As<INotificationService>();
+            builder.RegisterInstance(LicensedService()).As<ILicenseService>();
+            builder.RegisterInstance(clock).As<IClock>();
+        });
+
+        var keyGenerator = services.GetRequiredService<IDomainEntityGenerator<IApiKey>>();
+        IApiKey budgeted = await keyGenerator.GetOrCreateAsync(CancellationToken);
+        await AddLimitAsync(
+            services, budgeted.Project, agent: null, soft: null, hard: 25m, apiKey: budgeted);
+
+        // Spend belongs to a different key of the same project, plus the unattributed group.
+        CostBudgetGuard guard = BuildGuard(
+            services,
+            spend: [],
+            keySpend:
+            [
+                new ProjectApiKeyCostStat(budgeted.Project.Id, Guid.NewGuid(), 500m),
+                new ProjectApiKeyCostStat(budgeted.Project.Id, null, 500m),
+            ]);
+
+        await guard.EvaluateAsync(CancellationToken);
+
+        await notifications.DidNotReceive().NotifyAsync(
+            Arg.Any<NotificationRequest>(), Arg.Any<CancellationToken>());
+    }
+
+    [TestMethod]
+    public async Task Evaluate_WithNoKeyScopedLimit_NeverQueriesKeySpend()
+    {
+        var clock = new FixedClock(new DateTimeOffset(2026, 7, 15, 12, 0, 0, TimeSpan.Zero));
+
+        IServiceProvider services = GetServices(builder =>
+        {
+            builder.RegisterInstance(Substitute.For<INotificationService>()).As<INotificationService>();
+            builder.RegisterInstance(LicensedService()).As<ILicenseService>();
+            builder.RegisterInstance(clock).As<IClock>();
+        });
+
+        (IProject project, IAgent agent) = await SeedAsync(services);
+        await AddLimitAsync(services, project, agent: null, soft: 50m, hard: 100m);
+
+        var stats = SpendOf([new ProjectAgentCostStat(project.Id, agent.Id, 60m)]);
+        CostBudgetGuard guard = BuildGuard(services, stats);
+
+        await guard.EvaluateAsync(CancellationToken);
+
+        // The per-key aggregate is an extra scan of the highest-volume table; an install with no
+        // key budgets must keep the exact tick cost it had before key scope existed.
+        await stats.DidNotReceive().GetMonthToDateSpendByApiKeyAsync(
+            Arg.Any<DateTimeOffset>(), Arg.Any<CancellationToken>());
+    }
+
     private async Task<(IProject Project, IAgent Agent)> SeedAsync(IServiceProvider services)
     {
         IAgent agent = await services.GetRequiredService<IAgentGenerator>().GetOrCreateAsync(CancellationToken);
@@ -324,11 +430,12 @@ public sealed class CostBudgetGuardTests : BaseTest<Module>
         IAgent? agent,
         decimal? soft,
         decimal? hard,
-        bool enabled = true)
+        bool enabled = true,
+        IApiKey? apiKey = null)
     {
         var factory = services.GetRequiredService<ICostLimit.CreateNew>();
         var repository = services.GetRequiredService<ICostLimitRepository>();
-        return await repository.AddAsync(factory(project, agent, soft, hard, enabled), CancellationToken);
+        return await repository.AddAsync(factory(project, agent, apiKey, soft, hard, enabled), CancellationToken);
     }
 
     /// <summary>
@@ -337,8 +444,17 @@ public sealed class CostBudgetGuardTests : BaseTest<Module>
     /// seeding thousands of priced traces to reach a threshold.
     /// </summary>
     private static CostBudgetGuard BuildGuard(IServiceProvider services, params ProjectAgentCostStat[] spend)
+        => BuildGuard(services, SpendOf(spend));
+
+    private static CostBudgetGuard BuildGuard(
+        IServiceProvider services,
+        ProjectAgentCostStat[] spend,
+        ProjectApiKeyCostStat[]? keySpend)
+        => BuildGuard(services, SpendOf(spend, keySpend));
+
+    private static CostBudgetGuard BuildGuard(IServiceProvider services, ICostStatistics costStatistics)
         => new(
-            SpendOf(spend),
+            costStatistics,
             services.GetRequiredService<ICostLimitRepository>(),
             services.GetRequiredService<ICostLimitBreachRepository>(),
             services.GetRequiredService<ICostLimitBreach.CreateNew>(),

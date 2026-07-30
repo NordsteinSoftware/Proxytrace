@@ -173,9 +173,14 @@ public class StatisticsController : ControllerBase
                 .Select(p => new AgentCostPointDto(p.BucketStart, p.AgentId, p.CostEur)).ToArray(),
             AgentTotals: overview.AgentTotals
                 .Select(t => new AgentCostTotalDto(t.AgentId, t.AgentName, t.CostEur)).ToArray(),
+            ApiKeySeries: overview.ApiKeySeries
+                .Select(p => new ApiKeyCostPointDto(p.BucketStart, p.ApiKeyId, p.CostEur)).ToArray(),
+            ApiKeyTotals: overview.ApiKeyTotals
+                .Select(t => new ApiKeyCostTotalDto(t.ApiKeyId, t.ApiKeyName, t.KeyPrefix, t.CostEur)).ToArray(),
             Budgets: overview.Budgets
                 .Select(b => new CostBudgetStatusDto(
-                    b.CostLimitId, b.AgentId, b.AgentName, b.SoftLimitEur, b.HardLimitEur,
+                    b.CostLimitId, b.AgentId, b.AgentName, b.ApiKeyId, b.ApiKeyName,
+                    b.SoftLimitEur, b.HardLimitEur,
                     b.Enabled, b.MonthToDateSpendEur, b.SoftBreached, b.HardBreached))
                 .ToArray(),
             HasUnpricedEndpoints: overview.HasUnpricedEndpoints,

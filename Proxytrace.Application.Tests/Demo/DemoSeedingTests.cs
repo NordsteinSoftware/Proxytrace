@@ -15,6 +15,7 @@ using Proxytrace.Domain.TestRun;
 using Proxytrace.Domain.TestRunGroup;
 using Proxytrace.Domain.TestSuite;
 using Proxytrace.Domain.Usage;
+using Proxytrace.Domain.User;
 using Proxytrace.Testing;
 
 namespace Proxytrace.Application.Tests.Demo;
@@ -83,6 +84,19 @@ public class DemoSeedingTests : BaseTest<Module>
             [ProposalStatus.Draft, ProposalStatus.Accepted, ProposalStatus.Rejected, ProposalStatus.Adopted]);
         proposals.Select(p => p.Kind).Should().Contain(
             [ProposalKind.ModelSwitch, ProposalKind.SystemPrompt, ProposalKind.Tool]);
+    }
+
+    [TestMethod]
+    public async Task Seed_DemoUser_Is_An_Admin()
+    {
+        var users = services.GetRequiredService<IUserRepository>();
+        var demoUser = await users.FindByEmailAsync("demo@proxytrace.dev", CancellationToken);
+
+        demoUser.Should().NotBeNull();
+        // The kiosk runs on an Enterprise override license, but role-gated surfaces (cost budgets,
+        // settings) also demand Admin. A Member demo user renders those permanently locked, which
+        // reads as a missing feature rather than a demo boundary.
+        demoUser.Role.Should().Be(UserRole.Admin);
     }
 
     [TestMethod]

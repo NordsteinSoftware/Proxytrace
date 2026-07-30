@@ -131,12 +131,19 @@ export function fmtPct100(v: number): string {
 
 /**
  * Formats a cost in EUR (all costs in Proxytrace are EUR, converted from the USD price feed).
- * Sub-euro amounts keep 4 decimals (per-call costs live in the tenths of a cent); from €1 up,
- * cents are enough.
+ *
+ * **Always exactly two decimals**, whatever the magnitude. The old rule switched to four below €1,
+ * so the same column mixed `€0.0004` and `€12,345.68` and a zero total read as the distinctly
+ * unmoneylike `€0.0000` — money is read by comparing shapes, and one that changes shape per row
+ * cannot be scanned.
+ *
+ * The one exception is the sub-cent floor: a real but tiny amount would round to `€0.00`, which is
+ * indistinguishable from free. Those render `<€0.01` — still two decimals, and honest about being
+ * something rather than nothing. Per-call precision lives in the trace detail, which formats the
+ * raw `costEur` itself.
  */
 export function fmtCost(eur: number | null | undefined): string {
   if (eur == null) return '—';
-  if (eur > 0 && eur < 0.001) return '<€0.001';
-  if (eur >= 1) return `€${eur.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  return `€${eur.toFixed(4)}`;
+  if (eur > 0 && eur < 0.005) return '<€0.01';
+  return `€${eur.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }

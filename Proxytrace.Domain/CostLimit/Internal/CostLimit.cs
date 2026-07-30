@@ -1,6 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using Proxytrace.Common.Validation;
 using Proxytrace.Domain.Agent;
+using Proxytrace.Domain.ApiKey;
 using Proxytrace.Domain.Internal;
 using Proxytrace.Domain.Project;
 
@@ -10,6 +11,7 @@ internal record CostLimit : DomainEntity<ICostLimit>, ICostLimit
 {
     public IProject Project { get; private init; }
     public IAgent? Agent { get; private init; }
+    public IApiKey? ApiKey { get; private init; }
     public decimal? SoftLimitEur { get; private init; }
     public decimal? HardLimitEur { get; private init; }
     public bool Enabled { get; private init; }
@@ -17,6 +19,7 @@ internal record CostLimit : DomainEntity<ICostLimit>, ICostLimit
     public CostLimit(
         IProject project,
         IAgent? agent,
+        IApiKey? apiKey,
         decimal? softLimitEur,
         decimal? hardLimitEur,
         bool enabled,
@@ -24,6 +27,7 @@ internal record CostLimit : DomainEntity<ICostLimit>, ICostLimit
     {
         Project = project;
         Agent = agent;
+        ApiKey = apiKey;
         SoftLimitEur = softLimitEur;
         HardLimitEur = hardLimitEur;
         Enabled = enabled;
@@ -32,6 +36,7 @@ internal record CostLimit : DomainEntity<ICostLimit>, ICostLimit
     public CostLimit(
         IProject project,
         IAgent? agent,
+        IApiKey? apiKey,
         decimal? softLimitEur,
         decimal? hardLimitEur,
         bool enabled,
@@ -40,6 +45,7 @@ internal record CostLimit : DomainEntity<ICostLimit>, ICostLimit
     {
         Project = project;
         Agent = agent;
+        ApiKey = apiKey;
         SoftLimitEur = softLimitEur;
         HardLimitEur = hardLimitEur;
         Enabled = enabled;
@@ -85,5 +91,19 @@ internal record CostLimit : DomainEntity<ICostLimit>, ICostLimit
             yield return new ValidationResult(
                 "An agent-scoped cost limit must reference an agent of the same project.",
                 [nameof(Agent)]);
+
+        // Same reasoning for a key: a key belongs to exactly one project, and scoping a limit to a
+        // foreign key would measure spend the project never incurred.
+        if (ApiKey is not null && ApiKey.Project.Id != Project.Id)
+            yield return new ValidationResult(
+                "A key-scoped cost limit must reference an API key of the same project.",
+                [nameof(ApiKey)]);
+
+        // Exactly one scope. The partial unique indexes assume this — a row with both set would
+        // satisfy the agent-scope index while silently escaping the key-scope one.
+        if (Agent is not null && ApiKey is not null)
+            yield return new ValidationResult(
+                "A cost limit is scoped to an agent or to an API key, not to both.",
+                [nameof(Agent), nameof(ApiKey)]);
     }
 }

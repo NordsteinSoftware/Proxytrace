@@ -39,7 +39,19 @@ function KioskShell({ interactive }: { interactive: boolean }) {
   return (
     <KioskContext.Provider value={{ enabled: true, interactive }}>
       <BrowserRouter>
-        <CurrentUserContext.Provider value={{ email: 'demo@proxytrace.dev', signOut: () => {} }}>
+        {/*
+          The role is as load-bearing as the email: every `adminOnly` surface — Settings, the
+          project selector's admin actions, cost budgets — gates on `useCurrentUser()?.role`, so
+          omitting it left them all hidden in kiosk regardless of what the demo user was actually
+          seeded as. That silently defeated seeding the demo user as an Admin: the API answered
+          "Admin" while the UI behaved as if it were a Member, which reads as a missing feature
+          rather than a demo boundary. Must stay in step with `CoreSeedScenario` (pinned by
+          `DemoSeedingTests.Seed_DemoUser_Is_An_Admin`). What a visitor may actually change is
+          bounded by `interactive` above, not by this role.
+        */}
+        <CurrentUserContext.Provider
+          value={{ email: 'demo@proxytrace.dev', role: 'Admin', signOut: () => {} }}
+        >
           <AppRoutes />
         </CurrentUserContext.Provider>
       </BrowserRouter>

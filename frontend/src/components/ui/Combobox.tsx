@@ -10,7 +10,7 @@ import { formInputCls } from './classes';
 interface ComboboxProps<T> {
   value: string | null;
   onChange: (value: string) => void;
-  items: T[];
+  items: readonly T[];
   itemKey: (item: T) => string;
   itemLabel: (item: T) => string;
   renderItem?: (item: T) => ReactNode;
@@ -115,6 +115,7 @@ export function Combobox<T>({
                     type="button"
                     role="option"
                     aria-selected={isSel}
+                    data-testid={testId ? `${testId}-option-${key}` : undefined}
                     onClick={() => select(item)}
                     className={cn(
                       'w-full flex items-center gap-2 px-2.5 py-2 text-body text-left rounded-md cursor-pointer',

@@ -64,10 +64,11 @@ describe('api request — opts.signal forwarding', () => {
   });
 });
 
-describe('api request — silentStatuses', () => {
-  const errorRes = (status: number) =>
-    ({ ok: false, status, statusText: 'err', json: async () => ({}) }) as unknown as Response;
+/** An error Response stand-in. `text` is the only body reader the client uses (see below). */
+const errorRes = (status: number, body = '{}') =>
+  ({ ok: false, status, statusText: 'err', text: async () => body }) as unknown as Response;
 
+describe('api request — silentStatuses', () => {
   it('still rejects on a silenced status but does NOT raise the error toast', async () => {
     fetchMock.mockResolvedValue(errorRes(404));
     await expect(api.get('/missing', { silentStatuses: [404] })).rejects.toMatchObject({ status: 404 });
@@ -78,6 +79,96 @@ describe('api request — silentStatuses', () => {
     fetchMock.mockResolvedValue(errorRes(500));
     await expect(api.get('/boom')).rejects.toBeInstanceOf(Error);
     expect(showToast).toHaveBeenCalledOnce();
+  });
+});
+
+/**
+ * The body of a failed response is read ONCE, as text, and parsed afterwards. Reading it as JSON
+ * first and falling back to text cannot work — `json()` consumes the stream even when it throws, so
+ * the fallback rejects with "body already read". Every non-JSON error message was lost that way,
+ * and an explanatory 409 (MVC writes `Conflict("…")` as bare text/plain) reached the user as an
+ * unactionable "409 err".
+ */
+describe('api request — error messages', () => {
+  it('uses the message from our own JSON error envelope', async () => {
+    fetchMock.mockResolvedValue(errorRes(400, JSON.stringify({ error: { message: 'Bad thresholds.' } })));
+    await expect(api.post('/x', {})).rejects.toThrow('Bad thresholds.');
+  });
+
+  it('keeps a plain-text explanation instead of dropping it', async () => {
+    fetchMock.mockResolvedValue(errorRes(409, 'This project already has a budget.'));
+    await expect(api.post('/x', {})).rejects.toThrow('This project already has a budget.');
+  });
+
+  it('keeps a bare JSON string explanation', async () => {
+    fetchMock.mockResolvedValue(errorRes(409, JSON.stringify('This agent already has a budget.')));
+    await expect(api.post('/x', {})).rejects.toThrow('This agent already has a budget.');
+  });
+
+  it('falls back to the status when the body is empty', async () => {
+    fetchMock.mockResolvedValue(errorRes(500, ''));
+    await expect(api.get('/x')).rejects.toThrow('500 err');
+  });
+
+  it('keeps a string error field, not the JSON wrapper around it', async () => {
+    fetchMock.mockResolvedValue(errorRes(400, JSON.stringify({ error: 'Unsupported provider.' })));
+    await expect(api.post('/x', {})).rejects.toThrow('Unsupported provider.');
+  });
+
+  it('falls back to the status when the body is only whitespace', async () => {
+    fetchMock.mockResolvedValue(errorRes(500, '\n  \n'));
+    await expect(api.get('/x')).rejects.toThrow('500 err');
+    const [message] = showToast.mock.calls[0] as [string];
+    expect(message).toBe('500 err');
+  });
+
+  it('keeps the status for an HTML body and does not paste a whole error page into the toast', async () => {
+    fetchMock.mockResolvedValue(errorRes(502, `<html><body>${'x'.repeat(500)}</body></html>`));
+    await expect(api.get('/x')).rejects.toThrow(/^502 err: <html>/);
+    const [message] = showToast.mock.calls[0] as [string];
+    expect(message.length).toBeLessThan(260);
+  });
+
+  it('caps a plain-text body too, not only markup', async () => {
+    fetchMock.mockResolvedValue(errorRes(500, 'x'.repeat(5000)));
+    await expect(api.get('/x')).rejects.toBeInstanceOf(Error);
+    const [message] = showToast.mock.calls[0] as [string];
+    expect(message.length).toBeLessThan(260);
+  });
+
+  /**
+   * ASP.NET answers every bodiless `NotFound()`/`Conflict()` with a ProblemDetails document. Dumping
+   * that JSON into a red toast that never auto-dismisses is strictly worse than the status line, so
+   * an unrecognized JSON shape keeps the status — and a recognized one is reduced to its sentence.
+   */
+  it('never renders raw ProblemDetails JSON', async () => {
+    const problem = { type: 'https://tools.ietf.org/html/rfc9110#section-15.5.5', title: 'Not Found', status: 404 };
+    fetchMock.mockResolvedValue(errorRes(404, JSON.stringify(problem)));
+    await expect(api.get('/x')).rejects.toThrow('Not Found');
+    const [message] = showToast.mock.calls[0] as [string];
+    expect(message).not.toContain('{');
+  });
+
+  it('prefers a ProblemDetails detail over its generic title', async () => {
+    fetchMock.mockResolvedValue(
+      errorRes(409, JSON.stringify({ title: 'Conflict', detail: 'The budget is already gone.' })),
+    );
+    await expect(api.get('/x')).rejects.toThrow('The budget is already gone.');
+  });
+
+  it('surfaces the field messages of a validation problem, not "One or more validation errors occurred."', async () => {
+    const problem = {
+      title: 'One or more validation errors occurred.',
+      status: 400,
+      errors: { softLimitEur: ['The field softLimitEur must be between 0 and 1000000.'] },
+    };
+    fetchMock.mockResolvedValue(errorRes(400, JSON.stringify(problem)));
+    await expect(api.post('/x', {})).rejects.toThrow(/must be between 0 and 1000000/);
+  });
+
+  it('keeps the status for JSON in a shape it does not recognize', async () => {
+    fetchMock.mockResolvedValue(errorRes(500, JSON.stringify({ foo: 1, bar: [2, 3] })));
+    await expect(api.get('/x')).rejects.toThrow('500 err');
   });
 });
 

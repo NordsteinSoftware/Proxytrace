@@ -1,4 +1,9 @@
-import type { AgentCostPointDto, AgentCostTotalDto } from '../../api/costs';
+import type {
+  AgentCostPointDto,
+  AgentCostTotalDto,
+  ApiKeyCostPointDto,
+  ApiKeyCostTotalDto,
+} from '../../api/costs';
 import type { StackedDatum } from '../../components/charts/chart-math';
 import { agentColor } from '../../lib/colors';
 import { bucketAxisLabel, type StatisticsBucket } from '../../lib/time-range';
@@ -9,11 +14,34 @@ import { resolveRange, type TimeRange } from '../../lib/timeRange';
  * sparse→dense bucketing, the StackedBar adapter, the month-end projection and the window
  * resolution the overview query needs.
  *
- * The API returns a **sparse** series (only `(bucket, agent)` cells that had spend). The chart needs
- * a **dense** bucket axis so a day with no traffic reads as a gap rather than compressing the
- * timeline — so the full UTC-aligned grid is generated from the window and the sparse rows folded
- * into it.
+ * The API returns a **sparse** series (only cells that had spend). The chart needs a **dense**
+ * bucket axis so a day with no traffic reads as a gap rather than compressing the timeline — so the
+ * full UTC-aligned grid is generated from the window and the sparse rows folded into it.
+ *
+ * The bucketing is deliberately **dimension-agnostic**: spend is grouped by agent *or* by inbound
+ * API key, and both feed the same chart. Callers convert their DTO rows to {@link CostSeriesPoint}
+ * (via {@link agentPoints} / {@link apiKeyPoints}) and everything downstream is shared.
  */
+
+/**
+ * One sparse `(bucket, series)` cell. `seriesKey` is the agent id or the API key id; `null` is a
+ * real, meaningful group — the unattributed remainder of the key dimension — not missing data.
+ */
+export interface CostSeriesPoint {
+  bucketStart: string;
+  seriesKey: string | null;
+  costEur: number;
+}
+
+/** Adapts the per-agent API rows to the shared series shape. */
+export function agentPoints(rows: readonly AgentCostPointDto[]): CostSeriesPoint[] {
+  return rows.map(r => ({ bucketStart: r.bucketStart, seriesKey: r.agentId, costEur: r.costEur }));
+}
+
+/** Adapts the per-key API rows to the shared series shape, preserving the null (unattributed) key. */
+export function apiKeyPoints(rows: readonly ApiKeyCostPointDto[]): CostSeriesPoint[] {
+  return rows.map(r => ({ bucketStart: r.bucketStart, seriesKey: r.apiKeyId, costEur: r.costEur }));
+}
 
 const BUCKET_MS: Record<StatisticsBucket, number> = {
   fiveMinutes: 5 * 60_000,
@@ -27,8 +55,8 @@ export const MAX_BUCKETS = 400;
 export interface DenseCostBucket {
   startMs: number;
   iso: string;
-  /** Per-agent spend in this bucket, descending by amount. */
-  cells: { agentId: string; costEur: number }[];
+  /** Per-series spend in this bucket, descending by amount. */
+  cells: { seriesKey: string | null; costEur: number }[];
   totalEur: number;
 }
 
@@ -75,7 +103,7 @@ export function monthStartIso(ms: number): string {
  * Buckets with no spend are kept (with an empty cell list) so gaps read as gaps.
  */
 export function densifyCostSeries(
-  rows: readonly AgentCostPointDto[],
+  rows: readonly CostSeriesPoint[],
   from: string,
   to: string,
   bucket: StatisticsBucket,
@@ -95,14 +123,16 @@ export function densifyCostSeries(
   const startMs = truncated ? lastStart - (MAX_BUCKETS - 1) * step : firstStart;
   const count = truncated ? MAX_BUCKETS : totalCount;
 
-  const byBucket = new Map<number, Map<string, number>>();
+  // Map keys are `string | null`: the null group is the unattributed series and must survive the
+  // fold like any other, rather than being silently dropped or merged into a neighbour.
+  const byBucket = new Map<number, Map<string | null, number>>();
   for (const row of rows) {
     const ms = Date.parse(row.bucketStart);
     if (!Number.isFinite(ms)) continue;
     const slot = Math.floor(ms / step) * step;
     if (slot < startMs || slot > lastStart) continue;
-    const cell = byBucket.get(slot) ?? new Map<string, number>();
-    cell.set(row.agentId, (cell.get(row.agentId) ?? 0) + row.costEur);
+    const cell = byBucket.get(slot) ?? new Map<string | null, number>();
+    cell.set(row.seriesKey, (cell.get(row.seriesKey) ?? 0) + row.costEur);
     byBucket.set(slot, cell);
   }
 
@@ -112,7 +142,7 @@ export function densifyCostSeries(
     const cellMap = byBucket.get(slot);
     const cells = cellMap
       ? [...cellMap.entries()]
-          .map(([agentId, costEur]) => ({ agentId, costEur }))
+          .map(([seriesKey, costEur]) => ({ seriesKey, costEur }))
           .sort((a, b) => b.costEur - a.costEur)
       : [];
     buckets.push({
@@ -127,20 +157,23 @@ export function densifyCostSeries(
 }
 
 /**
- * Adapts the dense series to the `StackedBar` input, one segment per agent. `nameOf` resolves the
- * display name so the chart tooltip does not have to know about the agent list.
+ * Adapts the dense series to the `StackedBar` input, one segment per series key. `nameOf` resolves
+ * the display name — including the label for the null (unattributed) key — so the chart never has
+ * to know which dimension it is rendering.
  */
 export function toStackedCostData(
   series: DenseCostSeries,
   bucket: StatisticsBucket,
-  nameOf: (agentId: string) => string,
+  nameOf: (seriesKey: string | null) => string,
 ): StackedDatum[] {
   return series.buckets.map(b => ({
     label: bucketAxisLabel(b.iso, bucket),
     segments: b.cells.map(cell => ({
-      label: nameOf(cell.agentId),
+      label: nameOf(cell.seriesKey),
       value: cell.costEur,
-      color: agentColor(cell.agentId),
+      // The unattributed slice is deliberately muted rather than given a palette colour: it is a
+      // remainder, not a peer of the named series.
+      color: cell.seriesKey === null ? 'var(--text-muted)' : agentColor(cell.seriesKey),
     })),
   }));
 }
@@ -178,15 +211,39 @@ export function monthDelta(monthToDateEur: number, previousMonthEur: number): nu
   return (monthToDateEur - previousMonthEur) / previousMonthEur;
 }
 
-/** The window's per-agent totals, largest first, capped to `limit` with the rest folded into one row. */
-export function topAgents(
-  totals: readonly AgentCostTotalDto[],
+/** The window's totals, largest first, capped to `limit` with the rest folded into one remainder. */
+export function topBySpend<T extends { costEur: number }>(
+  totals: readonly T[],
   limit: number,
-): { rows: AgentCostTotalDto[]; otherEur: number } {
+): { rows: T[]; otherEur: number } {
   const sorted = [...totals].sort((a, b) => b.costEur - a.costEur);
   if (sorted.length <= limit) return { rows: sorted, otherEur: 0 };
   return {
     rows: sorted.slice(0, limit),
     otherEur: sorted.slice(limit).reduce((sum, t) => sum + t.costEur, 0),
   };
+}
+
+/** The window's per-agent totals, largest first, capped to `limit`. */
+export function topAgents(
+  totals: readonly AgentCostTotalDto[],
+  limit: number,
+): { rows: AgentCostTotalDto[]; otherEur: number } {
+  return topBySpend(totals, limit);
+}
+
+/**
+ * The window's per-key totals, largest first, capped to `limit`. The unattributed row is pinned
+ * last regardless of size — it is a remainder, and letting it head the list would read as if one
+ * key were the biggest spender.
+ */
+export function topApiKeys(
+  totals: readonly ApiKeyCostTotalDto[],
+  limit: number,
+): { rows: ApiKeyCostTotalDto[]; otherEur: number; unattributedEur: number } {
+  const unattributedEur = totals
+    .filter(t => t.apiKeyId === null)
+    .reduce((sum, t) => sum + t.costEur, 0);
+  const { rows, otherEur } = topBySpend(totals.filter(t => t.apiKeyId !== null), limit);
+  return { rows, otherEur, unattributedEur };
 }

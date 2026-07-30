@@ -8,6 +8,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using Proxytrace.Api.Auth;
 using Proxytrace.Api.Auth.Licensing;
+using Proxytrace.Domain.ApiKey;
 using Proxytrace.Api.Controllers;
 using Proxytrace.Api.Dto.Costs;
 using Proxytrace.Domain;
@@ -97,6 +98,97 @@ public sealed class CostLimitsControllerTests : BaseTest<Module>
         dto.AgentId.Should().Be(agent.Id);
         dto.AgentName.Should().Be(agent.Name);
         dto.HardLimitEur.Should().Be(25m);
+    }
+
+    [TestMethod]
+    public async Task Create_WithApiKeyScope_ReturnsCreatedDtoNamingTheKey()
+    {
+        IServiceProvider services = GetServices();
+        CostLimitsController controller = ResolveController(services);
+        IApiKey apiKey = await services.GetRequiredService<IDomainEntityGenerator<IApiKey>>()
+            .GetOrCreateAsync(CancellationToken);
+
+        var result = await controller.Create(
+            new CreateCostLimitRequest(apiKey.Project.Id, null, null, 40m, Enabled: true, ApiKeyId: apiKey.Id),
+            CancellationToken);
+
+        CostLimitDto dto = result.Result.Should().BeOfType<CreatedAtActionResult>()
+            .Which.Value.Should().BeOfType<CostLimitDto>().Subject;
+        dto.ApiKeyId.Should().Be(apiKey.Id);
+        dto.ApiKeyName.Should().Be(apiKey.Name);
+        dto.AgentId.Should().BeNull();
+        dto.HardLimitEur.Should().Be(40m);
+    }
+
+    [TestMethod]
+    public async Task Create_WithBothAgentAndApiKeyScope_ReturnsBadRequest()
+    {
+        IServiceProvider services = GetServices();
+        CostLimitsController controller = ResolveController(services);
+        IAgent agent = await services.GetRequiredService<IAgentGenerator>().GetOrCreateAsync(CancellationToken);
+        IApiKey apiKey = await services.GetRequiredService<IDomainEntityGenerator<IApiKey>>()
+            .GetOrCreateAsync(CancellationToken);
+
+        var result = await controller.Create(
+            new CreateCostLimitRequest(agent.Project.Id, agent.Id, null, 40m, Enabled: true, ApiKeyId: apiKey.Id),
+            CancellationToken);
+
+        // Caught as a readable 400 rather than surfacing as a domain validation error.
+        result.Result.Should().BeOfType<BadRequestObjectResult>();
+    }
+
+    [TestMethod]
+    public async Task Create_WithApiKeyOfAnotherProject_ReturnsBadRequest()
+    {
+        IServiceProvider services = GetServices();
+        CostLimitsController controller = ResolveController(services);
+        IApiKey apiKey = await services.GetRequiredService<IDomainEntityGenerator<IApiKey>>()
+            .GetOrCreateAsync(CancellationToken);
+        IProject otherProject = await services.GetRequiredService<IDomainEntityGenerator<IProject>>()
+            .CreateAsync(CancellationToken);
+
+        var result = await controller.Create(
+            new CreateCostLimitRequest(otherProject.Id, null, null, 40m, Enabled: true, ApiKeyId: apiKey.Id),
+            CancellationToken);
+
+        result.Result.Should().BeOfType<BadRequestObjectResult>();
+    }
+
+    [TestMethod]
+    public async Task Create_SecondBudgetForSameApiKey_ReturnsConflict()
+    {
+        IServiceProvider services = GetServices();
+        CostLimitsController controller = ResolveController(services);
+        IApiKey apiKey = await services.GetRequiredService<IDomainEntityGenerator<IApiKey>>()
+            .GetOrCreateAsync(CancellationToken);
+
+        var request = new CreateCostLimitRequest(
+            apiKey.Project.Id, null, null, 40m, Enabled: true, ApiKeyId: apiKey.Id);
+
+        await controller.Create(request, CancellationToken);
+        var second = await controller.Create(request, CancellationToken);
+
+        // The partial unique index would turn this into a 500; the pre-check makes it readable.
+        second.Result.Should().BeOfType<ConflictObjectResult>();
+    }
+
+    [TestMethod]
+    public async Task Create_KeyBudget_DoesNotConflictWithProjectWideBudget()
+    {
+        IServiceProvider services = GetServices();
+        CostLimitsController controller = ResolveController(services);
+        IApiKey apiKey = await services.GetRequiredService<IDomainEntityGenerator<IApiKey>>()
+            .GetOrCreateAsync(CancellationToken);
+
+        await controller.Create(
+            new CreateCostLimitRequest(apiKey.Project.Id, null, null, 100m), CancellationToken);
+        var keyBudget = await controller.Create(
+            new CreateCostLimitRequest(apiKey.Project.Id, null, null, 40m, Enabled: true, ApiKeyId: apiKey.Id),
+            CancellationToken);
+
+        // The project-scope unique index is filtered on BOTH scope columns being null, so a key
+        // budget and the project-wide budget coexist.
+        keyBudget.Result.Should().BeOfType<CreatedAtActionResult>();
     }
 
     [TestMethod]
@@ -288,7 +380,7 @@ public sealed class CostLimitsControllerTests : BaseTest<Module>
 
     private async Task<ICostLimit> CreateLimit(IServiceProvider services, IProject project, IAgent? agent)
         => await services.GetRequiredService<ICostLimitRepository>().AddAsync(
-            services.GetRequiredService<ICostLimit.CreateNew>()(project, agent, 50m, 100m, true),
+            services.GetRequiredService<ICostLimit.CreateNew>()(project, agent, null, 50m, 100m, true),
             CancellationToken);
 
     private static CostLimitsController ResolveController(
@@ -298,6 +390,7 @@ public sealed class CostLimitsControllerTests : BaseTest<Module>
         services.GetRequiredService<ICostLimitBreachRepository>(),
         services.GetRequiredService<IProjectRepository>(),
         services.GetRequiredService<IAgentRepository>(),
+        services.GetRequiredService<IApiKeyRepository>(),
         services.GetRequiredService<ICostLimit.CreateNew>(),
         services.GetRequiredService<ITransaction>(),
         accessGuard ?? services.GetRequiredService<IProjectAccessGuard>(),

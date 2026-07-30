@@ -19,7 +19,13 @@ export function CostToolbar({ timeRange, bucket, onTimeRangeChange, onBucketChan
     <div className="flex items-center gap-2 flex-wrap shrink-0" data-testid="cost-toolbar">
       <TimeRangePicker value={timeRange} onChange={onTimeRangeChange} testId="cost-time" />
 
+      {/*
+        h-9 matches TimeRangePicker's trigger height. Without it the control sizes itself from its
+        button padding and sits visibly shorter than the picker beside it; the flex wrapper's
+        default stretch then sizes the buttons to fill.
+      */}
       <SegmentedControl<StatisticsBucket>
+        className="h-9"
         value={bucket}
         onChange={onBucketChange}
         segments={[

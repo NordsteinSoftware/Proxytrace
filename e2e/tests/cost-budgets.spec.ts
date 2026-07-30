@@ -15,11 +15,19 @@ import { ProxytraceApiClient } from '../helpers/api-client';
 // asserting it here would either sleep for minutes or need a test-only guard interval.
 //
 // Stable data-testids: `costs-page`, `cost-kpis`, `cost-over-time`, `cost-by-agent`,
-// `budget-section`, `budget-create-btn`, `budget-upgrade-btn`, `budget-empty-state`,
+// `cost-by-api-key`, `cost-api-key-list`, `cost-api-key-row-<id>`,
+// `cost-api-key-row-unattributed`, `cost-dimension-agent`, `cost-dimension-api-key`,
+// `budget-section`, `budget-create-btn` (the one and only create action, in the budgets card
+// header), `budget-upgrade-btn`, `budget-empty-state`,
 // `budget-list`, `budget-row-<id>`, `budget-scope-<id>`, `budget-spend-<id>`,
-// `budget-edit-btn-<id>`, and the editor (`budget-editor`, `budget-soft-input`,
-// `budget-hard-input`, `budget-enabled-switch`, `budget-save-btn`, `budget-delete-btn`,
-// `budget-editor-error`).
+// `budget-edit-btn-<id>`, `budget-delete-btn-<id>` (row-level; the delete confirmation is the
+// shared `.modal-panel` ConfirmDialog), and the editor (`budget-editor`,
+// `budget-scope-select` — the scope *kind*, with `budget-scope-select-option-{project,agent,apiKey}`
+// derived by `Select` — `budget-scope-element` (+ `budget-scope-element-option-<id>`) for the
+// agent/key picker, `budget-scope-empty`, `budget-scope-stale`, `budget-scope-locked-kind`,
+// `budget-scope-locked-element`, `budget-scope-help`, `budget-soft-input`, `budget-hard-input`,
+// `budget-enabled-switch`, `budget-save-btn`, `budget-cancel-btn`, `budget-editor-error`,
+// `budget-save-error`).
 
 /** Fresh, authenticated client for a test's own `request` fixture. */
 async function makeClient(request: APIRequestContext): Promise<ProxytraceApiClient> {
@@ -131,12 +139,73 @@ test.describe('Cost budgets', () => {
     await expect(page.getByTestId(`budget-scope-${created.id}`)).toHaveText(agent.name);
   });
 
+  test('a key-scoped budget is listed under its key name and marked as a key budget', async ({ page }) => {
+    const providerId = await api.firstProviderId();
+    const key = await api.createApiKeyForProject(providerId, `Budget Key ${Date.now()}`, projectId);
+    const created = await api.createCostLimit({ projectId, apiKeyId: key.id, hardLimitEur: 10 });
+
+    await page.goto('/costs', { waitUntil: 'load' });
+
+    await expect(page.getByTestId(`budget-scope-${created.id}`)).toHaveText(key.name);
+    // The list must distinguish key budgets from agent ones: they enforce differently, since a key
+    // budget cannot be dodged by omitting the agent header.
+    await expect(page.getByTestId(`budget-row-${created.id}`)).toContainText('API Key');
+  });
+
+  test('a key budget coexists with the project-wide budget', async ({ page }) => {
+    const providerId = await api.firstProviderId();
+    const key = await api.createApiKeyForProject(providerId, `Coexist Key ${Date.now()}`, projectId);
+
+    const projectWide = await api.createCostLimit({ projectId, hardLimitEur: 100 });
+    const keyScoped = await api.createCostLimit({ projectId, apiKeyId: key.id, hardLimitEur: 10 });
+
+    // Regression guard for the partial unique index: its filter names BOTH scope columns, so a
+    // key-scoped row does not collide with the project-wide one. On Postgres only — the in-memory
+    // provider used by unit tests ignores index filters entirely.
+    await page.goto('/costs', { waitUntil: 'load' });
+
+    await expect(page.getByTestId(`budget-row-${projectWide.id}`)).toBeVisible();
+    await expect(page.getByTestId(`budget-row-${keyScoped.id}`)).toBeVisible();
+  });
+
+  test('the API rejects a budget scoped to an agent and a key at once', async () => {
+    const providerId = await api.firstProviderId();
+    const key = await api.createApiKeyForProject(providerId, `Both Key ${Date.now()}`, projectId);
+    const endpointId = await api.firstEndpointId();
+    const agent = await api.createAgent({ name: `Both Agent ${Date.now()}`, endpointId, projectId });
+
+    const res = await api.tryCreateCostLimit({
+      projectId,
+      agentId: agent.id,
+      apiKeyId: key.id,
+      softLimitEur: null,
+      hardLimitEur: 10,
+      enabled: true,
+    });
+
+    // A budget has exactly one scope; the cross-product is not a thing the proxy can enforce.
+    expect(res.status()).toBe(400);
+  });
+
+  test('the cost overview reports per-key totals alongside per-agent ones', async () => {
+    const now = new Date();
+    const from = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString();
+
+    const overview = await api.costOverview({ projectId, from, to: now.toISOString() });
+
+    // Shape assertion only: whether any key has spend depends on what this run proxied, but the
+    // arrays must always be present so the page can render its breakdown.
+    expect(Array.isArray(overview.apiKeyTotals)).toBe(true);
+    expect(Array.isArray(overview.apiKeySeries)).toBe(true);
+  });
+
   test('deleting a budget removes it from the list', async ({ page }) => {
     const created = await api.createCostLimit({ projectId, softLimitEur: 10, hardLimitEur: 20 });
 
     await page.goto('/costs', { waitUntil: 'load' });
-    await page.getByTestId(`budget-edit-btn-${created.id}`).click();
-    await page.getByTestId('budget-delete-btn').click();
+    // Delete lives on the row behind a confirmation, not one gap away from Save in the editor.
+    await page.getByTestId(`budget-delete-btn-${created.id}`).click();
+    await page.locator('.modal-panel').getByRole('button', { name: 'Delete', exact: true }).click();
 
     await expect
       .poll(async () => (await api.listCostLimits(projectId)).length, {
@@ -147,4 +216,62 @@ test.describe('Cost budgets', () => {
 
     await expect(page.getByTestId('budget-empty-state')).toBeVisible();
   });
+
+  // ── The three defects this suite exists to keep fixed ────────────────────────────────────────
+
+  test('a second budget can be created, scoped to an agent, once the project one exists', async ({ page }) => {
+    // The regression: the editor always opened on the project scope and offered it even when it
+    // was taken, so every second budget ended in an opaque 409 with the dialog left open.
+    await api.createCostLimit({ projectId, hardLimitEur: 100 });
+    const endpointId = await api.firstEndpointId();
+    const agent = await api.createAgent({ name: `Second Budget Agent ${Date.now()}`, endpointId, projectId });
+
+    await page.goto('/costs', { waitUntil: 'load' });
+    await page.getByTestId('budget-create-btn').click();
+
+    // The dialog opens on a scope that is actually free rather than on the taken project one...
+    await expect(page.getByTestId('budget-scope-element')).toBeVisible();
+    // ...and picking the taken scope explains itself instead of failing on Save.
+    await page.getByTestId('budget-scope-select').click();
+    await page.getByTestId('budget-scope-select-option-project').click();
+    await expect(page.getByTestId('budget-scope-empty')).toBeVisible();
+    await expect(page.getByTestId('budget-save-btn')).toBeDisabled();
+
+    await page.getByTestId('budget-scope-select').click();
+    await page.getByTestId('budget-scope-select-option-agent').click();
+
+    await page.getByTestId('budget-scope-element').click();
+    await page.getByTestId(`budget-scope-element-option-${agent.id}`).click();
+    await page.getByTestId('budget-hard-input').fill('30');
+    await page.getByTestId('budget-save-btn').click();
+
+    await expect
+      .poll(async () => (await api.listCostLimits(projectId)).filter(l => l.agentId === agent.id).length, {
+        timeout: 15_000,
+        message: 'the second (agent-scoped) budget was not persisted',
+      })
+      .toBe(1);
+
+    // Both budgets coexist, and the new row appears without waiting on the heavy overview refetch.
+    const [agentLimit] = (await api.listCostLimits(projectId)).filter(l => l.agentId === agent.id);
+    await expect(page.getByTestId(`budget-row-${agentLimit.id}`)).toBeVisible();
+    await expect(page.getByTestId('budget-list').getByTestId(/^budget-row-/)).toHaveCount(2);
+  });
+
+  test('editing an agent budget shows the agent name, never its id', async ({ page }) => {
+    // The reported bug: a budgeted agent is filtered out of the pickable roster, so the old single
+    // Select could not resolve its own value and printed the raw `agent:<uuid>`.
+    const endpointId = await api.firstEndpointId();
+    const agent = await api.createAgent({ name: `Named Scope Agent ${Date.now()}`, endpointId, projectId });
+    const created = await api.createCostLimit({ projectId, agentId: agent.id, hardLimitEur: 10 });
+
+    await page.goto('/costs', { waitUntil: 'load' });
+    await page.getByTestId(`budget-edit-btn-${created.id}`).click();
+
+    await expect(page.getByTestId('budget-scope-locked-kind')).toHaveText('Agent');
+    const element = page.getByTestId('budget-scope-locked-element');
+    await expect(element).toHaveText(agent.name);
+    await expect(element).not.toContainText(agent.id);
+  });
+
 });

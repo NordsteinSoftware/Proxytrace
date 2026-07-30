@@ -17,6 +17,14 @@ internal sealed record SeedOptions(
     // and the anomaly aggregates (anomalyTimeline) measure against a realistically small flagged
     // subset; a share of flagged rows also carries the CustomAnomaly bit (see BuildCall).
     double OutlierRate = 0.03,
+    // Fraction of calls attributed to an inbound API key, drawn from a pool of ApiKeyPoolSize
+    // synthetic ids, so the per-key cost aggregates (statsCostByApiKey/statsCostSeriesByApiKey)
+    // measure against realistic grouping cardinality rather than one giant null group. The
+    // remainder stays unattributed, which is also the real shape: upstream-key traffic and any
+    // trace ingested before key attribution existed. The ids are synthetic — ApiKeyId is a
+    // deliberately FK-free column, so no ApiKeyEntity rows are needed.
+    double ApiKeyRate = 0.85,
+    int ApiKeyPoolSize = 12,
     int BatchSize = 10_000,
     int RandomSeed = 1234,
     // Per-run test-run statistics rows (TestRunStatsEntity), spread across TestRunSuitePoolSize

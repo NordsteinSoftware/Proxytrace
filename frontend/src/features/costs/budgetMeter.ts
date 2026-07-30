@@ -1,11 +1,16 @@
-import type { CostBudgetStatusDto } from '../../api/costs';
+import type { BudgetRow } from './budgetPatch';
 
 /**
  * Pure consumption math for the budget meters. Framework-free and unit-tested
  * (`budgetMeter.spec.ts`) so `BudgetSection` stays a presentational shell.
  */
 
-export type BudgetState = 'ok' | 'approaching' | 'soft' | 'hard' | 'disabled';
+/**
+ * `measuring` is a budget this client has just created: the configuration is saved, but its
+ * month-to-date spend is only known once the overview refetch lands. It is deliberately its own
+ * state rather than a €0 stand-in — see {@link BudgetRow}.
+ */
+export type BudgetState = 'ok' | 'approaching' | 'soft' | 'hard' | 'disabled' | 'measuring';
 
 export interface BudgetMeter {
   /** Fill fraction clamped to [0,1] — the bar never overflows its track. */
@@ -30,9 +35,10 @@ export const APPROACHING_FRACTION = 0.8;
  * "approaching" hint. That ordering matters: between a threshold being crossed and the next guard
  * tick the two disagree, and the flags are the truth the rest of the system acts on.
  */
-export function budgetMeter(budget: CostBudgetStatusDto): BudgetMeter {
+export function budgetMeter(budget: BudgetRow): BudgetMeter {
   const scaleEur = budget.hardLimitEur ?? budget.softLimitEur;
-  const consumed = scaleEur && scaleEur > 0 ? budget.monthToDateSpendEur / scaleEur : null;
+  const spend = budget.monthToDateSpendEur;
+  const consumed = spend !== null && scaleEur && scaleEur > 0 ? spend / scaleEur : null;
   const fill = consumed === null ? 0 : Math.min(1, Math.max(0, consumed));
 
   const softMarker =
@@ -43,17 +49,23 @@ export function budgetMeter(budget: CostBudgetStatusDto): BudgetMeter {
   return { fill, softMarker, scaleEur, consumed, state: budgetState(budget, consumed) };
 }
 
-function budgetState(budget: CostBudgetStatusDto, consumed: number | null): BudgetState {
+function budgetState(budget: BudgetRow, consumed: number | null): BudgetState {
   if (!budget.enabled) return 'disabled';
   if (budget.hardBreached) return 'hard';
   if (budget.softBreached) return 'soft';
+  // Checked after the breach flags — those are facts the guard recorded and the proxy acts on, and
+  // they are known even for a budget whose spend this client has not seen measured yet.
+  if (budget.monthToDateSpendEur === null) return 'measuring';
   if (consumed !== null && consumed >= APPROACHING_FRACTION) return 'approaching';
   return 'ok';
 }
 
-/** The EUR still available before the hard limit stops calls, or null when no hard limit is set. */
-export function remainingEur(budget: CostBudgetStatusDto): number | null {
-  if (budget.hardLimitEur === null) return null;
+/**
+ * The EUR still available before the hard limit stops calls. Null when no hard limit is set — and
+ * also while spend is unmeasured, because "€100 left" would be a claim this client cannot make.
+ */
+export function remainingEur(budget: BudgetRow): number | null {
+  if (budget.hardLimitEur === null || budget.monthToDateSpendEur === null) return null;
   return Math.max(0, budget.hardLimitEur - budget.monthToDateSpendEur);
 }
 
@@ -61,8 +73,12 @@ export function remainingEur(budget: CostBudgetStatusDto): number | null {
  * Sorts budgets for display: most urgent first (hard, then soft, then approaching), with the
  * project-wide budget ahead of its agent overrides inside each tier.
  */
-export function sortBudgets(budgets: readonly CostBudgetStatusDto[]): CostBudgetStatusDto[] {
-  const rank: Record<BudgetState, number> = { hard: 0, soft: 1, approaching: 2, ok: 3, disabled: 4 };
+export function sortBudgets(budgets: readonly BudgetRow[]): BudgetRow[] {
+  // `measuring` ranks with `ok`: a budget just created is not more urgent than the healthy ones,
+  // and parking it at the bottom would make the new row jump position the moment spend arrives.
+  const rank: Record<BudgetState, number> = {
+    hard: 0, soft: 1, approaching: 2, ok: 3, measuring: 3, disabled: 4,
+  };
   return [...budgets].sort((a, b) => {
     const byState = rank[budgetMeter(a).state] - rank[budgetMeter(b).state];
     if (byState !== 0) return byState;

@@ -1,6 +1,7 @@
 using AwesomeAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Proxytrace.Domain.Agent;
+using Proxytrace.Domain.ApiKey;
 using Proxytrace.Domain.CostLimit;
 using Proxytrace.Domain.Project;
 
@@ -18,7 +19,7 @@ public sealed class CostLimitValidationTests : DomainTest<Module>
         var factory = services.GetRequiredService<ICostLimit.CreateNew>();
         IProject project = await GetOrCreate<IProject>(services);
 
-        ICostLimit limit = factory(project, null, 50m, 100m, true);
+        ICostLimit limit = factory(project, null, null, 50m, 100m, true);
 
         limit.Should().NotBeNull();
         limit.Project.Should().Be(project);
@@ -36,11 +37,56 @@ public sealed class CostLimitValidationTests : DomainTest<Module>
         var factory = services.GetRequiredService<ICostLimit.CreateNew>();
         IAgent agent = await GetOrCreate<IAgent>(services);
 
-        ICostLimit limit = factory(agent.Project, agent, null, 25m, true);
+        ICostLimit limit = factory(agent.Project, agent, null, null, 25m, true);
 
         limit.Agent.Should().Be(agent);
         limit.SoftLimitEur.Should().BeNull();
         limit.HardLimitEur.Should().Be(25m);
+    }
+
+    [TestMethod]
+    public async Task CreateNew_WithApiKey_CreatesKeyScopedLimit()
+    {
+        IServiceProvider services = GetServices();
+        var factory = services.GetRequiredService<ICostLimit.CreateNew>();
+        IApiKey apiKey = await GetOrCreate<IApiKey>(services);
+
+        ICostLimit limit = factory(apiKey.Project, null, apiKey, 20m, 40m, true);
+
+        limit.ApiKey.Should().Be(apiKey);
+        limit.Agent.Should().BeNull();
+        limit.HardLimitEur.Should().Be(40m);
+    }
+
+    [TestMethod]
+    public async Task CreateNew_WithBothAgentAndApiKey_Throws()
+    {
+        IServiceProvider services = GetServices();
+        var factory = services.GetRequiredService<ICostLimit.CreateNew>();
+        IAgent agent = await GetOrCreate<IAgent>(services);
+        var keyGenerator = services.GetRequiredService<IDomainEntityGenerator<IApiKey>>();
+        IApiKey apiKey = await keyGenerator.CreateAsync(CancellationToken);
+
+        // A budget has exactly one scope: the partial unique indexes assume it, and "agent X via
+        // key Y" is a cross-product the proxy's scope matching does not model.
+        var act = () => factory(agent.Project, agent, apiKey, null, 10m, true);
+
+        act.Should().Throw<Exception>();
+    }
+
+    [TestMethod]
+    public async Task CreateNew_WithApiKeyFromAnotherProject_Throws()
+    {
+        IServiceProvider services = GetServices();
+        var factory = services.GetRequiredService<ICostLimit.CreateNew>();
+        var projectGenerator = services.GetRequiredService<IDomainEntityGenerator<IProject>>();
+        IApiKey apiKey = await GetOrCreate<IApiKey>(services);
+        IProject otherProject = await projectGenerator.CreateAsync(CancellationToken);
+
+        // Otherwise the budget would measure spend the project never incurred.
+        var act = () => factory(otherProject, null, apiKey, null, 10m, true);
+
+        act.Should().Throw<Exception>();
     }
 
     [TestMethod]
@@ -50,8 +96,8 @@ public sealed class CostLimitValidationTests : DomainTest<Module>
         var factory = services.GetRequiredService<ICostLimit.CreateNew>();
         IProject project = await GetOrCreate<IProject>(services);
 
-        ICostLimit first = factory(project, null, 10m, 20m, true);
-        ICostLimit second = factory(project, null, 10m, 20m, true);
+        ICostLimit first = factory(project, null, null, 10m, 20m, true);
+        ICostLimit second = factory(project, null, null, 10m, 20m, true);
 
         first.Id.Should().NotBe(second.Id);
     }
@@ -64,8 +110,8 @@ public sealed class CostLimitValidationTests : DomainTest<Module>
         var createExisting = services.GetRequiredService<ICostLimit.CreateExisting>();
         IAgent agent = await GetOrCreate<IAgent>(services);
 
-        ICostLimit original = createNew(agent.Project, agent, 5m, 10m, true);
-        ICostLimit restored = createExisting(agent.Project, agent, 5m, 10m, true, original);
+        ICostLimit original = createNew(agent.Project, agent, null, 5m, 10m, true);
+        ICostLimit restored = createExisting(agent.Project, agent, null, 5m, 10m, true, original);
 
         restored.Id.Should().Be(original.Id);
         restored.CreatedAt.Should().Be(original.CreatedAt);
@@ -84,7 +130,7 @@ public sealed class CostLimitValidationTests : DomainTest<Module>
         var factory = services.GetRequiredService<ICostLimit.CreateNew>();
         IProject project = await GetOrCreate<IProject>(services);
 
-        var act = () => factory(project, null, null, null, true);
+        var act = () => factory(project, null, null, null, null, true);
 
         act.Should().Throw<Exception>();
     }
@@ -96,7 +142,7 @@ public sealed class CostLimitValidationTests : DomainTest<Module>
         var factory = services.GetRequiredService<ICostLimit.CreateNew>();
         IProject project = await GetOrCreate<IProject>(services);
 
-        var act = () => factory(project, null, 0m, 100m, true);
+        var act = () => factory(project, null, null, 0m, 100m, true);
 
         act.Should().Throw<Exception>();
     }
@@ -108,7 +154,7 @@ public sealed class CostLimitValidationTests : DomainTest<Module>
         var factory = services.GetRequiredService<ICostLimit.CreateNew>();
         IProject project = await GetOrCreate<IProject>(services);
 
-        var act = () => factory(project, null, null, -1m, true);
+        var act = () => factory(project, null, null, null, -1m, true);
 
         act.Should().Throw<Exception>();
     }
@@ -121,7 +167,7 @@ public sealed class CostLimitValidationTests : DomainTest<Module>
         IProject project = await GetOrCreate<IProject>(services);
 
         // A soft threshold above the hard one could never fire — the hard limit blocks first.
-        var act = () => factory(project, null, 200m, 100m, true);
+        var act = () => factory(project, null, null, 200m, 100m, true);
 
         act.Should().Throw<Exception>();
     }
@@ -133,7 +179,7 @@ public sealed class CostLimitValidationTests : DomainTest<Module>
         var factory = services.GetRequiredService<ICostLimit.CreateNew>();
         IProject project = await GetOrCreate<IProject>(services);
 
-        ICostLimit limit = factory(project, null, 100m, 100m, true);
+        ICostLimit limit = factory(project, null, null, 100m, 100m, true);
 
         limit.SoftLimitEur.Should().Be(limit.HardLimitEur);
     }
@@ -147,7 +193,7 @@ public sealed class CostLimitValidationTests : DomainTest<Module>
         IAgent agent = await GetOrCreate<IAgent>(services);
         IProject otherProject = await projectGenerator.CreateAsync(CancellationToken);
 
-        var act = () => factory(otherProject, agent, null, 10m, true);
+        var act = () => factory(otherProject, agent, null, null, 10m, true);
 
         act.Should().Throw<Exception>();
     }
@@ -162,7 +208,7 @@ public sealed class CostLimitValidationTests : DomainTest<Module>
         var repository = services.GetRequiredService<ICostLimitRepository>();
         IProject project = await GetOrCreate<IProject>(services);
 
-        ICostLimit saved = await repository.AddAsync(factory(project, null, 50m, 100m, true), CancellationToken);
+        ICostLimit saved = await repository.AddAsync(factory(project, null, null, 50m, 100m, true), CancellationToken);
         await saved.Update(75m, 150m, false, CancellationToken);
 
         ICostLimit reloaded = await repository.GetAsync(saved.Id, CancellationToken);
@@ -179,7 +225,7 @@ public sealed class CostLimitValidationTests : DomainTest<Module>
         var repository = services.GetRequiredService<ICostLimitRepository>();
         IProject project = await GetOrCreate<IProject>(services);
 
-        ICostLimit saved = await repository.AddAsync(factory(project, null, 50m, 100m, true), CancellationToken);
+        ICostLimit saved = await repository.AddAsync(factory(project, null, null, 50m, 100m, true), CancellationToken);
 
         await FluentActions
             .Invoking(() => saved.Update(200m, 100m, true, CancellationToken))
@@ -196,8 +242,8 @@ public sealed class CostLimitValidationTests : DomainTest<Module>
         var repository = services.GetRequiredService<ICostLimitRepository>();
         IAgent agent = await GetOrCreate<IAgent>(services);
 
-        await repository.AddAsync(factory(agent.Project, null, 50m, 100m, true), CancellationToken);
-        await repository.AddAsync(factory(agent.Project, agent, null, 10m, false), CancellationToken);
+        await repository.AddAsync(factory(agent.Project, null, null, 50m, 100m, true), CancellationToken);
+        await repository.AddAsync(factory(agent.Project, agent, null, null, 10m, false), CancellationToken);
 
         IReadOnlyList<ICostLimit> enabled = await repository.GetAllEnabledAsync(CancellationToken);
 
@@ -212,8 +258,8 @@ public sealed class CostLimitValidationTests : DomainTest<Module>
         var repository = services.GetRequiredService<ICostLimitRepository>();
         IAgent agent = await GetOrCreate<IAgent>(services);
 
-        await repository.AddAsync(factory(agent.Project, null, 50m, 100m, true), CancellationToken);
-        await repository.AddAsync(factory(agent.Project, agent, 5m, 10m, true), CancellationToken);
+        await repository.AddAsync(factory(agent.Project, null, null, 50m, 100m, true), CancellationToken);
+        await repository.AddAsync(factory(agent.Project, agent, null, 5m, 10m, true), CancellationToken);
 
         IReadOnlyList<ICostLimit> limits = await repository.GetByProjectAsync(agent.Project.Id, CancellationToken);
 

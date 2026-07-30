@@ -120,7 +120,8 @@ export default defineConfig([
             'elevation', 'trend', 'trendDirection', 'trendDir', 'language', 'lang', 'level',
             'density', 'weight', 'format', 'state', 'connection',
             // structural / non-copy attributes
-            'className', 'class', 'to', 'path', 'data-testid', 'railTestId', 'listTestId',
+            'className', 'class', 'headerClassName', 'contentClassName',
+            'to', 'path', 'data-testid', 'railTestId', 'listTestId',
             'htmlFor', 'id', 'name',
             'htmlType', 'inputMode', 'enterKeyHint', 'autoCapitalize', 'spellCheck',
             // style-token-map keys: values are Tailwind class lists / CSS colours, not copy

@@ -3,6 +3,7 @@ import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { cn } from '../../lib/cn';
 import { CheckIcon, ChevronDownIcon } from '../icons';
 import { formInputCls } from './classes';
+import { collectGroups } from './selectOptions';
 
 type Size = 'sm' | 'md';
 
@@ -17,7 +18,10 @@ interface SelectProps {
   autoFocus?: boolean;
   id?: string;
   className?: string;
-  /** `<option>` elements — kept as the call-site API; parsed into the styled menu. */
+  /**
+   * `<option>` elements, optionally wrapped in `<optgroup label="…">` — kept as the call-site API;
+   * parsed into the styled menu.
+   */
   children: React.ReactNode;
   'data-testid'?: string;
 }
@@ -26,30 +30,6 @@ const SIZE_CLS: Record<Size, string> = {
   sm: cn('px-2.5 py-1.5 text-body-sm'),
   md: cn('px-3 py-2 text-title'),
 };
-
-interface OptionData {
-  value: string;
-  label: React.ReactNode;
-  disabled?: boolean;
-}
-
-function isOptionElement(
-  node: React.ReactNode,
-): node is React.ReactElement<React.OptionHTMLAttributes<HTMLOptionElement>> {
-  return React.isValidElement(node) && node.type === 'option';
-}
-
-/** Flatten `<option>` children into renderable option data (label stays a node). */
-function collectOptions(children: React.ReactNode): OptionData[] {
-  return React.Children.toArray(children)
-    .filter(isOptionElement)
-    .map(el => {
-      const { value, children: label, disabled } = el.props;
-      const resolvedValue =
-        value !== undefined ? String(value) : typeof label === 'string' ? label : '';
-      return { value: resolvedValue, label, disabled };
-    });
-}
 
 /**
  * Single-select control with a styled, dark-theme option list (Radix DropdownMenu-backed:
@@ -71,8 +51,8 @@ export function Select({
   children,
   'data-testid': testId,
 }: SelectProps) {
-  const options = collectOptions(children);
-  const selected = options.find(o => o.value === value);
+  const groups = collectGroups(children);
+  const selected = groups.flatMap(g => g.options).find(o => o.value === value);
 
   return (
     <DropdownMenu.Root>
@@ -104,27 +84,36 @@ export function Select({
           sideOffset={6}
           className="z-[60] min-w-[var(--radix-dropdown-menu-trigger-width)] max-h-[280px] overflow-y-auto bg-card-2 py-1 shadow-[var(--shadow-float)] border border-border"
         >
-          {options.map((opt, i) => {
-            const isSel = opt.value === value;
-            return (
-              <DropdownMenu.Item
-                key={opt.value || `opt-${i}`}
-                disabled={opt.disabled}
-                textValue={typeof opt.label === 'string' ? opt.label : opt.value}
-                data-testid={testId ? `${testId}-option-${opt.value}` : undefined}
-                onSelect={() => onValueChange(opt.value)}
-                className={cn(
-                  'flex items-center gap-2 px-2.5 py-1.5 text-body text-left cursor-pointer outline-none',
-                  'transition-colors duration-100 data-[highlighted]:bg-[var(--bg-wash-hover)]',
-                  'data-[disabled]:opacity-50 data-[disabled]:cursor-not-allowed',
-                  isSel ? 'text-primary' : 'text-secondary',
-                )}
-              >
-                <span className="flex-1 truncate">{opt.label}</span>
-                {isSel && <CheckIcon size={12} strokeWidth={2.5} className="text-accent shrink-0" />}
-              </DropdownMenu.Item>
-            );
-          })}
+          {groups.map((group, gi) => (
+            <DropdownMenu.Group key={group.label ?? `group-${gi}`}>
+              {group.label && (
+                <DropdownMenu.Label className="px-2.5 pt-2 pb-1 text-caption font-medium uppercase tracking-wide text-secondary">
+                  {group.label}
+                </DropdownMenu.Label>
+              )}
+              {group.options.map((opt, i) => {
+                const isSel = opt.value === value;
+                return (
+                  <DropdownMenu.Item
+                    key={opt.value || `opt-${gi}-${i}`}
+                    disabled={opt.disabled}
+                    textValue={typeof opt.label === 'string' ? opt.label : opt.value}
+                    data-testid={testId ? `${testId}-option-${opt.value}` : undefined}
+                    onSelect={() => onValueChange(opt.value)}
+                    className={cn(
+                      'flex items-center gap-2 px-2.5 py-1.5 text-body text-left cursor-pointer outline-none',
+                      'transition-colors duration-100 data-[highlighted]:bg-[var(--bg-wash-hover)]',
+                      'data-[disabled]:opacity-50 data-[disabled]:cursor-not-allowed',
+                      isSel ? 'text-primary' : 'text-secondary',
+                    )}
+                  >
+                    <span className="flex-1 truncate">{opt.label}</span>
+                    {isSel && <CheckIcon size={12} strokeWidth={2.5} className="text-accent shrink-0" />}
+                  </DropdownMenu.Item>
+                );
+              })}
+            </DropdownMenu.Group>
+          ))}
         </DropdownMenu.Content>
       </DropdownMenu.Portal>
     </DropdownMenu.Root>

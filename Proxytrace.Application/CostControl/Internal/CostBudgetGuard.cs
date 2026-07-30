@@ -114,6 +114,16 @@ internal sealed class CostBudgetGuard : BackgroundService
                 .GroupBy(s => s.AgentId)
                 .ToDictionary(g => g.Key, g => g.Sum(s => s.CostEur));
 
+            // Only pay for the per-key aggregate when a key-scoped budget actually exists. Most
+            // installs configure none, and this keeps their tick at exactly the cost it was before
+            // key scope existed.
+            Dictionary<Guid, decimal> spendByApiKey = limits.Any(l => l.ApiKey is not null)
+                ? (await costStatistics.GetMonthToDateSpendByApiKeyAsync(monthStart, cancellationToken))
+                    .Where(s => s.ApiKeyId is not null)
+                    .GroupBy(s => s.ApiKeyId ?? Guid.Empty)
+                    .ToDictionary(g => g.Key, g => g.Sum(s => s.CostEur))
+                : [];
+
             IReadOnlyList<ICostLimitBreach> existing = await breaches.GetForMonthAsync(monthStart, cancellationToken);
             HashSet<(Guid LimitId, CostThreshold Threshold)> fired = existing
                 .Select(b => (b.CostLimit.Id, b.Threshold))
@@ -121,9 +131,12 @@ internal sealed class CostBudgetGuard : BackgroundService
 
             foreach (ICostLimit limit in limits)
             {
-                decimal effectiveSpend = limit.Agent is { } agent
-                    ? spendByAgent.GetValueOrDefault(agent.Id)
-                    : spendByProject.GetValueOrDefault(limit.Project.Id);
+                decimal effectiveSpend = (limit.Agent, limit.ApiKey) switch
+                {
+                    ({ } agent, _) => spendByAgent.GetValueOrDefault(agent.Id),
+                    (_, { } key) => spendByApiKey.GetValueOrDefault(key.Id),
+                    _ => spendByProject.GetValueOrDefault(limit.Project.Id),
+                };
 
                 // Soft before hard so a single tick that vaults past both still tells the whole
                 // story: the warning explains the escalation the critical alert then acts on.
@@ -168,9 +181,12 @@ internal sealed class CostBudgetGuard : BackgroundService
             return;
         }
 
-        string scope = limit.Agent is { } agent
-            ? $"Agent '{agent.Name}' in project '{limit.Project.Name}'"
-            : $"Project '{limit.Project.Name}'";
+        string scope = (limit.Agent, limit.ApiKey) switch
+        {
+            ({ } agent, _) => $"Agent '{agent.Name}' in project '{limit.Project.Name}'",
+            (_, { } key) => $"API key '{key.Name}' ({key.KeyPrefix}) in project '{limit.Project.Name}'",
+            _ => $"Project '{limit.Project.Name}'",
+        };
 
         (string title, string message, NotificationSeverity severity) = threshold switch
         {
@@ -205,7 +221,7 @@ internal sealed class CostBudgetGuard : BackgroundService
                 : AuditAction.CostBudgetSoftLimitReached,
             targetType: nameof(ICostLimit),
             targetId: limit.Id,
-            targetLabel: limit.Agent?.Name ?? limit.Project.Name,
+            targetLabel: limit.Agent?.Name ?? limit.ApiKey?.Name ?? limit.Project.Name,
             projectId: limit.Project.Id,
             details: serializer.Serialize(new
             {

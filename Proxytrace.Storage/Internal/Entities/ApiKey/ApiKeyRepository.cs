@@ -46,4 +46,15 @@ internal class ApiKeyRepository : AbstractRepository<IApiKey, ApiKeyEntity>, IAp
 
         return await Map(stored, cancellationToken);
     }
+
+    public async Task<IReadOnlyList<IApiKey>> GetByProjectAsync(Guid projectId, CancellationToken cancellationToken = default)
+    {
+        var stored = await contextFactory()
+            .Set<ApiKeyEntity>()
+            .AsNoTracking()
+            .Where(e => e.Project == projectId)
+            .ToListAsync(cancellationToken);
+
+        return await Map(stored, cancellationToken);
+    }
 }

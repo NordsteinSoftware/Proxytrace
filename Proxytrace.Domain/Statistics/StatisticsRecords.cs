@@ -158,6 +158,27 @@ public record AgentCostPoint(
     Guid AgentId,
     decimal CostEur);
 
+/// <summary>
+/// Derived spend attributed to one inbound API key within one project over a window. A null
+/// <see cref="ApiKeyId"/> is the unattributed remainder — traffic authenticated with the provider's
+/// own upstream key, plus any call ingested before key attribution existed. It is a real group
+/// rather than a dropped row, so per-key figures always reconcile with the project total.
+/// </summary>
+public record ProjectApiKeyCostStat(
+    Guid ProjectId,
+    Guid? ApiKeyId,
+    decimal CostEur);
+
+/// <summary>
+/// Derived spend attributed to one inbound API key in one time bucket. Aggregated per
+/// (bucket, key, endpoint) in SQL and priced in C#, so the result is O(buckets × keys × endpoints)
+/// and never O(calls). A null <see cref="ApiKeyId"/> is the unattributed series.
+/// </summary>
+public record ApiKeyCostPoint(
+    DateTimeOffset BucketStart,
+    Guid? ApiKeyId,
+    decimal CostEur);
+
 public record AgentTimeSeriesPoint(
     DateTimeOffset BucketStart,
     int TraceCount,

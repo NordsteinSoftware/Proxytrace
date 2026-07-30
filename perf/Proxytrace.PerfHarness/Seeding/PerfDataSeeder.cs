@@ -70,6 +70,13 @@ internal sealed class PerfDataSeeder
             sessionPool[i] = new SessionSeed(SessionIdDerivation.Derive(graph.ProjectId, externalKey), externalKey);
         }
 
+        // Pool of inbound API key ids so ~ApiKeyRate of calls are attributable to a key. Small and
+        // fixed: a real install has a handful of keys per project, and the per-key cost aggregates
+        // return one row per (key, endpoint), so this is what sets their result cardinality.
+        var apiKeyPool = Enumerable.Range(0, Math.Max(1, options.ApiKeyPoolSize))
+            .Select(_ => Guid.NewGuid())
+            .ToArray();
+
         // Denormalized counters accumulated as calls are assigned to sessions, mirroring what the
         // ingestion upsert (RecordActivityAsync) maintains. TraceCount/TotalTokens are exact for the
         // seeded rows; LastActivityAt is the newest member call's CreatedAt. (Approximate only in that
@@ -90,7 +97,7 @@ internal sealed class PerfDataSeeder
                 var batch = new List<IAgentCall>(batchCount);
                 for (int i = 0; i < batchCount; i++)
                 {
-                    batch.Add(BuildCall(graph, conversationIds, sessionPool, sessionAccumulators,
+                    batch.Add(BuildCall(graph, conversationIds, apiKeyPool, sessionPool, sessionAccumulators,
                         createExisting, createCompletion, rng, start, span, options));
                 }
 
@@ -254,6 +261,7 @@ internal sealed class PerfDataSeeder
     private static IAgentCall BuildCall(
         SeedGraph graph,
         Guid[] conversationIds,
+        Guid[] apiKeyPool,
         SessionSeed[] sessionPool,
         SessionAccumulator[] sessionAccumulators,
         IAgentCall.CreateExisting createExisting,
@@ -276,6 +284,10 @@ internal sealed class PerfDataSeeder
 
         int? sessionIndex = rng.NextDouble() < options.SessionRate ? rng.Next(sessionPool.Length) : null;
         Guid? sessionId = sessionIndex is { } si ? sessionPool[si].Id : null;
+
+        Guid? apiKeyId = rng.NextDouble() < options.ApiKeyRate
+            ? apiKeyPool[rng.Next(apiKeyPool.Length)]
+            : null;
 
         bool isError = rng.NextDouble() < options.ErrorRate;
 
@@ -351,7 +363,8 @@ internal sealed class PerfDataSeeder
             existing: data,
             conversationId: conversationId,
             sessionId: sessionId,
-            outlierFlags: outlierFlags);
+            outlierFlags: outlierFlags,
+            apiKeyId: apiKeyId);
     }
 
     /// <summary>

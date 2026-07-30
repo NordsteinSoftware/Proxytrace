@@ -9,6 +9,17 @@ namespace Proxytrace.Application.CostControl;
 public record AgentCostTotal(Guid AgentId, string AgentName, decimal CostEur);
 
 /// <summary>
+/// A single inbound API key's derived spend over the requested window, with the key's name and
+/// non-secret prefix resolved so the page can identify it without a second lookup.
+/// </summary>
+/// <remarks>
+/// A null <see cref="ApiKeyId"/> is the unattributed remainder — upstream-key traffic and traces
+/// ingested before key attribution existed. The page labels it as such; it is never dropped,
+/// because dropping it would make the per-key rows silently fail to sum to the project total.
+/// </remarks>
+public record ApiKeyCostTotal(Guid? ApiKeyId, string? ApiKeyName, string? KeyPrefix, decimal CostEur);
+
+/// <summary>
 /// One configured budget joined with the current month's spend and breach state — everything the
 /// Costs page needs to draw a consumption meter without recomputing thresholds client-side.
 /// </summary>
@@ -16,6 +27,8 @@ public record CostBudgetStatus(
     Guid CostLimitId,
     Guid? AgentId,
     string? AgentName,
+    Guid? ApiKeyId,
+    string? ApiKeyName,
     decimal? SoftLimitEur,
     decimal? HardLimitEur,
     bool Enabled,
@@ -38,5 +51,7 @@ public record CostOverview(
     decimal PreviousMonthSpendEur,
     IReadOnlyList<AgentCostPoint> Series,
     IReadOnlyList<AgentCostTotal> AgentTotals,
+    IReadOnlyList<ApiKeyCostPoint> ApiKeySeries,
+    IReadOnlyList<ApiKeyCostTotal> ApiKeyTotals,
     IReadOnlyList<CostBudgetStatus> Budgets,
     bool HasUnpricedEndpoints);

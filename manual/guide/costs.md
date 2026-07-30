@@ -4,10 +4,11 @@ The **Costs** page is where you see what your agents are actually spending — a
 limits so a runaway agent can't quietly burn through a month's budget. Open it from **Costs** in
 the sidebar, under Monitor.
 
-It answers three questions:
+It answers four questions:
 
 - **What have we spent this month, and where is it heading?**
 - **Which agent is spending it?**
+- **Which API key is spending it?**
 - **What happens when we hit the limit?**
 
 ## Where the numbers come from
@@ -41,11 +42,31 @@ The four cards across the top are the management view:
 - **Selected window** — the total for whatever range the time picker is set to, plus how many
   budgets are currently blocking calls.
 
-Below that, **Spend over time** charts the selected window stacked per agent, so one agent's spike
-stands out from the background instead of hiding in a single total line. Use the bucket control
-(five minutes / hourly / daily) to zoom from "what just happened" out to "how has this month gone".
+Below that, **Spend over time** charts the selected window as a stack, so one spike stands out from
+the background instead of hiding in a single total line. Use the bucket control (five minutes /
+hourly / daily) to zoom from "what just happened" out to "how has this month gone", and the
+**By agent / By API key** toggle to change what the stack is cut by. Both views come from the same
+window, so switching is instant.
 
-**Spend by agent** breaks the same window down as a share ring plus exact figures, largest first.
+**Spend by agent** breaks the same window down as a share ring plus exact figures, largest first —
+*who* spent the money.
+
+**Spend by API key** answers the neighbouring question: *which credential* spent it. That is
+usually the more useful one when several applications, environments or customers share a project,
+since each normally has its own key.
+
+::: info Unattributed spend
+The per-key list may end with an **Unattributed** row. That is spend Proxytrace cannot tie to one of
+your keys, for either of two reasons:
+
+- the caller authenticated with the **provider's own API key** rather than a Proxytrace-issued one
+  (see [Proxy Setup](/guide/proxy-setup)), so there was no key of yours to record; or
+- the call was captured **before per-key tracking existed** — older traces cannot be backfilled,
+  because the information was never recorded.
+
+It is shown rather than hidden so the per-key figures always add up to the project total. A key
+budget cannot cap unattributed spend; the project budget is what holds it.
+:::
 
 ## Monthly budgets
 
@@ -66,11 +87,19 @@ A budget sets up to two EUR amounts for one calendar month:
 Both are optional — a soft-limit-only budget is a pure early-warning system that never interrupts
 anything, which is a good way to start.
 
-### Project budgets and agent budgets
+### Choosing a scope
 
-You can set **one budget for the whole project**, and optionally **one budget per agent** as an
-override. An agent's spend counts toward *both* its own budget and the project budget, so the
-project figure is always the complete picture.
+A budget covers exactly one of three things:
+
+| Scope | Covers | Best for |
+|---|---|---|
+| **Whole project** | Every call in the project. | The backstop. Always set one. |
+| **One agent** | Calls that identify themselves as that agent. | Capping a specific workload. |
+| **One API key** | Calls authenticated with that key. | Capping one application, environment or customer. |
+
+An agent's or key's spend counts toward *both* its own budget and the project budget, so the
+project figure is always the complete picture. A budget cannot be scoped to an agent *and* a key at
+once — pick the one that matches how you want to divide the money up.
 
 ::: warning Agent budgets need the agent header
 Blocking an *agent* before its call reaches the provider means Proxytrace has to know which agent
@@ -82,24 +111,54 @@ The **project budget is the reliable backstop**: it applies to every call regard
 budget enforcement matters to you, always set one.
 :::
 
+::: tip API key budgets cannot be bypassed
+A key budget does not have that weakness. **Every** proxied call has to authenticate with a key, so
+there is no header a client can omit to slip past it. If you need a cap that genuinely holds for one
+application, scope it to that application's key.
+
+The one gap: callers who authenticate with the **provider's own** API key instead of a
+Proxytrace-issued one carry no key of yours to match against. That traffic is caught by the project
+budget — and it is the same traffic that shows up as *Unattributed* in the breakdown above.
+:::
+
+::: warning Rotating a key resets its budget
+Keys cannot be edited in place — rotating one means deleting it and creating a new one. The new key
+is a **different** key as far as Proxytrace is concerned, so its budget does not carry over: the old
+budget is removed with the old key, and the spend it had accrued becomes unattributed for the rest
+of the month. Re-create the budget against the new key, and lean on the project budget in the
+meantime.
+:::
+
 ### Setting a budget
 
-1. Open **Costs** and click **New budget**.
-2. Choose the **scope** — the whole project, or one agent.
-3. Enter a **soft limit**, a **hard limit**, or both. If you set both, the soft limit must not be
-   above the hard one (it could never fire — the hard limit would block first).
-4. Leave **Enabled** on and save.
+1. Open **Costs** and click **New budget**, top right of the **Monthly budgets** card.
+2. Pick the **scope** — *Whole project*, *Agent* or *API key*. The dialog opens on a scope that is
+   still free.
+3. For an agent or key budget, pick **which one** in the second field. It is searchable, so type a
+   few letters rather than scrolling a long list.
+4. Enter a **soft limit**, a **hard limit**, or both, in EUR. If you set both, the soft limit must
+   not be above the hard one (it could never fire — the hard limit would block first).
+5. Leave **Enabled** on and save.
+
+Each scope holds **at most one** budget. If you pick a scope that is already spoken for, the dialog
+says so and Save stays disabled — edit the existing budget instead of adding a second one. The same
+line tells you when a scope has nothing to point at yet, e.g. a project with no agents.
 
 Each budget renders as a **consumption meter**: a bar filled against the hard limit (or the soft
 one, if that is all you set), a tick marking where the soft threshold sits, the exact spend so far,
-and how much is left this month.
+and how much is left this month. A budget you have just created shows **Measuring spend** until the
+next reading of this month's figures arrives — a moment later, not a sign anything is wrong.
+
+A budget's **scope is fixed** once created. To point a budget at a different agent or key, delete it
+and create a new one; the editor shows the scope read-only.
 
 Editing a budget **clears its alert state**, so the next check re-evaluates against your new
 numbers. That is what makes raising a hard limit actually unblock things — and it also means a
 lowered soft limit can warn again in the same month.
 
-Deleting a budget removes it and lifts any block it was applying. Switching a budget to
-**disabled** does the same thing without losing the configuration.
+Deleting a budget (the bin icon on its row, with a confirmation) removes it and lifts any block it
+was applying; the spend itself keeps being tracked. Switching a budget to **disabled** does the same
+thing without losing the configuration.
 
 ## What a blocked call looks like
 
@@ -135,6 +194,10 @@ block list briefly. In practice:
   the hard limit slightly below the number you truly cannot exceed.
 - **Raising a limit, disabling a budget, or deleting one** takes effect within about half a minute.
 - **Renaming an agent** propagates to agent-scoped blocking within about half a minute too.
+
+One more thing worth knowing about per-key figures: they start from the day this feature was
+installed. Spend captured before then is real and counts toward your project totals, but Proxytrace
+cannot say which key produced it, so it appears as *Unattributed* rather than being guessed at.
 
 ## On the 1st of the month
 

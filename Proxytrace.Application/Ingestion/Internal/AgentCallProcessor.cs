@@ -168,7 +168,8 @@ internal sealed class AgentCallProcessor : IAgentCallProcessor
                 modelParameters: parsed.ModelParameters,
                 conversationId: conversationId,
                 sessionId: session?.Id,
-                outlierFlags: outlierFlags);
+                outlierFlags: outlierFlags,
+                apiKeyId: job.ApiKeyId);
 
             call = await agentCallRepository.AddAsync(call, cancellationToken);
 

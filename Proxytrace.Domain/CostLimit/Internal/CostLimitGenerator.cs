@@ -26,6 +26,7 @@ internal class CostLimitGenerator : DomainEntityGenerator<ICostLimit>
         return factory(
             project: project,
             agent: null,
+            apiKey: null,
             softLimitEur: 50m,
             hardLimitEur: 100m,
             enabled: true);

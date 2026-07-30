@@ -81,6 +81,9 @@ namespace Proxytrace.Storage.Migrations
                     b.Property<Guid>("AgentVersionId")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("ApiKeyId")
+                        .HasColumnType("uuid");
+
                     b.Property<double?>("CacheHitRate")
                         .HasColumnType("double precision");
 
@@ -433,6 +436,9 @@ namespace Proxytrace.Storage.Migrations
                     b.Property<Guid?>("Agent")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("ApiKey")
+                        .HasColumnType("uuid");
+
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -458,17 +464,24 @@ namespace Proxytrace.Storage.Migrations
 
                     b.HasIndex("Agent");
 
+                    b.HasIndex("ApiKey");
+
                     b.HasIndex("Enabled");
 
                     b.HasIndex("Project")
                         .IsUnique()
                         .HasDatabaseName("IX_CostLimitEntity_Project_ProjectScope")
-                        .HasFilter("\"Agent\" IS NULL");
+                        .HasFilter("\"Agent\" IS NULL AND \"ApiKey\" IS NULL");
 
                     b.HasIndex("Project", "Agent")
                         .IsUnique()
                         .HasDatabaseName("IX_CostLimitEntity_Project_Agent_AgentScope")
                         .HasFilter("\"Agent\" IS NOT NULL");
+
+                    b.HasIndex("Project", "ApiKey")
+                        .IsUnique()
+                        .HasDatabaseName("IX_CostLimitEntity_Project_ApiKey_ApiKeyScope")
+                        .HasFilter("\"ApiKey\" IS NOT NULL");
 
                     b.ToTable("CostLimitEntity");
                 });
@@ -1871,6 +1884,11 @@ namespace Proxytrace.Storage.Migrations
                     b.HasOne("Proxytrace.Storage.Internal.Entities.Agent.AgentEntity", null)
                         .WithMany()
                         .HasForeignKey("Agent")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.HasOne("Proxytrace.Storage.Internal.Entities.ApiKey.ApiKeyEntity", null)
+                        .WithMany()
+                        .HasForeignKey("ApiKey")
                         .OnDelete(DeleteBehavior.Cascade);
 
                     b.HasOne("Proxytrace.Storage.Internal.Entities.Project.ProjectEntity", null)

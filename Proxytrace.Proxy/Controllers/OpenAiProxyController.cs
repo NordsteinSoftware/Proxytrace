@@ -172,7 +172,7 @@ public class OpenAiProxyController : ControllerBase
         // since it never reaches the provider it adds ~no tokens to the spend that blocked it.
         var budgetSw = Stopwatch.StartNew();
         BudgetBlockMatch? budgetBlocked = await budgetBlocker.EvaluateAsync(
-            resolved.Project.Id, agentName, cancellationToken);
+            resolved.Project.Id, agentName, resolved.ApiKeyId, cancellationToken);
         if (budgetBlocked is not null)
         {
             await RejectBudgetBlockedRequestAsync(
@@ -228,11 +228,11 @@ public class OpenAiProxyController : ControllerBase
 
             if (isStreaming)
             {
-                await ProxyStreamingResponseAsync(resolved.Provider, resolved.Project, requestBody, upstreamResponse, sw, sessionId, conversationId, agentName, cancellationToken);
+                await ProxyStreamingResponseAsync(resolved, requestBody, upstreamResponse, sw, sessionId, conversationId, agentName, cancellationToken);
             }
             else
             {
-                await ProxyBufferedResponseAsync(resolved.Provider, resolved.Project, requestBody, upstreamResponse, sw, sessionId, conversationId, agentName, cancellationToken);
+                await ProxyBufferedResponseAsync(resolved, requestBody, upstreamResponse, sw, sessionId, conversationId, agentName, cancellationToken);
             }
         }
     }
@@ -529,8 +529,7 @@ public class OpenAiProxyController : ControllerBase
     // ── Non-streaming ─────────────────────────────────────────────────────────
 
     private async Task ProxyBufferedResponseAsync(
-        IModelProvider provider,
-        IProject project,
+        ResolvedApiKey resolved,
         string requestBody,
         HttpResponseMessage upstreamResponse,
         Stopwatch sw,
@@ -579,15 +578,14 @@ public class OpenAiProxyController : ControllerBase
             // Capture is decoupled from the client request lifetime: the upstream call has already
             // completed, so a client disconnect/timeout here must not drop the captured call.
             // Publish with CancellationToken.None rather than the request-aborted token.
-            await EnqueueSafeAsync(provider, project, requestBody, captured.ToString(), sw.Elapsed, upstreamResponse.StatusCode, sessionId, conversationId, agentName, CancellationToken.None);
+            await EnqueueSafeAsync(resolved, requestBody,captured.ToString(), sw.Elapsed, upstreamResponse.StatusCode, sessionId, conversationId, agentName, CancellationToken.None);
         }
     }
 
     // ── Streaming (SSE) ───────────────────────────────────────────────────────
 
     private async Task ProxyStreamingResponseAsync(
-        IModelProvider provider,
-        IProject project,
+        ResolvedApiKey resolved,
         string requestBody,
         HttpResponseMessage upstreamResponse,
         Stopwatch sw,
@@ -628,7 +626,7 @@ public class OpenAiProxyController : ControllerBase
             // data the proxy exists to capture. Decouple from the request-aborted token with
             // CancellationToken.None so the publish itself isn't cancelled by the same disconnect.
             sw.Stop();
-            await EnqueueSafeAsync(provider, project, requestBody, accumulated.ToString(), sw.Elapsed, upstreamResponse.StatusCode, sessionId, conversationId, agentName, CancellationToken.None);
+            await EnqueueSafeAsync(resolved, requestBody,accumulated.ToString(), sw.Elapsed, upstreamResponse.StatusCode, sessionId, conversationId, agentName, CancellationToken.None);
         }
     }
 
@@ -653,9 +651,11 @@ public class OpenAiProxyController : ControllerBase
         }
     }
 
+    // Takes the whole ResolvedApiKey rather than provider+project: every captured call must carry
+    // the authenticating key's id so spend can be attributed per key, and passing the resolution
+    // outcome as one value means a new capture path cannot forget to thread it through.
     private async Task EnqueueSafeAsync(
-        IModelProvider provider,
-        IProject project,
+        ResolvedApiKey resolved,
         string requestBody,
         string? responseBody,
         TimeSpan duration,
@@ -671,8 +671,8 @@ public class OpenAiProxyController : ControllerBase
         {
             await stream.PublishAsync(
                 new IngestMessage(
-                    ProviderId: provider.Id,
-                    ProjectId: project.Id,
+                    ProviderId: resolved.Provider.Id,
+                    ProjectId: resolved.Project.Id,
                     RequestBody: requestBody,
                     ResponseBody: responseBody,
                     DurationMs: (long)duration.TotalMilliseconds,
@@ -683,7 +683,8 @@ public class OpenAiProxyController : ControllerBase
                     BlockedDetectorName: blocked?.DetectorName,
                     BlockedTriggerPattern: blocked?.TriggerPattern,
                     ConversationId: conversationId,
-                    BlockedByBudget: blockedByBudget),
+                    BlockedByBudget: blockedByBudget,
+                    ApiKeyId: resolved.ApiKeyId),
                 cancellationToken);
         }
         catch (Exception ex)
@@ -724,8 +725,7 @@ public class OpenAiProxyController : ControllerBase
 
         // CancellationToken.None: a client disconnect right after the 403 must not drop the record.
         await EnqueueSafeAsync(
-            resolved.Provider,
-            resolved.Project,
+            resolved,
             requestBody,
             responseBody: errorJson,
             duration: elapsed,
@@ -759,8 +759,7 @@ public class OpenAiProxyController : ControllerBase
 
         // CancellationToken.None: a client disconnect right after the 403 must not drop the record.
         await EnqueueSafeAsync(
-            resolved.Provider,
-            resolved.Project,
+            resolved,
             requestBody,
             responseBody: errorJson,
             duration: elapsed,
