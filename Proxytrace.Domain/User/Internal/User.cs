@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.Text;
 using Proxytrace.Common.Validation;
 using Proxytrace.Domain.Internal;
 using Proxytrace.Domain.Notification;
@@ -76,6 +77,31 @@ internal record User : DomainEntity<IUser>, IUser
         => EmailNotificationsEnabled == emailNotificationsEnabled && EmailNotificationMinSeverity == emailNotificationMinSeverity
             ? Task.FromResult<IUser>(this)
             : ApplyAsync(this with { EmailNotificationsEnabled = emailNotificationsEnabled, EmailNotificationMinSeverity = emailNotificationMinSeverity }, cancellationToken);
+
+    // Redact the stored password hash from the record's generated ToString()/PrintMembers so it never
+    // leaks into a log line, exception message or debugger string — a salted, slow hash lifted from
+    // the operator Error Log or a support bundle is an offline-cracking target. It also travels
+    // transitively: any record holding an IUser (UserTotpEnrollment, ApiKey.Owner) prints it. The
+    // same treatment ModelProvider gives its upstream API key. PasswordHash stays a public member
+    // (the login path reads it; equality keeps it) — only its textual rendering is masked.
+    // ExternalSubject is deliberately left visible: it is an identifier, not a credential, and
+    // holding it grants nothing (like EmailSettings.Username, which also stays).
+    protected override bool PrintMembers(StringBuilder builder)
+    {
+        if (base.PrintMembers(builder))
+        {
+            builder.Append(", ");
+        }
+
+        builder.Append("Email = ").Append(Email)
+            .Append(", ExternalSubject = ").Append(ExternalSubject)
+            .Append(", PasswordHash = ***")
+            .Append(", Role = ").Append(Role)
+            .Append(", Language = ").Append(Language)
+            .Append(", EmailNotificationsEnabled = ").Append(EmailNotificationsEnabled)
+            .Append(", EmailNotificationMinSeverity = ").Append(EmailNotificationMinSeverity);
+        return true;
+    }
 
     public override IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {

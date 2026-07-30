@@ -64,19 +64,33 @@ public class TestRunSchedulesController : ControllerBase
     // (accessible == null) pass for any scope. Non-admins must scope to a project they belong to —
     // directly via projectId or via the agent's project — otherwise the query returns nothing rather
     // than leaking other tenants' rows.
-    private async Task<bool> CanListAsync(Guid? agentId, Guid? projectId, CancellationToken cancellationToken)
+    /// <summary>
+    /// The schedules the caller may list under the optional agent/project filters. An agent filter
+    /// authorizes against that agent's project and then queries by agent; otherwise the request is
+    /// scoped to the projects the caller may read.
+    /// </summary>
+    private async Task<IReadOnlyList<ITestRunSchedule>> ListScopedAsync(
+        Guid? agentId,
+        Guid? projectId,
+        CancellationToken cancellationToken)
     {
-        var accessible = await accessGuard.GetAccessibleProjectIdsAsync(cancellationToken);
-        if (accessible is null)
-            return true;
-        if (projectId is { } pid)
-            return accessible.Contains(pid);
+        var scope = await accessGuard.ResolveListScopeAsync(projectId, cancellationToken);
+        if (scope.IsEmpty())
+            return [];
+
         if (agentId is { } aid)
         {
             var agent = await agentRepository.FindAsync(aid, cancellationToken);
-            return agent is not null && accessible.Contains(agent.Project.Id);
+            if (agent is null || !scope.Admits(agent.Project.Id))
+                return [];
+            return await scheduleRepository.GetByAgentAsync(aid, cancellationToken);
         }
-        return false;
+
+        if (scope.SingleProject() is { } singleProject)
+            return await scheduleRepository.GetByProjectAsync(singleProject, cancellationToken);
+
+        var all = await scheduleRepository.GetAllAsync(cancellationToken);
+        return scope is null ? all : all.Where(s => scope.Contains(s.Suite.Agent.Project.Id)).ToArray();
     }
 
     /// <summary>
@@ -89,16 +103,7 @@ public class TestRunSchedulesController : ControllerBase
         [FromQuery] Guid? projectId = null,
         CancellationToken cancellationToken = default)
     {
-        if (!await CanListAsync(agentId, projectId, cancellationToken))
-            return [];
-
-        IReadOnlyList<ITestRunSchedule> schedules;
-        if (agentId.HasValue)
-            schedules = await scheduleRepository.GetByAgentAsync(agentId.Value, cancellationToken);
-        else if (projectId.HasValue)
-            schedules = await scheduleRepository.GetByProjectAsync(projectId.Value, cancellationToken);
-        else
-            schedules = await scheduleRepository.GetAllAsync(cancellationToken);
+        IReadOnlyList<ITestRunSchedule> schedules = await ListScopedAsync(agentId, projectId, cancellationToken);
 
         return await Task.WhenAll(schedules.Select(s => ToDtoAsync(s, cancellationToken)));
     }

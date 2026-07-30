@@ -3,8 +3,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Proxytrace.Api.Auth;
 using Proxytrace.Api.Dto.Projects;
-using Proxytrace.Application.Auth;
 using Proxytrace.Application.Evaluator;
 using Proxytrace.Application.Tracey;
 using Proxytrace.Domain;
@@ -30,7 +30,7 @@ public class ProjectsController : ControllerBase
     private readonly IProject.CreateExisting createExisting;
     private readonly ITraceyAgentProvisioner traceyProvisioner;
     private readonly IDefaultEvaluatorProvisioner defaultEvaluatorProvisioner;
-    private readonly ICurrentUserAccessor currentUser;
+    private readonly IProjectAccessGuard accessGuard;
     private readonly ILogger<Audit> audit;
 
     public ProjectsController(
@@ -42,7 +42,7 @@ public class ProjectsController : ControllerBase
         IProject.CreateExisting createExisting,
         ITraceyAgentProvisioner traceyProvisioner,
         IDefaultEvaluatorProvisioner defaultEvaluatorProvisioner,
-        ICurrentUserAccessor currentUser,
+        IProjectAccessGuard accessGuard,
         ILogger<Audit> audit)
     {
         this.repository = repository;
@@ -53,7 +53,7 @@ public class ProjectsController : ControllerBase
         this.createExisting = createExisting;
         this.traceyProvisioner = traceyProvisioner;
         this.defaultEvaluatorProvisioner = defaultEvaluatorProvisioner;
-        this.currentUser = currentUser;
+        this.accessGuard = accessGuard;
         this.audit = audit;
     }
 
@@ -63,25 +63,37 @@ public class ProjectsController : ControllerBase
         [FromQuery] int pageSize = 50,
         CancellationToken cancellationToken = default)
     {
-        // Admins see every project; non-admins (e.g. the sidebar project switcher) see only the
-        // projects they belong to — never the full cross-tenant list.
-        if (User.IsInRole(nameof(UserRole.Admin)))
+        // Clamp before either branch: the unscoped path clamps inside GetPagedAsync, but the
+        // in-memory scoped path below does not, so pageSize=int.MaxValue would return every
+        // accessible project in one response and echo the unclamped size back in the PagedResult.
+        (page, pageSize) = Paging.Clamp(page, pageSize);
+
+        // The guard is the single authority on who may see which project: an admin sees every
+        // project (null scope), everyone else only the projects they belong to, and a REST API key
+        // only the project it was minted for — the confinement this endpoint used to miss (#474),
+        // because an inline User.IsInRole/membership check cannot see the key's project.
+        // There is no projectId filter to resolve here (the listed resource *is* the project), so
+        // the scope is simply the caller's own reach.
+        var scope = await accessGuard.ResolveListScopeAsync(requestedProjectId: null, cancellationToken);
+        if (scope.IsEmpty())
+            return new PagedResult<ProjectListItemDto>([], 0, page, pageSize);
+
+        if (scope is null)
         {
             var paged = await repository.GetPagedAsync(page, pageSize, cancellationToken);
             return paged.Map(ProjectDtoMapper.ToListItemDto);
         }
 
-        var user = await currentUser.GetCurrentUserAsync(cancellationToken);
-        if (user is null)
-            return new PagedResult<ProjectListItemDto>([], 0, page, pageSize);
-
-        var memberProjects = await repository.GetByMemberAsync(user.Id, cancellationToken);
-        var items = memberProjects
-            .Skip(Math.Max(page - 1, 0) * pageSize)
+        // Tolerate an id that vanished between resolving the scope and loading it (a project
+        // deleted concurrently) rather than failing the whole listing.
+        var accessible = await repository.GetManyAsync(scope, cancellationToken, ignoreMissing: true);
+        var items = accessible
+            .OrderByDescending(p => p.CreatedAt)
+            .Skip(Paging.Offset(page, pageSize))
             .Take(pageSize)
             .Select(ProjectDtoMapper.ToListItemDto)
             .ToArray();
-        return new PagedResult<ProjectListItemDto>(items, memberProjects.Count, page, pageSize);
+        return new PagedResult<ProjectListItemDto>(items, accessible.Count, page, pageSize);
     }
 
     [HttpGet("{id:guid}")]
@@ -91,7 +103,7 @@ public class ProjectsController : ControllerBase
         if (project is null)
             return NotFound();
         // Hide projects the caller cannot access behind a 404 so existence does not leak.
-        if (!await CanAccessAsync(project, cancellationToken))
+        if (!await accessGuard.CanAccessProjectAsync(project.Id, cancellationToken))
             return NotFound();
         return ToDto(project);
     }
@@ -194,8 +206,9 @@ public class ProjectsController : ControllerBase
         var project = await repository.FindAsync(id, cancellationToken);
         if (project is null)
             return NotFound();
-        // Members' emails are PII — only an admin or a member of the project may list them.
-        if (!await CanAccessAsync(project, cancellationToken))
+        // Members' emails are PII — only a caller who may reach the project may list them (an
+        // admin, a member, or a REST API key minted for exactly this project).
+        if (!await accessGuard.CanAccessProjectAsync(project.Id, cancellationToken))
             return NotFound();
         return project.Members.Select(ProjectDtoMapper.ToMemberDto).ToArray();
     }
@@ -244,16 +257,6 @@ public class ProjectsController : ControllerBase
         var saved = await repository.UpdateAsync(updated, cancellationToken);
         audit.LogAudit(AuditAction.ProjectMemberRemoved, nameof(IUser), userId, member.Email, projectId: id);
         return ToDto(saved);
-    }
-
-    // Admins can access any project; everyone else only the projects they belong to. The project is
-    // already loaded with its Members, so membership is checked in memory without an extra query.
-    private async Task<bool> CanAccessAsync(IProject project, CancellationToken cancellationToken)
-    {
-        if (User.IsInRole(nameof(UserRole.Admin)))
-            return true;
-        var user = await currentUser.GetCurrentUserAsync(cancellationToken);
-        return user is not null && project.Members.Any(m => m.Id == user.Id);
     }
 
     private async Task<IReadOnlyCollection<IUser>?> ResolveMembersAsync(

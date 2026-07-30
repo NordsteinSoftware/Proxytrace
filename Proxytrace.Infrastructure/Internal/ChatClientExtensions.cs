@@ -79,6 +79,44 @@ internal static class ChatClientExtensions
                 .ToList();
         }
 
+        ApplySampling(chatOptions, options.Sampling);
         return chatOptions;
+    }
+
+    /// <summary>
+    /// Copies the caller's sampling overrides onto the outgoing request.
+    /// </summary>
+    /// <remarks>
+    /// Only non-null members are set, so an unset override leaves the provider's default alone
+    /// rather than pinning it to a value the user never chose. Reasoning effort and choice count
+    /// have no first-class <see cref="ChatOptions"/> member, so they go through
+    /// <see cref="ChatOptions.AdditionalProperties"/> under their OpenAI wire names; a backend that
+    /// does not understand them answers with its own error, which is more useful than dropping the
+    /// value silently — the behaviour this whole method exists to fix.
+    /// </remarks>
+    private static void ApplySampling(ChatOptions chatOptions, ModelSamplingParameters? sampling)
+    {
+        if (sampling is null || sampling.IsEmpty)
+        {
+            return;
+        }
+
+        if (sampling.Temperature is { } temperature) chatOptions.Temperature = (float)temperature;
+        if (sampling.TopP is { } topP) chatOptions.TopP = (float)topP;
+        if (sampling.FrequencyPenalty is { } frequency) chatOptions.FrequencyPenalty = (float)frequency;
+        if (sampling.PresencePenalty is { } presence) chatOptions.PresencePenalty = (float)presence;
+        if (sampling.MaxOutputTokens is { } maxTokens) chatOptions.MaxOutputTokens = maxTokens;
+        if (sampling.Seed is { } seed) chatOptions.Seed = seed;
+        if (sampling.StopSequences is { Count: > 0 } stop) chatOptions.StopSequences = [.. stop];
+
+        if (!string.IsNullOrWhiteSpace(sampling.ReasoningEffort))
+        {
+            (chatOptions.AdditionalProperties ??= [])["reasoning_effort"] = sampling.ReasoningEffort;
+        }
+
+        if (sampling.ChoiceCount is { } choiceCount)
+        {
+            (chatOptions.AdditionalProperties ??= [])["n"] = choiceCount;
+        }
     }
 }

@@ -18,7 +18,10 @@ on. This is broader than just failed HTTP requests: errors that never surface as
 still recorded.
 
 Expected cancellations (client disconnect or shutdown, i.e. `OperationCanceledException` /
-`TaskCanceledException`) are **not** recorded — they are normal, not faults.
+`TaskCanceledException`) are **not** recorded — they are normal, not faults. The same holds for a
+client that hangs up in the middle of a streaming response (closing a browser tab that had live
+updates open, for example): the failed write is recognised as a disconnect and skipped, so normal
+navigation never fills this page with entries.
 
 Each entry stores:
 

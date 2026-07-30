@@ -27,6 +27,13 @@ internal sealed class ApiKeyAuthenticationHandler : AuthenticationHandler<Authen
     /// <summary>Claim type carrying each granted REST scope (<c>ApiRead</c>/<c>ApiWrite</c>).</summary>
     public const string ScopeClaimType = "proxytrace:api_scope";
 
+    /// <summary>
+    /// Key under which this handler stashes the key's own project id on <see cref="HttpContext.Items"/>,
+    /// so <c>ProjectAccessGuard</c> can confine the request to it. The analogue of
+    /// <c>McpProjectAccessor.ProjectIdItemKey</c>.
+    /// </summary>
+    internal const string ProjectIdItemKey = "Proxytrace.ApiKey.ProjectId";
+
     // Proxytrace-issued keys are the only bearer tokens this scheme handles. Anything else on the
     // Authorization header (an OIDC/local JWT) is left to the JwtBearer handler, and — crucially —
     // skipped before any database lookup, so this scheme adds no per-request cost to JWT traffic.
@@ -83,10 +90,17 @@ internal sealed class ApiKeyAuthenticationHandler : AuthenticationHandler<Authen
         Context.Items[CurrentUserAccessor.UserIdItemKey] = apiKey.Owner.Id;
         Context.Items[McpApiKeyAuthenticationHandler.ApiKeyIdItemKey] = apiKey.Id;
 
+        // Confine the request to the key's own project. This MUST be an HttpContext.Items entry that
+        // ProjectAccessGuard reads, not just a claim: the key acts as its owner, and because
+        // POST /api/providers/{id}/keys is admin-only the owner is typically an Admin — whose role
+        // alone would otherwise let the guard wave through every project in the instance. The
+        // manual's contract for the REST scopes is "read/write *the key's project*"
+        // (manual/admin/providers-and-api-keys.md), which is exactly what this pins.
+        Context.Items[ProjectIdItemKey] = apiKey.Project.Id;
+
         var claims = new List<Claim>
         {
             new(ClaimTypes.Name, apiKey.Name),
-            new("project", apiKey.Project.Id.ToString()),
         };
         // Emit a claim per granted REST scope; ApiKeyScopeHandler reads these to enforce read vs write.
         if (canRead) claims.Add(new Claim(ScopeClaimType, nameof(ApiKeyScopes.ApiRead)));

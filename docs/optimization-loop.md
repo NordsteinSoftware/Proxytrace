@@ -141,13 +141,24 @@ A/B-test card both go through it, so the surfaces can't drift). A wall-clock `Co
 measure would fold in the run's queue wait, the evaluator passes, and the parallel-execution overlap
 between cases, so it is deliberately **not** used for latency.
 
-When a group completes, `TestRunnerService` calls `IOptimizerService.EnqueueAsync(group)`
-(`TestRunnerService.cs:178`). `TestRunGroupsController` can also enqueue on demand.
+When a group completes, `TestRunnerService.ExecuteGroupAsync` calls
+`IOptimizerService.EnqueueAsync(group)`. `TestRunGroupsController` can also enqueue on demand.
 
 The same completion point also feeds **anomaly detection** (a parallel, independent pipeline — see
 below): `TestRunnerService` calls `IAnomalyDetectionService.EnqueueAsync(group)` on both the success
 and the failure path (a failed group is itself the most important anomaly). Anomaly detection raises
 user notifications rather than theories; it does not participate in the theory→proposal loop.
+
+**Each path only settles a group it actually settled.** Both the success path and the generic
+failure handler check `group.Status.IsTerminal()` under the per-group lock and do their terminal
+work — the `SetCompleted`/`SetFailed` transition, the `PublishGroupComplete` broadcast, *and* the
+enqueues — only when that check let them through. A group is settled exactly once, by exactly one
+of them, so it gets exactly **one** terminal SSE event and **one** anomaly-detection pass. This
+matters because the failure handler is reachable with the group already terminal: a racing
+`CancelAsync` may have settled it `Cancelled`, or the fault may have come from the *tail* of the
+success path (an enqueue) with the group already `Completed`. Broadcasting or enqueueing from there
+re-sent the terminal event carrying the state the group was already in rather than `Failed`, and
+re-ran detection, so one genuine anomaly was flagged and notified twice (#486).
 `Proxytrace.Application/Anomaly/` holds `IAnomalyDetectionService` (a hosted background queue, a
 structural copy of `OptimizerService`), the pure `IAnomalyDetector` rule engine (run failed /
 endpoint unavailable, pass-rate drop or latency increase vs a rolling baseline computed from
@@ -155,6 +166,15 @@ endpoint unavailable, pass-rate drop or latency increase vs a rolling baseline c
 baseline — shared with the kiosk demo seeder, which runs the same rule engine over its seeded
 incident groups), and `AnomalyDetectionConfiguration` (thresholds + baseline window). Detected
 anomalies are delivered through `INotificationService` → the dashboard notification channel.
+
+**Both enqueues are handed `CancellationToken.None`, deliberately.** The group's transition to a
+terminal state happens *inside* the per-group `IAsyncLock`, but the two `EnqueueAsync` calls run
+outside it. Passing the run's linked (cancellable) token there opened a silent hole: a `CancelAsync`
+landing in that window tripped the token, both enqueues were skipped, and `SettleCancelledAsync` then
+found an already-terminal group and no-op'd — so the group read `Completed` forever with neither
+optimization nor anomaly detection ever run, and no error surfaced (#476). Once a group is durably
+terminal the downstream jobs are **owed**, so they must not be cancellable by a racing cancel. Keep
+it that way on both the success and the failure path.
 
 **Sampling and the loop — cohort aggregation.** The per-run `TestRunStats` projection is left
 **unchanged** (one row per `TestRun`); the loop aggregates at read time so N samples never produce N
@@ -200,10 +220,12 @@ concurrent-validation quota (`TheorySubmissionOutcome`: `Accepted` / `Duplicate`
 is in-memory; on startup the service re-queues every theory still `Proposed`/`Validating`
 (`IOptimizationTheoryRepository.GetActiveAsync`) so a restart cannot strand the backlog.
 Recovery is skipped in kiosk mode: kiosk storage is in-memory and freshly demo-seeded on
-every boot, so the only backlog it could find is the seeded `Proposed`/`Validating` demo
-theories — re-queuing those would trigger real A/B runs (LLM spend) on every kiosk start
-when a live `Kiosk:Endpoint` is configured. Theories submitted during a kiosk session still
-validate normally via `SubmitAsync`:
+every boot, so the only backlog it could find is the seeded `Proposed` demo theories —
+re-queuing those would trigger real A/B runs (LLM spend) on every kiosk start when a live
+`Kiosk:Endpoint` is configured. The flip side is that a seeded theory never advances, so
+the demo seed leaves **no** theory in `Validating`: it would render as a permanently
+pulsing "A/B in flight" row. Theories submitted during a kiosk session still validate
+normally via `SubmitAsync`:
 
 | Validator | File |
 |---|---|
@@ -213,7 +235,7 @@ validate normally via `SubmitAsync`:
 | System-prompt theory | `.../Validation/SystemPromptTheoryValidator.cs` |
 | Tool-update theory | `.../Validation/ToolUpdateTheoryValidator.cs` |
 | Model-switch theory | `.../Validation/ModelSwitchTheoryValidator.cs` |
-| Two-proportion stats / p-value | `.../Validation/ProportionStats.cs` |
+| Paired significance test / p-value | `.../Validation/ProportionStats.cs` |
 | Evidence assembly | `Optimization/Internal/Evidence/OptimizerEvidenceBuilder.cs` |
 
 Validation runs the **baseline and candidate fresh, back to back**, against the same suite and
@@ -224,19 +246,84 @@ agent on the alternate endpoint. The candidate run is linked to the theory while
 via the `CandidateRunObserver` callback, and is flagged `isSystemTestRun` so it stays out of the
 user's run list.
 
-Each arm runs `OptimizationOptions.AbSampleCount` times (default **3**) and the samples are
-**pooled** — passes and totals summed across them — before the significance test. One sample per arm
-caps the evidence at the suite's case count, which on a small suite cannot resolve anything but an
-enormous effect: an 11-case suite improving 5/11 → 8/11 lands at p≈0.19 and is discarded, while the
-same effect pooled over three samples (15/33 → 24/33) is significant. The cost is proportional —
+Each arm runs `OptimizationOptions.AbSampleCount` times (default **3**). The cost is proportional —
 each extra sample is another full suite run per arm.
+
+#### The significance test is paired on the test case, not pooled over replays
+
+This is worth understanding before changing anything here, because the obvious implementation is
+wrong in a direction that always errs toward accepting.
+
+The samples used to be **pooled**: passes and totals summed across replays, then fed to a
+two-proportion test. That treats `cases × replays` as that many independent trials — but replays of
+the *same* test case are not independent of each other, and a case that deterministically passes
+contributes the identical outcome every time. The sample size was therefore inflated by the replay
+count and the standard error shrank by roughly √(replays), so **the gate got easier to pass the more
+samples an operator configured** — exactly backwards, and it meant raising `AbSampleCount` quietly
+bought acceptances rather than confidence.
+
+The unit of independence is the **test case**, and both arms run the same ones, so the analysis is
+**paired**: per case, take the difference in pass proportion across its replays and test whether the
+mean difference differs from zero — a paired t-test with n = the number of test cases. Replays still
+earn their keep (they sharpen each case's proportion, narrowing the spread of the differences) but
+they no longer manufacture sample size. Because n is routinely well under 30, the test uses the
+**t distribution**, not the normal approximation, whose thinner tails would understate the p-value
+and reintroduce the same over-acceptance.
+
+Two consequences to keep in mind:
+
+- **Pass rates are still reported pooled** ("of everything attempted, this fraction passed"), which
+  is what a reader expects to see. Only the *verdict* is paired. Do not feed `SumPassCounts` to a
+  significance test — use `PairedPassRates`.
+- **A p-value can be undefined**, and that is meaningful rather than missing: fewer than two paired
+  cases (one case cannot evidence a difference between arms), or no difference in any case. Where
+  every case moves the same way by exactly the same amount, the t statistic is unbounded and the
+  test falls back to the two-sided **sign test** — ten cases all flipping to passing gives p ≈ 0.002,
+  while two cases agreeing gives 0.5, which is the honest reading of a coin toss.
+
+An 11-case suite improving 5/11 → 8/11 is three cases flipping, and lands at p ≈ 0.08 — suggestive
+but unproven, at one sample per arm or at three. That is the correct answer; the previous pooled
+figure of 15/33 → 24/33 "reaching significance" was an artefact of counting the same evidence three
+times.
+
+#### Both queues survive a restart
+
+The optimizer queue and the theory queue are both **in-process channels**, so a restart discards
+whatever is still in them. Each therefore re-queues its backlog on start, from a durable marker:
+
+| Queue | Marker | Recovery |
+|-------|--------|----------|
+| Theory validation | `TheoryStatus` (Proposed/Validating) | `TheoryValidationService.RecoverInFlightTheoriesAsync` |
+| Optimizer (theory discovery) | `ITestRunGroup.OptimizationConsideredAt` | `OptimizerService.RecoverPendingGroupsAsync` |
+
+The group marker exists solely for this: without it there was nothing to distinguish "never
+considered" from "considered and produced no theories", so a deploy during a scheduled-run window
+silently dropped that night's optimization. It is set **after** the theories are submitted, so a
+crash mid-discovery leaves the group pending and retries it; and it is set **even when discovery
+found nothing**, or every barren group would be reprocessed on every boot forever.
+
+Two guards worth preserving when touching this:
+
+- **Recovery is capped** (50 groups per start, remainder deferred and logged), so a long-dormant
+  install does not enqueue its entire history — and its entire LLM cost — on the first start after
+  upgrading. For the same reason the migration that added the column **backfills existing rows as
+  already considered**: history is not a backlog.
+- **Recovery is skipped in kiosk mode**, exactly as the theory queue's is — kiosk storage is
+  in-memory and demo-seeded on every start, so its only "backlog" is the seed.
 
 The outcome (`TheoryValidationOutcome`) records baseline pass rate, projected pass rate, p-value,
 and candidate run id **regardless of result**:
-- **Won** — improvement is real (beyond sampling noise: the two-proportion p-value must be
+- **Won** — improvement is real (beyond sampling noise: the paired p-value must be
   ≤ `OptimizationOptions.SignificanceLevel` = 0.05) → spawns a **Draft `OptimizationProposal`**
   carrying the A/B comparison as evidence. Model-switch theories instead require *no* pass-rate
   regression plus a genuine cost or latency win — equal-quality-but-pricier is not a win.
+  **Their evidence gate is directional and deliberately different:** a model switch claims *parity*
+  on quality, so demanding a statistically significant *difference* would be backwards — it would
+  reject the ideal result (identical answers, materially cheaper) and admit only switches that
+  measurably changed the output. A null p-value there usually means the arms agreed on every case,
+  which is the best outcome available. What is gated instead is the *size of the paired comparison*
+  (at least two paired cases), so parity is never concluded from evidence that could not have shown
+  a difference at all.
 - **Rejected** — the A/B ran cleanly but showed no significant improvement → theory marked
   Invalidated; metrics still kept so the same idea isn't retried (dedup).
 - **Could not test** — the comparison never happened: a run was incomplete (unreachable/unauthorized
@@ -255,8 +342,8 @@ configuration — tests, tooling — still resolve it:
 
 | Setting | Default | Effect |
 |---------|---------|--------|
-| `AbSampleCount` | `3` | Runs per arm, pooled before the significance test (max `ITestRunGroup.MaxSampleCount`). |
-| `SignificanceLevel` | `0.05` | Maximum two-sided p-value that counts as a real difference. |
+| `AbSampleCount` | `3` | Runs per arm (max `ITestRunGroup.MaxSampleCount`). Sharpens each case's pass proportion; does **not** increase the significance test's sample size — see above. |
+| `SignificanceLevel` | `0.05` | Maximum two-sided paired p-value that counts as a real difference. |
 | `RequireStatisticalSignificance` | `true` | When false, beating the baseline is enough — the p-value is still computed and stored. |
 
 `OptimizationOptions.KioskShowcase` is the one place the gate is dropped: the demo runs one sample

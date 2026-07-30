@@ -99,6 +99,22 @@ JWT carries one extra claim, `offline` (a JSON boolean), and the server emits it
 
 ## Notes on specific gates
 
+- **`MaxTracesPerMonth`** is an **installation-wide** limit whose *enforcement* is **per project**
+  (`TraceQuotaGuard` / `ITraceQuotaGuard.IsOverQuota`). Enforcing it as one global switch — the
+  original shape — meant a single busy project could consume the whole month's allowance and
+  silently stop capture for every other project. The guard therefore also counts per project and
+  drops only for projects at or above their **equal share** of the cap; because the total is at or
+  over the cap, at least one project must be above its share, so the licence still binds while quiet
+  projects keep capturing.
+  Two further properties are load-bearing and should not be dropped in a refactor:
+  - **A drop is never silent.** The captured call is still acked to the client (failing the proxied
+    request would take the caller's application down over a billing limit), so the guard raises a
+    `NotificationKind.TraceQuotaReached` notification per project as it starts being throttled, and
+    logs at **Error** — the level the operator Error Log captures. Entering the state is reported
+    once per month, not on every recompute.
+  - **Polling tightens near the cap.** The recompute interval drops from 5 minutes to 30 seconds
+    once usage passes 90% of the limit; at the flat 5-minute interval a busy install could ingest a
+    long way past its cap before the flag flipped.
 - **`AgenticEvaluators`** is enforced at *use* time, not creation time. Default agentic evaluators
   are provisioned for every project regardless of tier (`IDefaultEvaluatorProvisioner`); the gate
   applies in two places: (1) `TestRunnerService` skips agentic evaluators during a run when the

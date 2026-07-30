@@ -1,8 +1,12 @@
+using System.Collections.Concurrent;
 using System.Reflection;
 using Autofac;
 using AwesomeAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
+using NSubstitute.ExceptionExtensions;
+using Proxytrace.Application.Anomaly;
+using Proxytrace.Application.Optimization;
 using Proxytrace.Application.Streaming;
 using Proxytrace.Application.TestRun;
 using Proxytrace.Domain;
@@ -138,6 +142,310 @@ public sealed class TestRunnerServiceTests : BaseTest<Module>
                 });
             return handler;
         });
+    }
+
+    // A model client that reports whether the token it was handed was ever signalled. It announces
+    // `entered` once the run is provably inside the model call, then waits on that token; the wait
+    // is bounded so a run whose cancellation never arrives finishes on its own instead of hanging
+    // the suite — which is exactly what the pre-fix code did with a live, un-cancelled token.
+    private static void RegisterCancellationObservingModelClient(
+        ContainerBuilder builder,
+        AssistantMessage response,
+        TaskCompletionSource entered,
+        TaskCompletionSource tokenSignalled)
+    {
+        builder.Register(ct =>
+        {
+            IModelClient handler = Substitute.For<IModelClient>();
+            var completionFactory = ct.Resolve<ICompletion.Create>();
+            handler.CompleteAsync(Arg.Any<Conversation>(), Arg.Any<ModelOptions>(), Arg.Any<IReadOnlyDictionary<string, string>?>(), Arg.Any<CancellationToken>())
+                .Returns(async call =>
+                {
+                    CancellationToken callToken = call.Arg<CancellationToken>();
+                    entered.TrySetResult();
+                    try
+                    {
+                        await Task.Delay(TimeSpan.FromSeconds(10), callToken);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        // Recorded before the exception escapes, so a caller that has observed the
+                        // run unwind has necessarily observed this too — no polling, no timing.
+                        tokenSignalled.TrySetResult();
+                        throw;
+                    }
+
+                    return completionFactory(response, null, TimeSpan.FromMilliseconds(1000));
+                });
+            return handler;
+        });
+    }
+
+    [TestMethod]
+    public async Task CancelAsync_WhileGroupIsRunning_SignalsTheInFlightModelCallsToken()
+    {
+        // Regression: ExecuteGroupAsync registers the group's CancellationTokenSource under the
+        // *group* id, but CancelAsync looked it up under each *run* id — the lookup never matched,
+        // so cancelling a group only flipped the database rows while the parallel loop kept issuing
+        // real, billed model calls through to completion.
+        var expectedOutput = new AssistantMessage([Content.FromText(MatchingText)], []);
+        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var tokenSignalled = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var services = GetServices(config =>
+            RegisterCancellationObservingModelClient(config, expectedOutput, entered, tokenSignalled));
+
+        var suite = await BuildSuiteAsync(services, expectedOutput, CancellationToken);
+        var endpoint = (await CreateEndpoints(services, 1))[0];
+        var runner = services.GetRequiredService<ITestRunnerService>();
+
+        ITestRunGroup? created = null;
+        var runTask = runner.RunInForegroundAsync(
+            suite,
+            [endpoint],
+            isSystemTestRun: true,
+            onGroupCreated: (g, _) => { created = g; return Task.CompletedTask; },
+            cancellationToken: CancellationToken);
+
+        // Deterministic mid-run point: the model call has been entered and is now waiting on its
+        // token, so the cancellation below always lands while the run is genuinely in flight.
+        await entered.Task;
+        if (created is not { } group)
+            throw new InvalidOperationException("onGroupCreated must run before the model call is reached");
+
+        await runner.CancelAsync(group, CancellationToken);
+
+        await FluentActions.Invoking(() => runTask).Should().ThrowAsync<OperationCanceledException>();
+        tokenSignalled.Task.IsCompletedSuccessfully.Should()
+            .BeTrue("cancelling the group must reach the token the in-flight model call is running on");
+    }
+
+    [TestMethod]
+    public async Task CancelAsync_WhileGroupIsRunning_SettlesGroupCancelledWithoutASpuriousCompletion()
+    {
+        // The post-run SetCompleted used to be unguarded: a group already driven terminal by
+        // CancelAsync was pushed into an invalid transition, the InvalidOperationException landed in
+        // the generic handler and was logged as "Test run group failed", and a completion event was
+        // broadcast for a group the user had cancelled.
+        var expectedOutput = new AssistantMessage([Content.FromText(MatchingText)], []);
+        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var tokenSignalled = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        var broadcaster = Substitute.For<ITestResultBroadcaster>();
+        var groupEvents = new ConcurrentQueue<GroupRunCompleteEvent>();
+        broadcaster.When(b => b.PublishGroupComplete(Arg.Any<GroupRunCompleteEvent>()))
+            .Do(ci =>
+            {
+                var groupEvent = ci.Arg<GroupRunCompleteEvent>();
+                ArgumentNullException.ThrowIfNull(groupEvent);
+                groupEvents.Enqueue(groupEvent);
+            });
+
+        var services = GetServices(config =>
+        {
+            RegisterCancellationObservingModelClient(config, expectedOutput, entered, tokenSignalled);
+            config.RegisterInstance(broadcaster).As<ITestResultBroadcaster>();
+        });
+
+        var suite = await BuildSuiteAsync(services, expectedOutput, CancellationToken);
+        var endpoint = (await CreateEndpoints(services, 1))[0];
+        var runner = services.GetRequiredService<ITestRunnerService>();
+
+        ITestRunGroup? created = null;
+        var runTask = runner.RunInForegroundAsync(
+            suite,
+            [endpoint],
+            isSystemTestRun: true,
+            onGroupCreated: (g, _) => { created = g; return Task.CompletedTask; },
+            cancellationToken: CancellationToken);
+
+        await entered.Task;
+        if (created is not { } group)
+            throw new InvalidOperationException("onGroupCreated must run before the model call is reached");
+
+        await runner.CancelAsync(group, CancellationToken);
+        await FluentActions.Invoking(() => runTask).Should().ThrowAsync<OperationCanceledException>();
+
+        var groups = services.GetRequiredService<ITestRunGroupRepository>();
+        var final = await groups.GetAsync(group.Id, CancellationToken);
+        final.Status.Should().Be(TestRunStatus.Cancelled);
+
+        // Exactly one terminal event, carrying Cancelled: no completion broadcast for a group the
+        // user cancelled, and no duplicate from the execution unwinding alongside the canceller.
+        groupEvents.Should().ContainSingle()
+            .Which.GroupStatus.Should().Be(TestRunStatus.Cancelled);
+    }
+
+    [TestMethod]
+    public async Task RunInForeground_WhenCancelLandsAfterTheGroupCompleted_StillEnqueuesOptimizerAndAnomalyDetection()
+    {
+        // Regression for #476. The group transitions to Completed *inside* the per-group lock, but
+        // the optimizer / anomaly-detection enqueues ran outside it on the linked (cancellable)
+        // token. A cancel landing in that window tripped the token, both enqueues were skipped,
+        // SettleCancelledAsync then saw an already-terminal group and no-op'd — leaving the group
+        // reporting Completed forever with no optimization and no anomaly detection ever run, and
+        // nothing surfaced to say so.
+        //
+        // The window is opened deterministically from PublishGroupComplete, which the runner calls
+        // inside the lock immediately after SetCompleted. Cancelling the *caller's* token trips the
+        // very same linked token CancelAsync would, and is the only safe way to do it from here:
+        // CancelAsync re-enters the group lock this callback runs under.
+        var expectedOutput = new AssistantMessage([Content.FromText(MatchingText)], []);
+
+        using var cts = new CancellationTokenSource();
+
+        var broadcaster = Substitute.For<ITestResultBroadcaster>();
+        broadcaster.When(b => b.PublishGroupComplete(Arg.Any<GroupRunCompleteEvent>()))
+            .Do(ci =>
+            {
+                var groupEvent = ci.Arg<GroupRunCompleteEvent>();
+                ArgumentNullException.ThrowIfNull(groupEvent);
+                if (groupEvent.GroupStatus == TestRunStatus.Completed)
+                    cts.Cancel();
+            });
+
+        // Both fakes honour the token they are handed, exactly as the real implementations do —
+        // each enqueue is a ChannelWriter.WriteAsync, which faults immediately on an already
+        // cancelled token rather than queueing the group.
+        CancellationToken optimizerToken = default;
+        CancellationToken anomalyToken = default;
+
+        var optimizer = Substitute.For<IOptimizerService>();
+        optimizer.EnqueueAsync(Arg.Any<ITestRunGroup>(), Arg.Any<CancellationToken>())
+            .Returns(call =>
+            {
+                optimizerToken = call.Arg<CancellationToken>();
+                optimizerToken.ThrowIfCancellationRequested();
+                return Task.CompletedTask;
+            });
+
+        var anomalyDetection = Substitute.For<IAnomalyDetectionService>();
+        anomalyDetection.EnqueueAsync(Arg.Any<ITestRunGroup>(), Arg.Any<CancellationToken>())
+            .Returns(call =>
+            {
+                anomalyToken = call.Arg<CancellationToken>();
+                anomalyToken.ThrowIfCancellationRequested();
+                return Task.CompletedTask;
+            });
+
+        var services = GetServices(config =>
+        {
+            RegisterFakeModelClient(config, expectedOutput);
+            config.RegisterInstance(broadcaster).As<ITestResultBroadcaster>();
+            config.RegisterInstance(optimizer).As<IOptimizerService>();
+            config.RegisterInstance(anomalyDetection).As<IAnomalyDetectionService>();
+        });
+
+        var suite = await BuildSuiteAsync(services, expectedOutput, CancellationToken);
+        var endpoint = (await CreateEndpoints(services, 1))[0];
+        var runner = services.GetRequiredService<ITestRunnerService>();
+
+        // isSystemTestRun stays false — internal A/B runs deliberately skip both pipelines.
+        var group = await runner.RunInForegroundAsync(suite, [endpoint], cancellationToken: cts.Token);
+
+        cts.IsCancellationRequested.Should()
+            .BeTrue("the test must have cancelled inside the completion window for this to prove anything");
+        group.Status.Should().Be(TestRunStatus.Completed);
+
+        await optimizer.Received(1).EnqueueAsync(Arg.Any<ITestRunGroup>(), Arg.Any<CancellationToken>());
+        await anomalyDetection.Received(1).EnqueueAsync(Arg.Any<ITestRunGroup>(), Arg.Any<CancellationToken>());
+        optimizerToken.IsCancellationRequested.Should()
+            .BeFalse("a durably Completed group owes its downstream jobs — a racing cancel must not skip them");
+        anomalyToken.IsCancellationRequested.Should().BeFalse();
+
+        var stored = await services.GetRequiredService<ITestRunGroupRepository>()
+            .GetAsync(group.Id, CancellationToken);
+        stored.Status.Should().Be(TestRunStatus.Completed);
+    }
+
+    [TestMethod]
+    public async Task RunInForeground_WhenAnEnqueueFaultsAfterTheGroupCompleted_DoesNotRepeatTheTerminalEventOrDetection()
+    {
+        // Regression for #486. The generic catch assumed it had been reached from a *non-terminal*
+        // group: PublishGroupComplete sat outside the `if (!group.Status.IsTerminal())` guard and the
+        // anomaly enqueue followed unconditionally. But the tail of the try runs after the group is
+        // already durably Completed, so a fault raised there re-published the terminal event —
+        // carrying Completed a second time, not Failed — and detected the same group twice, which
+        // flags and notifies a genuine anomaly twice.
+        //
+        // The fault is injected into the anomaly enqueue itself because it is the *last* statement of
+        // the success path, so both duplicates are observable from one run: the success-path enqueue
+        // has already happened, making a second one distinguishable from the first. Each enqueue now
+        // also absorbs its own failure (see the sibling test below), so this pins the outcome from
+        // both directions: whichever layer catches the fault, the group settles exactly once.
+        var expectedOutput = new AssistantMessage([Content.FromText(MatchingText)], []);
+
+        var broadcaster = Substitute.For<ITestResultBroadcaster>();
+        var groupEvents = new ConcurrentQueue<GroupRunCompleteEvent>();
+        broadcaster.When(b => b.PublishGroupComplete(Arg.Any<GroupRunCompleteEvent>()))
+            .Do(ci =>
+            {
+                var groupEvent = ci.Arg<GroupRunCompleteEvent>();
+                ArgumentNullException.ThrowIfNull(groupEvent);
+                groupEvents.Enqueue(groupEvent);
+            });
+
+        // The real enqueue is a ChannelWriter.WriteAsync; a completed or disposed writer faults it.
+        var anomalyDetection = Substitute.For<IAnomalyDetectionService>();
+        anomalyDetection.EnqueueAsync(Arg.Any<ITestRunGroup>(), Arg.Any<CancellationToken>())
+            .Throws(new InvalidOperationException("the anomaly queue is gone"));
+
+        var services = GetServices(config =>
+        {
+            RegisterFakeModelClient(config, expectedOutput);
+            config.RegisterInstance(broadcaster).As<ITestResultBroadcaster>();
+            config.RegisterInstance(anomalyDetection).As<IAnomalyDetectionService>();
+        });
+
+        var suite = await BuildSuiteAsync(services, expectedOutput, CancellationToken);
+        var endpoint = (await CreateEndpoints(services, 1))[0];
+        var runner = services.GetRequiredService<ITestRunnerService>();
+
+        // isSystemTestRun stays false, so the enqueues — and with them the fault — actually run.
+        var group = await runner.RunInForegroundAsync(suite, [endpoint], cancellationToken: CancellationToken);
+
+        // A fault landing after the group settled cannot un-settle it, and the failure path must not
+        // pretend otherwise: no second terminal event, and no second pass of anomaly detection.
+        group.Status.Should().Be(TestRunStatus.Completed);
+        var stored = await services.GetRequiredService<ITestRunGroupRepository>()
+            .GetAsync(group.Id, CancellationToken);
+        stored.Status.Should().Be(TestRunStatus.Completed);
+
+        groupEvents.Should().ContainSingle("a group has exactly one terminal event")
+            .Which.GroupStatus.Should().Be(TestRunStatus.Completed);
+        await anomalyDetection.Received(1).EnqueueAsync(Arg.Any<ITestRunGroup>(), Arg.Any<CancellationToken>());
+    }
+
+    [TestMethod]
+    public async Task RunInForeground_WhenTheOptimizerEnqueueFaults_StillEnqueuesAnomalyDetection()
+    {
+        // The two downstream jobs a completed group owes are unrelated, so failing to hand it to one
+        // must not cost it the other. They used to be bare sequential awaits: an optimizer fault
+        // skipped the anomaly enqueue and fell into the generic catch, which happened to enqueue it
+        // there instead. That accidental compensation is gone now that the catch only settles a group
+        // it actually transitioned (#486), so each enqueue owns its own failure.
+        var expectedOutput = new AssistantMessage([Content.FromText(MatchingText)], []);
+
+        var optimizer = Substitute.For<IOptimizerService>();
+        optimizer.EnqueueAsync(Arg.Any<ITestRunGroup>(), Arg.Any<CancellationToken>())
+            .Throws(new InvalidOperationException("the optimizer queue is gone"));
+
+        var anomalyDetection = Substitute.For<IAnomalyDetectionService>();
+
+        var services = GetServices(config =>
+        {
+            RegisterFakeModelClient(config, expectedOutput);
+            config.RegisterInstance(optimizer).As<IOptimizerService>();
+            config.RegisterInstance(anomalyDetection).As<IAnomalyDetectionService>();
+        });
+
+        var suite = await BuildSuiteAsync(services, expectedOutput, CancellationToken);
+        var endpoint = (await CreateEndpoints(services, 1))[0];
+        var runner = services.GetRequiredService<ITestRunnerService>();
+
+        var group = await runner.RunInForegroundAsync(suite, [endpoint], cancellationToken: CancellationToken);
+
+        group.Status.Should().Be(TestRunStatus.Completed);
+        await anomalyDetection.Received(1).EnqueueAsync(Arg.Any<ITestRunGroup>(), Arg.Any<CancellationToken>());
     }
 
     [TestMethod]
@@ -684,6 +992,97 @@ public sealed class TestRunnerServiceTests : BaseTest<Module>
 
         storedRun.Status.Should().Be(TestRunStatus.Completed);
         storedRun.TestResults.Should().HaveCount(2);
+    }
+
+    [TestMethod]
+    public async Task Run_AcrossNestedParallelLoops_NeverExceedsTheConfiguredDegreeOfModelCalls()
+    {
+        // The runner nests three parallel loops — runs, then that run's test cases, then that
+        // case's evaluators — and each was configured with the same MaxDegreeOfParallelism, so the
+        // setting multiplied instead of capping: at the default of 2 the loops permitted 2×2×2 = 8
+        // concurrent upstream calls. With several endpoints and several cases, the observed peak
+        // must stay within the configured value.
+        const int degree = 2;
+        var expectedOutput = new AssistantMessage([Content.FromText(MatchingText)], []);
+
+        var inFlight = 0;
+        var peak = 0;
+
+        var services = GetServices(config =>
+        {
+            config.RegisterInstance(new TestRunnerConfiguration { MaxDegreeOfParallelism = degree })
+                .As<TestRunnerConfiguration>();
+
+            config.Register(ct =>
+            {
+                IModelClient handler = Substitute.For<IModelClient>();
+                var completionFactory = ct.Resolve<ICompletion.Create>();
+                handler.CompleteAsync(Arg.Any<Conversation>(), Arg.Any<ModelOptions>(), Arg.Any<IReadOnlyDictionary<string, string>?>(), Arg.Any<CancellationToken>())
+                    .Returns(async _ =>
+                    {
+                        int current = Interlocked.Increment(ref inFlight);
+                        // Record the high-water mark without locking: retry until our observed
+                        // value is no longer higher than what is stored.
+                        int observed = Volatile.Read(ref peak);
+                        while (current > observed)
+                        {
+                            int won = Interlocked.CompareExchange(ref peak, current, observed);
+                            if (won == observed) break;
+                            observed = won;
+                        }
+
+                        // Hold the slot long enough for every other loop iteration to pile up, so a
+                        // missing cap shows as a peak above `degree` rather than as lucky timing.
+                        await Task.Delay(TimeSpan.FromMilliseconds(50), CancellationToken);
+                        Interlocked.Decrement(ref inFlight);
+                        return completionFactory(expectedOutput, null, TimeSpan.FromMilliseconds(1));
+                    });
+                return handler;
+            });
+        });
+
+        var suite = await BuildSuiteWithCasesAsync(services, expectedOutput, caseCount: 3, CancellationToken);
+        var endpoints = await CreateEndpoints(services, 3);
+        var runner = services.GetRequiredService<ITestRunnerService>();
+
+        await runner.RunInForegroundAsync(suite, endpoints, isSystemTestRun: true, cancellationToken: CancellationToken);
+
+        Volatile.Read(ref peak).Should().BeLessThanOrEqualTo(degree,
+            "the configured degree is an absolute cap on concurrent model calls, not a per-loop one");
+        Volatile.Read(ref peak).Should().BeGreaterThan(0, "the run must actually have called the model");
+    }
+
+    /// Builds a suite with <paramref name="caseCount"/> test cases, so a run exercises the
+    /// test-case loop nested inside the per-run loop.
+    private static async Task<ITestSuite> BuildSuiteWithCasesAsync(
+        IServiceProvider services,
+        AssistantMessage expectedOutput,
+        int caseCount,
+        CancellationToken ct)
+    {
+        var agentGenerator = services.GetRequiredService<IDomainEntityGenerator<IAgent>>();
+        var evaluatorGenerator = services.GetRequiredService<IDomainEntityGenerator<IExactMatchEvaluator>>();
+        var createTestCase = services.GetRequiredService<ITestCase.CreateNew>();
+        var testCaseRepo = services.GetRequiredService<IRepository<ITestCase>>();
+        var createTestSuite = services.GetRequiredService<ITestSuite.CreateNew>();
+        var testSuiteRepo = services.GetRequiredService<IRepository<ITestSuite>>();
+
+        var agent = await agentGenerator.GetOrCreateAsync(ct);
+        var evaluator = await evaluatorGenerator.CreateAsync(ct);
+
+        var testCases = new List<ITestCase>(caseCount);
+        for (var i = 0; i < caseCount; i++)
+        {
+            var input = Conversation.Create()
+                .With(new UserMessage([Content.FromText($"Question {i}")]));
+            var testCase = createTestCase(input, expectedOutput, sourceAgentCallId: null);
+            await testCaseRepo.AddAsync(testCase, ct);
+            testCases.Add(testCase);
+        }
+
+        var suite = createTestSuite("Parallelism Suite", agent, [evaluator], testCases);
+        await testSuiteRepo.AddAsync(suite, ct);
+        return suite;
     }
 
     [TestMethod]

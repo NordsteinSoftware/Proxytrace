@@ -108,6 +108,28 @@ public sealed class TestRunScheduleValidationTests : DomainTest<Module>
     }
 
     [TestMethod]
+    public async Task CreateNew_WithNonUtcOffsetPastAnchor_FirstRunIsStrictlyInTheFuture()
+    {
+        IServiceProvider services = GetServicesWithRepository();
+        var factory = services.GetRequiredService<ITestRunSchedule.CreateNew>();
+        var suite = await GetOrCreate<ITestSuite>(services);
+        var endpoint = await GetOrCreate<IModelEndpoint>(services);
+
+        // Same instant, expressed at +02:00: DateTimeOffset.Ticks is the wall-clock reading, so it
+        // reads two hours higher than UtcTicks. Offset-naive alignment therefore loses a whole step
+        // and puts the first fire an hour in the PAST — which the scheduler then re-derives on every
+        // 60s poll, firing (and LLM-billing) the suite once a minute.
+        var day = TimeSpan.FromDays(1);
+        var anchor = DateTimeOffset.UtcNow.AddDays(-30).AddHours(-1).ToOffset(TimeSpan.FromHours(2));
+
+        var schedule = factory("Nightly", suite, [endpoint], day, true, anchor);
+
+        schedule.NextRunAt.Should().BeAfter(schedule.CreatedAt);
+        schedule.NextRunAt.Should().BeAfter(DateTimeOffset.UtcNow);
+        ((schedule.NextRunAt - anchor).Ticks % day.Ticks).Should().Be(0);
+    }
+
+    [TestMethod]
     public async Task CreateNew_IdsAreUniquePerInstance()
     {
         IServiceProvider services = GetServicesWithRepository();
@@ -248,6 +270,29 @@ public sealed class TestRunScheduleValidationTests : DomainTest<Module>
     }
 
     [TestMethod]
+    public async Task RecordFired_WithNonUtcOffsetAnchor_AdvancesNextRunStrictlyAfterNow()
+    {
+        IServiceProvider services = GetServicesWithRepository();
+        var factory = services.GetRequiredService<ITestRunSchedule.CreateNew>();
+        var repo = services.GetRequiredService<IRepository<ITestRunSchedule>>();
+        var suite = await GetOrCreate<ITestSuite>(services);
+        var endpoint = await GetOrCreate<IModelEndpoint>(services);
+
+        // Daily schedule anchored at 09:00+02:00 (= 07:00Z), fired five seconds past 07:00Z. Naive
+        // tick subtraction understates the gap by the 2h offset, drops a step, and yields 07:00Z —
+        // five seconds in the past — so the schedule stays perpetually due.
+        var anchor = new DateTimeOffset(2026, 7, 1, 9, 0, 0, TimeSpan.FromHours(2));
+        var now = new DateTimeOffset(2026, 7, 27, 7, 0, 5, TimeSpan.Zero);
+        var schedule = await repo.AddAsync(
+            factory("Nightly", suite, [endpoint], TimeSpan.FromDays(1), true, anchor), CancellationToken);
+
+        var fired = await schedule.RecordFired(now, CancellationToken);
+
+        fired.NextRunAt.Should().BeAfter(now);
+        fired.NextRunAt.Should().Be(new DateTimeOffset(2026, 7, 28, 9, 0, 0, TimeSpan.FromHours(2)));
+    }
+
+    [TestMethod]
     public async Task RecordFired_PersistsLastRunAndNextRun()
     {
         IServiceProvider services = GetServicesWithRepository();
@@ -322,6 +367,24 @@ public sealed class TestRunScheduleValidationTests : DomainTest<Module>
 
         updated.AnchorAt.Should().Be(newAnchor);
         updated.NextRunAt.Should().Be(newAnchor);
+    }
+
+    [TestMethod]
+    public async Task Update_WithNonUtcOffsetPastAnchor_RecomputesNextRunStrictlyAfterNow()
+    {
+        IServiceProvider services = GetServicesWithRepository();
+        var endpoint = await GetOrCreate<IModelEndpoint>(services);
+        var schedule = await CreateSchedule(services, interval: TimeSpan.FromHours(1));
+
+        // Re-anchor onto a +02:00 wall-clock time whose instant is a whole number of days before
+        // `now`; the third AlignForward call site must be offset-aware too.
+        var anchor = new DateTimeOffset(2026, 7, 1, 9, 0, 0, TimeSpan.FromHours(2));
+        var now = new DateTimeOffset(2026, 7, 27, 7, 0, 5, TimeSpan.Zero);
+
+        var updated = await schedule.Update(
+            "Nightly", [endpoint], TimeSpan.FromDays(1), true, anchor, now, CancellationToken);
+
+        updated.NextRunAt.Should().BeAfter(now);
     }
 
     [TestMethod]

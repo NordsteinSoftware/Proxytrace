@@ -1,7 +1,11 @@
 using AwesomeAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Proxytrace.Domain;
+using Proxytrace.Domain.Agent;
+using Proxytrace.Domain.Inference;
 using Proxytrace.Domain.ModelEndpoint;
+using Proxytrace.Domain.Project;
+using Proxytrace.Domain.Prompt;
 using Proxytrace.Domain.TestResult;
 using Proxytrace.Domain.TestRun;
 using Proxytrace.Domain.TestRunGroup;
@@ -119,6 +123,96 @@ public sealed class TestRunRepositoryTests : BaseTest<Module>
     /// Seeds one user (non-system) run and one system run under the same suite/agent, so a test can
     /// assert the system-run filter on either listing method.
     /// </summary>
+    [TestMethod]
+    public async Task GetByProjectsPaged_ReturnsOnlyRunsOfTheGivenProjects()
+    {
+        // #482: an unfiltered list from a caller who may read several projects is paged over the
+        // union of exactly those projects — applied in the query, not by filtering afterwards.
+        IServiceProvider services = GetServices();
+        var repo = services.GetRequiredService<ITestRunRepository>();
+        var first = await PersistRunInNewProject(services);
+        var second = await PersistRunInNewProject(services);
+        var outsider = await PersistRunInNewProject(services);
+
+        var page = await repo.GetByProjectsPagedAsync(
+            [first.ProjectId, second.ProjectId], page: 1, pageSize: 50, cancellationToken: CancellationToken);
+
+        page.Items.Select(r => r.Id).Should().BeEquivalentTo([first.Run.Id, second.Run.Id]);
+        page.Items.Select(r => r.Id).Should().NotContain(outsider.Run.Id);
+        page.Total.Should().Be(2);
+    }
+
+    [TestMethod]
+    public async Task GetByProjectsPaged_ByDefault_ExcludesRunsOfSystemGroups()
+    {
+        IServiceProvider services = GetServices();
+        var repo = services.GetRequiredService<ITestRunRepository>();
+        var (suite, userRun, _) = await PersistUserAndSystemRuns(services);
+
+        var page = await repo.GetByProjectsPagedAsync(
+            [suite.Agent.Project.Id], page: 1, pageSize: 50, cancellationToken: CancellationToken);
+
+        page.Items.Should().ContainSingle().Which.Id.Should().Be(userRun.Id);
+    }
+
+    [TestMethod]
+    public async Task GetByProjectsPaged_WithIncludeSystem_ReturnsRunsOfSystemGroups()
+    {
+        IServiceProvider services = GetServices();
+        var repo = services.GetRequiredService<ITestRunRepository>();
+        var (suite, userRun, systemRun) = await PersistUserAndSystemRuns(services);
+
+        var page = await repo.GetByProjectsPagedAsync(
+            [suite.Agent.Project.Id], page: 1, pageSize: 50, includeSystem: true, CancellationToken);
+
+        page.Items.Select(r => r.Id).Should().BeEquivalentTo([userRun.Id, systemRun.Id]);
+    }
+
+    [TestMethod]
+    public async Task GetByProjectsPaged_WithNoProjects_ReturnsEmptyPage()
+    {
+        IServiceProvider services = GetServices();
+        var repo = services.GetRequiredService<ITestRunRepository>();
+        await PersistRunInNewProject(services);
+
+        var page = await repo.GetByProjectsPagedAsync([], page: 1, pageSize: 50, cancellationToken: CancellationToken);
+
+        page.Items.Should().BeEmpty();
+        page.Total.Should().Be(0);
+    }
+
+    // A run whose whole chain (project → agent → suite → group → run) is freshly created, so each
+    // call yields a distinct project — the generators reuse one project and cannot express this.
+    private async Task<(Guid ProjectId, ITestRun Run)> PersistRunInNewProject(IServiceProvider services)
+    {
+        var endpoint = await services.GetRequiredService<IDomainEntityGenerator<IModelEndpoint>>()
+            .GetOrCreateAsync(CancellationToken);
+        var project = await services.GetRequiredService<IDomainEntityGenerator<IProject>>()
+            .CreateAsync(CancellationToken);
+
+        var agent = await services.GetRequiredService<IAgentRepository>().CreateWithInitialVersionAsync(
+            name: $"A-{Guid.NewGuid():N}",
+            systemPrompt: services.GetRequiredService<IPromptTemplate.Create>()("T", "You are a test agent."),
+            tools: [],
+            project: project,
+            endpoint: endpoint,
+            modelParameters: services.GetRequiredService<IModelParameters.Create>()(null, null, null, null, null),
+            isSystemAgent: false,
+            cancellationToken: CancellationToken);
+
+        var suite = await services.GetRequiredService<IRepository<ITestSuite>>().AddAsync(
+            services.GetRequiredService<ITestSuite.CreateNew>()("S", agent, [], []),
+            CancellationToken);
+        var group = await services.GetRequiredService<ITestRunGroupRepository>().AddAsync(
+            services.GetRequiredService<ITestRunGroup.CreateNew>()(suite, isSystemRun: false, null, sampleCount: 1),
+            CancellationToken);
+        var run = await services.GetRequiredService<ITestRunRepository>().AddAsync(
+            services.GetRequiredService<ITestRun.CreateNew>()(group, endpoint, sampleIndex: 0),
+            CancellationToken);
+
+        return (project.Id, run);
+    }
+
     private async Task<(ITestSuite Suite, ITestRun UserRun, ITestRun SystemRun)> PersistUserAndSystemRuns(
         IServiceProvider services)
     {

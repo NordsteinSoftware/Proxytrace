@@ -39,6 +39,12 @@ services:
       # E2e specs seed data and immediately assert it on the dashboard; the server-side dashboard
       # cache (default 10s) would serve a pre-seed payload and flake those assertions. Disable it.
       - Statistics__DashboardCacheTtlSeconds=0
+      # Every spec authenticates its own ProxytraceApiClient, so a run drives ~80 real logins in a
+      # few minutes — and they all arrive from one source address, which is precisely the partition
+      # the per-IP auth-login limiter counts. The whole suite therefore shares a single 30/min
+      # bucket and the tail of the run 429s. Lift the budget for the test stack only; the shipped
+      # default in appsettings.json is untouched. See AuthRateLimiterConfigurator.
+      - RateLimiting__Login__PermitLimit=100000
       # Throwaway Enterprise license signed (ES256, kid 2026-05) with the TEST private key.
       # This stack's images are built with the LICENSE_PUBLIC_KEY build-arg baking in the
       # matching test public key (see docs/licensing.md). Official release images embed the
@@ -113,6 +119,8 @@ services:
       - TestSupport__Enabled=true
       # Same as `api`: keep e2e dashboard assertions deterministic (no server-side cache).
       - Statistics__DashboardCacheTtlSeconds=0
+      # Same as `api`: the `licensing` project's logins all share one rate-limit partition.
+      - RateLimiting__Login__PermitLimit=100000
       # Share the SAME Data Protection key ring as `api` (mounts the same appdata volume below).
       # api-free reads the shared Postgres DB, so it must decrypt secrets (provider keys, protected
       # columns) the primary `api` encrypted — its own ephemeral key ring would throw

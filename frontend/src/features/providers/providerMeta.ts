@@ -17,10 +17,6 @@ export function kindColor(k: ModelProviderKind): string {
   return 'var(--text-muted)';
 }
 
-export function maskKey(k: string): string {
-  return k.length <= 8 ? '••••••••' : k.slice(0, 7) + '••••••••••••' + k.slice(-4);
-}
-
 const DEFAULT_ENDPOINT: Partial<Record<ModelProviderKind, string>> = {
   [ModelProviderKind.OpenAi]: 'https://api.openai.com/v1',
 };

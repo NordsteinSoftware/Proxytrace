@@ -82,6 +82,30 @@ public sealed class OpenAiProxyModelsTests
         controller.Response.StatusCode.Should().Be((int)HttpStatusCode.Unauthorized);
     }
 
+    // Regression: ServeAzureModelsAsync attached the provider key through the *validating* header
+    // APIs (HttpRequestHeaders.Add and the Authorization setter). Both throw FormatException on a key
+    // carrying a trailing newline or control character — the classic paste artefact — and that
+    // escaped the action as an unhandled 500 instead of the upstream status / 502 this path carefully
+    // produces. Every other header the proxy sets goes through TryAddWithoutValidation for exactly
+    // this reason.
+    [TestMethod]
+    public async Task Proxy_GetModels_AzureKeyWithTrailingNewline_DoesNotThrowUnhandled()
+    {
+        var handler = new AzureRoutingHandler(
+            deploymentsBody: """{"object":"list","data":[{"id":"gpt-4o-prod","model":"gpt-4o"}]}""",
+            modelsBody: """{"object":"list","data":[]}""");
+
+        var controller = BuildController(handler, Key(new Uri("https://myres.openai.azure.com/openai/v1"), "sk-upstream\n"));
+        controller.ControllerContext = BuildGetContext("Bearer valid");
+
+        await FluentActions
+            .Awaiting(() => controller.Proxy("models", project: null, CancellationToken.None))
+            .Should().NotThrowAsync("a malformed provider key must not escape the proxy as an unhandled 500");
+
+        controller.Response.StatusCode.Should().Be((int)HttpStatusCode.OK);
+        handler.DeploymentsRequested.Should().BeTrue("the deployments lookup must still be attempted");
+    }
+
     // ── helpers ────────────────────────────────────────────────────────────────
 
     private static OpenAiProxyController BuildController(HttpMessageHandler handler, ResolvedApiKey key)
@@ -122,12 +146,12 @@ public sealed class OpenAiProxyModelsTests
     private static ResolvedApiKey AzureKey() => Key(new Uri("https://myres.openai.azure.com/openai/v1"));
     private static ResolvedApiKey OpenAiKey() => Key(new Uri("https://api.openai.com/v1"));
 
-    private static ResolvedApiKey Key(Uri endpoint)
+    private static ResolvedApiKey Key(Uri endpoint, string apiKey = "sk-upstream")
     {
         var provider = Substitute.For<IModelProvider>();
         provider.Id.Returns(Guid.NewGuid());
         provider.Name.Returns("test-provider");
-        provider.ApiKey.Returns("sk-upstream");
+        provider.ApiKey.Returns(apiKey);
         provider.Endpoint.Returns(endpoint);
 
         var project = Substitute.For<IProject>();

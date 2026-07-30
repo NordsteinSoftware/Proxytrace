@@ -50,16 +50,21 @@ internal class ApplicationErrorRepository
 
         if (!string.IsNullOrWhiteSpace(search))
         {
-            var pattern = $"%{search.Trim()}%";
+            // Lower both sides and escape the user's wildcards — see LikePattern. A bare
+            // EF.Functions.Like over the raw column is case-sensitive on Postgres but
+            // case-insensitive on the in-memory test provider, so searching "TimeoutException"
+            // silently missed rows logged as "timeoutexception" in production only.
+            var pattern = LikePattern.Contains(search);
             query = query.Where(e =>
-                EF.Functions.Like(e.Message, pattern) ||
-                (e.StackTrace != null && EF.Functions.Like(e.StackTrace, pattern)));
+                EF.Functions.Like(e.Message.ToLower(), pattern, LikePattern.EscapeCharacter) ||
+                (e.StackTrace != null
+                 && EF.Functions.Like(e.StackTrace.ToLower(), pattern, LikePattern.EscapeCharacter)));
         }
 
         int total = await query.CountAsync(cancellationToken);
         var stored = await query
             .OrderByDescending(e => e.CreatedAt)
-            .Skip((page - 1) * pageSize)
+            .Skip(Paging.Offset(page, pageSize))
             .Take(pageSize)
             .ToListAsync(cancellationToken);
 

@@ -4,6 +4,7 @@ using Proxytrace.Domain;
 using Proxytrace.Domain.Events;
 using Proxytrace.Domain.Paging;
 using Proxytrace.Domain.TestRun;
+using Proxytrace.Storage.Internal.Entities.Agent;
 using Proxytrace.Storage.Internal.Entities.TestRunGroup;
 using Proxytrace.Storage.Internal.Entities.TestSuite;
 
@@ -68,7 +69,7 @@ internal class TestRunRepository : AbstractRepository<ITestRun, TestRunEntity>, 
         int total = await query.CountAsync(cancellationToken);
         var stored = await query
             .OrderByDescending(r => r.CreatedAt)
-            .Skip((page - 1) * pageSize)
+            .Skip(Paging.Offset(page, pageSize))
             .Take(pageSize)
             .ToListAsync(cancellationToken);
 
@@ -96,7 +97,44 @@ internal class TestRunRepository : AbstractRepository<ITestRun, TestRunEntity>, 
         int total = await query.CountAsync(cancellationToken);
         var stored = await query
             .OrderByDescending(r => r.CreatedAt)
-            .Skip((page - 1) * pageSize)
+            .Skip(Paging.Offset(page, pageSize))
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
+
+        return new PagedResult<ITestRun>(await Map(stored, cancellationToken), total, page, pageSize);
+    }
+
+    public async Task<PagedResult<ITestRun>> GetByProjectsPagedAsync(
+        IReadOnlyCollection<Guid> projectIds,
+        int page,
+        int pageSize,
+        bool includeSystem = false,
+        CancellationToken cancellationToken = default)
+    {
+        (page, pageSize) = Paging.Clamp(page, pageSize);
+        var context = contextFactory();
+        var query = context
+            .Set<TestRunEntity>()
+            .AsNoTracking()
+            .Join(context.Set<TestRunGroupEntity>(),
+                r => r.Group,
+                g => g.Id,
+                (r, g) => new { Run = r, Group = g })
+            .Join(context.Set<TestSuiteEntity>(),
+                x => x.Group.Suite,
+                s => s.Id,
+                (x, s) => new { x.Run, x.Group, Suite = s })
+            .Join(context.Set<AgentEntity>(),
+                x => x.Suite.Agent,
+                a => a.Id,
+                (x, a) => new { x.Run, x.Group, Agent = a })
+            .Where(x => projectIds.Contains(x.Agent.Project) && (includeSystem || !x.Group.IsSystemRun))
+            .Select(x => x.Run);
+
+        int total = await query.CountAsync(cancellationToken);
+        var stored = await query
+            .OrderByDescending(r => r.CreatedAt)
+            .Skip(Paging.Offset(page, pageSize))
             .Take(pageSize)
             .ToListAsync(cancellationToken);
 

@@ -38,7 +38,13 @@ internal sealed class IngestionExecutor : IIngestionExecutor
     {
         // Once the licensed monthly trace quota is reached, drop further captures rather than
         // persisting them. (The stream consumer still acks the dropped envelope to avoid redelivery.)
-        if (quotaGuard.IsCurrentMonthOverQuota)
+        //
+        // Asked PER PROJECT, not installation-wide: the cap is global, but applying it as one switch
+        // let a single busy project consume the month's allowance and silently stop capture for
+        // every other project. Only projects above their share of the cap are dropped. The guard
+        // raises a notification and logs at Error when a project starts being throttled, so this is
+        // no longer invisible to the operator.
+        if (quotaGuard.IsOverQuota(message.ProjectId))
         {
             logger.LogWarning("Monthly trace quota exceeded; dropping captured call for project {ProjectId}", message.ProjectId);
             return;

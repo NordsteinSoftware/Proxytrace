@@ -131,6 +131,43 @@ public sealed class DashboardStatisticsTests : BaseTest<Module>
     }
 
     [TestMethod]
+    public async Task GetSummaryAsync_WithSeveralProjects_ResolvesAgentsOfEveryScopedProject()
+    {
+        // #483: a caller who may read several projects and named none. The agent set behind the
+        // pass-rate totals must be the union of those projects' agents — not empty (the old
+        // single-project-only branch) and not every agent in the install.
+        var svc = Build(out var runStats, out var callStats, out var agents);
+        callStats.GetSummaryAsync(Arg.Any<StatisticsFilter>(), Arg.Any<CancellationToken>())
+            .Returns(new StatisticsSummary(0, 0, 0, 0, 0, 0));
+        runStats.GetPassTotalsAsync(Arg.Any<TestRunStats.Filter>(), Arg.Any<CancellationToken>())
+            .Returns(new TestRunPassTotals(0, 0));
+
+        var firstProject = Guid.NewGuid();
+        var secondProject = Guid.NewGuid();
+        IAgent first = AgentIn(firstProject);
+        IAgent second = AgentIn(secondProject);
+        IAgent outsider = AgentIn(Guid.NewGuid());
+        agents.GetAllAsync(Arg.Any<CancellationToken>()).Returns([first, second, outsider]);
+
+        await svc.GetSummaryAsync(
+            new StatisticsFilter(ProjectIds: [firstProject, secondProject]), CancellationToken);
+
+        await runStats.Received(1).GetPassTotalsAsync(
+            Arg.Is<TestRunStats.Filter>(f =>
+                f != null && f.AgentIds != null && f.AgentIds.Count == 2
+                && f.AgentIds.Contains(first.Id) && f.AgentIds.Contains(second.Id)),
+            Arg.Any<CancellationToken>());
+    }
+
+    private static IAgent AgentIn(Guid projectId)
+    {
+        var agent = Substitute.For<IAgent>();
+        agent.Id.Returns(Guid.NewGuid());
+        agent.Project.Id.Returns(projectId);
+        return agent;
+    }
+
+    [TestMethod]
     public async Task GetDashboardTrendsAsync_CapsSparklineToRecentCohorts()
     {
         var svc = Build(out var runStats, out var callStats, out _);

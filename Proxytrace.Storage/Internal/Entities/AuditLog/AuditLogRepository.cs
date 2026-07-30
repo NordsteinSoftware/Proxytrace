@@ -78,8 +78,10 @@ internal class AuditLogRepository
             // Case-insensitive infix match: lower-case both sides so it works identically on Postgres
             // (where SQL LIKE is case-sensitive — translates to lower(ActorEmail) LIKE …) and the
             // in-memory provider. A plain EF.Functions.Like would silently be case-sensitive in prod.
-            var pattern = $"%{actorSearch.Trim().ToLowerInvariant()}%";
-            query = query.Where(e => e.ActorEmail != null && EF.Functions.Like(e.ActorEmail.ToLower(), pattern));
+            // LikePattern also escapes % and _ so a search for them matches literally.
+            var pattern = LikePattern.Contains(actorSearch);
+            query = query.Where(e => e.ActorEmail != null
+                                     && EF.Functions.Like(e.ActorEmail.ToLower(), pattern, LikePattern.EscapeCharacter));
         }
 
         int total = await query.CountAsync(cancellationToken);
@@ -88,7 +90,7 @@ internal class AuditLogRepository
             // stable, total order across pages — without it a tied row can duplicate or vanish at a boundary.
             .OrderByDescending(e => e.CreatedAt)
             .ThenByDescending(e => e.Id)
-            .Skip((page - 1) * pageSize)
+            .Skip(Paging.Offset(page, pageSize))
             .Take(pageSize)
             .ToListAsync(cancellationToken);
 

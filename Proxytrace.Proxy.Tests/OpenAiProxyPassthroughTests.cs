@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
+using Proxytrace.Domain.ApiKey;
 using Proxytrace.Domain.Kiosk;
 using Proxytrace.Domain.ModelProvider;
 using Proxytrace.Domain.Project;
@@ -41,6 +42,60 @@ public sealed class OpenAiProxyPassthroughTests
         await controller.Passthrough("acme", "health", CancellationToken.None);
 
         controller.Response.StatusCode.Should().Be(StatusCodes.Status401Unauthorized);
+    }
+
+    [TestMethod]
+    public async Task Passthrough_KeyWithoutThePassthroughScope_IsForbiddenAndForwardsNothing()
+    {
+        // Pass-through needs its own scope, not merely the Ingestion scope that admitted the key to
+        // the proxy: it relays any method and any path to the provider ORIGIN with the organisation's
+        // real upstream credential attached, and none of it is detected, traced or audited. On a
+        // provider serving account-management routes at the same host, that is the provider account's
+        // reach, handed to a key issued only to capture traffic.
+        var capture = new CapturingHttpMessageHandler("""{"status":"ok"}""");
+        var controller = BuildController(
+            Substitute.For<IIngestionStream>(),
+            ResolverFor(ApiKey(new Uri("http://upstream.test/v1"), ApiKeyScopes.Ingestion)),
+            new SingleHandlerClientFactory(capture));
+        controller.ControllerContext = BuildContext("Bearer valid");
+
+        await controller.Passthrough("acme", "health", CancellationToken.None);
+
+        controller.Response.StatusCode.Should().Be(StatusCodes.Status403Forbidden);
+        capture.LastUri.Should().BeNull("the request must never reach the provider");
+    }
+
+    [TestMethod]
+    public async Task Passthrough_KeyWithThePassthroughScope_IsForwarded()
+    {
+        var capture = new CapturingHttpMessageHandler("""{"status":"ok"}""");
+        var controller = BuildController(
+            Substitute.For<IIngestionStream>(),
+            ResolverFor(ApiKey(new Uri("http://upstream.test/v1"), ApiKeyScopes.Ingestion | ApiKeyScopes.Passthrough)),
+            new SingleHandlerClientFactory(capture));
+        controller.ControllerContext = BuildContext("Bearer valid");
+
+        await controller.Passthrough("acme", "health", CancellationToken.None);
+
+        capture.LastUri.Should().Be(new Uri("http://upstream.test/health"));
+    }
+
+    [TestMethod]
+    public async Task Passthrough_AuthenticatedWithTheProvidersOwnKey_IsForwardedUngated()
+    {
+        // A caller holding the provider's own credential can already call the provider directly, so
+        // gating which of its paths they may reach through Proxytrace would protect nothing. That
+        // path resolves with no scopes at all, which is what null means here.
+        var capture = new CapturingHttpMessageHandler("""{"status":"ok"}""");
+        var controller = BuildController(
+            Substitute.For<IIngestionStream>(),
+            ResolverFor(ApiKey(new Uri("http://upstream.test/v1"), scopes: null)),
+            new SingleHandlerClientFactory(capture));
+        controller.ControllerContext = BuildContext("Bearer sk-upstream");
+
+        await controller.Passthrough("acme", "health", CancellationToken.None);
+
+        capture.LastUri.Should().Be(new Uri("http://upstream.test/health"));
     }
 
     [TestMethod]
@@ -304,6 +359,9 @@ public sealed class OpenAiProxyPassthroughTests
         resolver.ResolveAsync(Arg.Any<string>(), Arg.Any<string?>(), Arg.Any<CancellationToken>()).Returns(resolved);
         return resolver;
     }
+
+    private static ResolvedApiKey ApiKey(Uri endpoint, ApiKeyScopes? scopes)
+        => ApiKey(endpoint) with { Scopes = scopes };
 
     private static ResolvedApiKey ApiKey(Uri endpoint)
     {

@@ -91,13 +91,40 @@ public sealed class LicenseControllerTests : BaseTest<Module>
             LicenseSource.Stored);
 
         var services = GetServices();
-        var dto = ResolveController(services, StubLicense(snapshot)).Get();
+        var dto = ResolveController(services, StubLicense(snapshot), authenticatedAsAdmin: true).Get();
 
         dto.Tier.Should().Be("enterprise");
         dto.Status.Should().Be("active");
         dto.Source.Should().Be("stored");
         dto.CustomerEmail.Should().Be("customer@example.com");
         dto.Features.Should().Contain(nameof(LicenseFeature.OptimizationProposals));
+    }
+
+    [TestMethod]
+    public void Get_Anonymously_WithholdsTheCustomerEmail()
+    {
+        // The endpoint is deliberately anonymous (the setup wizard and sign-in screen need the tier
+        // before any user exists), so it must not disclose who the licence belongs to — otherwise a
+        // plain unauthenticated GET yields the purchaser's email address.
+        var definition = LicensePolicy.For(LicenseTier.Enterprise);
+        var snapshot = new LicenseSnapshot(
+            LicenseTier.Enterprise,
+            LicenseStatus.Active,
+            DateTimeOffset.UtcNow.AddDays(30),
+            null,
+            "customer@example.com",
+            "jti-1",
+            definition.Features,
+            definition.Limits,
+            LicenseSource.Stored);
+
+        var services = GetServices();
+        var dto = ResolveController(services, StubLicense(snapshot)).Get();
+
+        dto.CustomerEmail.Should().BeNull();
+        // Everything the anonymous callers actually need is still there.
+        dto.Tier.Should().Be("enterprise");
+        dto.Status.Should().Be("active");
     }
 
     [TestMethod]

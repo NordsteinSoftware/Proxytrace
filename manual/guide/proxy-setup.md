@@ -52,6 +52,26 @@ your browser's URL bar.
 - **Collisions.** If the same string is valid as both a Proxytrace key and an upstream
   provider key, the Proxytrace key wins.
 
+::: warning An upstream provider key is not scoped to a project
+This is the deliberate trade-off that makes the "same key, several projects" setup above work, and
+it is worth understanding before you rely on it.
+
+When the bearer is the **upstream provider's own key**, Proxytrace has no way to tell which project
+the call belongs to except the path segment — so whoever holds that key chooses it, by editing the
+URL. Two consequences:
+
+- **Attribution.** Traces can be recorded against any project, so per-project trace counts and costs
+  are only as trustworthy as the holders of that key.
+- **Blocking rules.** Detectors are configured per project, and the **chosen** project's rules are
+  the ones applied. Pointing the path at a project with no detectors therefore means the call is not
+  evaluated against any blocking rule.
+
+If either matters — you rely on detectors to block prompts, or on per-project attribution for
+chargeback — issue a **Proxytrace key per project** instead. A Proxytrace key carries its own
+project, so the path cannot override it: supply a mismatched segment and the request is rejected
+rather than re-attributed.
+:::
+
 ### The project segment
 
 The proxy base URL carries the project as the first path segment:
@@ -165,6 +185,29 @@ These pass-through calls are **not captured as traces** (only the `openai/v1` AP
 require a valid key for the project, exactly like a traced call. If the upstream answers with a
 redirect, Proxytrace relays the `3xx` (including its `Location`) back to your client verbatim
 rather than following it server-side — `Location` values are not rewritten to proxy URLs.
+
+::: warning Pass-through needs its own permission, and reaches the whole upstream host
+Forwarding is deliberately unrestricted in *path*: **any** method and **any** path under
+`/{project}/` is relayed to the provider's host with your real upstream key attached. That is what
+makes `/health` and other provider-specific routes work without configuration, but it also means the
+reach is the provider account's, not just its inference API — on a provider that serves account or
+organization-management routes at the same host, a key that can pass through can reach those too.
+Pass-through calls are **not evaluated by detectors, not traced, and not written to the audit log**,
+by design, since Proxytrace does not interpret their payloads.
+
+Because that reach differs in kind from capturing traffic, it is a **separate permission**:
+
+- A Proxytrace API key must carry the **Upstream pass-through** capability. A key with only
+  **Ingestion proxy** can capture LLM calls but gets `403 Forbidden` on any other path.
+- **Keys created before this permission existed keep it**, so an existing `/health` setup is
+  unaffected by upgrading. New keys must be granted it deliberately — choose it when creating the
+  key under **Settings → Providers**.
+- Calls authenticated with the **provider's own upstream key** are not restricted, since anyone
+  holding that key can already call the provider directly.
+
+Grant it only to clients that need it, issue keys per client so they can be revoked individually,
+and if your provider offers scoped upstream keys, configure the provider in Proxytrace with one.
+:::
 
 ::: tip Which upstream, which path
 The target is the **host** of the project's provider — the same provider your LLM calls resolve

@@ -68,12 +68,6 @@ public class AgentsController : ControllerBase
         this.accessGuard = accessGuard;
     }
 
-    private async Task<bool> CanListAsync(Guid? projectId, CancellationToken cancellationToken)
-    {
-        var accessible = await accessGuard.GetAccessibleProjectIdsAsync(cancellationToken);
-        return accessible is null || (projectId.HasValue && accessible.Contains(projectId.Value));
-    }
-
     [HttpGet]
     public async Task<PagedResult<AgentListItemDto>> GetAll(
         [FromQuery] Guid? projectId = null,
@@ -81,16 +75,17 @@ public class AgentsController : ControllerBase
         [FromQuery] int pageSize = 50,
         CancellationToken cancellationToken = default)
     {
-        if (!await CanListAsync(projectId, cancellationToken))
+        var scope = await accessGuard.ResolveListScopeAsync(projectId, cancellationToken);
+        if (scope is { Count: 0 })
             return new PagedResult<AgentListItemDto>([], 0, page, pageSize);
 
         // Archived (soft-deleted) agents are hidden from the listing — they keep resolving by id for
         // history, but must not appear here (mirrors EvaluatorsController, which lists via the
         // archive-filtered GetAllAsync/GetByProjectAsync). EnumerateAsync streams the full set.
         var all = repository.EnumerateAsync(cancellationToken).Where(a => !a.IsArchived);
-        var filtered = projectId.HasValue
-            ? all.Where(a => a.Project.Id == projectId.Value)
-            : all;
+        var filtered = scope is null
+            ? all
+            : all.Where(a => scope.Contains(a.Project.Id));
 
         var lastCallTimes = await agentCallRepository.GetLastCallTimesAsync(cancellationToken);
 
@@ -102,7 +97,7 @@ public class AgentsController : ControllerBase
 
         (page, pageSize) = Paging.Clamp(page, pageSize);
         var items = sorted
-            .Skip((page - 1) * pageSize)
+            .Skip(Paging.Offset(page, pageSize))
             .Take(pageSize)
             .Select(a => agentDtoMapper.ToListItemDto(a, lastCallTimes.TryGetValue(a.Id, out var t) ? t : null))
             .ToArray();
@@ -117,8 +112,8 @@ public class AgentsController : ControllerBase
             return NotFound();
         if (!await accessGuard.CanAccessProjectAsync(agent.Project.Id, cancellationToken))
             return NotFound();
-        var lastCallTimes = await agentCallRepository.GetLastCallTimesAsync(cancellationToken);
-        return agentDtoMapper.ToDto(agent, lastCallTimes.TryGetValue(agent.Id, out var t) ? t : null);
+        var lastCallTime = await agentCallRepository.GetLastCallTimeAsync(agent.Id, cancellationToken);
+        return agentDtoMapper.ToDto(agent, lastCallTime);
     }
 
     /// <summary>

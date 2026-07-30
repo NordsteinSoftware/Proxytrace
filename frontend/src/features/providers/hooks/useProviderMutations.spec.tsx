@@ -11,6 +11,7 @@ import { ProviderConnectionTestError } from '../../../lib/providerConnection';
 const mocks = vi.hoisted(() => ({
   testConnection: vi.fn(),
   update: vi.fn(),
+  getUpstreamKey: vi.fn(),
   toast: vi.fn(),
 }));
 
@@ -18,13 +19,13 @@ vi.mock('../../../api/setup', () => ({
   setupApi: { testConnection: mocks.testConnection },
 }));
 vi.mock('../../../api/providers', () => ({
-  providersApi: { update: mocks.update },
+  providersApi: { update: mocks.update, getUpstreamKey: mocks.getUpstreamKey },
 }));
 vi.mock('../../../hooks/useToast', () => ({
   default: () => ({ show: mocks.toast }),
 }));
 
-import { useRotateUpstreamKey } from './useProviderMutations';
+import { useRevealUpstreamKey, useRotateUpstreamKey } from './useProviderMutations';
 
 (globalThis as Record<string, unknown>).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -32,7 +33,7 @@ const provider: ProviderDto = {
   id: 'provider-1',
   name: 'OpenAI',
   endpoint: 'https://api.openai.com/v1',
-  upstreamApiKey: 'sk-old',
+  upstreamApiKeyPreview: 'sk-••••••••••••-old',
   kind: ModelProviderKind.OpenAi,
   createdAt: '2026-01-01T00:00:00Z',
   updatedAt: '2026-01-01T00:00:00Z',
@@ -43,10 +44,18 @@ let root: Root;
 let container: HTMLDivElement;
 let queryClient: QueryClient;
 
+let latestReveal: ReturnType<typeof useRevealUpstreamKey> | null = null;
+
 function Host() {
   const rotation = useRotateUpstreamKey(provider);
-  useEffect(() => { latest = rotation; });
+  const reveal = useRevealUpstreamKey(provider.id);
+  useEffect(() => { latest = rotation; latestReveal = reveal; });
   return null;
+}
+
+function reveal(): ReturnType<typeof useRevealUpstreamKey> {
+  if (latestReveal === null) throw new Error('Reveal hook has not rendered');
+  return latestReveal;
 }
 
 function rotation(): ReturnType<typeof useRotateUpstreamKey> {
@@ -58,7 +67,7 @@ beforeAll(() => i18n.loadAndActivate({ locale: 'en', messages: {} }));
 
 beforeEach(() => {
   vi.clearAllMocks();
-  mocks.update.mockResolvedValue({ ...provider, upstreamApiKey: 'sk-new' });
+  mocks.update.mockResolvedValue({ ...provider, upstreamApiKeyPreview: 'sk-••••••••••••-new' });
   latest = null;
   queryClient = new QueryClient({ defaultOptions: { mutations: { retry: false } } });
   container = document.createElement('div');
@@ -139,6 +148,30 @@ describe('useRotateUpstreamKey', () => {
     expect(result?.modelCount).toBe(2);
     expect(invalidate).toHaveBeenCalled();
     expect(mocks.toast).toHaveBeenCalledWith('Upstream API key updated.', 'success');
+  });
+
+  it('fetches the cleartext key only when reveal is invoked, never on render', async () => {
+    // The key used to arrive with the providers page itself. It must now cost an explicit,
+    // server-audited request — so simply rendering the hook must not ask for it.
+    expect(mocks.getUpstreamKey).not.toHaveBeenCalled();
+
+    mocks.getUpstreamKey.mockResolvedValue({ upstreamApiKey: 'sk-secret' });
+    let revealed: string | undefined;
+    await act(async () => {
+      revealed = await reveal().mutateAsync();
+    });
+
+    expect(mocks.getUpstreamKey).toHaveBeenCalledExactlyOnceWith(provider.id);
+    expect(revealed).toBe('sk-secret');
+  });
+
+  it('keeps the revealed key out of the query cache', async () => {
+    // A secret in the Query cache outlives the moment the user asked for it.
+    mocks.getUpstreamKey.mockResolvedValue({ upstreamApiKey: 'sk-secret' });
+    await act(async () => { await reveal().mutateAsync(); });
+
+    const cached = JSON.stringify(queryClient.getQueryCache().getAll().map(q => q.state.data));
+    expect(cached).not.toContain('sk-secret');
   });
 
   it('saves when verification succeeds with zero reported models', async () => {

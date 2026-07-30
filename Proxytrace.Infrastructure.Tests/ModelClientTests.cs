@@ -385,6 +385,88 @@ public sealed class ModelClientTests : BaseTest<Module>
     }
 
     [TestMethod]
+    public async Task CompleteAsync_WithSamplingParameters_SendsThemToTheProvider()
+    {
+        // The playground offers these controls and mapped them all the way to its request DTO — and
+        // then dropped them, because ModelOptions had nowhere to put them. Changing temperature did
+        // nothing at all, with no error and no indication.
+        ChatOptions? capturedOptions = null;
+
+        IChatClient chatClient = Substitute.For<IChatClient>();
+        chatClient.GetResponseAsync(
+                Arg.Any<IEnumerable<ChatMessage>>(),
+                Arg.Do<ChatOptions>(o => capturedOptions = o),
+                Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(TextResponse("done")));
+
+        var services = GetServices(config =>
+        {
+            RegisterEndpoint(config);
+            config.RegisterInstance(chatClient).As<IChatClient>();
+        });
+
+        var sampling = new ModelSamplingParameters(
+            Temperature: 0.25,
+            TopP: 0.9,
+            FrequencyPenalty: 0.5,
+            PresencePenalty: 0.75,
+            MaxOutputTokens: 512,
+            Seed: 42,
+            StopSequences: ["END"],
+            ReasoningEffort: "high",
+            ChoiceCount: 2);
+
+        var client = services.GetRequiredService<IModelClient>();
+        await client.CompleteAsync(
+            SimpleConversation(),
+            new ModelOptions("gpt-4o", [], sampling),
+            cancellationToken: CancellationToken);
+
+        capturedOptions.Should().NotBeNull();
+        capturedOptions?.Temperature.Should().BeApproximately(0.25f, 0.0001f);
+        capturedOptions?.TopP.Should().BeApproximately(0.9f, 0.0001f);
+        capturedOptions?.FrequencyPenalty.Should().BeApproximately(0.5f, 0.0001f);
+        capturedOptions?.PresencePenalty.Should().BeApproximately(0.75f, 0.0001f);
+        capturedOptions?.MaxOutputTokens.Should().Be(512);
+        capturedOptions?.Seed.Should().Be(42);
+        capturedOptions?.StopSequences.Should().ContainSingle().Which.Should().Be("END");
+        capturedOptions?.AdditionalProperties?["reasoning_effort"].Should().Be("high");
+        capturedOptions?.AdditionalProperties?["n"].Should().Be(2);
+    }
+
+    [TestMethod]
+    public async Task CompleteAsync_WithNoSamplingParameters_LeavesProviderDefaultsAlone()
+    {
+        // An untouched control must send nothing, not pin the provider to a value nobody chose.
+        ChatOptions? capturedOptions = null;
+
+        IChatClient chatClient = Substitute.For<IChatClient>();
+        chatClient.GetResponseAsync(
+                Arg.Any<IEnumerable<ChatMessage>>(),
+                Arg.Do<ChatOptions>(o => capturedOptions = o),
+                Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(TextResponse("done")));
+
+        var services = GetServices(config =>
+        {
+            RegisterEndpoint(config);
+            config.RegisterInstance(chatClient).As<IChatClient>();
+        });
+
+        var client = services.GetRequiredService<IModelClient>();
+        await client.CompleteAsync(
+            SimpleConversation(),
+            new ModelOptions("gpt-4o", []),
+            cancellationToken: CancellationToken);
+
+        capturedOptions.Should().NotBeNull();
+        capturedOptions?.Temperature.Should().BeNull();
+        capturedOptions?.MaxOutputTokens.Should().BeNull();
+        capturedOptions?.StopSequences.Should().BeNull();
+        capturedOptions?.AdditionalProperties.Should().BeNull();
+    }
+
+    [TestMethod]
     public async Task CompleteAsync_WhenOptionsHaveTools_PassesToolsToChatOptions()
     {
         var tool = new ToolSpecification("my_tool", "Does something useful", ToolArguments.None);

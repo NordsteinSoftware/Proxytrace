@@ -44,6 +44,19 @@ custom or self-hosted endpoint is shown). The model
 list is **pulled from the provider** — there is no manual "add model" control; use reload (or wait
 for the periodic refresh) to pick up newly deployed models.
 
+### Viewing an upstream API key
+
+The **Upstream API key** row shows the stored credential masked — a few leading and trailing
+characters, enough to tell two keys apart and to confirm a rotation took effect.
+
+Choosing **Reveal** (or **Copy**) fetches the key itself. Only administrators can do this, and
+**every reveal is recorded in the audit log** as *Provider Key Revealed*, naming the administrator
+and the provider. The key value itself is never written to the audit log.
+
+The key is fetched only at the moment you ask for it. It is not part of the providers page's data,
+so simply opening the page — or leaving it open — does not put any provider credential in front of
+the browser.
+
 ### Rotating an upstream API key
 
 To replace the credential Proxytrace uses when forwarding requests to a provider:
@@ -77,6 +90,13 @@ loads without a price (shown as `—`).
 Every stored price is normalised to **EUR per 1M tokens** and is refreshed from the catalogue on
 each reload.
 
+If either feed is unreachable — the catalogue **or** the exchange-rate feed — models still load, they
+simply load without prices. Proxytrace makes **one** attempt against the failing feed and then pauses
+for about half a minute before trying it again, instead of retrying once per discovered model. A
+reload during a feed outage therefore finishes promptly rather than appearing to hang; run it again
+once the feed is back to fill the prices in. A successfully fetched exchange rate is reused for the
+rest of the day, so a healthy day needs a single rate lookup.
+
 Operators can point the pricing feeds at different sources via the `Pricing` section of
 `appsettings` (see [Configuration](/admin/configuration)): `Pricing:LiteLlmFeedUrl` and
 `Pricing:FxApiUrl`.
@@ -105,6 +125,13 @@ Each key also carries explicit **capabilities** (least privilege), chosen when y
   can call the API directly with a scoped key instead of a long-lived user login.
 - **REST API write** — additionally create and change data over the REST API (`POST`/`PUT`/`PATCH`/
   `DELETE`). A REST key acts as its owner and, like an MCP key, can never reach admin-only endpoints.
+
+A REST key is confined to its own project, so list endpoints return that project's rows whether or
+not you pass an optional `projectId` — there is no need to repeat the project on every call, and a
+key can never widen its reach by omitting it. Endpoints without a project filter at all, such as
+`GET /api/test-runs`, are scoped the same way. The confinement holds for the projects
+themselves: `GET /api/projects` lists only the key's project, and reading any other project (or its
+members) answers `404`, regardless of what the key's owner could see when signed in.
 
 A key works only on the surfaces it was granted: an ingestion-only key cannot drive MCP or the REST API,
 an MCP-only key cannot proxy LLM traffic or drive REST, and a REST key cannot drive MCP. Keys issued

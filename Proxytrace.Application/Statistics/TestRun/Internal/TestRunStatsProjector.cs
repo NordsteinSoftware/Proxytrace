@@ -15,6 +15,19 @@ internal sealed class TestRunStatsProjector : AbstractStatsProjector<ITestRun, T
     {
     }
 
+    /// <summary>
+    /// Excludes internal system runs from the user-facing statistics.
+    /// </summary>
+    /// <remarks>
+    /// A/B validation runs are executed by the optimizer, not by a user. <c>IsSystemRun</c> already
+    /// hides them from the run list, so a user cannot see or inspect them — but their results were
+    /// still folded into the pass-rate figures and the anomaly baseline, so people saw pass rates
+    /// computed partly from runs that do not exist as far as the UI is concerned, moving for reasons
+    /// they could not investigate. Being deliberately adversarial (a candidate prompt under test),
+    /// those runs also skew the baseline that anomaly detection compares against.
+    /// </remarks>
+    protected override bool ShouldProject(ITestRun run) => !run.Group.IsSystemRun;
+
     protected override Task<TestRunStats> ComputeStatsAsync(ITestRun run, CancellationToken cancellationToken)
     {
         int testCases = run.Group.Suite.TestCases.Count;

@@ -25,7 +25,12 @@ hooks in `frontend/src/api/event-stream.ts`.
 
 `*` = **terminal** event. The client closes the `EventSource` on the terminal event and the run/group
 views are **pure-SSE (no polling)**; on terminal they invalidate the relevant TanStack queries to
-heal any dropped events. Do **not** reintroduce `refetchInterval` on these views.
+heal any dropped events. Do **not** reintroduce `refetchInterval` on these views. A terminal event is
+therefore **emitted exactly once** per run/group: the publisher must sit inside the same
+`IsTerminal()`-guarded critical section as the transition that settles the entity, so a second path
+reaching an already-settled entity publishes nothing (see
+[`docs/optimization-loop.md`](optimization-loop.md) — `TestRunnerService`'s success, cancel and
+failure paths all do this; #486).
 
 **Cross-tenant scoping (every stream).** Streams are tenant-scoped via `IProjectAccessGuard`
 (`Proxytrace.Api/Auth/IProjectAccessGuard.cs`; admins bypass). Per-resource streams
@@ -121,6 +126,23 @@ inactivity it yields a `null` tick and the action writes a comment frame (`:\n\n
 that write fails, the action unwinds, `RequestAborted` fires, and the broadcaster's cancellation
 registration removes the subscription. Mirror this exactly when adding a stream — emit the heartbeat
 on the `null` tick, real events otherwise.
+
+**Mid-stream faults (any started response).** Once the first frame is out, headers and status are
+read-only, so `ExceptionHandlingMiddleware` cannot turn a later fault into an error body — writing
+one would only append junk to a payload the client is already consuming. It therefore logs the real
+cause and calls `HttpContext.Abort()`. The reset matters: simply returning is a *success* signal to
+the framework, which then closes the response cleanly (chunked terminator / HTTP/2 `END_STREAM`), and
+a client reads the truncated payload as a complete one. SSE consumers just reconnect, but any other
+chunked response would silently hand back half a document.
+
+**Client disconnects are not faults.** A mid-stream hang-up surfaces as a *failed write* (typically
+an `IOException`), not an `OperationCanceledException`, so it reaches the same catch block as a real
+fault. The middleware therefore classifies it **first**, before anything is logged: a started
+response plus a cancelled `RequestAborted` is logged once at `Debug` and returns — no Error-level
+log, so no captured `ApplicationError` row and no `errorId`, and no abort (there is nothing left to
+reset). Without that ordering every closed browser tab with an open stream would add an Error Log
+entry no operator can act on. Genuine faults on a live connection keep the full treatment: Error
+capture with an `errorId`, a warning, and the reset.
 
 **Subscriber cap (every broadcaster).** Each broadcaster bounds total live subscriptions at
 `MaxSubscribers = 2000` so an authenticated client can't exhaust memory/sockets by opening unbounded

@@ -78,23 +78,24 @@ public class ProposalsController : ControllerBase
         this.accessGuard = accessGuard;
     }
 
-    // Resolve the effective owning project of a list query and verify access. Admins
-    // (accessible == null) pass for any scope. Non-admins must scope to a project they belong to —
-    // directly via projectId or via the agent's project — otherwise the query returns nothing rather
-    // than leaking other tenants' rows.
-    private async Task<bool> CanListAsync(Guid? agentId, Guid? projectId, CancellationToken cancellationToken)
+    // The projects this list request may read: null for an admin, the caller's own projects when no
+    // narrower filter is given (#482), and [] when a named agent/project is out of reach.
+    private async Task<IReadOnlyCollection<Guid>?> ListScopeAsync(
+        Guid? agentId,
+        Guid? projectId,
+        CancellationToken cancellationToken)
     {
-        var accessible = await accessGuard.GetAccessibleProjectIdsAsync(cancellationToken);
-        if (accessible is null)
-            return true;
-        if (projectId is { } pid)
-            return accessible.Contains(pid);
+        var scope = await accessGuard.ResolveListScopeAsync(projectId, cancellationToken);
+        if (scope is null || scope.IsEmpty())
+            return scope;
+
         if (agentId is { } aid)
         {
             var agent = await agents.FindAsync(aid, cancellationToken);
-            return agent is not null && accessible.Contains(agent.Project.Id);
+            return agent is not null && scope.Contains(agent.Project.Id) ? scope : [];
         }
-        return false;
+
+        return scope;
     }
 
     [HttpGet]
@@ -103,16 +104,17 @@ public class ProposalsController : ControllerBase
         [FromQuery] Guid? projectId = null,
         CancellationToken cancellationToken = default)
     {
-        if (!await CanListAsync(agentId, projectId, cancellationToken))
+        var scope = await ListScopeAsync(agentId, projectId, cancellationToken);
+        if (scope.IsEmpty())
             return [];
 
         IReadOnlyList<IOptimizationProposal> proposals;
         if (agentId.HasValue)
             proposals = await repository.GetByAgentAsync(agentId.Value, cancellationToken);
-        else if (projectId.HasValue)
-            proposals = await repository.GetByProjectAsync(projectId.Value, cancellationToken);
-        else
+        else if (scope is null)
             proposals = await repository.GetAllAsync(cancellationToken);
+        else
+            proposals = await repository.GetByProjectsAsync(scope, cancellationToken);
 
         return proposals.Select(mapper.ToDto).ToList();
     }

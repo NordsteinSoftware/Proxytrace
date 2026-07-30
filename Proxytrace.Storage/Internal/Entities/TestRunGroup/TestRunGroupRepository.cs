@@ -56,6 +56,32 @@ internal class TestRunGroupRepository : AbstractRepository<ITestRunGroup, TestRu
         return await Map(stored, cancellationToken);
     }
 
+    public async Task<IReadOnlyList<ITestRunGroup>> GetPendingOptimizationAsync(
+        int limit,
+        CancellationToken cancellationToken = default)
+    {
+        if (limit <= 0)
+            return [];
+
+        // Terminal statuses only — a group still running has not finished producing the evidence the
+        // optimizer reads, and will be enqueued normally when it does. Oldest first so a backlog is
+        // worked in the order it accumulated. Bounded, so a long-dormant install does not enqueue its
+        // entire history (and its entire LLM cost) in one go on the first start after upgrading.
+        var context = contextFactory();
+        var stored = await context
+            .Set<TestRunGroupEntity>()
+            .AsNoTracking()
+            .Where(g => g.OptimizationConsideredAt == null
+                        && !g.IsSystemRun
+                        && (g.Status == TestRunStatus.Completed || g.Status == TestRunStatus.Failed))
+            .OrderBy(g => g.CreatedAt)
+            .ThenBy(g => g.Id)
+            .Take(limit)
+            .ToListAsync(cancellationToken);
+
+        return await Map(stored, cancellationToken);
+    }
+
     public async Task<IReadOnlyList<ITestRunGroup>> GetByProjectAsync(Guid projectId, CancellationToken cancellationToken = default)
     {
         var context = contextFactory();
@@ -99,15 +125,23 @@ internal class TestRunGroupRepository : AbstractRepository<ITestRunGroup, TestRu
         int total = await query.CountAsync(cancellationToken);
         var stored = await query
             .OrderByDescending(g => g.CreatedAt)
-            .Skip((page - 1) * pageSize)
+            .Skip(Paging.Offset(page, pageSize))
             .Take(pageSize)
             .ToListAsync(cancellationToken);
 
         return new PagedResult<ITestRunGroup>(await Map(stored, cancellationToken), total, page, pageSize);
     }
 
-    public async Task<PagedResult<ITestRunGroup>> GetByProjectPagedAsync(
+    public Task<PagedResult<ITestRunGroup>> GetByProjectPagedAsync(
         Guid projectId,
+        int page,
+        int pageSize,
+        bool includeSystem = false,
+        CancellationToken cancellationToken = default) =>
+        GetByProjectsPagedAsync([projectId], page, pageSize, includeSystem, cancellationToken);
+
+    public async Task<PagedResult<ITestRunGroup>> GetByProjectsPagedAsync(
+        IReadOnlyCollection<Guid> projectIds,
         int page,
         int pageSize,
         bool includeSystem = false,
@@ -126,13 +160,13 @@ internal class TestRunGroupRepository : AbstractRepository<ITestRunGroup, TestRu
                 gs => gs.Suite.Agent,
                 a => a.Id,
                 (gs, a) => new { gs.Group, Agent = a })
-            .Where(x => x.Agent.Project == projectId && (includeSystem || !x.Group.IsSystemRun))
+            .Where(x => projectIds.Contains(x.Agent.Project) && (includeSystem || !x.Group.IsSystemRun))
             .Select(x => x.Group);
 
         int total = await query.CountAsync(cancellationToken);
         var stored = await query
             .OrderByDescending(g => g.CreatedAt)
-            .Skip((page - 1) * pageSize)
+            .Skip(Paging.Offset(page, pageSize))
             .Take(pageSize)
             .ToListAsync(cancellationToken);
 
@@ -157,7 +191,7 @@ internal class TestRunGroupRepository : AbstractRepository<ITestRunGroup, TestRu
         int total = await query.CountAsync(cancellationToken);
         var stored = await query
             .OrderByDescending(g => g.CreatedAt)
-            .Skip((page - 1) * pageSize)
+            .Skip(Paging.Offset(page, pageSize))
             .Take(pageSize)
             .ToListAsync(cancellationToken);
 

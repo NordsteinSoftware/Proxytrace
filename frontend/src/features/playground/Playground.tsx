@@ -32,8 +32,11 @@ export default function Playground() {
   const { showSeed, setShowSeed, seedAnchorRef } = useSeedDropdown();
   const [streamingId, setStreamingId] = useState<string | null>(null);
 
-  const { agent } = usePlaygroundAgent({ agentId: state.agentId, dispatch });
-  usePlaygroundAgentList({ projectId: currentProject?.id, agentId: state.agentId, dispatch });
+  // The list runs first: it tells the single-agent query whether the id restored from the persisted
+  // session still exists here, so a selection left over from an earlier instance is dropped rather
+  // than fetched (see `resolveStoredAgent`).
+  const { known } = usePlaygroundAgentList({ projectId: currentProject?.id, agentId: state.agentId, dispatch });
+  const { agent } = usePlaygroundAgent({ agentId: state.agentId, known, dispatch });
   useAutoLoadAgentCall({ agentId: state.agentId, agent, messages: state.messages, dispatch });
   useAgentFromSearchParam({ agentId: state.agentId, dispatch });
 

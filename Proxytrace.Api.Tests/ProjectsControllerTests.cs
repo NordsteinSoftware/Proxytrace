@@ -1,11 +1,11 @@
 using Proxytrace.Domain.AuditLog;
-using System.Security.Claims;
-using Autofac;
 using AwesomeAssertions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
+using Proxytrace.Api.Auth;
+using Proxytrace.Api.Auth.Rest;
 using Proxytrace.Api.Controllers;
 using Proxytrace.Api.Dto.Projects;
 using Proxytrace.Application.Auth;
@@ -124,17 +124,12 @@ public sealed class ProjectsControllerTests : BaseTest<Module>
     [TestMethod]
     public async Task GetAll_AsNonAdmin_ReturnsOnlyMemberProjects()
     {
-        ICurrentUserAccessor accessor = null!;
-        IServiceProvider services = GetServices(builder => accessor = RegisterAccessor(builder));
-        var endpoint = await services.GetRequiredService<IDomainEntityGenerator<IModelEndpoint>>().GetOrCreateAsync(CancellationToken);
-        var user = await services.GetRequiredService<IDomainEntityGenerator<IUser>>().CreateAsync(CancellationToken);
-        var createNew = services.GetRequiredService<IProject.CreateNew>();
-        var repo = services.GetRequiredService<IProjectRepository>();
-        var mine = await repo.AddAsync(createNew("Mine", endpoint, [user]), CancellationToken);
-        await repo.AddAsync(createNew("Theirs", endpoint, []), CancellationToken);
-        accessor.GetCurrentUserAsync(Arg.Any<CancellationToken>()).Returns(user);
+        IServiceProvider services = GetServices();
+        var user = await CreateUserAsync(services, UserRole.Member);
+        var mine = await ProjectWithMembersAsync(services, user);
+        await ProjectWithMembersAsync(services); // someone else's project
 
-        var controller = ResolveController(services, ContextWithRoles());
+        var controller = ResolveController(services, NewGuard(services, user));
         var result = await controller.GetAll(cancellationToken: CancellationToken);
 
         result.Items.Should().ContainSingle().Which.Id.Should().Be(mine.Id);
@@ -144,44 +139,101 @@ public sealed class ProjectsControllerTests : BaseTest<Module>
     public async Task GetAll_AsAdmin_ReturnsAllProjects()
     {
         IServiceProvider services = GetServices();
-        var endpoint = await services.GetRequiredService<IDomainEntityGenerator<IModelEndpoint>>().GetOrCreateAsync(CancellationToken);
-        var createNew = services.GetRequiredService<IProject.CreateNew>();
-        var repo = services.GetRequiredService<IProjectRepository>();
-        await repo.AddAsync(createNew("A", endpoint, []), CancellationToken);
-        await repo.AddAsync(createNew("B", endpoint, []), CancellationToken);
+        var admin = await CreateUserAsync(services, UserRole.Admin);
+        await ProjectWithMembersAsync(services);
+        await ProjectWithMembersAsync(services);
 
-        var controller = ResolveController(services, ContextWithRoles(nameof(UserRole.Admin)));
+        var controller = ResolveController(services, NewGuard(services, admin));
         var result = await controller.GetAll(cancellationToken: CancellationToken);
 
         result.Items.Should().HaveCount(2);
     }
 
     [TestMethod]
+    public async Task GetAll_WithApiKeyScopedToOneProject_ReturnsOnlyThatProject()
+    {
+        // #474: the listing used to be driven by an inline role/membership check that never saw the
+        // key's project, so a key minted for A listed every project its (admin) owner could reach.
+        IServiceProvider services = GetServices();
+        var owner = await CreateUserAsync(services, UserRole.Admin);
+        var projectA = await ProjectWithMembersAsync(services);
+        var projectB = await ProjectWithMembersAsync(services);
+
+        var controller = ResolveController(services, NewGuard(services, owner, apiKeyProjectId: projectA.Id));
+        var result = await controller.GetAll(cancellationToken: CancellationToken);
+
+        result.Items.Should().ContainSingle().Which.Id.Should().Be(projectA.Id);
+        result.Total.Should().Be(1);
+        result.Items.Should().NotContain(p => p.Id == projectB.Id);
+    }
+
+    [TestMethod]
     public async Task Get_AsNonMember_ReturnsNotFound()
     {
-        ICurrentUserAccessor accessor = null!;
-        IServiceProvider services = GetServices(builder => accessor = RegisterAccessor(builder));
-        var outsider = await services.GetRequiredService<IDomainEntityGenerator<IUser>>().CreateAsync(CancellationToken);
-        var project = await services.GetRequiredService<IDomainEntityGenerator<IProject>>().CreateAsync(CancellationToken);
-        accessor.GetCurrentUserAsync(Arg.Any<CancellationToken>()).Returns(outsider);
+        IServiceProvider services = GetServices();
+        var outsider = await CreateUserAsync(services, UserRole.Member);
+        var project = await ProjectWithMembersAsync(services);
 
-        var controller = ResolveController(services, ContextWithRoles());
+        var controller = ResolveController(services, NewGuard(services, outsider));
         var result = await controller.Get(project.Id, CancellationToken);
 
         result.Result.Should().BeOfType<NotFoundResult>();
     }
 
     [TestMethod]
+    public async Task Get_WithApiKeyScopedToAnotherProject_ReturnsNotFound()
+    {
+        // A key minted for A must not read B's detail, even though its admin owner could.
+        IServiceProvider services = GetServices();
+        var owner = await CreateUserAsync(services, UserRole.Admin);
+        var projectA = await ProjectWithMembersAsync(services);
+        var projectB = await ProjectWithMembersAsync(services);
+
+        var controller = ResolveController(services, NewGuard(services, owner, apiKeyProjectId: projectA.Id));
+        var result = await controller.Get(projectB.Id, CancellationToken);
+
+        result.Result.Should().BeOfType<NotFoundResult>();
+    }
+
+    [TestMethod]
+    public async Task Get_WithApiKeyScopedToThatProject_ReturnsDto()
+    {
+        IServiceProvider services = GetServices();
+        var owner = await CreateUserAsync(services, UserRole.Admin);
+        var projectA = await ProjectWithMembersAsync(services);
+
+        var controller = ResolveController(services, NewGuard(services, owner, apiKeyProjectId: projectA.Id));
+        var result = await controller.Get(projectA.Id, CancellationToken);
+
+        result.Value.Should().NotBeNull();
+        result.Value.Id.Should().Be(projectA.Id);
+    }
+
+    [TestMethod]
     public async Task GetMembers_AsNonMember_ReturnsNotFound()
     {
-        ICurrentUserAccessor accessor = null!;
-        IServiceProvider services = GetServices(builder => accessor = RegisterAccessor(builder));
-        var outsider = await services.GetRequiredService<IDomainEntityGenerator<IUser>>().CreateAsync(CancellationToken);
-        var project = await services.GetRequiredService<IDomainEntityGenerator<IProject>>().CreateAsync(CancellationToken);
-        accessor.GetCurrentUserAsync(Arg.Any<CancellationToken>()).Returns(outsider);
+        IServiceProvider services = GetServices();
+        var outsider = await CreateUserAsync(services, UserRole.Member);
+        var project = await ProjectWithMembersAsync(services);
 
-        var controller = ResolveController(services, ContextWithRoles());
+        var controller = ResolveController(services, NewGuard(services, outsider));
         var result = await controller.GetMembers(project.Id, CancellationToken);
+
+        result.Result.Should().BeOfType<NotFoundResult>();
+    }
+
+    [TestMethod]
+    public async Task GetMembers_WithApiKeyScopedToAnotherProject_ReturnsNotFound()
+    {
+        // Member emails are PII: a key minted for A must not enumerate B's members.
+        IServiceProvider services = GetServices();
+        var owner = await CreateUserAsync(services, UserRole.Admin);
+        var member = await CreateUserAsync(services, UserRole.Member);
+        var projectA = await ProjectWithMembersAsync(services);
+        var projectB = await ProjectWithMembersAsync(services, member);
+
+        var controller = ResolveController(services, NewGuard(services, owner, apiKeyProjectId: projectA.Id));
+        var result = await controller.GetMembers(projectB.Id, CancellationToken);
 
         result.Result.Should().BeOfType<NotFoundResult>();
     }
@@ -189,16 +241,11 @@ public sealed class ProjectsControllerTests : BaseTest<Module>
     [TestMethod]
     public async Task GetMembers_AsMember_ReturnsMembers()
     {
-        ICurrentUserAccessor accessor = null!;
-        IServiceProvider services = GetServices(builder => accessor = RegisterAccessor(builder));
-        var endpoint = await services.GetRequiredService<IDomainEntityGenerator<IModelEndpoint>>().GetOrCreateAsync(CancellationToken);
-        var user = await services.GetRequiredService<IDomainEntityGenerator<IUser>>().CreateAsync(CancellationToken);
-        var createNew = services.GetRequiredService<IProject.CreateNew>();
-        var repo = services.GetRequiredService<IProjectRepository>();
-        var project = await repo.AddAsync(createNew("Mine", endpoint, [user]), CancellationToken);
-        accessor.GetCurrentUserAsync(Arg.Any<CancellationToken>()).Returns(user);
+        IServiceProvider services = GetServices();
+        var user = await CreateUserAsync(services, UserRole.Member);
+        var project = await ProjectWithMembersAsync(services, user);
 
-        var controller = ResolveController(services, ContextWithRoles());
+        var controller = ResolveController(services, NewGuard(services, user));
         var result = await controller.GetMembers(project.Id, CancellationToken);
 
         result.Value.Should().ContainSingle(m => m.Id == user.Id);
@@ -248,10 +295,15 @@ public sealed class ProjectsControllerTests : BaseTest<Module>
         result.Should().BeOfType<NotFoundResult>();
     }
 
-    private static ProjectsController ResolveController(IServiceProvider services, ControllerContext? context = null)
-    {
-        var controller = new ProjectsController(
-            services.GetRequiredService<IProjectRepository>(),
+    /// <summary>
+    /// Builds the controller. Without an explicit <paramref name="accessGuard"/> the permissive
+    /// stub from the test module is used, so tests that do not care about tenant scoping stay
+    /// unaffected; the access tests pass a real guard built by <see cref="NewGuard"/>.
+    /// </summary>
+    private static ProjectsController ResolveController(
+        IServiceProvider services,
+        IProjectAccessGuard? accessGuard = null) =>
+        new(services.GetRequiredService<IProjectRepository>(),
             services.GetRequiredService<IRepository<IModelEndpoint>>(),
             services.GetRequiredService<IRepository<IUser>>(),
             services.GetRequiredService<IAgentRepository>(),
@@ -259,25 +311,45 @@ public sealed class ProjectsControllerTests : BaseTest<Module>
             services.GetRequiredService<IProject.CreateExisting>(),
             services.GetRequiredService<Proxytrace.Application.Tracey.ITraceyAgentProvisioner>(),
             services.GetRequiredService<Proxytrace.Application.Evaluator.IDefaultEvaluatorProvisioner>(),
-            services.GetRequiredService<ICurrentUserAccessor>(),
+            accessGuard ?? services.GetRequiredService<IProjectAccessGuard>(),
             Microsoft.Extensions.Logging.Abstractions.NullLogger<Proxytrace.Domain.AuditLog.Audit>.Instance);
-        if (context is not null)
-            controller.ControllerContext = context;
-        return controller;
-    }
 
-    private static ICurrentUserAccessor RegisterAccessor(ContainerBuilder builder)
+    /// <summary>
+    /// The real guard, wired to a given caller and — optionally — to a REST API key confined to one
+    /// project, exactly as <c>ApiKeyAuthenticationHandler</c> marks the request.
+    /// </summary>
+    private static ProjectAccessGuard NewGuard(
+        IServiceProvider services,
+        IUser? currentUser,
+        Guid? apiKeyProjectId = null)
     {
         var accessor = Substitute.For<ICurrentUserAccessor>();
-        builder.RegisterInstance(accessor).As<ICurrentUserAccessor>();
-        return accessor;
+        accessor.GetCurrentUserAsync(Arg.Any<CancellationToken>()).Returns(currentUser);
+
+        var httpContextAccessor = new HttpContextAccessor { HttpContext = new DefaultHttpContext() };
+        if (apiKeyProjectId is { } projectId)
+            httpContextAccessor.HttpContext.Items[ApiKeyAuthenticationHandler.ProjectIdItemKey] = projectId;
+
+        return new ProjectAccessGuard(
+            accessor,
+            services.GetRequiredService<IProjectRepository>(),
+            httpContextAccessor);
     }
 
-    private static ControllerContext ContextWithRoles(params string[] roles)
+    private async Task<IUser> CreateUserAsync(IServiceProvider services, UserRole role)
     {
-        var identity = new ClaimsIdentity(roles.Select(r => new Claim(ClaimTypes.Role, r)), "test");
-        var http = new DefaultHttpContext { User = new ClaimsPrincipal(identity) };
-        return new ControllerContext { HttpContext = http };
+        // The IUser generator picks a random role, which would make a role-sensitive test flaky.
+        var create = services.GetRequiredService<IUser.CreateNew>();
+        var user = create($"{Guid.NewGuid():N}@example.test", externalSubject: null, passwordHash: "hash", role);
+        return await services.GetRequiredService<IRepository<IUser>>().AddAsync(user, CancellationToken);
+    }
+
+    private async Task<IProject> ProjectWithMembersAsync(IServiceProvider services, params IUser[] members)
+    {
+        var endpoint = await services.GetRequiredService<IDomainEntityGenerator<IModelEndpoint>>().GetOrCreateAsync(CancellationToken);
+        var createNew = services.GetRequiredService<IProject.CreateNew>();
+        var project = createNew($"P-{Guid.NewGuid():N}", endpoint, members);
+        return await services.GetRequiredService<IProjectRepository>().AddAsync(project, CancellationToken);
     }
 
     private async Task<(IProject project, IUser user)> SeedProjectAndUserAsync(IServiceProvider services)

@@ -40,6 +40,7 @@ public sealed class StatsQueryTranslationTests
             "Host=localhost;Database=translation-check;Username=none;Password=none")));
         builder.RegisterStub<ISecretProtector>();
         builder.RegisterStub<ISecretHasher>();
+        builder.RegisterStub<ISecretIndexer>();
         builder.RegisterStub<IAgentNameGenerator>();
         builder.RegisterStub<IProviderClient>();
         builder.RegisterInstance(NullLoggerFactory.Instance).As<ILoggerFactory>();
@@ -195,6 +196,33 @@ public sealed class StatsQueryTranslationTests
         sql.Should().Contain("\"ProjectId\" =");
         sql.Should().Contain("ORDER BY");
         sql.Should().Contain("LIMIT");
+    }
+
+    [TestMethod]
+    public void MultiProjectScope_SemiJoinAgainstAgentVersion_TranslatesToServerSideFilter()
+    {
+        using IContainer container = BuildPostgresContainer();
+        var context = container.Resolve<StorageDbContext>();
+
+        // The AgentCallStatsQueries.Query() ProjectIds branch (#483): the aggregate is restricted to
+        // the versions of a SET of projects. Same shape as the single-project branch with IN instead
+        // of =, so it must stay a server-side semi-join — client-evaluating it would materialize the
+        // whole trace table at 1M+ rows, the exact failure docs/performance-testing.md exists to catch.
+        IReadOnlyCollection<Guid> projectIds = [Guid.NewGuid(), Guid.NewGuid()];
+        IQueryable<Guid> versionIdsForProjects = context.Set<AgentVersionEntity>()
+            .AsNoTracking()
+            .Where(v => projectIds.Contains(v.Project))
+            .Select(v => v.Id);
+        string sql = context.Set<AgentCallEntity>()
+            .AsNoTracking()
+            .Where(c => versionIdsForProjects.Contains(c.AgentVersionId))
+            .GroupBy(_ => 1)
+            .Select(g => new { Count = g.Count() })
+            .ToQueryString();
+
+        // The project set is compared in SQL (Npgsql renders a parameterised collection as
+        // "= ANY (@ids)", older shapes as an IN list) — not pulled back and filtered in memory.
+        sql.Should().MatchRegex("\"Project\"\\s*(=\\s*ANY|IN)");
     }
 
     [TestMethod]

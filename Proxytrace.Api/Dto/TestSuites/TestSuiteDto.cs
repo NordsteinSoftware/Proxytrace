@@ -85,8 +85,8 @@ public record UpdateTestCaseRequest(TestSuiteMessageDto ExpectedOutput);
 public record CreateTestSuiteRequest(
     [Required, StringLength(200, MinimumLength = 1)] string Name,
     [Required] Guid AgentId,
-    [Required] IReadOnlyList<CreateTestCaseRequest> TestCases,
-    IReadOnlyList<Guid>? EvaluatorIds = null);
+    [Required, MaxLength(RequestLimits.MaxTestCases)] IReadOnlyList<CreateTestCaseRequest> TestCases,
+    [MaxLength(RequestLimits.MaxEvaluators)] IReadOnlyList<Guid>? EvaluatorIds = null);
 
 public record CreateTestCaseRequest(
     Guid? FromAgentCallId,
@@ -105,5 +105,5 @@ public record AddTestCaseRequest(
 public record PromoteTracesRequest(
     [Required, StringLength(200, MinimumLength = 1)] string Name,
     [Required] Guid AgentId,
-    [Required, MinLength(1)] IReadOnlyList<Guid> AgentCallIds,
-    IReadOnlyList<Guid>? EvaluatorIds = null);
+    [Required, MinLength(1), MaxLength(RequestLimits.MaxTestCases)] IReadOnlyList<Guid> AgentCallIds,
+    [MaxLength(RequestLimits.MaxEvaluators)] IReadOnlyList<Guid>? EvaluatorIds = null);

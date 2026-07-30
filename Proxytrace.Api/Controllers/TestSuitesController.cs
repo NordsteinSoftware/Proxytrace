@@ -1,3 +1,4 @@
+using Proxytrace.Common.Async;
 using Proxytrace.Domain.Statistics;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -37,7 +38,20 @@ public class TestSuitesController : ControllerBase
     private readonly IStatsReader<TestRunStats, TestRunStats.Filter> runStats;
     private readonly ILicenseService license;
     private readonly IProjectAccessGuard accessGuard;
+    private readonly IAsyncLock asyncLock;
     private readonly ILogger<Audit> audit;
+
+    /// <summary>
+    /// Lock key serializing the licensed-suite-count check against the create that follows it.
+    /// </summary>
+    /// <remarks>
+    /// The limit is installation-wide, so the key is a constant rather than per-project. Mirrors
+    /// <c>TheoryValidationService.SubmitAsync</c>, which serializes its own check-then-act quota the
+    /// same way. Like that one this is per-process: it closes the ordinary double-submit race, not a
+    /// race between two replicas — enforcing across replicas needs a database constraint, which a
+    /// count-based limit cannot express.
+    /// </remarks>
+    private const string SuiteQuotaLockKey = "license-quota:test-suites";
 
     public TestSuitesController(
         ITestSuiteRepository suiteRepository,
@@ -55,10 +69,12 @@ public class TestSuitesController : ControllerBase
         IStatsReader<TestRunStats, TestRunStats.Filter> runStats,
         ILicenseService license,
         IProjectAccessGuard accessGuard,
+        IAsyncLock asyncLock,
         ILogger<Audit> audit)
     {
         this.audit = audit;
         this.accessGuard = accessGuard;
+        this.asyncLock = asyncLock;
         this.suiteRepository = suiteRepository;
         this.agentRepository = agentRepository;
         this.agentCallRepository = agentCallRepository;
@@ -73,6 +89,43 @@ public class TestSuitesController : ControllerBase
         this.mapper = mapper;
         this.runStats = runStats;
         this.license = license;
+    }
+
+    // Caller-supplied evaluator and test-case ids are not implicitly the caller's. Without these
+    // guards a crafted id lets a member of one project attach — and, because the response echoes the
+    // saved suite, read back — another project's evaluator or test-case conversation and expected
+    // output, and spend that project's provider credential when the suite runs its agentic judge.
+    // Same shape as EvaluatorTestBenchController's guards (#265): resolve the owning project, deny
+    // behind a 404 rather than a 403 so an id cannot be used as an existence oracle.
+    private async Task<bool> CanAccessEvaluatorsAsync(
+        IReadOnlyCollection<Guid> evaluatorIds,
+        CancellationToken cancellationToken)
+    {
+        foreach (var evaluatorId in evaluatorIds)
+        {
+            var projectId = await evaluatorRepository.GetProjectIdAsync(evaluatorId, cancellationToken);
+            if (projectId is null || !await accessGuard.CanAccessProjectAsync(projectId.Value, cancellationToken))
+                return false;
+        }
+
+        return true;
+    }
+
+    // A test case carries no project of its own — it is reachable only through the suite that
+    // references it — so an orphaned case (its suite was deleted) has no resolvable owner and stays
+    // accessible, matching EvaluatorTestBenchController.CanAccessTestCaseAsync.
+    private async Task<bool> CanAccessTestCasesAsync(
+        IReadOnlyCollection<Guid> testCaseIds,
+        CancellationToken cancellationToken)
+    {
+        foreach (var testCaseId in testCaseIds)
+        {
+            var projectId = await suiteRepository.GetProjectIdByTestCaseAsync(testCaseId, cancellationToken);
+            if (projectId is not null && !await accessGuard.CanAccessProjectAsync(projectId.Value, cancellationToken))
+                return false;
+        }
+
+        return true;
     }
 
     [HttpGet]
@@ -92,16 +145,17 @@ public class TestSuitesController : ControllerBase
             scopeProjectId = scopeAgent.Project.Id;
         }
 
-        if (!await CanListAsync(scopeProjectId, cancellationToken))
+        var scope = await accessGuard.ResolveListScopeAsync(scopeProjectId, cancellationToken);
+        if (scope.IsEmpty())
             return new PagedResult<TestSuiteListItemDto>([], 0, page, pageSize);
 
         PagedResult<ITestSuite> paged;
         if (agentId.HasValue)
             paged = await suiteRepository.GetByAgentPagedAsync(agentId.Value, page, pageSize, cancellationToken);
-        else if (projectId.HasValue)
-            paged = await suiteRepository.GetByProjectPagedAsync(projectId.Value, page, pageSize, cancellationToken);
-        else
+        else if (scope is null)
             paged = await suiteRepository.GetPagedAsync(page, pageSize, cancellationToken);
+        else
+            paged = await suiteRepository.GetByProjectsPagedAsync(scope, page, pageSize, cancellationToken);
 
         var statsBySuite = await GetRunStatsBySuiteAsync(
             paged.Items.Select(s => s.Id).ToArray(), cancellationToken);
@@ -132,11 +186,6 @@ public class TestSuitesController : ControllerBase
             .ToDictionary(g => g.Key, g => (IReadOnlyList<TestRunStats>)g.ToArray());
     }
 
-    private async Task<bool> CanListAsync(Guid? projectId, CancellationToken cancellationToken)
-    {
-        var accessible = await accessGuard.GetAccessibleProjectIdsAsync(cancellationToken);
-        return accessible is null || (projectId.HasValue && accessible.Contains(projectId.Value));
-    }
 
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<TestSuiteDto>> Get(Guid id, CancellationToken cancellationToken)
@@ -189,12 +238,18 @@ public class TestSuitesController : ControllerBase
         if (!await accessGuard.CanAccessProjectAsync(agent.Project.Id, cancellationToken))
             return NotFound();
 
+        // Held to the end of the method, so the count and the create that acts on it cannot be
+        // interleaved by a concurrent request — two simultaneous creates both used to observe
+        // "0 suites" and both proceed, taking a Free-tier install to two.
+        using IDisposable quotaLock = await asyncLock.LockAsync(SuiteQuotaLockKey, cancellationToken);
         license.Ensure(LicenseLimit.MaxTestSuites, await suiteRepository.CountAsync(cancellationToken));
 
         IReadOnlyCollection<IEvaluator> evaluators;
         if (request.EvaluatorIds is { Count: > 0 })
         {
             var distinctEvalIds = request.EvaluatorIds.Distinct().ToArray();
+            if (!await CanAccessEvaluatorsAsync(distinctEvalIds, cancellationToken))
+                return NotFound();
             evaluators = await evaluatorRepository.GetManyAsync(distinctEvalIds, cancellationToken);
         }
         else
@@ -233,17 +288,38 @@ public class TestSuitesController : ControllerBase
         if (!await accessGuard.CanAccessProjectAsync(existing.Agent.Project.Id, cancellationToken))
             return NotFound();
 
-        var agent = request.AgentId.HasValue && request.AgentId.Value != existing.Agent.Id
-            ? await agentRepository.GetAsync(request.AgentId.Value, cancellationToken)
-            : existing.Agent;
+        // Re-parenting the suite moves it — and every test case it carries — under another agent, so
+        // the target agent's project needs the same access check as the suite's own.
+        var agent = existing.Agent;
+        if (request.AgentId.HasValue && request.AgentId.Value != existing.Agent.Id)
+        {
+            var requestedAgent = await agentRepository.FindAsync(request.AgentId.Value, cancellationToken);
+            if (requestedAgent is null
+                || !await accessGuard.CanAccessProjectAsync(requestedAgent.Project.Id, cancellationToken))
+            {
+                return NotFound($"Agent {request.AgentId.Value} not found.");
+            }
+
+            agent = requestedAgent;
+        }
 
         IReadOnlyCollection<IEvaluator> evaluators = existing.Evaluators;
         if (request.EvaluatorIds is not null)
-            evaluators = await evaluatorRepository.GetManyAsync(request.EvaluatorIds.Distinct().ToArray(), cancellationToken);
+        {
+            var distinctEvalIds = request.EvaluatorIds.Distinct().ToArray();
+            if (!await CanAccessEvaluatorsAsync(distinctEvalIds, cancellationToken))
+                return NotFound();
+            evaluators = await evaluatorRepository.GetManyAsync(distinctEvalIds, cancellationToken);
+        }
 
         IReadOnlyCollection<ITestCase> testCases = existing.TestCases;
         if (request.TestCaseIds is not null)
-            testCases = await testCaseRepository.GetManyAsync(request.TestCaseIds.Distinct().ToArray(), cancellationToken);
+        {
+            var distinctCaseIds = request.TestCaseIds.Distinct().ToArray();
+            if (!await CanAccessTestCasesAsync(distinctCaseIds, cancellationToken))
+                return NotFound();
+            testCases = await testCaseRepository.GetManyAsync(distinctCaseIds, cancellationToken);
+        }
 
         var updated = createSuiteExisting(existing.Name, agent, evaluators, testCases, existing);
         var saved = await suiteRepository.UpdateAsync(updated, cancellationToken);
@@ -293,12 +369,19 @@ public class TestSuitesController : ControllerBase
         if (!await accessGuard.CanAccessProjectAsync(agent.Project.Id, cancellationToken))
             return NotFound();
 
+        // Held to the end of the method, so the count and the create that acts on it cannot be
+        // interleaved by a concurrent request — two simultaneous creates both used to observe
+        // "0 suites" and both proceed, taking a Free-tier install to two.
+        using IDisposable quotaLock = await asyncLock.LockAsync(SuiteQuotaLockKey, cancellationToken);
         license.Ensure(LicenseLimit.MaxTestSuites, await suiteRepository.CountAsync(cancellationToken));
 
         IReadOnlyCollection<IEvaluator> evaluators;
         if (request.EvaluatorIds is { Count: > 0 })
         {
-            evaluators = await evaluatorRepository.GetManyAsync(request.EvaluatorIds.Distinct().ToArray(), cancellationToken);
+            var distinctEvalIds = request.EvaluatorIds.Distinct().ToArray();
+            if (!await CanAccessEvaluatorsAsync(distinctEvalIds, cancellationToken))
+                return NotFound();
+            evaluators = await evaluatorRepository.GetManyAsync(distinctEvalIds, cancellationToken);
         }
         else
         {

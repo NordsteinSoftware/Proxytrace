@@ -7,6 +7,38 @@ DI hooks, NSubstitute substitution patterns, and the hard rules against shared
 state/fields and `[TestFixture]`-style helper classes. The summary below is orientation
 only; the skill overrides it where they differ.
 
+## Which tests to run
+
+The backend suite is ~2,200 tests across 10 projects; the frontend has ~95 Vitest spec files.
+**Run only what your change can break.** `.github/workflows/ci.yml` runs
+`dotnet test Proxytrace.sln` on every push, so a local full run buys nothing but wall-clock — and
+once a scoped run is green, do not re-run the full suite to "make sure".
+
+| Changed | Run |
+|---|---|
+| `Proxytrace.<Layer>/**` | `dotnet test Proxytrace.<Layer>.Tests` |
+| A domain entity, its EF entity, or a mapping | `dotnet test Proxytrace.Domain.Tests` **and** `Proxytrace.Storage.Tests` |
+| A controller, route, or auth handler | `dotnet test Proxytrace.Api.Tests` |
+| A service, optimizer, or the run loop | `dotnet test Proxytrace.Application.Tests` |
+| One class/area inside a project | `dotnet test <Project> --filter "FullyQualifiedName~<Name>"` |
+| Frontend components/hooks | `npm test -- <path-or-pattern>` (from `frontend/`) |
+| `Proxytrace.Common`, `Proxytrace.Testing`, DI/module wiring, a shared interface signature, a package bump, a release | `dotnet test Proxytrace.sln` |
+
+Add `--no-restore` (and `--no-build` when nothing changed since the last build) to skip repeat work.
+
+Two things worth remembering:
+
+- The **frontend suite is cheap** — ~1,000 specs in ~3 seconds — so scoping it matters far less than
+  on the backend. Scope while iterating, then run bare `npm test` before you call it done. CI runs
+  it too (the `frontend` job).
+- The e2e and perf suites are **not** routine checks. Both boot Docker stacks and take many minutes;
+  run them only when the change is in that flow or when asked (`run-e2e-tests`, `run-perf-tests`).
+
+When reporting results, say which scope you ran — a scoped green run must never be reported as
+"all tests pass".
+
+## The harness
+
 All tests extend `BaseTest<TModule>` (MSTest + AwesomeAssertions):
 
 ```csharp

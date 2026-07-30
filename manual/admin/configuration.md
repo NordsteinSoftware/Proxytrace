@@ -66,6 +66,25 @@ behind a reverse proxy or its own domain. When unset, the UI falls back to its o
 which is only correct if your own reverse proxy routes ingestion paths
 (`/{project}/openai/v1/…`) to the proxy service.
 
+### Data directory (`PROXYTRACE_DATA_DIR`)
+
+`PROXYTRACE_DATA_DIR` is the writable directory holding the state that must outlive the
+container: the **Data Protection key ring** (which encrypts your stored provider API keys, TOTP/MFA
+enrollments and the SMTP password), the session signing key, and the offline license-status cache.
+
+The official images already default it (`/app/data` in the split shape, `/data/appdata` in the
+single-container shape), and the supplied compose files mount a persistent volume there — so a
+standard installation needs no action. **Every process that reads or writes secrets must point at
+the same directory**: in the split shape the API *and* the ingestion proxy mount the shared
+`appdata` volume, because the proxy decrypts the upstream provider key the API encrypted.
+
+If you write your own deployment manifest (for example a Kubernetes Deployment) and leave the
+variable unset — or point it at a path that is not persisted — the key ring lives only in memory.
+The application still starts and looks healthy, but after every restart the encrypted secrets fail
+to decrypt and are read back as unset, which shows up only as upstream `401`s from your provider
+and rejected authenticator codes. To make that impossible to miss, an unset `PROXYTRACE_DATA_DIR`
+is reported at **Critical** at startup, so it appears in [Error Log](/admin/error-log).
+
 ### Model pricing feeds
 
 Proxytrace auto-fetches model prices when a provider is added (and when its **Reload models &
@@ -282,6 +301,42 @@ applies to the bundled manual at `/docs` (which needs a slightly relaxed `script
 ```
 
 Empty values are rejected on startup.
+
+## Running behind your own reverse proxy
+
+The released all-in-one image needs nothing here: its bundled nginx and the API share a
+container and talk over the loopback interface, which Proxytrace trusts out of the box. Two
+things then work correctly on their own — the session cookie is marked `Secure`, and the
+sign-in, password-reset and two-factor rate limits apply per client.
+
+If you instead run the API **behind your own reverse proxy or load balancer**, tell Proxytrace
+which hop to trust. Until you do, it ignores the `X-Forwarded-For` and `X-Forwarded-Proto`
+headers your proxy sends, and every request looks like it came from the proxy itself — so the
+per-client rate limits collapse into a single shared bucket that one caller can exhaust for
+everyone.
+
+| Setting | What it does |
+|---|---|
+| `ForwardedHeaders__KnownProxies` | The address of your proxy. Comma-separated for several. |
+| `ForwardedHeaders__KnownNetworks` | A CIDR range to trust instead, e.g. `10.1.0.0/16`. |
+
+```yaml
+environment:
+  - ForwardedHeaders__KnownProxies=10.1.0.7
+```
+
+::: danger Trust only the proxy itself
+Only list addresses that **exclusively** belong to your proxy. Anything in the trusted set can
+choose its own apparent client address, which lets it sidestep the rate limits entirely — so a
+range that untrusted clients can also originate from is worse than leaving this unset. In
+particular, if you publish the API's own port so it is reachable without going through the
+proxy, do not trust the network that reaches it.
+:::
+
+If you terminate TLS at your proxy and deliberately serve Proxytrace over plain HTTP on a
+non-`localhost` address, the session cookie's `Secure` flag will stop the browser from sending
+it. Prefer fixing the TLS path; as a last resort set
+`Authentication__SessionCookie__Secure=false`, which sends session tokens in the clear.
 
 ## Endpoint tuning
 

@@ -185,7 +185,11 @@ internal class TestRunStatsStore : IStatsReader<TestRunStats, TestRunStats.Filte
         {
             q = q.Where(e => e.AgentId == filter.AgentId.Value);
         }
-        if (filter.AgentIds is { Count: > 0 } agentIds)
+        // `null` means "no agent filter"; an EMPTY collection means "no agent matches" and must
+        // narrow to nothing. Treating empty as unfiltered leaked global figures: a project with no
+        // agents yet (or all archived) produced an empty AgentIds list, and the dashboard's
+        // OverallPassRate and pass-rate sparkline were then computed over every other project's runs.
+        if (filter.AgentIds is { } agentIds)
         {
             q = q.Where(e => agentIds.Contains(e.AgentId));
         }
@@ -201,7 +205,8 @@ internal class TestRunStatsStore : IStatsReader<TestRunStats, TestRunStats.Filte
         {
             q = q.Where(e => e.SuiteId == filter.SuiteId.Value);
         }
-        if (filter.SuiteIds is { Count: > 0 } suiteIds)
+        // Same null-vs-empty distinction as AgentIds above.
+        if (filter.SuiteIds is { } suiteIds)
         {
             q = q.Where(e => suiteIds.Contains(e.SuiteId));
         }

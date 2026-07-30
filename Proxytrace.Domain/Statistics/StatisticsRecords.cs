@@ -13,7 +13,18 @@ public record StatisticsFilter(
     // When true, drops calls attributed to system agents (the Tracey assistant, evaluators) from
     // every aggregate. Default false keeps project-wide totals. Used by the Tracey dashboard tool so
     // its usage figures are about the user's own agents, not the platform's own activity.
-    bool ExcludeSystemAgents = false);
+    bool ExcludeSystemAgents = false,
+    // The set of projects the aggregate is restricted to, for a caller who may read several and
+    // named none (#483). Mirrors AgentCallFilter.ProjectIds in shape and semantics: ProjectId above
+    // stays the single-project filter and a scope naming exactly one project keeps using it — so
+    // the common, indexed by-one-project path is unchanged — while a genuinely multi-project scope
+    // comes through here. Null or empty means "not restricted by a set"; both the LINQ chokepoint
+    // and the raw-SQL percentile paths must honour it.
+    //
+    // Note it participates in this record's value equality by identity (collections compare by
+    // reference), so a multi-project filter misses the dashboard view cache rather than aliasing
+    // another caller's entry — a miss, never a false hit.
+    IReadOnlyCollection<Guid>? ProjectIds = null);
 
 public record StatisticsSummary(
     long TotalCalls,

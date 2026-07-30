@@ -21,4 +21,5 @@ public record AgentCallFilter(
     string? ToolName = null,
     AgentCallSortField SortBy = AgentCallSortField.CreatedAt,
     bool SortDescending = true,
-    Guid? SessionId = null);
+    Guid? SessionId = null,
+    IReadOnlyCollection<Guid>? ProjectIds = null);

@@ -14,6 +14,17 @@ public enum NotificationKind
     ProposalReady,
 
     /// <summary>
+    /// The installation has reached its licensed monthly trace limit and captures for this project
+    /// are being dropped.
+    /// </summary>
+    /// <remarks>
+    /// A dropped capture is still acknowledged to the client — failing the proxied call would take
+    /// the caller's application down over a billing limit — so without this notification the only
+    /// symptom was traces quietly going missing.
+    /// </remarks>
+    TraceQuotaReached,
+
+    /// <summary>
     /// A configured monthly cost budget crossed one of its thresholds. The severity distinguishes
     /// the two: <c>Warning</c> for the soft limit, <c>Critical</c> for the hard limit (which also
     /// blocks further proxied calls for the rest of the month).

@@ -35,8 +35,13 @@ internal class OptimizationProposalRepository :
         return await Map(stored, cancellationToken);
     }
 
-    public async Task<IReadOnlyList<IOptimizationProposal>> GetByProjectAsync(
+    public Task<IReadOnlyList<IOptimizationProposal>> GetByProjectAsync(
         Guid projectId,
+        CancellationToken cancellationToken = default) =>
+        GetByProjectsAsync([projectId], cancellationToken);
+
+    public async Task<IReadOnlyList<IOptimizationProposal>> GetByProjectsAsync(
+        IReadOnlyCollection<Guid> projectIds,
         CancellationToken cancellationToken = default)
     {
         var context = contextFactory();
@@ -47,7 +52,7 @@ internal class OptimizationProposalRepository :
                 p => p.Agent,
                 a => a.Id,
                 (p, a) => new { Proposal = p, Agent = a })
-            .Where(x => x.Agent.Project == projectId)
+            .Where(x => projectIds.Contains(x.Agent.Project))
             .OrderByDescending(x => x.Proposal.CreatedAt)
             .Select(x => x.Proposal)
             .ToListAsync(cancellationToken);

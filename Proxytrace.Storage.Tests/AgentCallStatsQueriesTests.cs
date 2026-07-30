@@ -6,8 +6,11 @@ using Proxytrace.Domain;
 using Proxytrace.Domain.Agent;
 using Proxytrace.Domain.AgentCall;
 using Proxytrace.Domain.Completion;
+using Proxytrace.Domain.Inference;
 using Proxytrace.Domain.Message;
 using Proxytrace.Domain.ModelEndpoint;
+using Proxytrace.Domain.Project;
+using Proxytrace.Domain.Prompt;
 using Proxytrace.Domain.Usage;
 using Proxytrace.Testing;
 
@@ -233,6 +236,106 @@ public sealed class AgentCallStatsQueriesTests : BaseTest<Module>
         var call = createCall(systemAgent, systemAgent.CurrentVersion, endpoint, request, response);
         await callRepo.AddAsync(call, CancellationToken);
         return systemAgent.Id;
+    }
+
+    // ── multi-project scope (#483) ─────────────────────────────────────────────
+    //
+    // The LINQ chokepoint Query() is what these exercise: on the in-memory provider the latency
+    // percentiles fall back to it too, so the raw-SQL twin is covered separately by
+    // StatisticsFilterWhereTests (its WHERE fragment) and StatisticsFilterParityTests (that both
+    // paths know every filter member).
+
+    [TestMethod]
+    public async Task GetSummary_ScopedToSeveralProjects_CountsOnlyThoseProjectsCalls()
+    {
+        IServiceProvider services = GetServices();
+        var reader = services.GetRequiredService<IAgentCallStatsReader>();
+        var first = await SeedAgentInNewProjectAsync(services, "first");
+        var second = await SeedAgentInNewProjectAsync(services, "second");
+        var outsider = await SeedAgentInNewProjectAsync(services, "outsider");
+        await SeedPlainCallAsync(services, first);
+        await SeedPlainCallAsync(services, second);
+        await SeedPlainCallAsync(services, outsider);
+
+        var summary = await reader.GetSummaryAsync(
+            new StatisticsFilter(ProjectIds: [first.Project.Id, second.Project.Id]), CancellationToken);
+
+        summary.TotalCalls.Should().Be(2);
+    }
+
+    [TestMethod]
+    public async Task GetAgentBreakdown_ScopedToSeveralProjects_ListsOnlyThoseProjectsAgents()
+    {
+        IServiceProvider services = GetServices();
+        var reader = services.GetRequiredService<IAgentCallStatsReader>();
+        var first = await SeedAgentInNewProjectAsync(services, "first");
+        var second = await SeedAgentInNewProjectAsync(services, "second");
+        var outsider = await SeedAgentInNewProjectAsync(services, "outsider");
+        await SeedPlainCallAsync(services, first);
+        await SeedPlainCallAsync(services, second);
+        await SeedPlainCallAsync(services, outsider);
+
+        var rows = await reader.GetAgentBreakdownAsync(
+            new StatisticsFilter(ProjectIds: [first.Project.Id, second.Project.Id]), CancellationToken);
+
+        rows.Select(r => r.AgentId).Should().BeEquivalentTo(new[] { first.Id, second.Id });
+    }
+
+    [TestMethod]
+    public async Task GetLatency_ScopedToSeveralProjects_SamplesOnlyThoseProjectsCalls()
+    {
+        IServiceProvider services = GetServices();
+        var reader = services.GetRequiredService<IAgentCallStatsReader>();
+        var first = await SeedAgentInNewProjectAsync(services, "first");
+        var second = await SeedAgentInNewProjectAsync(services, "second");
+        var outsider = await SeedAgentInNewProjectAsync(services, "outsider");
+        await SeedPlainCallAsync(services, first);
+        await SeedPlainCallAsync(services, second);
+        await SeedPlainCallAsync(services, outsider);
+
+        var rows = await reader.GetLatencyAsync(
+            new StatisticsFilter(ProjectIds: [first.Project.Id, second.Project.Id]), CancellationToken);
+
+        rows.Sum(r => r.SampleCount).Should().Be(2);
+    }
+
+    [TestMethod]
+    public async Task GetSummary_ScopedToAnEmptyProjectSet_IsNotRestricted()
+    {
+        // An empty set means "no set filter", not "no rows" — endpoints short-circuit an empty scope
+        // before they ever build a filter (ProjectListScope.IsEmpty), and both filter paths mirror
+        // AgentCallFilter in ignoring a zero-length set.
+        IServiceProvider services = GetServices();
+        var reader = services.GetRequiredService<IAgentCallStatsReader>();
+        await services.GetRequiredService<IDomainEntityGenerator<IAgentCall>>().CreateAsync(CancellationToken);
+
+        var summary = await reader.GetSummaryAsync(new StatisticsFilter(ProjectIds: []), CancellationToken);
+
+        summary.TotalCalls.Should().Be(1);
+    }
+
+    /// <summary>An agent in a project of its own, so a test can tell two tenants' rows apart.</summary>
+    private async Task<IAgent> SeedAgentInNewProjectAsync(IServiceProvider services, string name)
+    {
+        var endpoint = await services.GetRequiredService<IDomainEntityGenerator<IModelEndpoint>>()
+            .GetOrCreateAsync(CancellationToken);
+        var project = await services.GetRequiredService<IProjectRepository>().AddAsync(
+            services.GetRequiredService<IProject.CreateNew>()($"P-{name}-{Guid.NewGuid():N}", endpoint, []),
+            CancellationToken);
+        var template = services.GetRequiredService<IPromptTemplate.Create>()($"T-{name}", "You are a test agent.");
+        var parameters = services.GetRequiredService<IModelParameters.Create>()(null, null, null, null, null);
+
+        return await services.GetRequiredService<IAgentRepository>().AddAsync(
+            services.GetRequiredService<IAgent.CreateNew>()($"A-{name}", template, [], endpoint, project, parameters),
+            CancellationToken);
+    }
+
+    private async Task<IAgentCall> SeedPlainCallAsync(IServiceProvider services, IAgent agent)
+    {
+        AssistantMessage sample = (await services.GetRequiredService<IDomainObjectGenerator<ICompletion>>()
+            .CreateAsync(CancellationToken)).Response;
+        return await SeedCallAsync(services, agent, agent.Endpoint, sample, conversationId: null,
+            new TokenUsage(100, 50, 0), latencyMs: 120, toolCount: 0, HttpStatusCode.OK);
     }
 
     [TestMethod]

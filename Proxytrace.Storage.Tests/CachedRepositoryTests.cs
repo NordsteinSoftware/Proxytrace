@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using Autofac;
 using AwesomeAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -189,7 +190,7 @@ public sealed class CachedRepositoryTests : BaseTest<Module>
     {
         // Direct unit test of the cache itself with a fake clock.
         var clock = new FakeTimeProvider(new DateTimeOffset(2025, 1, 1, 0, 0, 0, TimeSpan.Zero));
-        var cache = new EntityCache<IModel>(clock, TimeSpan.FromMinutes(1));
+        var cache = new EntityCache<IModel>(new EntityCacheVersions<IModel>(), clock, TimeSpan.FromMinutes(1));
         var model = new StubModel(Guid.NewGuid(), "m1");
 
         cache.Set(model);
@@ -267,6 +268,83 @@ public sealed class CachedRepositoryTests : BaseTest<Module>
         IModel reloaded = await repository.FindAsync(created.Id, CancellationToken)
                           ?? throw new InvalidOperationException("Expected the updated model to be readable.");
         reloaded.Name.Should().Be("after-update");
+    }
+
+    [TestMethod]
+    public async Task Write_InOneLifetimeScope_InvalidatesTheCacheHeldByAnother()
+    {
+        // The #8 failure: caches are per-lifetime-scope, so an admin's write invalidated only its
+        // own request scope while the singleton ingestion path kept reading its ROOT-scope copy —
+        // e.g. rotating a provider's upstream API key left ingestion authenticating against the
+        // stale key until the 5-minute TTL expired. The cache must stay scope-local (its entries
+        // hold repositories bound to the resolving scope), so invalidation is instead shared
+        // process-wide via EntityCacheVersions.
+        IServiceProvider services = GetServices();
+        var root = services.GetRequiredService<ILifetimeScope>();
+        var generator = services.GetRequiredService<IDomainEntityGenerator<IModel>>();
+        var createExisting = services.GetRequiredService<IModel.CreateExisting>();
+
+        IModel created = await generator.CreateAsync(CancellationToken);
+
+        await using var readerScope = root.BeginLifetimeScope();
+        await using var writerScope = root.BeginLifetimeScope();
+
+        // Reader populates its own scope's cache.
+        IModel before = await readerScope.Resolve<IRepository<IModel>>().FindAsync(created.Id, CancellationToken)
+            ?? throw new InvalidOperationException("Expected the reader scope to load the model.");
+        before.Name.Should().Be(created.Name);
+
+        // Writer commits in a different scope entirely — it never touches the reader's cache instance.
+        await writerScope.Resolve<IRepository<IModel>>()
+            .UpdateAsync(createExisting("rotated", created), CancellationToken);
+
+        IModel after = await readerScope.Resolve<IRepository<IModel>>().FindAsync(created.Id, CancellationToken)
+            ?? throw new InvalidOperationException("Expected the reader scope to reload the model.");
+        after.Name.Should().Be("rotated", "a write in any scope must invalidate every scope's cached copy");
+    }
+
+    [TestMethod]
+    public async Task GetAllAsync_AfterAWriteInAnotherLifetimeScope_ReturnsAFreshSnapshot()
+    {
+        // Same cross-scope guarantee for the "all entities" snapshot, which backs the list reads.
+        IServiceProvider services = GetServices();
+        var root = services.GetRequiredService<ILifetimeScope>();
+        var generator = services.GetRequiredService<IDomainEntityGenerator<IModel>>();
+
+        await generator.CreateAsync(CancellationToken);
+
+        await using var readerScope = root.BeginLifetimeScope();
+        await using var writerScope = root.BeginLifetimeScope();
+
+        IReadOnlyList<IModel> first = await readerScope.Resolve<IRepository<IModel>>().GetAllAsync(CancellationToken);
+        first.Should().HaveCount(1);
+
+        var added = await writerScope.Resolve<IDomainEntityGenerator<IModel>>().GenerateAsync(CancellationToken);
+        await writerScope.Resolve<IRepository<IModel>>().AddAsync(added, CancellationToken);
+
+        IReadOnlyList<IModel> second = await readerScope.Resolve<IRepository<IModel>>().GetAllAsync(CancellationToken);
+        second.Should().HaveCount(2, "an add in any scope must drop every scope's cached snapshot");
+    }
+
+    [TestMethod]
+    public void EntityCacheVersions_WhenTheTrackedIdCapIsExceeded_StillReportsEveryEntryStale()
+    {
+        // The per-id map is bounded. Dropping a version must fail safe: a forgotten id reads back as
+        // version 0, which no live entry matches, so eviction can only cause an extra miss.
+        var versions = new EntityCacheVersions<IModel>();
+        var first = Guid.NewGuid();
+
+        versions.Invalidate(first);
+        long trackedVersion = versions.VersionOf(first);
+        trackedVersion.Should().BeGreaterThan(0);
+
+        for (var i = 0; i < 10_000; i++)
+        {
+            versions.Invalidate(Guid.NewGuid());
+        }
+
+        versions.VersionOf(first).Should().NotBe(trackedVersion,
+            "an evicted id must not keep matching an entry cached under its old version");
     }
 
     private sealed class FakeTimeProvider : TimeProvider

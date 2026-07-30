@@ -119,12 +119,18 @@ public enum AuditAction
     // The key value itself is never recorded.
     ProviderUpstreamKeyRotated = 70,
 
+    // An administrator read a provider's upstream API key back in the clear. The key used to ship
+    // with every providers-page load, so nothing recorded who had actually seen it; it is now
+    // returned only from a dedicated endpoint, and each read lands here. The key value itself is
+    // never recorded.
+    ProviderUpstreamKeyRevealed = 71,
+
     // Monthly cost-budget configuration (admin-initiated) and the guard's threshold crossings
     // (System actor). The crossings are audited in addition to the notification so the record
     // survives notification acknowledgement/retention.
-    CostLimitCreated = 71,
-    CostLimitUpdated = 72,
-    CostLimitDeleted = 73,
-    CostBudgetSoftLimitReached = 74,
-    CostBudgetHardLimitReached = 75,
+    CostLimitCreated = 72,
+    CostLimitUpdated = 73,
+    CostLimitDeleted = 74,
+    CostBudgetSoftLimitReached = 75,
+    CostBudgetHardLimitReached = 76,
 }

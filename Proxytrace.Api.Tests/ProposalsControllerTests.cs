@@ -312,6 +312,106 @@ public sealed class ProposalsControllerTests : BaseTest<Module>
         dto.AgentId.Should().Be(proposal.Agent.Id);
     }
 
+    [TestMethod]
+    public async Task GetAll_AsNonAdminWithoutFilter_ReturnsOwnProjectsProposalsOnly()
+    {
+        // #482: an unfiltered list from a non-admin used to short-circuit to an empty list, so a
+        // REST API key — confined to one project, and with no reason to send a filter — was told its
+        // own project had no proposals.
+        IServiceProvider services = GetServices();
+        var mine = await SeedProposalInNewProjectAsync(services, "mine");
+        await SeedProposalInNewProjectAsync(services, "theirs");
+
+        var controller = ResolveController(services, ScopedGuard(mine.Agent.Project.Id));
+        var result = await controller.GetAll(cancellationToken: CancellationToken);
+
+        result.Should().ContainSingle().Which.Id.Should().Be(mine.Id);
+    }
+
+    [TestMethod]
+    public async Task GetAll_AsNonAdminInSeveralProjectsWithoutFilter_ReturnsTheUnion()
+    {
+        IServiceProvider services = GetServices();
+        var first = await SeedProposalInNewProjectAsync(services, "first");
+        var second = await SeedProposalInNewProjectAsync(services, "second");
+        await SeedProposalInNewProjectAsync(services, "outsider");
+
+        var controller = ResolveController(
+            services, ScopedGuard(first.Agent.Project.Id, second.Agent.Project.Id));
+        var result = await controller.GetAll(cancellationToken: CancellationToken);
+
+        result.Select(p => p.Id).Should().BeEquivalentTo([first.Id, second.Id]);
+    }
+
+    [TestMethod]
+    public async Task GetAll_AsNonAdminWithoutAccessibleProjects_ReturnsEmpty()
+    {
+        IServiceProvider services = GetServices();
+        await SeedProposalInNewProjectAsync(services, "theirs");
+
+        var controller = ResolveController(services, ScopedGuard());
+        var result = await controller.GetAll(cancellationToken: CancellationToken);
+
+        result.Should().BeEmpty();
+    }
+
+    [TestMethod]
+    public async Task GetAll_AsNonAdminFilteredByInaccessibleProject_ReturnsEmpty()
+    {
+        IServiceProvider services = GetServices();
+        var mine = await SeedProposalInNewProjectAsync(services, "mine");
+        var theirs = await SeedProposalInNewProjectAsync(services, "theirs");
+
+        var controller = ResolveController(services, ScopedGuard(mine.Agent.Project.Id));
+        var result = await controller.GetAll(projectId: theirs.Agent.Project.Id, cancellationToken: CancellationToken);
+
+        result.Should().BeEmpty();
+    }
+
+    // A proposal whose agent lives in a freshly created project, so the project id is unique to it
+    // and can be handed to ScopedGuard.
+    private async Task<IOptimizationProposal> SeedProposalInNewProjectAsync(
+        IServiceProvider services, string name)
+    {
+        var endpoint = await services.GetRequiredService<IDomainEntityGenerator<IModelEndpoint>>()
+            .GetOrCreateAsync(CancellationToken);
+        var project = await services.GetRequiredService<Proxytrace.Domain.Project.IProjectRepository>().AddAsync(
+            services.GetRequiredService<Proxytrace.Domain.Project.IProject.CreateNew>()(
+                $"P-{name}-{Guid.NewGuid():N}", endpoint, []),
+            CancellationToken);
+
+        var agent = await services.GetRequiredService<IAgentRepository>().AddAsync(
+            services.GetRequiredService<IAgent.CreateNew>()(
+                $"A-{name}",
+                services.GetRequiredService<Proxytrace.Domain.Prompt.IPromptTemplate.Create>()(
+                    $"T-{name}", "You are a test agent."),
+                [],
+                endpoint,
+                project,
+                services.GetRequiredService<Proxytrace.Domain.Inference.IModelParameters.Create>()(
+                    null, null, null, null, null)),
+            CancellationToken);
+
+        var abRun = await services.GetRequiredService<IDomainEntityGenerator<Domain.TestRun.ITestRun>>()
+            .CreateAsync(CancellationToken);
+        return await services.GetRequiredService<IOptimizationProposalRepository>().AddAsync(
+            services.GetRequiredService<ISystemPromptProposal.CreateNew>()(
+                agent, Priority.Medium, "r", $"proposed-{name}", null, null, [], abRun),
+            CancellationToken);
+    }
+
+    // A non-admin scoped to a specific set of projects: the scope set is non-null (not admin) and
+    // contains exactly those projects. No arguments means a member of nothing.
+    private static Proxytrace.Api.Auth.IProjectAccessGuard ScopedGuard(params Guid[] projectIds)
+    {
+        var guard = Substitute.For<Proxytrace.Api.Auth.IProjectAccessGuard>();
+        guard.CanAccessProjectAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+            .Returns(ci => projectIds.Contains(ci.Arg<Guid>()));
+        guard.GetAccessibleProjectIdsAsync(Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<IReadOnlyCollection<Guid>?>(projectIds));
+        return guard;
+    }
+
     private async Task<IOptimizationProposal> SeedSystemPromptProposalAsync(
         IServiceProvider services, string proposedPrompt = "proposed")
     {
@@ -324,7 +424,11 @@ public sealed class ProposalsControllerTests : BaseTest<Module>
             CancellationToken);
     }
 
-    private static ProposalsController ResolveController(IServiceProvider services) => new(
+    private static ProposalsController ResolveController(IServiceProvider services)
+        => ResolveController(services, services.GetRequiredService<Proxytrace.Api.Auth.IProjectAccessGuard>());
+
+    private static ProposalsController ResolveController(
+        IServiceProvider services, Proxytrace.Api.Auth.IProjectAccessGuard guard) => new(
         services.GetRequiredService<IOptimizationProposalRepository>(),
         services.GetRequiredService<IModelSwitchProposal.CreateNew>(),
         services.GetRequiredService<ISystemPromptProposal.CreateNew>(),
@@ -340,5 +444,5 @@ public sealed class ProposalsControllerTests : BaseTest<Module>
         services.GetRequiredService<OptimizationProposalDtoMapper>(),
         services.GetRequiredService<IProposalBroadcaster>(),
         Microsoft.Extensions.Logging.Abstractions.NullLogger<Proxytrace.Domain.AuditLog.Audit>.Instance,
-        services.GetRequiredService<Proxytrace.Api.Auth.IProjectAccessGuard>());
+        guard);
 }

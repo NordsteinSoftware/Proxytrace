@@ -71,8 +71,30 @@ single `IUserTotpEnrollmentRepository.ListConfirmedUserIdsAsync` query.
 - **`IUserTotpEnrollment`** — `User`, `Secret` (encrypted at rest via `ISecretProtector` in the storage
   mapper, like `ModelProvider.ApiKey`), `ConfirmedAt`, `LastUsedStep`. Unique index on `User`
   (one enrollment per user), FK cascade-deletes with the user.
-- **`IMfaBackupCode`** — `User`, `CodeHash` (SHA-256 via `ISecretHasher`), `ConsumedAt`. ~10 per user,
-  unique index on `CodeHash`, FK cascade.
+- **`IMfaBackupCode`** — `User`, `CodeHash` (**salted PBKDF2 via `IPasswordService`**), `ConsumedAt`.
+  10 per user, unique index on `CodeHash`, FK cascade.
+
+### Backup codes are hashed like passwords, not like Proxytrace-generated secrets
+
+`ISecretHasher` (unkeyed single-round SHA-256) is correct for the 256-bit CSPRNG secrets Proxytrace
+mints itself, and **wrong** here. A backup code is 10 characters over a 32-symbol alphabet ≈ **50
+bits** — deliberately small enough for a human to read off a card and type. Under one unsalted
+single-round hash, 50 bits is within reach of a GPU rig, and because every installation hashed with
+the same function, a single dump could be attacked against **every user's codes at once**. They
+therefore go through `IPasswordService` (PBKDF2, per-code salt): the salt removes the shared work,
+the iteration count removes the throughput.
+
+Two consequences follow from the salt:
+
+- **There is no hash to look a code up by.** `MfaService` loads the user's unconsumed codes and
+  verifies them one at a time (bounded by the 10-code batch, and only reached after a TOTP code has
+  already failed — never on a normal login). `IMfaBackupCodeRepository.FindByCodeHashAsync` is
+  meaningful only for the legacy scheme.
+- **Codes issued before the change cannot be upgraded in place.** The raw code is unrecoverable, so
+  a stored hash could only be re-hashed at the moment it is redeemed — and redeeming consumes it.
+  `MfaService` detects the legacy 64-char hex form and verifies against it, so existing codes keep
+  working; they age out as they are used, or when the user re-enrolls. Every newly issued batch gets
+  the stronger hash.
 
 **Disable removes rows via per-row `RemoveAsync`, never a bulk `ExecuteDelete`** — the in-memory
 provider (tests + kiosk) breaks on bulk deletes.

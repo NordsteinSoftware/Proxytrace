@@ -80,8 +80,19 @@ public sealed class Module : Autofac.Module
         builder.RegisterServiceCollection(services =>
         {
             services.AddMemoryCache();
-            // The upstream target is per-request (provider endpoint), so only the timeout matters here.
-            services.AddHttpClient("openai", client => client.Timeout = TimeSpan.FromMinutes(5));
+            // The upstream target is per-request (provider endpoint), so only the timeout matters
+            // here. That timeout is also the budget OpenAiProxyController applies to the *body*
+            // download: it reads with ResponseHeadersRead (to avoid buffering the whole reply), and
+            // HttpClient.Timeout stops applying once the headers land, so the controller re-arms this
+            // same value on its copy loop (#475). Changing it here changes both phases.
+            // Auto-redirect is off for the same reason as the pass-through client below: a
+            // transparent proxy relays a 3xx to the client rather than chasing it server-side. The
+            // BCL's redirect handler only clears the typed Authorization header on a cross-origin
+            // hop — the Azure `api-key` header (BuildUpstreamRequest) and every blanket-forwarded
+            // client header survive the hop, so following an upstream redirect would hand the
+            // provider credential to whatever host the upstream named.
+            services.AddHttpClient("openai", client => client.Timeout = TimeSpan.FromMinutes(5))
+                .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler { AllowAutoRedirect = false });
 
             // Non-LLM pass-through relays redirects to the client verbatim instead of following them
             // server-side (the BCL would also strip Authorization on the redirect hop), so it needs

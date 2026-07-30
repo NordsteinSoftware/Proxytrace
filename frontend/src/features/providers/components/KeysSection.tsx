@@ -55,6 +55,7 @@ export function KeysSection({ providerId, keys, projects, defaultProjectId }: Ke
     McpWrite: <Trans>MCP write — let agents curate suites, start runs and change proposals</Trans>,
     ApiRead: <Trans>REST API read — let a service read this project over the REST API</Trans>,
     ApiWrite: <Trans>REST API write — let a service create and change data over the REST API</Trans>,
+    Passthrough: <Trans>Upstream pass-through — forward non-inference paths (such as /health) to the provider using its own credential. Not traced, and not checked by detectors.</Trans>,
   };
 
   const toggleScope = (scope: ApiKeyScope, on: boolean) =>

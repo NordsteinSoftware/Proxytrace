@@ -213,6 +213,177 @@ internal sealed class ChunkLimitedStream : Stream
     public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
 }
 
+/// <summary>
+/// A response stream that records everything written to it, the size of the largest single write and
+/// how many writes there were — so a test can assert the proxy forwarded a body in bounded pieces
+/// instead of materializing it whole, and that it forwarded event by event instead of in one batch.
+/// </summary>
+internal sealed class RecordingResponseStream : Stream
+{
+    private readonly MemoryStream written = new();
+
+    public int LargestWriteBytes { get; private set; }
+
+    /// <summary>Number of individual writes — one per forwarded SSE segment on the streaming path.</summary>
+    public int WriteCount { get; private set; }
+
+    public byte[] Written => written.ToArray();
+
+    public override bool CanRead => false;
+    public override bool CanSeek => false;
+    public override bool CanWrite => true;
+    public override long Length => written.Length;
+    public override long Position { get => written.Position; set => throw new NotSupportedException(); }
+
+    public override async ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default)
+    {
+        LargestWriteBytes = Math.Max(LargestWriteBytes, buffer.Length);
+        WriteCount++;
+        await written.WriteAsync(buffer, cancellationToken);
+    }
+
+    public override void Write(byte[] buffer, int offset, int count)
+    {
+        LargestWriteBytes = Math.Max(LargestWriteBytes, count);
+        WriteCount++;
+        written.Write(buffer, offset, count);
+    }
+
+    public override void Flush() { }
+    public override Task FlushAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+    public override int Read(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+    public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+    public override void SetLength(long value) => throw new NotSupportedException();
+}
+
+/// <summary>
+/// A read-only stream that produces <c>length</c> bytes of filler without materializing them, and
+/// counts how many were actually consumed. Lets a test drive the proxy's request-body cap with a body
+/// far larger than the cap and then assert the proxy stopped reading at the cap.
+/// </summary>
+internal sealed class GeneratedByteStream : Stream
+{
+    private readonly long length;
+    private long position;
+
+    public GeneratedByteStream(long length) => this.length = length;
+
+    /// <summary>Bytes the consumer actually pulled — never the full length once the cap bites.</summary>
+    public long BytesRead => position;
+
+    public override bool CanRead => true;
+    public override bool CanSeek => false;
+    public override bool CanWrite => false;
+    public override long Length => length;
+    public override long Position { get => position; set => throw new NotSupportedException(); }
+
+    public override int Read(byte[] buffer, int offset, int count)
+    {
+        var remaining = length - position;
+        if (remaining <= 0)
+        {
+            return 0;
+        }
+
+        var n = (int)Math.Min(count, remaining);
+        Array.Fill(buffer, (byte)'a', offset, n);
+        position += n;
+        return n;
+    }
+
+    public override void Flush() { }
+    public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+    public override void SetLength(long value) => throw new NotSupportedException();
+    public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+}
+
+/// <summary>
+/// Serves a response whose headers arrive immediately but whose body never produces a byte: every read
+/// blocks until the caller's token trips. Stands in for the slow-loris upstream of #475 — the case
+/// <see cref="HttpClient.Timeout"/> stops covering once <c>ResponseHeadersRead</c> has returned. The
+/// client's timeout is settable so a test can drive the proxy's own body bound in milliseconds.
+/// </summary>
+internal sealed class StallingBodyHttpClientFactory : IHttpClientFactory
+{
+    private readonly TimeSpan timeout;
+    private readonly CancellationTokenSource? cancelOnFirstRead;
+
+    // `timeout` is the client timeout — which is also the budget the proxy applies to the body copy.
+    // `cancelOnFirstRead`, when given, is cancelled the instant the proxy asks for the first body byte:
+    // that models a client disconnecting while the proxy waits on the upstream, with no sleep and no race.
+    public StallingBodyHttpClientFactory(TimeSpan timeout, CancellationTokenSource? cancelOnFirstRead = null)
+    {
+        this.timeout = timeout;
+        this.cancelOnFirstRead = cancelOnFirstRead;
+    }
+
+    public HttpClient CreateClient(string name) => new(new Handler(cancelOnFirstRead))
+    {
+        BaseAddress = new Uri("http://fake-upstream/"),
+        Timeout = timeout,
+    };
+
+    private sealed class Handler : HttpMessageHandler
+    {
+        private readonly CancellationTokenSource? cancelOnFirstRead;
+
+        public Handler(CancellationTokenSource? cancelOnFirstRead) => this.cancelOnFirstRead = cancelOnFirstRead;
+
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+            => Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StreamContent(new StallingStream(cancelOnFirstRead)),
+            });
+    }
+}
+
+/// <summary>A read-only stream whose reads never complete until the token they were given is cancelled.</summary>
+internal sealed class StallingStream : Stream
+{
+    private readonly CancellationTokenSource? cancelOnFirstRead;
+    private bool cancelled;
+
+    public StallingStream(CancellationTokenSource? cancelOnFirstRead = null)
+        => this.cancelOnFirstRead = cancelOnFirstRead;
+
+    public override bool CanRead => true;
+    public override bool CanSeek => false;
+    public override bool CanWrite => false;
+    public override long Length => throw new NotSupportedException();
+    public override long Position { get => 0; set => throw new NotSupportedException(); }
+
+    public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
+    {
+        SignalFirstRead();
+        await Task.Delay(Timeout.Infinite, cancellationToken);
+        return 0;
+    }
+
+    public override async Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+    {
+        SignalFirstRead();
+        await Task.Delay(Timeout.Infinite, cancellationToken);
+        return 0;
+    }
+
+    private void SignalFirstRead()
+    {
+        if (cancelOnFirstRead is null || cancelled)
+        {
+            return;
+        }
+
+        cancelled = true;
+        cancelOnFirstRead.Cancel();
+    }
+
+    public override void Flush() { }
+    public override int Read(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+    public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+    public override void SetLength(long value) => throw new NotSupportedException();
+    public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+}
+
 /// <summary>A response stream that fails every write — simulates a client that disconnected.</summary>
 internal sealed class ThrowOnWriteStream : Stream
 {

@@ -202,7 +202,7 @@ internal abstract class AbstractRepository<TDomainEntity, TStoredEntity> : IRepo
         int total = await query.CountAsync(cancellationToken);
         var stored = await query
             .OrderByDescending(e => e.CreatedAt)
-            .Skip((page - 1) * pageSize)
+            .Skip(Paging.Offset(page, pageSize))
             .Take(pageSize)
             .ToListAsync(cancellationToken);
 
@@ -494,6 +494,27 @@ internal abstract class AbstractRepository<TDomainEntity, TStoredEntity> : IRepo
         return removed;
     }
 
+    /// <summary>
+    /// Removes every row of this entity type.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Used by the admin data reset, which invokes it on <c>AgentCallEntity</c> — the highest-volume
+    /// table in the install. <c>RemoveRange(set)</c> loaded every row into the change tracker first,
+    /// so resetting an install with millions of traces meant materializing all of them just to
+    /// delete them. The relational path issues a single server-side <c>DELETE</c> instead.
+    /// </para>
+    /// <para>
+    /// The in-memory provider (kiosk/tests) cannot translate <c>ExecuteDelete</c>, so it keeps the
+    /// materializing path — cheap on those datasets. See the same relational/in-memory split in
+    /// <c>AgentCallRepository.RemoveOlderThanAsync</c>.
+    /// </para>
+    /// <para>
+    /// Change notifications are still emitted per row, so ids are read before the delete. That read
+    /// is a single indexed column projection rather than a full-entity materialization, and callers
+    /// depend on the events (SSE, cache invalidation), so it stays.
+    /// </para>
+    /// </remarks>
     public async Task RemoveAllAsync(CancellationToken cancellationToken = default)
     {
         Guid[] removedIds = await transaction.InvokeAsync(async () =>
@@ -501,8 +522,17 @@ internal abstract class AbstractRepository<TDomainEntity, TStoredEntity> : IRepo
             StorageDbContext context = ambient.RequireContext();
             DbSet<TStoredEntity> set = context.Set<TStoredEntity>();
             Guid[] ids = await set.AsNoTracking().Select(e => e.Id).ToArrayAsync(cancellationToken);
-            set.RemoveRange(set);
-            await context.SaveChangesAsync(cancellationToken);
+
+            if (context.Database.IsRelational())
+            {
+                await set.ExecuteDeleteAsync(cancellationToken);
+            }
+            else
+            {
+                set.RemoveRange(set);
+                await context.SaveChangesAsync(cancellationToken);
+            }
+
             InvalidateCache();
             return ids;
         });

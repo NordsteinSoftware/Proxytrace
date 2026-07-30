@@ -1,5 +1,6 @@
 using JetBrains.Annotations;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Proxytrace.Domain.Statistics;
 using Proxytrace.Domain.AgentCall;
 using Proxytrace.Domain.ModelEndpoint;
@@ -15,15 +16,31 @@ namespace Proxytrace.Storage.Internal.Statistics;
 [UsedImplicitly]
 internal class AgentCallStatsQueries : IAgentCallStatsReader
 {
+    /// <summary>
+    /// Upper bound on the per-call rows <see cref="GetAgentDistributionsAsync"/> pulls into memory.
+    /// </summary>
+    /// <remarks>
+    /// The distributions are computed in C# (std-dev, and cost-per-conversation needs endpoint
+    /// pricing), so the rows have to be materialized. The window is caller-supplied and unbounded,
+    /// so without a cap a request spanning the whole history of a busy agent materializes every one
+    /// of its traces — a memory spike that grows with the trace table. The cap keeps that bounded;
+    /// distributions are statistical summaries, so the most recent N calls describe the shape of the
+    /// data. When the cap bites it is logged rather than silently applied.
+    /// </remarks>
+    private const int MaxDistributionSamples = 200_000;
+
     private readonly Func<StorageDbContext> contextFactory;
     private readonly IMapper<IModelEndpoint, ModelEndpointEntity> endpointMapper;
+    private readonly ILogger<AgentCallStatsQueries> logger;
 
     public AgentCallStatsQueries(
         Func<StorageDbContext> contextFactory,
-        IMapper<IModelEndpoint, ModelEndpointEntity> endpointMapper)
+        IMapper<IModelEndpoint, ModelEndpointEntity> endpointMapper,
+        ILogger<AgentCallStatsQueries> logger)
     {
         this.contextFactory = contextFactory;
         this.endpointMapper = endpointMapper;
+        this.logger = logger;
     }
 
     public async Task<StatisticsSummary> GetSummaryAsync(StatisticsFilter filter, CancellationToken cancellationToken = default)
@@ -198,7 +215,12 @@ internal class AgentCallStatsQueries : IAgentCallStatsReader
     /// <see cref="Query"/> for the raw-SQL percentile paths. Kept in lockstep with the table/column
     /// names in <c>AgentCallConfig</c>/<c>AgentVersionConfig</c>/<c>AgentConfig</c>.
     /// </summary>
-    private static (string Where, IReadOnlyList<(string Name, object Value)> Parameters) BuildLatencyWhere(
+    /// <remarks>
+    /// <c>internal</c> rather than private so <c>StatisticsFilterWhereTests</c> can assert the
+    /// generated fragment directly: the behavioural tests run on the in-memory provider, where the
+    /// percentile paths fall back to LINQ, so this SQL is otherwise only exercised in production.
+    /// </remarks>
+    internal static (string Where, IReadOnlyList<(string Name, object Value)> Parameters) BuildLatencyWhere(
         StorageDbContext context, StatisticsFilter filter)
     {
         var clauses = new List<string>();
@@ -213,6 +235,16 @@ internal class AgentCallStatsQueries : IAgentCallStatsReader
         {
             clauses.Add("\"AgentVersionId\" IN (SELECT \"Id\" FROM \"AgentVersionEntity\" WHERE \"Project\" = @projectId)");
             parameters.Add(("@projectId", projectId));
+        }
+        if (filter.ProjectIds is { Count: > 0 } projectIds)
+        {
+            // Multi-project scope (#483). The ids go over as ONE uuid[] parameter compared with
+            // = ANY — never interpolated into the statement, and never a variable-length IN list,
+            // so the SQL text is constant regardless of how many projects the caller belongs to
+            // (Npgsql maps Guid[] to uuid[]). Separate from the single-project clause above so a
+            // one-project scope keeps its equality predicate rather than a single-element array.
+            clauses.Add("\"AgentVersionId\" IN (SELECT \"Id\" FROM \"AgentVersionEntity\" WHERE \"Project\" = ANY(@projectIds))");
+            parameters.Add(("@projectIds", projectIds.ToArray()));
         }
         if (filter.EndpointId is { } endpointId)
         {
@@ -915,15 +947,20 @@ internal class AgentCallStatsQueries : IAgentCallStatsReader
             .Where(v => v.AgentId == agentId)
             .Select(v => v.Id);
 
-        // Single materialise-and-compute pass. Scoped to one agent over a bounded window, so pulling
-        // the minimal per-call projection into memory is cheap. Std-dev needs no ordered-set aggregate
-        // (unlike the latency percentiles above), and cost-per-conversation needs C# endpoint pricing,
-        // so every distribution is computed here rather than splitting relational/in-memory paths.
+        // Single materialise-and-compute pass. Std-dev needs no ordered-set aggregate (unlike the
+        // latency percentiles above), and cost-per-conversation needs C# endpoint pricing, so every
+        // distribution is computed here rather than splitting relational/in-memory paths.
+        //
+        // The window is caller-supplied and unbounded, so the row set is capped at
+        // MaxDistributionSamples most-recent calls: a request spanning a busy agent's whole history
+        // would otherwise materialize its entire trace history at once.
         var calls = await context.Set<AgentCallEntity>()
             .AsNoTracking()
             .Where(c => versionIdsForAgent.Contains(c.AgentVersionId)
                 && c.CreatedAt >= from && c.CreatedAt <= to
                 && c.HttpStatus >= 200 && c.HttpStatus < 300)
+            .OrderByDescending(c => c.CreatedAt)
+            .ThenByDescending(c => c.Id)
             .Select(c => new
             {
                 ConvKey = c.ConversationId ?? c.Id,
@@ -935,11 +972,21 @@ internal class AgentCallStatsQueries : IAgentCallStatsReader
                 c.LatencyMs,
                 Tools = c.ResponseToolRequestCount,
             })
+            .Take(MaxDistributionSamples)
             .ToListAsync(cancellationToken);
 
         if (calls.Count == 0)
         {
             return AgentCallDistributions.Empty;
+        }
+
+        if (calls.Count == MaxDistributionSamples)
+        {
+            // Never truncate silently — the caller is looking at a sample, not the whole window.
+            logger.LogInformation(
+                "Distributions for agent {AgentId} over {From:o}–{To:o} hit the {Cap}-call sample cap; "
+                + "the returned distributions describe the most recent {Cap} calls in that window.",
+                agentId, from, to, MaxDistributionSamples, MaxDistributionSamples);
         }
 
         // Per-call metrics.
@@ -1059,6 +1106,19 @@ internal class AgentCallStatsQueries : IAgentCallStatsReader
                 .Where(v => v.Project == projectId)
                 .Select(v => v.Id);
             query = query.Where(c => versionIdsForProject.Contains(c.AgentVersionId));
+        }
+        // Multi-project scope (#483): an unfiltered aggregate from a caller who may read several
+        // projects. Same shape as the single-project branch above — a semi-join against
+        // AgentVersion(Project), with IN instead of = — so it stays server-side rather than
+        // degenerating into a client-side filter over every trace row. Kept separate from that
+        // branch so a scope naming exactly one project keeps its equality predicate and its plan.
+        if (filter.ProjectIds is { Count: > 0 } projectIds)
+        {
+            IQueryable<Guid> versionIdsForProjects = context.Set<AgentVersionEntity>()
+                .AsNoTracking()
+                .Where(v => projectIds.Contains(v.Project))
+                .Select(v => v.Id);
+            query = query.Where(c => versionIdsForProjects.Contains(c.AgentVersionId));
         }
         if (filter.From is { } from)
         {

@@ -24,14 +24,29 @@ export function useCreateProvider() {
 export function useUpdateProviderKind() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (args: { provider: { id: string; name: string; endpoint: string; upstreamApiKey: string }; kind: ModelProviderKind }) =>
+    mutationFn: (args: { provider: { id: string; name: string; endpoint: string }; kind: ModelProviderKind }) =>
       providersApi.update(args.provider.id, {
         name: args.provider.name,
         endpoint: args.provider.endpoint,
-        upstreamApiKey: args.provider.upstreamApiKey,
+        // null = leave the stored credential alone. The client does not hold the upstream key, so
+        // there is nothing to echo back on an edit that only changes the kind.
+        upstreamApiKey: null,
         kind: args.kind,
       }),
     onSuccess: () => qc.invalidateQueries({ queryKey: QUERY_KEYS.providersOverview }),
+  });
+}
+
+/**
+ * Fetches a provider's upstream credential on demand.
+ *
+ * Deliberately a mutation, not a query: the key must never enter the Query cache, where it would
+ * outlive the moment the user asked for it and be visible to anything reading the cache. The server
+ * audits every call, so it is only invoked on an explicit reveal or copy.
+ */
+export function useRevealUpstreamKey(providerId: string) {
+  return useMutation({
+    mutationFn: () => providersApi.getUpstreamKey(providerId).then(r => r.upstreamApiKey),
   });
 }
 
@@ -65,6 +80,7 @@ export function useRotateUpstreamKey(provider: ProviderDto) {
         upstreamApiKey: newKey,
         kind: provider.kind,
       });
+
       return { provider: saved, modelCount: verification.modelCount };
     },
     onSuccess: () => {

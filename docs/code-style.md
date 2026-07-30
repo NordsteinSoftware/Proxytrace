@@ -49,6 +49,14 @@
   buys no safety. This is rare and must be justified with a comment pointing here. Current sanctioned
   uses: the Lucene index writer/indexing service (`Proxytrace.Application/Search/Internal`), which
   serialize synchronous Lucene operations. Everything else uses `IAsyncLock`.
+- **Second narrow exception — counting, not excluding.** `IAsyncLock` grants *one* holder per key, so
+  it cannot express "at most N concurrently". Where the requirement is a **concurrency limit** rather
+  than mutual exclusion, `SemaphoreSlim` is the correct primitive and is permitted, with a comment
+  pointing here. Current sanctioned use: `TestRunnerService.modelCallGate`, which caps in-flight
+  upstream model calls at `TestRunnerConfiguration.MaxDegreeOfParallelism` across the three nested
+  `Parallel.ForEachAsync` loops (which otherwise multiply that setting rather than respecting it).
+  A limiter must never be held while acquiring another lock — the gate is released before a test
+  case's evaluators run, so the nesting cannot deadlock.
 - `IAsyncLock` is **keyed**: `LockAsync(key, ct)` serializes only callers sharing the same `key`,
   so use the narrowest natural key (e.g. an entity `Id`, a fingerprint) to avoid serializing
   unrelated work. Pass the `CancellationToken` through.

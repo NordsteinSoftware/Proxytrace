@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using System.Text.Json;
 using Autofac.Features.OwnedInstances;
 using Microsoft.EntityFrameworkCore;
@@ -18,17 +19,27 @@ namespace Proxytrace.Storage.Internal;
 /// per-row marker so a partial run resumes and a re-run is a no-op:
 /// <list type="bullet">
 /// <item><description><c>ModelProvider</c>: <c>ApiKeyLookupHash IS NULL</c> ⇒ <c>ApiKey</c> still plaintext.</description></item>
-/// <item><description><c>ApiKey</c>: <c>KeyPrefix IS NULL</c> ⇒ <c>KeyHash</c> still holds the plaintext key.</description></item>
+/// <item><description><c>ApiKey</c>: <c>KeyHash</c> length ≠ 64 ⇒ it still holds the plaintext key.</description></item>
 /// <item><description><c>Invite</c>: a 64-char hash vs the 43-char base64url token ⇒ length 64 means done.</description></item>
 /// </list>
 /// It reads the still-plaintext value and writes the protected value directly (bypassing the
 /// encrypt/hash-aware mappers). It never fails host boot: each table is isolated, and the provider
 /// pass is skipped (logged) if encryption is unavailable, while the key-ring-independent hash passes
 /// still run.
+///
+/// The two hash markers deliberately read the <em>protected column itself</em> rather than a
+/// companion column: a hex SHA-256 is always 64 characters, while the pre-retrofit plaintexts are
+/// not (an inbound key is <c>"proxytrace-"</c> + 43 base64url chars, an invite token 43). A marker
+/// held in a separate column is only as durable as that column's mapper — <c>ApiKey.KeyPrefix</c>
+/// was such a marker until its <c>NULL</c> turned out to be collapsed to <c>""</c> by
+/// <c>ApiKeyConfig</c> (<c>stored.KeyPrefix ?? string.Empty</c>) on every round trip, so a single
+/// save of an un-backfilled row would have hidden it from the pass forever, stranding a plaintext
+/// key that can never authenticate again.
 /// </summary>
 internal sealed class SecretsBackfillService : IHostedService
 {
-    private const int InviteTokenHashLength = 64;
+    // Length of a hex-encoded SHA-256 — the shape of an already-protected verify-only column.
+    private const int HexHashLength = 64;
     private const int DisplayPrefixLength = 16;
 
     // An Owned<StorageDbContext> factory (not the ambient-aware Func<StorageDbContext>): this service is a
@@ -38,17 +49,20 @@ internal sealed class SecretsBackfillService : IHostedService
     // inside a logical transaction, so it never needs the shared ambient context.
     private readonly Func<Owned<StorageDbContext>> contextFactory;
     private readonly ISecretProtector protector;
+    private readonly ISecretIndexer indexer;
     private readonly ILogger<SecretsBackfillService> logger;
     private readonly ILogger<Audit> audit;
 
     public SecretsBackfillService(
         Func<Owned<StorageDbContext>> contextFactory,
         ISecretProtector protector,
+        ISecretIndexer indexer,
         ILogger<SecretsBackfillService> logger,
         ILogger<Audit> audit)
     {
         this.contextFactory = contextFactory;
         this.protector = protector;
+        this.indexer = indexer;
         this.logger = logger;
         this.audit = audit;
     }
@@ -67,14 +81,17 @@ internal sealed class SecretsBackfillService : IHostedService
             "existing API keys cannot authenticate at the proxy or MCP server until this completes", cancellationToken);
         var inviteTokens = await RunSafely(BackfillInvitesAsync, "invite token",
             "pending invites cannot be redeemed until this completes", cancellationToken);
+        var providerIndexes = await RunSafely(ReindexProviderKeysAsync, "provider key blind index",
+            "provider keys stay recoverable from a database dump by wordlist until this completes",
+            cancellationToken);
 
         // Audit the one-time at-rest protection only when it actually changed rows, so a re-run
         // (everything already protected) records nothing. No request context here ⇒ System actor.
-        if (providerKeys + inboundKeys + inviteTokens > 0)
+        if (providerKeys + inboundKeys + inviteTokens + providerIndexes > 0)
         {
             audit.LogAudit(
                 AuditAction.SecretsBackfilled, "Secrets",
-                details: JsonSerializer.Serialize(new { providerKeys, inboundKeys, inviteTokens }));
+                details: JsonSerializer.Serialize(new { providerKeys, inboundKeys, inviteTokens, providerIndexes }));
         }
     }
 
@@ -122,7 +139,7 @@ internal sealed class SecretsBackfillService : IHostedService
             db.Entry(row).CurrentValues.SetValues(row with
             {
                 ApiKey = protector.Protect(row.ApiKey),
-                ApiKeyLookupHash = Sha256.HexHash(row.ApiKey),
+                ApiKeyLookupHash = indexer.Index(row.ApiKey),
             });
         }
 
@@ -135,12 +152,83 @@ internal sealed class SecretsBackfillService : IHostedService
         return rows.Count;
     }
 
+    /// <summary>
+    /// Upgrades provider rows still carrying the pre-keying, unkeyed blind index to the keyed one.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The original index was a plain SHA-256, justified on the grounds that the secrets it covers
+    /// are 256-bit CSPRNG values. That holds for the secrets Proxytrace generates, but not for this
+    /// one: the upstream provider key is typed in by an operator, and self-hosted OpenAI-compatible
+    /// backends conventionally use <c>EMPTY</c>, <c>ollama</c> or <c>sk-1234</c>. A database dump
+    /// then recovers the key by wordlist, undoing the encryption on the column beside it.
+    /// </para>
+    /// <para>
+    /// Re-indexing needs the plaintext, which means decrypting the stored ciphertext — so the pass is
+    /// skipped when the key ring cannot decrypt, exactly like the encryption pass above. It is also
+    /// skipped when no persisted blind-index key exists, because indexing under a per-process key
+    /// would make every provider fail to authenticate after the next restart.
+    /// </para>
+    /// </remarks>
+    private async Task<int> ReindexProviderKeysAsync(CancellationToken cancellationToken)
+    {
+        if (!indexer.IsKeyed)
+        {
+            // Not an error: Development and the test harnesses run without a data directory, and the
+            // indexer already logged a warning naming the variable to set.
+            return 0;
+        }
+
+        await using var owned = contextFactory();
+        var db = owned.Value;
+
+        // A row is upgraded when its index is present but not yet scheme-prefixed. Reading the
+        // stored column itself, rather than a companion marker column, follows the same reasoning as
+        // the two hash markers above: a separate marker is only as durable as its mapper.
+        var rows = await db.Set<ModelProviderEntity>()
+            .Where(e => e.ApiKeyLookupHash != null && !e.ApiKeyLookupHash.StartsWith(SecretIndexScheme.KeyedPrefix))
+            .ToListAsync(cancellationToken);
+
+        var upgraded = 0;
+        foreach (var row in rows)
+        {
+            string plaintext;
+            try
+            {
+                plaintext = protector.Unprotect(row.ApiKey);
+            }
+            catch (CryptographicException ex)
+            {
+                // An undecryptable row is already broken for upstream auth (see
+                // ModelProviderConfig.Decrypt); re-indexing it to the HMAC of an empty string would
+                // additionally make the legacy fallback stop matching. Leave it exactly as it is.
+                logger.LogWarning(ex,
+                    "Could not decrypt provider {ProviderId} while re-indexing its API key; leaving its "
+                    + "existing blind index in place.", row.Id);
+                continue;
+            }
+
+            db.Entry(row).CurrentValues.SetValues(row with { ApiKeyLookupHash = indexer.Index(plaintext) });
+            upgraded++;
+        }
+
+        if (upgraded > 0)
+        {
+            await db.SaveChangesAsync(cancellationToken);
+            logger.LogInformation("Re-indexed {Count} provider API keys under the keyed blind index.", upgraded);
+        }
+
+        return upgraded;
+    }
+
     private async Task<int> BackfillApiKeysAsync(CancellationToken cancellationToken)
     {
         await using var owned = contextFactory();
         var db = owned.Value;
+        // Marker: the stored KeyHash is not yet a hex SHA-256, so it is still the plaintext key.
+        // KeyPrefix cannot serve as the marker — the mapper collapses its NULL to "" on any save.
         var rows = await db.Set<ApiKeyEntity>()
-            .Where(e => e.KeyPrefix == null)
+            .Where(e => e.KeyHash.Length != HexHashLength)
             .ToListAsync(cancellationToken);
         foreach (var row in rows)
         {
@@ -166,7 +254,7 @@ internal sealed class SecretsBackfillService : IHostedService
         await using var owned = contextFactory();
         var db = owned.Value;
         var rows = await db.Set<InviteEntity>()
-            .Where(e => e.TokenHash.Length != InviteTokenHashLength)
+            .Where(e => e.TokenHash.Length != HexHashLength)
             .ToListAsync(cancellationToken);
         foreach (var row in rows)
         {

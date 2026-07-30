@@ -84,8 +84,14 @@ internal class StatisticsBackfillHostedService : IHostedService
 
                 // Skip runs already projected — avoids racing the live drainer when a run finalizes
                 // during backfill, and is a cheap no-op on warm restarts.
+                //
+                // System runs invert the test. They must NOT appear in the statistics, so the work
+                // here is the opposite: a system run with a leftover row (written before that rule
+                // existed) needs projecting precisely so the projector can remove it, while one with
+                // no row is already correct and is skipped.
                 TestRunStats? existing = await runStatsReader.FindAsync(run.Id, cancellationToken);
-                if (existing is not null)
+                bool isSystemRun = run.Group.IsSystemRun;
+                if (isSystemRun ? existing is null : existing is not null)
                 {
                     continue;
                 }

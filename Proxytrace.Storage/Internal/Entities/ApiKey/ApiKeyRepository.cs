@@ -57,4 +57,15 @@ internal class ApiKeyRepository : AbstractRepository<IApiKey, ApiKeyEntity>, IAp
 
         return await Map(stored, cancellationToken);
     }
+
+    public async Task<IReadOnlyList<string>> GetKeyNamesByOwnerAsync(Guid ownerId, CancellationToken cancellationToken = default)
+        // Projects the name column only — no mapping, so this never materializes a key entity (and
+        // never resolves its project/provider/owner graph) just to answer "does this user own any?".
+        => await contextFactory()
+            .Set<ApiKeyEntity>()
+            .AsNoTracking()
+            .Where(e => e.Owner == ownerId)
+            .OrderBy(e => e.Name)
+            .Select(e => e.Name)
+            .ToListAsync(cancellationToken);
 }

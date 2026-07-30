@@ -1,7 +1,7 @@
 import { beforeAll, describe, it, expect } from 'vitest';
 import { ModelProviderKind } from '../../api/models';
 import { i18n } from '../../i18n';
-import { kindLabel, kindColor, maskKey, isDefaultEndpoint, isAzureEndpoint } from './providerMeta';
+import { kindLabel, kindColor, isDefaultEndpoint, isAzureEndpoint } from './providerMeta';
 
 // Activate an empty catalog so i18n._() resolves MessageDescriptors to their source strings.
 beforeAll(() => i18n.loadAndActivate({ locale: 'en', messages: {} }));
@@ -21,16 +21,6 @@ describe('kindColor', () => {
     expect(kindColor(ModelProviderKind.OpenAi)).toBe('var(--success)');
     expect(kindColor(ModelProviderKind.OpenAiCompatible)).toBe('var(--teal)');
     expect(kindColor(ModelProviderKind.Unknown)).toBe('var(--text-muted)');
-  });
-});
-
-describe('maskKey', () => {
-  it('fully masks short keys', () => {
-    expect(maskKey('short')).toBe('••••••••');
-    expect(maskKey('12345678')).toBe('••••••••');
-  });
-  it('shows a prefix and suffix for long keys', () => {
-    expect(maskKey('sk-ant-abcdef0123456789')).toBe('sk-ant-••••••••••••6789');
   });
 });
 

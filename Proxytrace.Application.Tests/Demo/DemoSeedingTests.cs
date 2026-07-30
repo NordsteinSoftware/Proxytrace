@@ -79,7 +79,7 @@ public class DemoSeedingTests : BaseTest<Module>
 
         var proposals = await services.GetRequiredService<IRepository<IOptimizationProposal>>()
             .GetAllAsync(CancellationToken);
-        proposals.Should().HaveCount(9);
+        proposals.Should().HaveCount(10);
         proposals.Select(p => p.Status).Should().Contain(
             [ProposalStatus.Draft, ProposalStatus.Accepted, ProposalStatus.Rejected, ProposalStatus.Adopted]);
         proposals.Select(p => p.Kind).Should().Contain(
@@ -180,6 +180,20 @@ public class DemoSeedingTests : BaseTest<Module>
             var contained = await runRepo.ContainsAsync(theory.ABTestRunId.Value, CancellationToken);
             contained.Should().BeTrue("the linked A/B candidate run must exist");
         }
+    }
+
+    [TestMethod]
+    public async Task Seed_Leaves_No_Theory_Mid_AB_Validation()
+    {
+        // The kiosk skips the validation queue's restart recovery (RecoverInFlightTheoriesAsync),
+        // so a seeded Validating theory is never picked up: the board would show a pulsing
+        // "A/B in flight" row and an indeterminate progress bar that never resolves.
+        var theories = await services.GetRequiredService<IRepository<IOptimizationTheory>>()
+            .GetAllAsync(CancellationToken);
+
+        theories.Should().NotBeEmpty();
+        theories.Should().NotContain(t => t.Status == TheoryStatus.Validating,
+            "no seeded theory may sit mid-A/B in a kiosk that never runs the validation queue");
     }
 
     [TestMethod]
