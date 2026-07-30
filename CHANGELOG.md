@@ -9,6 +9,8 @@ follow [Semantic Versioning](https://semver.org). Ongoing work is collected unde
 
 ## [Unreleased]
 
+## [1.10.0] - 2026-07-30
+
 ### Added
 
 - **Cost tracking and budgets.** A new **Costs** page (under Monitor in the sidebar) shows what your
