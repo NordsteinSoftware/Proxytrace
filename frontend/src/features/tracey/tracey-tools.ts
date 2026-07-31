@@ -49,6 +49,7 @@ export const TRACEY_TOOLS_META: { name: string; description: string }[] = [
   { name: 'get_agent', description: 'Get one agent by id.' },
   { name: 'list_suites', description: 'List the test suites.' },
   { name: 'get_suite', description: 'Get one test suite by id.' },
+  { name: 'propose_test_cases', description: 'Propose test cases from a trace (read-only).' },
   { name: 'create_suite', description: 'Create a suite for an agent from captured traces (confirm).' },
   { name: 'add_to_suite', description: 'Add captured traces to a suite as test cases (confirm).' },
   { name: 'remove_test_case', description: 'Remove a test case from a suite (confirm).' },

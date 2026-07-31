@@ -3611,6 +3611,9 @@ msgstr "Aucun Trace pour le moment."
 msgid "No turn here is worth a test"
 msgstr ""
 
+msgid "No turn in this conversation is worth a test case."
+msgstr ""
+
 msgid "No user message"
 msgstr "Aucun message User"
 
@@ -4156,6 +4159,9 @@ msgstr "Changement proposé"
 msgid "Proposed system prompt"
 msgstr "Prompt système proposé"
 
+msgid "Proposed test cases"
+msgstr ""
+
 #. placeholder {0}: details.proposedTools.length
 msgid "Proposed tools ({0}): "
 msgstr "Tools proposés ({0}) : "
@@ -4276,6 +4282,9 @@ msgstr "Renoté · modifié"
 
 msgid "Read"
 msgstr "Lu"
+
+msgid "Reading the conversation…"
+msgstr ""
 
 msgid "Reading the run…"
 msgstr "Lecture de l'exécution…"

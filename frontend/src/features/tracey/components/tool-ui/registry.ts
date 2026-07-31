@@ -23,6 +23,7 @@ import { RunComparisonToolUI } from './RunComparisonToolUI';
 import { TraceListToolUI } from './TraceListToolUI';
 import { AnomalyListToolUI } from './AnomalyListToolUI';
 import { EvaluatorListToolUI } from './EvaluatorListToolUI';
+import { ProposedCasesToolUI } from './ProposedCasesToolUI';
 import { TheoryListToolUI } from './TheoryListToolUI';
 import { presentGate } from './present-gate';
 
@@ -76,4 +77,5 @@ export const TRACEY_TOOL_UI: Record<string, ToolCallMessagePartComponent> = {
   find_traces: presentGate(TraceListToolUI),
   get_agent_anomalies: presentGate(AnomalyListToolUI),
   list_evaluators: presentGate(EvaluatorListToolUI),
+  propose_test_cases: presentGate(ProposedCasesToolUI),
 };

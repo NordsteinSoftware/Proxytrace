@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { TestRunStatus } from '../../../api/models';
 
-const { agentsApi, testSuitesApi, testCasesApi, testRunGroupsApi } = vi.hoisted(() => ({
+const { agentsApi, testSuitesApi, testCasesApi, testRunGroupsApi, agentCallsApi } = vi.hoisted(() => ({
   agentsApi: { get: vi.fn() },
   testSuitesApi: {
     get: vi.fn(), create: vi.fn(), createWithCases: vi.fn(),
@@ -9,11 +9,13 @@ const { agentsApi, testSuitesApi, testCasesApi, testRunGroupsApi } = vi.hoisted(
   },
   testCasesApi: { update: vi.fn() },
   testRunGroupsApi: { get: vi.fn(), cancel: vi.fn() },
+  agentCallsApi: { proposeTestCases: vi.fn() },
 }));
 vi.mock('../../../api/agents', () => ({ agentsApi }));
 vi.mock('../../../api/test-suites', () => ({ testSuitesApi }));
 vi.mock('../../../api/test-cases', () => ({ testCasesApi }));
 vi.mock('../../../api/test-run-groups', () => ({ testRunGroupsApi }));
+vi.mock('../../../api/agent-calls', () => ({ agentCallsApi }));
 
 import { createSuiteTools } from './suites';
 import { createRunTools } from './runs';
@@ -431,5 +433,77 @@ describe('cancel_test_run', () => {
     const result = await run(tool, { groupId: 'g1' }, ctx);
     expect(result).toBe(CANCELLED);
     expect(testRunGroupsApi.cancel).not.toHaveBeenCalled();
+  });
+});
+
+describe('propose_test_cases', () => {
+  const GUID = '11111111-2222-3333-4444-555555555555';
+
+  function proposalSet(count = 1) {
+    return {
+      summary: 'a refund conversation',
+      proposals: Array.from({ length: count }, (_, i) => ({
+        agentCallId: GUID,
+        kind: 'Promotion',
+        title: `Case ${i}`,
+        rationale: 'because',
+        relevance: 'High',
+        expectedOutput: null,
+        flags: [],
+      })),
+      skipped: [{ agentCallId: GUID, reason: 'closing summary' }],
+      evaluatorSuggestion: null,
+    };
+  }
+
+  it('reads the trace and returns an actionable digest without writing anything', async () => {
+    const ctx = makeCtx();
+    agentCallsApi.proposeTestCases.mockResolvedValue(proposalSet());
+
+    const tool = createSuiteTools(ctx, store).propose_test_cases;
+    const result = await run(tool, { traceId: GUID, instruction: 'test the refund' }, ctx) as {
+      proposals: { items: { agentCallId: string; kind: string }[] };
+      skippedCount: number;
+    };
+
+    expect(agentCallsApi.proposeTestCases).toHaveBeenCalledWith(
+      GUID, { suiteId: undefined, instruction: 'test the refund' }, { silentStatuses: [404] },
+    );
+    // The digest has to carry what add_to_suite needs next, or the model needs a second read.
+    expect(result.proposals.items[0]).toMatchObject({ agentCallId: GUID, kind: 'Promotion' });
+    expect(result.skippedCount).toBe(1);
+    expect(testSuitesApi.addTestCase).not.toHaveBeenCalled();
+    expect(testSuitesApi.createWithCases).not.toHaveBeenCalled();
+  });
+
+  it('stores under the test-case-proposals kind', async () => {
+    const ctx = makeCtx();
+    agentCallsApi.proposeTestCases.mockResolvedValue(proposalSet());
+
+    await run(createSuiteTools(ctx, store).propose_test_cases, { traceId: GUID }, ctx);
+
+    expect(store).toHaveBeenCalledWith('test-case-proposals', expect.anything(), expect.anything());
+  });
+
+  it('rejects a non-GUID trace id without calling the API', async () => {
+    const ctx = makeCtx();
+
+    const result = await run(createSuiteTools(ctx, store).propose_test_cases, { traceId: 'nope' }, ctx);
+
+    expect(result).toEqual({ notFound: 'nope' });
+    expect(agentCallsApi.proposeTestCases).not.toHaveBeenCalled();
+  });
+
+  it('caps the digest and notes the truncation', async () => {
+    const ctx = makeCtx();
+    agentCallsApi.proposeTestCases.mockResolvedValue(proposalSet(30));
+
+    const result = await run(createSuiteTools(ctx, store).propose_test_cases, { traceId: GUID }, ctx) as {
+      proposals: { count: number; items: unknown[]; note?: string };
+    };
+
+    expect(result.proposals.count).toBe(30);
+    expect(result.proposals.items).toHaveLength(20);
+    expect(result.proposals.note).toContain('first 20 of 30');
   });
 });
