@@ -349,7 +349,12 @@ fails forever while reading as "the fix did not work". This was a real failure �
 correction was written against the summary call, so the flagship case stayed red through an A/B whose
 prompt change had in fact worked.
 
-Three things now prevent it. `find_traces` reports `conversationId` and `toolCallsRequested` per row,
+Four things now prevent it, and the first removes the choice rather than checking it afterwards.
+Step 4 of the playbook calls **`propose_test_cases`** with the user's complaint as `instruction`:
+the synthesis agent reads the whole conversation, targets the call that *decided*, and flags any
+`Correction` landing on an already-resolved input as `Unpassable` (`ProposalValidator`, backend) —
+before anything is written. The remaining three catch what still gets through. `find_traces` reports
+`conversationId` and `toolCallsRequested` per row,
 which is what makes a loop legible at all — `preview` is the *first user message*, so every call of
 one turn previews identically and "the newest trace" silently means "the closing summary".
 `Conversation.ResolvedToolCallCount` (domain) counts the tool calls an input already resolved and

@@ -27,7 +27,9 @@ follow [Semantic Versioning](https://semver.org). Ongoing work is collected unde
   When the destination suite's evaluators cannot score what it proposes, it offers an agentic judge —
   either added to that suite (with the blast radius stated up front, since a suite's evaluators score
   *every* case in it) or carried by a new suite instead. Tracey can do the same in chat via
-  `propose_test_cases`. Enterprise.
+  `propose_test_cases`, and her **test-driven improvement** playbook now uses it to pick which call
+  to correct — the step that decides whether the resulting regression test can ever go green.
+  Enterprise.
 
 ### Changed
 
