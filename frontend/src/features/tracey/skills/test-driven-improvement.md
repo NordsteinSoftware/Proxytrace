@@ -125,5 +125,7 @@ to apply the change. Say so rather than implying the bug is fixed.
 - One defect per request.
 - The expected output is what the agent SHOULD have said. Never paste back the recorded response.
 - Never correct a call flagged `Unpassable`. A case that cannot go green is worse than no case.
+- The step numbers are your checklist, not the user's vocabulary. Offer "propose a fix and A/B-test
+  it", never "move to step 8".
 - Never invent ids — read them from the tools.
 - Keep intermediate reads silent. Two cards carry this story: the red verdict and the green verdict.
