@@ -9,17 +9,24 @@
 //   npm run i18n:translate          # fill missing translations for all non-source locales
 //   npm run i18n:check              # exit 1 if any locale still has untranslated strings (no LLM)
 //
-// Configuration (env), only needed for the translate path, never for --check:
-//   I18N_TRANSLATE_API_KEY   API key for the OpenAI-compatible endpoint (required)
+// Configuration, only needed for the translate path, never for --check. Values come from the
+// process environment first, then the repo-root .env:
+//   I18N_TRANSLATE_API_KEY   API key for the OpenAI-compatible endpoint
 //   I18N_TRANSLATE_BASE_URL  Base URL of the endpoint (optional; defaults to OpenAI)
 //   I18N_TRANSLATE_MODEL     Model id (optional; defaults to gpt-4o-mini)
-import { readFileSync, writeFileSync, readdirSync } from 'node:fs'
+//
+// With none of those set it falls back to the kiosk endpoint (KIOSK_LLM_BASE_URL / _API_KEY /
+// _MODEL) that `docker-compose.kiosk.yml` and the prompt-lab already read from the same file — one
+// OpenAI-compatible endpoint configured once serves every local tool that needs a model. Set the
+// I18N_TRANSLATE_* vars to translate somewhere else without disturbing the kiosk.
+import { readFileSync, writeFileSync, readdirSync, existsSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { formatter as poFormatter } from '@lingui/format-po'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const frontendRoot = join(here, '..', '..')
+const repoRoot = join(frontendRoot, '..')
 const localesRoot = join(frontendRoot, 'src', 'locales')
 const SOURCE_LOCALE = 'en'
 const BATCH_SIZE = 40
@@ -120,17 +127,43 @@ async function translateBatch(model, system, sources) {
   return out
 }
 
+/**
+ * The repo-root `.env` as a plain object. Docker Compose reads this file automatically, so on a
+ * dev machine it is where the kiosk endpoint is already configured; this script is run by npm and
+ * gets no such loading, hence the deliberately small parser (no dependency, `KEY=value`, `#`
+ * comments, optional surrounding quotes).
+ */
+function loadDotEnv(path) {
+  const env = {}
+  if (!existsSync(path)) return env
+  for (const line of readFileSync(path, 'utf8').split('\n')) {
+    if (line.trim().startsWith('#')) continue
+    const match = /^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$/.exec(line)
+    if (match) env[match[1]] = match[2].trim().replace(/^["']|["']$/g, '')
+  }
+  return env
+}
+
 function makeModel() {
-  const apiKey = process.env.I18N_TRANSLATE_API_KEY
+  // The process environment wins over the file, so a one-off `I18N_TRANSLATE_MODEL=… npm run …`
+  // works without editing anything.
+  const env = { ...loadDotEnv(join(repoRoot, '.env')), ...process.env }
+  const apiKey = env.I18N_TRANSLATE_API_KEY || env.KIOSK_LLM_API_KEY
   if (!apiKey) {
     console.error(
-      'i18n:translate needs an API key. Set I18N_TRANSLATE_API_KEY (and optionally\n' +
-        'I18N_TRANSLATE_BASE_URL / I18N_TRANSLATE_MODEL). Any OpenAI-compatible endpoint works,\n' +
-        "including Proxytrace's own proxy.",
+      'i18n:translate needs an API key. It reads I18N_TRANSLATE_API_KEY (and optionally\n' +
+        'I18N_TRANSLATE_BASE_URL / I18N_TRANSLATE_MODEL), falling back to the kiosk endpoint\n' +
+        'KIOSK_LLM_API_KEY / KIOSK_LLM_BASE_URL / KIOSK_LLM_MODEL — from the environment or the\n' +
+        "repo-root .env. Any OpenAI-compatible endpoint works, including Proxytrace's own proxy.",
     )
     process.exit(1)
   }
-  return { apiKey, baseURL: process.env.I18N_TRANSLATE_BASE_URL, modelId: process.env.I18N_TRANSLATE_MODEL || 'gpt-4o-mini' }
+  // Take the whole endpoint from one source: a base URL borrowed from the kiosk while the key came
+  // from I18N_TRANSLATE_API_KEY would send that key somewhere it does not belong.
+  const usingKiosk = !env.I18N_TRANSLATE_API_KEY
+  const baseURL = usingKiosk ? env.KIOSK_LLM_BASE_URL : env.I18N_TRANSLATE_BASE_URL
+  const modelId = env.I18N_TRANSLATE_MODEL || (usingKiosk ? env.KIOSK_LLM_MODEL : null) || 'gpt-4o-mini'
+  return { apiKey, baseURL, modelId, source: usingKiosk ? 'kiosk endpoint' : 'I18N_TRANSLATE_*' }
 }
 
 async function runCheck() {
@@ -157,7 +190,8 @@ async function runCheck() {
 
 async function runTranslate() {
   const glossary = loadGlossary()
-  const { apiKey, baseURL, modelId } = makeModel()
+  const { apiKey, baseURL, modelId, source } = makeModel()
+  console.log(`Translating with ${modelId} via ${baseURL || 'api.openai.com'} (${source}).`)
   const { createOpenAI } = await import('@ai-sdk/openai')
   const openai = createOpenAI({ apiKey, ...(baseURL ? { baseURL } : {}) })
   const model = openai(modelId)
