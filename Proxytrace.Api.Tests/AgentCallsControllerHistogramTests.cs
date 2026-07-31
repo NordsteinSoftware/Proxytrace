@@ -103,6 +103,9 @@ public sealed class AgentCallsControllerHistogramTests : BaseTest<Module>
             Substitute.For<IAgentCall.CreateNew>(),
             Substitute.For<ICompletion.Create>(),
             GetServices().GetRequiredService<Proxytrace.Api.Auth.IProjectAccessGuard>(),
-            NullLogger<Audit>.Instance);
+            NullLogger<Audit>.Instance,
+            Substitute.For<Proxytrace.Domain.TestSuite.ITestSuiteRepository>(),
+            Substitute.For<Proxytrace.Application.TestCase.ITestCaseSynthesisService>(),
+            new Proxytrace.Api.Dto.TestCases.TestCaseProposalDtoMapper());
     }
 }

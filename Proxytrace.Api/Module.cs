@@ -263,6 +263,7 @@ internal sealed class Module : Autofac.Module
         builder.RegisterType<ToolDtoMapper>().AsSelf().SingleInstance();
         builder.RegisterType<AgentDtoMapper>().AsSelf().SingleInstance();
         builder.RegisterType<AgentCallDtoMapper>().AsSelf().SingleInstance();
+        builder.RegisterType<Dto.TestCases.TestCaseProposalDtoMapper>().AsSelf().SingleInstance();
         builder.RegisterType<OptimizationProposalDtoMapper>().AsSelf().SingleInstance();
         builder.RegisterType<Dto.Notifications.NotificationDtoMapper>().AsSelf().SingleInstance();
         builder.RegisterType<Dto.EmailSettings.EmailSettingsDtoMapper>().AsSelf().SingleInstance();

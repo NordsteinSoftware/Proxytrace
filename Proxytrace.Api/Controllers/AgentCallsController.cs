@@ -6,9 +6,14 @@ using Microsoft.Extensions.Logging;
 using Proxytrace.Api.Auth;
 using Proxytrace.Api.Dto.AgentCalls;
 using Proxytrace.Api.Json;
+using Proxytrace.Api.Auth.Licensing;
 using Proxytrace.Api.Dto.Agents;
 using Proxytrace.Api.Dto.Statistics;
+using Proxytrace.Api.Dto.TestCases;
 using Proxytrace.Application.Statistics;
+using Proxytrace.Application.TestCase;
+using Proxytrace.Domain.TestSuite;
+using Proxytrace.Licensing;
 using Proxytrace.Application.Streaming;
 using Proxytrace.Domain.Agent;
 using Proxytrace.Domain.AgentCall;
@@ -37,6 +42,9 @@ public class AgentCallsController : ControllerBase
     private readonly ICompletion.Create createCompletion;
     private readonly IProjectAccessGuard accessGuard;
     private readonly ILogger<Audit> audit;
+    private readonly ITestSuiteRepository suiteRepository;
+    private readonly ITestCaseSynthesisService synthesis;
+    private readonly TestCaseProposalDtoMapper proposalMapper;
 
     public AgentCallsController(
         IAgentCallRepository repository,
@@ -49,8 +57,14 @@ public class AgentCallsController : ControllerBase
         IAgentCall.CreateNew createCall,
         ICompletion.Create createCompletion,
         IProjectAccessGuard accessGuard,
-        ILogger<Audit> audit)
+        ILogger<Audit> audit,
+        ITestSuiteRepository suiteRepository,
+        ITestCaseSynthesisService synthesis,
+        TestCaseProposalDtoMapper proposalMapper)
     {
+        this.suiteRepository = suiteRepository;
+        this.synthesis = synthesis;
+        this.proposalMapper = proposalMapper;
         this.repository = repository;
         this.agentRepository = agentRepository;
         this.sessionRepository = sessionRepository;
@@ -379,6 +393,52 @@ public class AgentCallsController : ControllerBase
         if (!await accessGuard.CanAccessProjectAsync(call.Agent.Project.Id, cancellationToken))
             return NotFound();
         return agentCallDtoMapper.ToDto(call);
+    }
+
+    /// <summary>
+    /// Proposes the test cases worth building from this trace's whole conversation. Read-only —
+    /// nothing is created; the caller approves a subset and writes them through the test-suite
+    /// endpoints. Pass <c>suiteId</c> so the agent can judge whether that suite's evaluators can
+    /// score what it proposes, and <c>rounds</c> to refine a previous answer instead of starting over.
+    /// </summary>
+    [HttpPost("{id:guid}/test-case-proposals")]
+    [RequiresFeature(LicenseFeature.TestCaseSynthesis)]
+    public async Task<ActionResult<TestCaseProposalSetDto>> ProposeTestCases(
+        Guid id,
+        [FromBody] SynthesizeTestCasesRequest request,
+        CancellationToken cancellationToken)
+    {
+        var call = await repository.FindAsync(id, cancellationToken);
+        if (call is null)
+            return NotFound();
+        // Hide other tenants' traces behind a 404 rather than disclosing that the id exists.
+        if (!await accessGuard.CanAccessProjectAsync(call.Agent.Project.Id, cancellationToken))
+            return NotFound();
+
+        ITestSuite? destination = null;
+        if (request.SuiteId is { } suiteId)
+        {
+            destination = await suiteRepository.FindAsync(suiteId, cancellationToken);
+            if (destination is not null
+                && !await accessGuard.CanAccessProjectAsync(destination.Agent.Project.Id, cancellationToken))
+            {
+                destination = null;
+            }
+        }
+
+        // Keep only the most recent rounds: the model needs the recent exchange, and an unbounded
+        // history posted by a client would grow the prompt without bound.
+        IReadOnlyList<SynthesisRound> rounds =
+        [
+            .. (request.Rounds ?? [])
+                .TakeLast(TestCaseProposalSet.MaxRounds)
+                .Select(proposalMapper.ToDomain),
+        ];
+
+        TestCaseProposalSet proposals = await synthesis.SynthesizeAsync(
+            call, destination, rounds, request.Instruction, cancellationToken);
+
+        return proposalMapper.ToDto(proposals);
     }
 
     /// <summary>
