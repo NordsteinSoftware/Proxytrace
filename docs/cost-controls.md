@@ -229,6 +229,25 @@ The degrade is at **use time**, not entry time: an install that loses its licens
 configuration and restores enforcement the moment it is re-licensed. See
 [`licensing.md`](licensing.md).
 
+**"Free for any project member" is a constraint on what the page may fetch.** Every query the Costs
+page issues must itself be member-readable, and `app/queryClient.ts` sets `throwOnError: true`
+globally — so a single admin-gated request does not degrade one card, it rethrows during render and
+replaces the whole route with the error boundary. Two rules follow, both load-bearing:
+
+- **Key names in the chart legend come from `CostOverviewDto.ApiKeyTotals`** (`apiKeyNames` in
+  `costSeries.ts`), never from the Admin-only `GET /api/providers/overview`. The totals and the
+  series are derived from the *same* window filter in `CostStatistics.GetCostOverviewAsync`, so
+  every key the chart can plot is named there — and the payload already carries `ApiKeyName` and
+  `KeyPrefix` for the per-key breakdown. A key revoked since is named by its raw id server-side;
+  `apiKeyNames` drops those so the legend's short-id fallback runs instead of printing a GUID.
+- **`useProjectApiKeys(isAdmin)` is admin-gated at the call site.** It reads the Admin-only
+  providers overview, and the only thing that needs it is the budget **scope picker** — which lists
+  every key including ones with no traffic yet, and which is admin-only anyway
+  (`BudgetActionButton` renders nothing for a non-admin). It also sets `throwOnError: false`, so an
+  unrelated failure degrades the picker instead of the page. See #490: the hook used to fire
+  unconditionally, and a non-admin member got a 403 rethrown in render on a page documented as
+  theirs to read.
+
 `PUT` clears the limit's breach state (`DeleteForLimitAsync`) so the next guard tick re-evaluates
 against the new thresholds — without it, a limit raised after a hard breach would keep blocking,
 because the breach row is what the proxy reads.

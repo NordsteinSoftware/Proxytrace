@@ -21,7 +21,7 @@ import { canCreateAny, scopeAvailability } from './scopeAvailability';
 import { useCostLimitMutations, useCostLimits } from './hooks/useCostLimits';
 import { useCostOverview } from './hooks/useCostQueries';
 import { useProjectApiKeys } from './hooks/useProjectApiKeys';
-import { agentPoints, apiKeyPoints, densifyCostSeries, totalOf } from './costSeries';
+import { agentPoints, apiKeyNames, apiKeyPoints, densifyCostSeries, totalOf } from './costSeries';
 import { parseAmount } from './budgetMeter';
 
 // The page opens on the period budgets are measured over, so what the meters say and what the
@@ -54,7 +54,10 @@ export default function Costs() {
   const { data: limits = [], isLoading: limitsLoading } = useCostLimits();
   const { create, update, remove } = useCostLimitMutations();
   const { allAgents } = useAgents();
-  const { apiKeys } = useProjectApiKeys();
+  // Admin-gated: the rows only feed the budget scope picker, and the endpoint behind them is
+  // Admin-only. Asking for a member took the page down (#490); the legend below names keys from
+  // the cost overview, which every member may read.
+  const { apiKeys } = useProjectApiKeys(isAdmin);
 
   const series = useMemo(
     () => densifyCostSeries(agentPoints(overview?.series ?? []), from, to, bucket),
@@ -69,13 +72,13 @@ export default function Costs() {
   const { t } = useLingui();
   const seriesName = useMemo(() => {
     const agentById = new Map(allAgents.map(a => [a.id, a.name]));
-    const keyById = new Map(apiKeys.map(k => [k.id, k.name]));
+    const keyById = apiKeyNames(overview?.apiKeyTotals ?? []);
     return (dimension: CostDimension, seriesKey: string | null) => {
       if (seriesKey === null) return t`Unattributed`;
       const byId = dimension === 'agent' ? agentById : keyById;
       return byId.get(seriesKey) ?? seriesKey.slice(0, ID_SHORT_LEN);
     };
-  }, [allAgents, apiKeys, t]);
+  }, [allAgents, overview?.apiKeyTotals, t]);
 
   const budgets = overview?.budgets ?? [];
   const editing = editor.mode === 'edit' ? limits.find(l => l.id === editor.id) ?? null : null;

@@ -220,6 +220,13 @@ follow [Semantic Versioning](https://semver.org). Ongoing work is collected unde
 
 ### Fixed
 
+- **The Costs page opens for everyone on the team again.** Reading spend has always been free for
+  every project member, but the page also asked for the provider list behind it — something only an
+  administrator may see. The refusal was treated as a page-wide failure, so anyone who is not an
+  administrator got an error screen instead of the Costs page. It now reads the API key names it
+  needs for the chart from the cost figures themselves, and asks for the provider list only when an
+  administrator is actually going to set a budget. Members see the full page, names and all.
+
 - **A stalled provider no longer ties up the proxy indefinitely.** The five-minute limit on an
   upstream call stopped applying as soon as the provider sent its response headers, so a provider
   that answered and then went quiet mid-reply held the request, its connection and its worker open
