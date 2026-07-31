@@ -158,6 +158,10 @@ msgstr "{0, plural, one {cas} other {cas}}"
 msgid "{0, plural, one {Show # more line} other {Show # more lines}}"
 msgstr "{0, plural, one {Afficher # ligne de plus} other {Afficher # lignes de plus}}"
 
+#. placeholder {0}: destination.caseCount
+msgid "{0, plural, one {This judge will also score the # case already in this suite.} other {This judge will also score the # cases already in this suite.}}"
+msgstr ""
+
 #. placeholder {0}: pending.length
 msgid "{0, plural, one {Waiting for # action} other {Waiting for # actions}}"
 msgstr "{0, plural, one {En attente de # action} other {En attente de # actions}}"
@@ -855,8 +859,14 @@ msgstr "Ajouter un provider"
 msgid "Add test"
 msgstr "Ajouter un test"
 
+msgid "Add the cases without this judge"
+msgstr ""
+
 msgid "Add to suite"
 msgstr "Ajouter au Suite"
+
+msgid "Add to this suite"
+msgstr ""
 
 msgid "Add tool request"
 msgstr "Ajouter une requête de Tool"
@@ -949,6 +959,9 @@ msgstr "Agent :"
 
 msgid "Agentic evaluators"
 msgstr "Évaluateurs agentiques"
+
+msgid "Agentic evaluators are not included in your licence, so these cases will be scored by the suite's existing evaluators."
+msgstr ""
 
 msgid "Agentic evaluators require a licensed installation. Use a non-agentic kind or the suite's default exact-match evaluator instead."
 msgstr "Les evaluators Agent require une installation sous licence. Utilisez un type non-Agent ou l'evaluator exact-match par défaut du Suite à la place."
@@ -2441,6 +2454,9 @@ msgstr ""
 msgid "Generate tests"
 msgstr ""
 
+msgid "Generated suite"
+msgstr ""
+
 msgid "Get data-driven improvement proposals, validated with A/B runs before you ship them."
 msgstr "Obtenez des propositions d’amélioration fondées sur les données, validées avec des A/B runs avant le déploiement."
 
@@ -3242,6 +3258,9 @@ msgstr "Nouvel horaire"
 msgid "New suite"
 msgstr "Nouvelle Suite"
 
+msgid "New suite name"
+msgstr ""
+
 msgid "New traces available. Scroll to the top to refresh."
 msgstr "Nouvelles Traces disponibles. Faites défiler vers le haut pour actualiser."
 
@@ -3389,6 +3408,9 @@ msgstr "Aucune amélioration — Theory rejetée."
 
 msgid "No input messages."
 msgstr "Aucun message d'entrée."
+
+msgid "No judge"
+msgstr ""
 
 msgid "No longer available"
 msgstr "Plus disponible"
@@ -4197,6 +4219,9 @@ msgstr "pt"
 msgid "Pulled from the provider; prices load automatically."
 msgstr "Récupéré auprès du provider ; les prix se chargent automatiquement."
 
+msgid "Put in a new suite"
+msgstr ""
+
 msgid "Question"
 msgstr "Question"
 
@@ -4692,6 +4717,9 @@ msgstr "Répartition des scores"
 
 msgid "Score distribution per evaluator, per model"
 msgstr "Répartition des scores par Evaluator, par modèle"
+
+msgid "Scoring"
+msgstr ""
 
 msgid "scoring…"
 msgstr "scoring…"

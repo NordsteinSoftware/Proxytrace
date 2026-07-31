@@ -1,21 +1,25 @@
 import { useEffect, useState } from 'react';
 import { Trans, useLingui } from '@lingui/react/macro';
 import { plural } from '@lingui/core/macro';
-import type { AgentCallDto, TestSuiteListItemDto } from '../../api/models';
+import {
+  type AgentCallDto,
+  type EvaluatorSuggestionTarget,
+  type TestSuiteListItemDto,
+} from '../../api/models';
 import useToast from '../../hooks/useToast';
+import useCurrentProject from '../../hooks/useCurrentProject';
+import { useFeature, useLicense } from '../../hooks/useLicense';
 import { Modal } from '../overlays/Modal';
 import { Button } from '../ui/Button';
-import { EmptyState } from '../ui/EmptyState';
 import { SkeletonList } from '../ui/Skeleton';
 import { EYEBROW_CLS } from '../ui/classes';
-import { SparklesIcon } from '../icons';
 import { SuitePicker } from './SuitePicker';
 import { MAX_ROUNDS, useSynthesizeTests } from './useSynthesizeTests';
 import { TranscriptPane } from './synthesis/TranscriptPane';
-import { ProposalList } from './synthesis/ProposalList';
-import { SkippedTurns } from './synthesis/SkippedTurns';
+import { ProposalsPane } from './synthesis/ProposalsPane';
 import { InstructionBar } from './synthesis/InstructionBar';
 import { useProposalSelection } from './synthesis/useProposalSelection';
+import type { JudgeChoice } from './synthesis/EvaluatorSuggestionCard';
 
 interface Props {
   trace: AgentCallDto;
@@ -31,14 +35,22 @@ interface Props {
 export function SynthesizeTestsModal({ trace, suites, onClose }: Props) {
   const { t } = useLingui();
   const { show: toast } = useToast();
+  const { currentProjectId } = useCurrentProject();
   const [suiteId, setSuiteId] = useState(suites[0]?.id ?? '');
   const [instruction, setInstruction] = useState('');
   const [highlightedCallId, setHighlightedCallId] = useState<string | null>(null);
+  const [judge, setJudge] = useState<JudgeChoice>({ target: 'none', newSuiteName: '' });
 
   const synthesis = useSynthesizeTests(trace);
   const { conversation, proposals, roundsUsed, generate, approve, abort } = synthesis;
-  const callById = new Map(conversation.map(call => [call.id, call]));
-  const selection = useProposalSelection(callById);
+  const selection = useProposalSelection(new Map(conversation.map(call => [call.id, call])));
+
+  const canJudge = useFeature('AgenticEvaluators');
+  const { data: license } = useLicense();
+  const selectedSuite = suites.find(suite => suite.id === suiteId) ?? null;
+  // On Free, MaxTestSuites is 1 and a project holds a single agent — so "the agent's suites" IS
+  // the project's suites and this is exact. On Enterprise the limit is unbounded and never trips.
+  const suiteLimitReached = suites.length >= (license?.limits.MaxTestSuites ?? Number.POSITIVE_INFINITY);
 
   // Synchronizing with something outside React — an in-flight fetch. Closing the panel must not
   // leave a generation running against the user's budget.
@@ -46,19 +58,44 @@ export function SynthesizeTestsModal({ trace, suites, onClose }: Props) {
 
   const busy = generate.isPending;
   const selectedCount = selection.checked.size;
-  const errorMessage = generate.isError ? (generate.error as Error).message : null;
 
   function runGenerate() {
     generate.mutate(
       { suiteId, instruction, current: proposals ? selection.withEdits(proposals) : null },
-      { onSuccess: result => { selection.seed(result); setInstruction(''); } },
+      {
+        onSuccess: result => {
+          selection.seed(result);
+          setInstruction('');
+          // Default to what the agent chose, so its recommendation is one click, not two.
+          setJudge({
+            target: result.evaluatorSuggestion?.target ?? 'none',
+            newSuiteName: result.evaluatorSuggestion?.name ?? '',
+          });
+        },
+      },
     );
   }
 
   function submit() {
     if (!proposals) return;
     const writes = selection.writes(proposals.proposals);
-    approve.mutate({ suiteId, writes }, {
+    const suggestion = proposals.evaluatorSuggestion;
+    const useJudge = canJudge && suggestion !== null && judge.target !== 'none';
+    approve.mutate({
+      suiteId,
+      agentId: trace.agentId ?? '',
+      projectId: currentProjectId ?? '',
+      writes,
+      judge: useJudge && suggestion
+        ? {
+          name: suggestion.name,
+          instructions: suggestion.instructions,
+          target: judge.target as EvaluatorSuggestionTarget,
+        }
+        : null,
+      currentEvaluatorIds: selectedSuite?.evaluators.map(evaluator => evaluator.id) ?? [],
+      newSuiteName: judge.newSuiteName.trim() || suggestion?.name || t`Generated suite`,
+    }, {
       onSuccess: added => {
         // eslint-disable-next-line lingui/no-unlocalized-strings -- toast tone token, not UI copy
         toast(plural(added, { one: 'Added # test case', other: 'Added # test cases' }), 'success');
@@ -108,48 +145,23 @@ export function SynthesizeTestsModal({ trace, suites, onClose }: Props) {
               <SuitePicker suites={suites} value={suiteId} onChange={setSuiteId} />
             </div>
 
-            <div className="flex-1 min-h-0 overflow-y-auto flex flex-col gap-2">
-              {errorMessage && <p className="text-body-sm text-danger">{errorMessage}</p>}
-              {busy && <SkeletonList rows={3} />}
-
-              {!busy && !proposals && (
-                <EmptyState
-                  title={t`Nothing generated yet`}
-                  description={t`Reads this trace's whole conversation and proposes the test cases worth building.`}
-                  action={
-                    <Button
-                      variant="primary"
-                      onClick={runGenerate}
-                      leftIcon={<SparklesIcon size={13} />}
-                      data-testid="synthesize-generate-btn"
-                    >
-                      <Trans>Generate</Trans>
-                    </Button>
-                  }
-                />
-              )}
-
-              {!busy && proposals && proposals.proposals.length === 0 && (
-                <EmptyState
-                  title={t`No turn here is worth a test`}
-                  description={proposals.summary || undefined}
-                />
-              )}
-
-              {!busy && proposals && proposals.proposals.length > 0 && (
-                <ProposalList
-                  proposals={proposals.proposals}
-                  callById={callById}
-                  checked={selection.checked}
-                  expectedFor={selection.expectedFor}
-                  onToggle={selection.toggle}
-                  onExpectedChange={selection.setExpected}
-                  onFocus={setHighlightedCallId}
-                />
-              )}
-
-              {!busy && proposals && <SkippedTurns skipped={proposals.skipped} />}
-            </div>
+            <ProposalsPane
+              proposals={proposals}
+              busy={busy}
+              errorMessage={generate.isError ? (generate.error as Error).message : null}
+              onGenerate={runGenerate}
+              selection={selection}
+              judge={{
+                choice: judge,
+                onChange: setJudge,
+                licensed: canJudge,
+                destination: {
+                  caseCount: selectedSuite?.testCaseCount ?? 0,
+                  limitReached: suiteLimitReached,
+                },
+              }}
+              onFocusCall={setHighlightedCallId}
+            />
 
             {proposals && (
               <InstructionBar

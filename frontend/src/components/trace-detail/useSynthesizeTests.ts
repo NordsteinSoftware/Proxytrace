@@ -1,9 +1,9 @@
 import { useRef, useState } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { agentCallsApi } from '../../api/agent-calls';
-import { testSuitesApi, type CreateTestCasePayload } from '../../api/test-suites';
 import { QUERY_KEYS } from '../../api/query-keys';
 import type { AgentCallDto, SynthesisRoundDto, TestCaseProposalSetDto } from '../../api/models';
+import { useApproveProposals } from './useApproveProposals';
 
 /** Refinement rounds carried into one request; the server enforces the same cap. */
 export const MAX_ROUNDS = 5;
@@ -18,13 +18,9 @@ interface GenerateArgs {
   current: TestCaseProposalSetDto | null;
 }
 
-interface ApproveArgs {
-  suiteId: string;
-  writes: CreateTestCasePayload[];
-}
-
 /**
- * Owns the generate → refine → approve loop behind the Generate-tests panel.
+ * Owns the generate → refine loop behind the Generate-tests panel, and hands the write side to
+ * {@link useApproveProposals}.
  *
  * The rounds bookkeeping is the subtle part: `rounds` records what the model answered, and
  * `generate` replaces the LAST round's proposals with the user's current (possibly edited) set
@@ -32,13 +28,12 @@ interface ApproveArgs {
  * what the model originally said.
  */
 export function useSynthesizeTests(trace: AgentCallDto) {
-  const queryClient = useQueryClient();
   const [proposals, setProposals] = useState<TestCaseProposalSetDto | null>(null);
   const [rounds, setRounds] = useState<SynthesisRoundDto[]>([]);
-  const added = useRef(0);
   // One controller per in-flight generation. Closing the panel aborts it, so a request the user
   // walked away from tears down its HTTP call instead of running on to completion on their budget.
   const inFlight = useRef<AbortController | null>(null);
+  const { approve, addedBeforeFailure } = useApproveProposals();
 
   const conversationQuery = useQuery({
     queryKey: QUERY_KEYS.traceConversation(trace.conversationId),
@@ -83,22 +78,6 @@ export function useSynthesizeTests(trace: AgentCallDto) {
     },
   });
 
-  const approve = useMutation({
-    mutationFn: async ({ suiteId, writes }: ApproveArgs) => {
-      // Sequential, like useSaveSuite: on a mid-way failure the earlier writes stand, and `added`
-      // is what lets the caller say "added K of N" instead of a bare failure.
-      added.current = 0;
-      for (const write of writes) {
-        await testSuitesApi.addTestCase(suiteId, write.fromAgentCallId, write.expectedOutput);
-        added.current += 1;
-      }
-      return added.current;
-    },
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: QUERY_KEYS.testSuitesRoot });
-    },
-  });
-
   return {
     conversation,
     isLoadingConversation: !!trace.conversationId && conversationQuery.isLoading,
@@ -106,7 +85,7 @@ export function useSynthesizeTests(trace: AgentCallDto) {
     roundsUsed: rounds.length,
     generate,
     approve,
-    addedBeforeFailure: added,
+    addedBeforeFailure,
     /** Called from the panel's unmount cleanup — synchronizing with an in-flight fetch. */
     abort: () => inFlight.current?.abort(),
   };

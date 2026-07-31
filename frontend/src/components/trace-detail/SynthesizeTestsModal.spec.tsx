@@ -13,15 +13,27 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { I18nProvider } from '@lingui/react';
 import { i18n } from '../../i18n';
 
-const { agentCallsApi, testSuitesApi } = vi.hoisted(() => ({
+const { agentCallsApi, testSuitesApi, evaluatorsApi } = vi.hoisted(() => ({
   agentCallsApi: { listFull: vi.fn(), proposeTestCases: vi.fn() },
-  testSuitesApi: { addTestCase: vi.fn() },
+  testSuitesApi: { addTestCase: vi.fn(), updateEvaluators: vi.fn(), createWithCases: vi.fn() },
+  evaluatorsApi: { create: vi.fn() },
 }));
 vi.mock('../../api/agent-calls', () => ({ agentCallsApi }));
 vi.mock('../../api/test-suites', () => ({ testSuitesApi }));
+vi.mock('../../api/evaluators', () => ({ evaluatorsApi }));
+// The panel reads the current project (for evaluator creation) and the licence (for the judge
+// card). Both are app-wide context; stub them rather than mounting the whole provider tree.
+vi.mock('../../hooks/useCurrentProject', () => ({
+  default: () => ({ currentProjectId: 'project-1' }),
+}));
+vi.mock('../../hooks/useLicense', () => ({
+  useFeature: () => true,
+  useLicense: () => ({ data: { limits: { MaxTestSuites: 100 } } }),
+}));
 
 import { SynthesizeTestsModal } from './SynthesizeTestsModal';
 import {
+  EvaluatorSuggestionTarget,
   TestCaseProposalFlag,
   TestCaseProposalKind,
   TestCaseProposalRelevance,
@@ -41,7 +53,12 @@ const TRACE = {
 } as unknown as AgentCallDto;
 
 const SUITES = [
-  { id: 'suite-1', name: 'Refund suite', testCaseCount: 2, evaluators: [] },
+  {
+    id: 'suite-1',
+    name: 'Refund suite',
+    testCaseCount: 2,
+    evaluators: [{ id: 'eval-existing', kind: 'ExactMatch' }],
+  },
 ] as unknown as TestSuiteListItemDto[];
 
 function proposalSet(): TestCaseProposalSetDto {
@@ -155,6 +172,51 @@ describe('SynthesizeTestsModal', () => {
     expect(testSuitesApi.addTestCase).toHaveBeenCalledTimes(1);
     // A promotion sends no expected output, so the server locks in the recorded response.
     expect(testSuitesApi.addTestCase).toHaveBeenCalledWith('suite-1', 'call-1', undefined);
+  });
+
+  it('attaching the suggested judge widens the suite evaluator set rather than replacing it', async () => {
+    agentCallsApi.proposeTestCases.mockResolvedValue({
+      ...proposalSet(),
+      evaluatorSuggestion: {
+        name: 'Refund policy judge',
+        instructions: 'Does the refusal cite the 30-day window?',
+        reason: 'Exact Match cannot judge prose.',
+        target: EvaluatorSuggestionTarget.Attach,
+      },
+    });
+    evaluatorsApi.create.mockResolvedValue({ id: 'judge-1' });
+    testSuitesApi.addTestCase.mockResolvedValue({ id: 'suite-1', name: 'Refund suite' });
+    testSuitesApi.updateEvaluators.mockResolvedValue({ id: 'suite-1' });
+    render();
+
+    await act(async () => { click('synthesize-generate-btn'); });
+    await act(async () => { click('synthesize-submit-btn'); });
+
+    // The existing evaluator survives: updateEvaluators REPLACES the set, so the current ids must
+    // be sent alongside the new judge.
+    expect(testSuitesApi.updateEvaluators).toHaveBeenCalledWith('suite-1', ['eval-existing', 'judge-1']);
+  });
+
+  it('declining the judge writes the cases and touches no evaluator', async () => {
+    agentCallsApi.proposeTestCases.mockResolvedValue({
+      ...proposalSet(),
+      evaluatorSuggestion: {
+        name: 'Refund policy judge',
+        instructions: 'Does the refusal cite the 30-day window?',
+        reason: 'Exact Match cannot judge prose.',
+        target: EvaluatorSuggestionTarget.Attach,
+      },
+    });
+    testSuitesApi.addTestCase.mockResolvedValue({ id: 'suite-1', name: 'Refund suite' });
+    render();
+
+    await act(async () => { click('synthesize-generate-btn'); });
+    await act(async () => { click('synthesis-judge-decline-btn'); });
+    await act(async () => { click('synthesize-submit-btn'); });
+
+    expect(evaluatorsApi.create).not.toHaveBeenCalled();
+    expect(testSuitesApi.updateEvaluators).not.toHaveBeenCalled();
+    expect(testSuitesApi.addTestCase).toHaveBeenCalledTimes(1);
   });
 
   it('explains itself when the agent finds nothing worth testing', async () => {

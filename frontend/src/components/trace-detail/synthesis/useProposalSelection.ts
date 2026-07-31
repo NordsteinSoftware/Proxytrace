@@ -36,10 +36,14 @@ export function useProposalSelection(callById: Map<string, AgentCallDto>) {
     setEdited(previous => new Map(previous).set(key, value));
   }
 
+  /** The source call a proposal was built from, when it is in the loaded conversation. */
+  function callFor(proposal: TestCaseProposalDto): AgentCallDto | undefined {
+    return callById.get(proposal.agentCallId);
+  }
+
   /** The editor state for a proposal: the user's edit if any, otherwise its seeded default. */
   function expectedFor(proposal: TestCaseProposalDto): ExpectedOutput {
-    return edited.get(proposalKey(proposal))
-      ?? expectedFromProposal(proposal, callById.get(proposal.agentCallId));
+    return edited.get(proposalKey(proposal)) ?? expectedFromProposal(proposal, callFor(proposal));
   }
 
   /** The approved proposals as write payloads, in the order the agent ranked them. */
@@ -70,5 +74,7 @@ export function useProposalSelection(callById: Map<string, AgentCallDto>) {
     };
   }
 
-  return { checked, seed, toggle, setExpected, expectedFor, writes, withEdits };
+  return { checked, seed, toggle, setExpected, callFor, expectedFor, writes, withEdits };
 }
+
+export type ProposalSelection = ReturnType<typeof useProposalSelection>;

@@ -158,6 +158,10 @@ msgstr "{0, plural, one {case} other {cases}}"
 msgid "{0, plural, one {Show # more line} other {Show # more lines}}"
 msgstr "{0, plural, one {Show # more line} other {Show # more lines}}"
 
+#. placeholder {0}: destination.caseCount
+msgid "{0, plural, one {This judge will also score the # case already in this suite.} other {This judge will also score the # cases already in this suite.}}"
+msgstr "{0, plural, one {This judge will also score the # case already in this suite.} other {This judge will also score the # cases already in this suite.}}"
+
 #. placeholder {0}: pending.length
 msgid "{0, plural, one {Waiting for # action} other {Waiting for # actions}}"
 msgstr "{0, plural, one {Waiting for # action} other {Waiting for # actions}}"
@@ -855,8 +859,14 @@ msgstr "Add provider"
 msgid "Add test"
 msgstr "Add test"
 
+msgid "Add the cases without this judge"
+msgstr "Add the cases without this judge"
+
 msgid "Add to suite"
 msgstr "Add to suite"
+
+msgid "Add to this suite"
+msgstr "Add to this suite"
 
 msgid "Add tool request"
 msgstr "Add tool request"
@@ -949,6 +959,9 @@ msgstr "Agent:"
 
 msgid "Agentic evaluators"
 msgstr "Agentic evaluators"
+
+msgid "Agentic evaluators are not included in your licence, so these cases will be scored by the suite's existing evaluators."
+msgstr "Agentic evaluators are not included in your licence, so these cases will be scored by the suite's existing evaluators."
 
 msgid "Agentic evaluators require a licensed installation. Use a non-agentic kind or the suite's default exact-match evaluator instead."
 msgstr "Agentic evaluators require a licensed installation. Use a non-agentic kind or the suite's default exact-match evaluator instead."
@@ -2441,6 +2454,9 @@ msgstr "Generate test cases"
 msgid "Generate tests"
 msgstr "Generate tests"
 
+msgid "Generated suite"
+msgstr "Generated suite"
+
 msgid "Get data-driven improvement proposals, validated with A/B runs before you ship them."
 msgstr "Get data-driven improvement proposals, validated with A/B runs before you ship them."
 
@@ -3242,6 +3258,9 @@ msgstr "New schedule"
 msgid "New suite"
 msgstr "New suite"
 
+msgid "New suite name"
+msgstr "New suite name"
+
 msgid "New traces available. Scroll to the top to refresh."
 msgstr "New traces available. Scroll to the top to refresh."
 
@@ -3389,6 +3408,9 @@ msgstr "No improvement — theory rejected."
 
 msgid "No input messages."
 msgstr "No input messages."
+
+msgid "No judge"
+msgstr "No judge"
 
 msgid "No longer available"
 msgstr "No longer available"
@@ -4197,6 +4219,9 @@ msgstr "pt"
 msgid "Pulled from the provider; prices load automatically."
 msgstr "Pulled from the provider; prices load automatically."
 
+msgid "Put in a new suite"
+msgstr "Put in a new suite"
+
 msgid "Question"
 msgstr "Question"
 
@@ -4692,6 +4717,9 @@ msgstr "Score distribution"
 
 msgid "Score distribution per evaluator, per model"
 msgstr "Score distribution per evaluator, per model"
+
+msgid "Scoring"
+msgstr "Scoring"
 
 msgid "scoring…"
 msgstr "scoring…"
