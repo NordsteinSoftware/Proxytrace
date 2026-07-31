@@ -4,6 +4,7 @@ import {
   MAX_BUCKETS,
   type CostSeriesPoint,
   agentPoints,
+  apiKeyNames,
   apiKeyPoints,
   densifyCostSeries,
   monthDelta,
@@ -227,6 +228,36 @@ describe('topAgents', () => {
 
     expect(rows.map(r => r.agentName)).toEqual(['B']);
     expect(otherEur).toBe(4);
+  });
+});
+
+describe('apiKeyNames', () => {
+  it('names every attributed key in the window', () => {
+    const names = apiKeyNames([
+      { apiKeyId: 'k1', apiKeyName: 'CI', keyPrefix: 'proxytrace-aa', costEur: 3 },
+      { apiKeyId: 'k2', apiKeyName: 'Prod', keyPrefix: 'proxytrace-bb', costEur: 7 },
+    ]);
+
+    // The legend's whole source of truth: a member reads these without touching the Admin-only
+    // providers overview that used to crash the page for them (#490).
+    expect(names.get('k1')).toBe('CI');
+    expect(names.get('k2')).toBe('Prod');
+  });
+
+  it('skips the unattributed remainder', () => {
+    const names = apiKeyNames([{ apiKeyId: null, apiKeyName: null, keyPrefix: null, costEur: 99 }]);
+
+    // Null is a real group, but it is labelled "Unattributed" by the caller, not looked up.
+    expect(names.size).toBe(0);
+  });
+
+  it('skips a revoked key whose name the API fell back to the id for', () => {
+    const names = apiKeyNames([
+      { apiKeyId: 'k3', apiKeyName: 'k3', keyPrefix: null, costEur: 5 },
+    ]);
+
+    // Leaving it out lets the caller's short-id fallback run — a full GUID in a legend is worse.
+    expect(names.has('k3')).toBe(false);
   });
 });
 

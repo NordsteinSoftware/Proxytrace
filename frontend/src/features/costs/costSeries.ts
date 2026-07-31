@@ -233,6 +233,28 @@ export function topAgents(
 }
 
 /**
+ * Display name per inbound API key, read off the cost overview's own per-key totals.
+ *
+ * Deliberately *not* the providers overview: that endpoint is Admin-only, so sourcing the chart
+ * legend from it replaced the whole Costs page with the error boundary for every non-admin member
+ * (#490) — on a page whose entire point is that reading it is free for the team. The totals are
+ * derived from the same window filter as the series server-side, so every key the chart can plot is
+ * named here.
+ *
+ * A key that has since been revoked is left out: the API falls back to the raw id as that key's
+ * name, and the caller's own short-id fallback reads better in a legend than a full GUID.
+ */
+export function apiKeyNames(totals: readonly ApiKeyCostTotalDto[]): Map<string, string> {
+  return new Map(
+    totals.flatMap(t =>
+      t.apiKeyId !== null && t.apiKeyName !== null && t.apiKeyName !== t.apiKeyId
+        ? [[t.apiKeyId, t.apiKeyName] as const]
+        : [],
+    ),
+  );
+}
+
+/**
  * The window's per-key totals, largest first, capped to `limit`. The unattributed row is pinned
  * last regardless of size — it is a remainder, and letting it head the list would read as if one
  * key were the biggest spender.
