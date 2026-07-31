@@ -2,6 +2,10 @@ using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.AI;
 using Proxytrace.Domain.Message;
+// Aliased rather than imported: OpenAI.Chat also defines a ChatMessage, which would collide with
+// Microsoft.Extensions.AI's own throughout this file.
+using OpenAiChatOptions = OpenAI.Chat.ChatCompletionOptions;
+using OpenAiReasoningEffort = OpenAI.Chat.ChatReasoningEffortLevel;
 using Proxytrace.Domain.ModelEndpoint;
 
 namespace Proxytrace.Infrastructure.Internal;
@@ -88,11 +92,9 @@ internal static class ChatClientExtensions
     /// </summary>
     /// <remarks>
     /// Only non-null members are set, so an unset override leaves the provider's default alone
-    /// rather than pinning it to a value the user never chose. Reasoning effort and choice count
-    /// have no first-class <see cref="ChatOptions"/> member, so they go through
-    /// <see cref="ChatOptions.AdditionalProperties"/> under their OpenAI wire names; a backend that
-    /// does not understand them answers with its own error, which is more useful than dropping the
-    /// value silently — the behaviour this whole method exists to fix.
+    /// rather than pinning it to a value the user never chose. Reasoning effort has no first-class
+    /// <see cref="ChatOptions"/> member — see <see cref="ApplyReasoningEffort"/> for how it reaches
+    /// the wire.
     /// </remarks>
     private static void ApplySampling(ChatOptions chatOptions, ModelSamplingParameters? sampling)
     {
@@ -109,14 +111,44 @@ internal static class ChatClientExtensions
         if (sampling.Seed is { } seed) chatOptions.Seed = seed;
         if (sampling.StopSequences is { Count: > 0 } stop) chatOptions.StopSequences = [.. stop];
 
-        if (!string.IsNullOrWhiteSpace(sampling.ReasoningEffort))
-        {
-            (chatOptions.AdditionalProperties ??= [])["reasoning_effort"] = sampling.ReasoningEffort;
-        }
+        ApplyReasoningEffort(chatOptions, sampling.ReasoningEffort);
 
+        // Choice count has no public member on the OpenAI options type (ChatCompletionOptions.N is
+        // documented but not exposed), so it stays in the dictionary — where, per the remarks on
+        // ApplyReasoningEffort, it does NOT reach the provider. Tracked in issue #496.
         if (sampling.ChoiceCount is { } choiceCount)
         {
             (chatOptions.AdditionalProperties ??= [])["n"] = choiceCount;
         }
+    }
+
+    /// <summary>
+    /// Puts the reasoning budget onto the request through the OpenAI client's own options type —
+    /// the only route that actually reaches the provider.
+    /// </summary>
+    /// <remarks>
+    /// It used to be written into <see cref="ChatOptions.AdditionalProperties"/> under its OpenAI
+    /// wire name, on the assumption that a backend which did not understand it would answer with
+    /// its own error. It never got the chance: the OpenAI adapter behind <see cref="IChatClient"/>
+    /// maps the members it knows and <b>silently discards the dictionary</b>, so the field never
+    /// left the process — the playground's Reasoning-effort control did nothing at all, which is
+    /// the exact failure <see cref="ModelSamplingParameters"/> was introduced to end.
+    /// <see cref="ChatOptions.RawRepresentationFactory"/> is the supported seam: the adapter starts
+    /// from the instance returned here and then overwrites the members it maps itself, so what it
+    /// does not know about — this one — survives onto the wire.
+    /// </remarks>
+    private static void ApplyReasoningEffort(ChatOptions chatOptions, string? effort)
+    {
+        if (string.IsNullOrWhiteSpace(effort))
+        {
+            return;
+        }
+
+        chatOptions.RawRepresentationFactory = _ =>
+            // OPENAI001 marks the reasoning API as evaluation-only. It is the SDK's sole supported
+            // way to set the parameter, and the value we send is a plain string either way.
+#pragma warning disable OPENAI001
+            new OpenAiChatOptions { ReasoningEffortLevel = new OpenAiReasoningEffort(effort) };
+#pragma warning restore OPENAI001
     }
 }

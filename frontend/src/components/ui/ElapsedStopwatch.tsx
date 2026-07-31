@@ -1,6 +1,6 @@
 import { useLingui } from '@lingui/react/macro';
-import { fmtElapsed } from '../../../../lib/format';
-import { useElapsedSeconds } from './useElapsedSeconds';
+import { fmtElapsed } from '../../lib/format';
+import { useElapsedSeconds } from '../../hooks/useElapsedSeconds';
 
 /**
  * A quiet m:ss stopwatch counting up from its own mount. A leaf on purpose: the once-a-second

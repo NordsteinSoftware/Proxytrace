@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import type { AgentCallDto, MessageDto } from '../../api/models';
-import { useAgentSuites } from './usePromoteTrace';
+import { useAgentSuites } from './useAgentSuites';
 import { fmtLatency, fmtTokens, cachedPct } from '../../lib/format';
 import {
   ClockIcon, CoinsIcon,
@@ -11,7 +11,6 @@ import { ToolMessageBubble } from '../ui/ToolMessageBubble';
 import { Button } from '../ui/Button';
 import { Tabs } from '../ui/Tabs';
 import { DetailPanel } from '../overlays/DetailPanel';
-import { PromoteModal } from './PromoteModal';
 import { SynthesizeTestsModal } from './SynthesizeTestsModal';
 import { AskTraceyModal } from './AskTraceyModal';
 import { DrawerStat } from './DrawerStat';
@@ -47,7 +46,6 @@ export function TraceDetailPanel({ trace, onClose, onPrev, onNext }: Props) {
   const { t, i18n } = useLingui();
   // eslint-disable-next-line lingui/no-unlocalized-strings -- Tab id token (display label from TAB_LABELS)
   const [tab, setTab] = useState<Tab>('Messages');
-  const [promoting, setPromoting] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [askingTracey, setAskingTracey] = useState(false);
   const [prevTraceId, setPrevTraceId] = useState(trace.id);
@@ -57,7 +55,6 @@ export function TraceDetailPanel({ trace, onClose, onPrev, onNext }: Props) {
     setPrevTraceId(trace.id);
     // eslint-disable-next-line lingui/no-unlocalized-strings -- Tab id token (display label from TAB_LABELS)
     setTab('Messages');
-    setPromoting(false);
     setGenerating(false);
     setAskingTracey(false);
   }
@@ -65,11 +62,11 @@ export function TraceDetailPanel({ trace, onClose, onPrev, onNext }: Props) {
   const suitesQuery = useAgentSuites(trace.agentId);
   const suites = suitesQuery.data?.items ?? [];
   const hasResponse = !!trace.response;
-  const promoteDisabled = !trace.agentId || !hasResponse || suitesQuery.isLoading || suites.length === 0;
-  const promoteTooltip = !trace.agentId
-    ? t`This trace is not linked to an agent and cannot be promoted.`
+  const generateDisabled = !trace.agentId || !hasResponse || suitesQuery.isLoading || suites.length === 0;
+  const generateTooltip = !trace.agentId
+    ? t`This trace is not linked to an agent, so there is nothing to generate tests against.`
     : !hasResponse
-      ? t`This trace has no response and cannot be promoted.`
+      ? t`This trace has no response, so there is nothing to generate tests from.`
       : suitesQuery.isLoading
         ? t`Loading test suites…`
         : suites.length === 0
@@ -105,22 +102,16 @@ export function TraceDetailPanel({ trace, onClose, onPrev, onNext }: Props) {
 
   return (
     <>
-      <DetailPanel onClose={onClose} onPrev={onPrev} onNext={onNext} keyboardEnabled={!promoting && !generating && !askingTracey} testId="trace-detail">
+      <DetailPanel onClose={onClose} onPrev={onPrev} onNext={onNext} keyboardEnabled={!generating && !askingTracey} testId="trace-detail">
         <TraceDetailHeader
           trace={trace}
           onClose={onClose}
           onPrev={onPrev}
           onNext={onNext}
           onAskTracey={() => setAskingTracey(true)}
-          promote={{
-            disabled: promoteDisabled,
-            tooltip: promoteTooltip,
-            onStart: () => setPromoting(true),
-          }}
           generate={{
-            // Same preconditions as promotion: an agent, a response, and somewhere to put the cases.
-            disabled: promoteDisabled,
-            tooltip: promoteTooltip,
+            disabled: generateDisabled,
+            tooltip: generateTooltip,
             onStart: () => setGenerating(true),
           }}
         />
@@ -196,7 +187,6 @@ export function TraceDetailPanel({ trace, onClose, onPrev, onNext }: Props) {
         </div>
       </DetailPanel>
 
-      {promoting && <PromoteModal trace={trace} suites={suites} onClose={() => setPromoting(false)} />}
       {generating && (
         <SynthesizeTestsModal trace={trace} suites={suites} onClose={() => setGenerating(false)} />
       )}

@@ -21,6 +21,27 @@ internal sealed class TestCaseSynthesisService : ITestCaseSynthesisService
     /// </summary>
     private const int MaxConversationCalls = 100;
 
+    /// <summary>
+    /// The reasoning budget asked of the synthesis agent — none at all.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The whole interaction is one blocking model call the user watches a panel wait for, and on a
+    /// reasoning model the thinking dwarfs the answer: measured against a four-call conversation on
+    /// the shipped demo endpoint, a synthesis call spent 1.7k–3.0k tokens on hidden reasoning to
+    /// produce a ~300-token JSON answer, taking 25–44s. Asking for none returned the same proposals
+    /// in 8–13s.
+    /// </para>
+    /// <para>
+    /// The task justifies it: this agent reads a transcript and reports the decision points in it,
+    /// which is extraction rather than deduction, and nothing it says is trusted anyway —
+    /// <see cref="ProposalValidator"/> re-checks every id against the real conversation. A model
+    /// that has no such knob rejects the parameter and <c>ModelClient</c> re-asks without it, so
+    /// this is a request for speed, never a requirement.
+    /// </para>
+    /// </remarks>
+    private const string ReasoningBudget = "none";
+
     private static readonly JsonSerializerOptions RoundJson = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
@@ -64,7 +85,11 @@ internal sealed class TestCaseSynthesisService : ITestCaseSynthesisService
         Conversation modelConversation = BuildModelConversation(transcript, destination, priorRounds, instruction);
 
         using IModelClient client = synthesizer.CreateClient();
-        SynthesisOutput? output = await CompleteWithRetryAsync(client, modelConversation, cancellationToken);
+        ModelOptions options = ModelOptions.FromAgent(synthesizer, synthesizer.Endpoint.Model) with
+        {
+            Sampling = new ModelSamplingParameters(ReasoningEffort: ReasoningBudget),
+        };
+        SynthesisOutput? output = await CompleteWithRetryAsync(client, modelConversation, options, cancellationToken);
 
         // A null output means the model did not produce parseable JSON. An internal feature failing
         // must not take the caller down — report nothing rather than throwing.
@@ -76,10 +101,11 @@ internal sealed class TestCaseSynthesisService : ITestCaseSynthesisService
     private static async Task<SynthesisOutput?> CompleteWithRetryAsync(
         IModelClient client,
         Conversation conversation,
+        ModelOptions options,
         CancellationToken cancellationToken)
     {
         TypedCompletion<SynthesisOutput> completion =
-            await client.CompleteAsync<SynthesisOutput>(conversation, cancellationToken: cancellationToken);
+            await client.CompleteAsync<SynthesisOutput>(conversation, options, cancellationToken: cancellationToken);
         if (completion.Response is not null)
         {
             return completion.Response;
@@ -87,7 +113,7 @@ internal sealed class TestCaseSynthesisService : ITestCaseSynthesisService
 
         // Sampling is non-deterministic, so the usual cause — a JSON answer cut off mid-string — does
         // not repeat. One retry costs a call; not retrying costs the user the whole interaction.
-        completion = await client.CompleteAsync<SynthesisOutput>(conversation, cancellationToken: cancellationToken);
+        completion = await client.CompleteAsync<SynthesisOutput>(conversation, options, cancellationToken: cancellationToken);
         return completion.Response;
     }
 

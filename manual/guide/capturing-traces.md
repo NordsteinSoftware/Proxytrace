@@ -145,7 +145,7 @@ while the time range, search, sort, and the System traces setting are shared acr
 
 ### The trace detail panel
 
-![The trace detail panel: latency, token and cost metrics above the Messages tab, which lays out the system, user, and assistant conversation.](/screenshots/traces/detail.png)
+![The trace detail panel: the agent, model and status in the header with the Ask Tracey and Generate tests actions, latency, token and cost metrics below, and the Messages tab laying out the system, user, tool and assistant conversation.](/screenshots/traces/detail.png)
 
 Click a trace to open its detail panel. The header leads with the **agent** that made the
 call (click the name to jump to its [agent page](/guide/agents)), followed by the **model**
@@ -153,10 +153,11 @@ and the call's **HTTP status**. The line below shows the full **trace ID** with 
 button that puts it on your clipboard, and the exact **capture time** (date and time, to the
 second). The header also holds the panel's actions: **Ask Tracey** opens a question box where
 you can ask something specific about this call (for example, “Why was the refund approved?”),
-then hands the trace ID and your question to the [AI assistant](/guide/tracey). **Add test** promotes it into a
-[test case](/guide/test-suites-and-cases), and **Generate tests** asks Proxytrace to read the whole
-conversation and [propose the cases worth building](/guide/test-suites-and-cases#let-proxytrace-propose-the-cases)
-(Enterprise).
+then hands the trace ID and your question to the [AI assistant](/guide/tracey). **Generate tests**
+reads the whole conversation and [proposes the test cases worth
+building](/guide/test-suites-and-cases#let-proxytrace-propose-the-cases) — it starts as soon as the
+panel opens (Enterprise). To turn traces into cases by hand instead, open a suite on the **Test
+Suites** page and use [Add from traces](/guide/test-suites-and-cases#building-a-suite-from-traces).
 
 If the call was [flagged as an outlier](/guide/outliers) or by a
 [custom anomaly detector](/guide/anomaly-dashboard#custom-anomaly-detectors), an **Anomalous

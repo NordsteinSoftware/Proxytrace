@@ -129,6 +129,28 @@ public sealed class TestCaseSynthesisServiceTests : BaseTest<Module>
     }
 
     [TestMethod]
+    public async Task SynthesizeAsync_AsksTheModelForNoReasoning()
+    {
+        // The user watches a panel block on this single call, and on a reasoning model the hidden
+        // thinking dwarfs the answer — measured at 1.7k-3.0k reasoning tokens for a ~300-token JSON
+        // answer, which is 25-44s of staring instead of 8-13s. Passing no options at all is what
+        // made that the default.
+        IServiceProvider services = GetServices();
+        var origin = FakeCall(out Guid callId);
+        List<Conversation> recorded = [];
+        List<ModelOptions?> recordedOptions = [];
+        var service = BuildService(
+            services,
+            RecordingAgent(services, ValidResponse.Replace("REPLACE_ME", callId.ToString()), recorded, recordedOptions),
+            [origin]);
+
+        await service.SynthesizeAsync(origin, null, [], null, CancellationToken);
+
+        recordedOptions.Should().ContainSingle();
+        recordedOptions[0]?.Sampling?.ReasoningEffort.Should().Be("none");
+    }
+
+    [TestMethod]
     public void Service_IsRegisteredInTheContainer()
     {
         // Guards the one line in Application/Module.cs that loads TestCaseModule — without it the
@@ -242,13 +264,15 @@ public sealed class TestCaseSynthesisServiceTests : BaseTest<Module>
 
     /// <summary>
     /// An agent whose client answers with the canned JSON and records the conversation it was asked
-    /// to complete, so a test can assert what actually went to the model. Substituted rather than
-    /// hand-written: implementing IAgent by delegation would be twenty pointless forwarding members.
+    /// to complete — and, when asked, the options it was asked with — so a test can assert what
+    /// actually went to the model. Substituted rather than hand-written: implementing IAgent by
+    /// delegation would be twenty pointless forwarding members.
     /// </summary>
     private static IAgent RecordingAgent(
         IServiceProvider services,
         string cannedResponse,
-        List<Conversation> recorded)
+        List<Conversation> recorded,
+        List<ModelOptions?>? recordedOptions = null)
     {
         var canned = new CannedJsonAgent(cannedResponse, services.GetRequiredService<IOutputFormat.Create>());
 
@@ -264,6 +288,7 @@ public sealed class TestCaseSynthesisServiceTests : BaseTest<Module>
                 Conversation? conversation = callInfo.Arg<Conversation>();
                 ArgumentNullException.ThrowIfNull(conversation);
                 recorded.Add(conversation);
+                recordedOptions?.Add(callInfo.Arg<ModelOptions?>());
                 using IModelClient inner = canned.CreateClient();
                 return inner.CompleteAsync<SynthesisOutput>(conversation);
             });

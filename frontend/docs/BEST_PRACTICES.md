@@ -136,6 +136,41 @@ Reach for `useEffect` **only** to synchronize with something *outside* React: DO
 
 Acceptable effects already in the repo, for reference: `hooks/useElementWidth.ts` (ResizeObserver), `hooks/useGlobalShortcut.ts` (keydown listener), `api/event-stream.ts` (SSE subscription). These wrap a genuinely external system in a custom hook — that's the right shape. Any effect more than a few lines belongs in its own `use*` hook, not inline in a component.
 
+### 4.1a Never start a mutation *inline* in a mount effect
+
+Occasionally a panel really does exist in order to fire one request (the trace detail's **Generate
+tests** opens *because* the user clicked generate). Calling `mutate()` straight from `useEffect(…, [])`
+looks like the obvious way to do it, and it is broken in development:
+
+StrictMode mounts, tears the effects down, and mounts again. That teardown unsubscribes
+`useMutation`'s observer, and `MutationObserver.onUnsubscribe` removes it from a mutation that is
+**still in flight** — with no matching re-attach when it re-subscribes (there is no `onSubscribe`;
+check `node_modules/@tanstack/query-core/build/modern/mutationObserver.js` before assuming
+otherwise). The request completes normally and the *mutation's* own `onSuccess` still runs, so your
+state updates — but no observer hears the status change, so **`isPending` stays true forever** and
+the component sits in its loading state on top of a response it already has. The per-call
+`mutate(vars, { onSuccess })` callbacks never fire either, because those are delivered through the
+observer.
+
+A `useRef` "only once" guard makes it worse: it suppresses the second pass's call, which is the one
+whose observer would have survived.
+
+Schedule it and cancel on cleanup instead — the first pass's timer is cleared, only the final
+mount's call runs, and its observer stays attached for the whole request:
+
+```tsx
+useEffect(() => {
+  const timer = setTimeout(runGenerate, 0);
+  return () => clearTimeout(timer);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only on purpose
+}, []);
+```
+
+Two consequences worth knowing: this is **development-only**, so a production-build e2e run will
+never catch it — cover it with a Vitest spec that renders inside an explicit `<StrictMode>`
+(`SynthesizeTestsModal.spec.tsx` has one). And a spec driving such a component must yield a turn
+for the deferred start before asserting.
+
 ### 4.2 State placement
 
 - **Local UI state** (open/closed, hovered, active tab) → `useState` in the lowest component that needs it.

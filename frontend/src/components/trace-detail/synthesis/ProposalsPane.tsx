@@ -2,8 +2,8 @@ import { Trans, useLingui } from '@lingui/react/macro';
 import type { TestCaseProposalSetDto } from '../../../api/models';
 import { Button } from '../../ui/Button';
 import { EmptyState } from '../../ui/EmptyState';
-import { SkeletonList } from '../../ui/Skeleton';
 import { SparklesIcon } from '../../icons';
+import { GeneratingProposals } from './GeneratingProposals';
 import { ProposalList } from './ProposalList';
 import { SkippedTurns } from './SkippedTurns';
 import { EvaluatorSuggestionCard, type JudgeChoice } from './EvaluatorSuggestionCard';
@@ -13,7 +13,7 @@ export interface JudgePaneProps {
   choice: JudgeChoice;
   onChange: (choice: JudgeChoice) => void;
   licensed: boolean;
-  destination: { caseCount: number; limitReached: boolean };
+  destination: { name: string; caseCount: number; limitReached: boolean };
 }
 
 interface Props {
@@ -36,7 +36,7 @@ export function ProposalsPane({
   return (
     <div className="flex-1 min-h-0 overflow-y-auto flex flex-col gap-2">
       {errorMessage && <p className="text-body-sm text-danger">{errorMessage}</p>}
-      {busy && <SkeletonList rows={3} />}
+      {busy && <GeneratingProposals />}
 
       {!busy && !proposals && (
         <EmptyState

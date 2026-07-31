@@ -126,45 +126,6 @@ test.describe('Traces', () => {
     await expect(page.getByTestId(`trace-row-${c2.id}`)).toBeVisible();
   });
 
-  test('promoting a trace adds a test case to the selected suite', async ({ page, request }) => {
-    const client = await makeClient(request);
-
-    const agentName = uniqueName('Promote Agent');
-    const { id: agentId } = await client.createAgent({ name: agentName, endpointId });
-    // A suite (with one seed case) is the promote destination.
-    const seedCall = await client.seedAgentCall({ agentId, userContent: 'seed', assistantContent: 'seed-resp' });
-    const { id: suiteId } = await client.createSuiteFromTraces(uniqueName('Promote Suite'), agentId, [seedCall.id], []);
-    expect((await client.getTestSuite(suiteId)).testCases.length).toBe(1);
-
-    // The trace we'll promote.
-    const promoteCall = await client.seedAgentCall({
-      agentId,
-      userContent: `promote me ${Date.now()}`,
-      assistantContent: 'promote reply',
-    });
-
-    await page.goto('/traces', { waitUntil: 'load' });
-    await selectAgentFilter(page, agentId);
-
-    await page.getByTestId(`trace-row-${promoteCall.id}`).click();
-    await expect(page.getByTestId('trace-detail')).toBeVisible();
-
-    await page.getByTestId('promote-btn').click();
-    const modal = page.getByTestId('promote-modal');
-    await expect(modal).toBeVisible();
-
-    // Select the destination suite and submit.
-    await page.getByTestId(`promote-suite-option-${suiteId}`).click();
-    await page.getByTestId('promote-submit-btn').click();
-
-    // Modal closes; suite's test-case count went 1 -> 2 (verify via API read-back).
-    await expect(modal).toBeHidden();
-    await expect.poll(
-      async () => (await client.getTestSuite(suiteId)).testCases.length,
-      { timeout: 10_000, message: 'promote did not add a test case' },
-    ).toBe(2);
-  });
-
   test('scrolling the trace list loads more traces', async ({ page, request }) => {
     const client = await makeClient(request);
 

@@ -10,17 +10,22 @@ The intended workflow is to **promote production traces** into durable benchmark
 
 1. Find a [trace](/guide/capturing-traces) that represents a critical behavior or a
    regression you want to guard against.
-2. Open its detail panel and click **Add test** — the captured input becomes the case input.
+2. Open its detail panel and click **Generate tests** — Proxytrace reads the conversation and
+   proposes the cases worth keeping (see [below](#let-proxytrace-propose-the-cases)).
 3. Group related cases into a test suite.
 
 Because cases come from real traffic, suites stay grounded in behaviors that actually
 matter.
 
+To add traces to a suite yourself, without the agent's help, open the suite on the **Test Suites**
+page and use **Add from traces** — pick the traces, and each becomes a case. That route works on
+every license tier.
+
 ## Let Proxytrace propose the cases
 
 ::: tip Enterprise feature
-Generating test cases requires an Enterprise license. Promoting a trace by hand with **Add test**
-works on every tier.
+Generating test cases requires an Enterprise license. On other tiers, build suites by hand with
+**Add from traces** on the Test Suites page.
 :::
 
 A multi-turn conversation offers a lot of possible test cases, and most of them are not worth
@@ -30,17 +35,27 @@ welcome" at the end.
 
 ![The Generate test cases panel: the captured conversation on the left, and on the right the destination suite, two approved candidates with their reasoning, and the editable expected tool call.](/screenshots/suites/generate-tests.png)
 
-Open a trace and click **Generate tests**. Proxytrace reads the whole conversation and proposes
-only the turns where the agent **decided** something — it chose a tool, chose its arguments,
-refused, escalated. Each candidate tells you what it asserts and why it is worth testing:
+Open a trace and click **Generate tests**. The panel opens and starts reading straight away — it
+takes in the whole conversation and proposes only the turns where the agent **decided** something:
+it chose a tool, chose its arguments, refused, escalated. A clock in the candidate column counts the
+wait, which is usually a few seconds and depends on the model your project's system endpoint points
+at. Each candidate tells you what it asserts and why it is worth testing:
 
 - **GREEN** locks in what the agent actually did, as a regression test.
 - **RED** asserts what it *should* have done — a test that fails until the agent is fixed.
 
-Nothing is generated until you click, and nothing is written until you approve. Review the
-candidates beside the conversation, edit any expected output, tick the ones you want, and add them
-to a suite in one go. Turns it passed over are listed under **N turns skipped**, each with the
-reason — so you can see what it decided not to test, and disagree.
+Nothing is written until you approve. Review the candidates beside the conversation, edit any
+expected output, tick the ones you want, and add them to a suite in one go. Turns it passed over are
+listed under **N turns skipped**, each with the reason — so you can see what it decided not to test,
+and disagree.
+
+The **Destination suite** picker sets where the approved cases land, and you can change it at any
+point before you add them. The first round is read against whichever suite is selected when the
+panel opens; if you switch and want the candidates reconsidered against the new suite's evaluators,
+ask for a refinement round from the box at the bottom.
+
+Once the cases are added, a message in the corner confirms how many landed and offers **View
+suite** — one click to the suite you just filled.
 
 ### When a candidate can't be made to pass
 
@@ -70,12 +85,14 @@ the cases it proposes need judgement the destination suite cannot deliver — "d
 sensibly?" is not something Exact Match can answer — it offers an **agentic judge** and asks where
 to put it:
 
-- **Add to this suite** — the judge also scores the cases already there. The panel tells you how
-  many that is before you commit.
-- **Put in a new suite** — the new cases and the judge go somewhere clean, leaving the existing
-  suite untouched.
+- **Add the judge to *your suite*** — it will also score the cases already there, and the panel
+  says how many that is before you commit.
+- **Put the cases in a new suite** — the cases and the judge go somewhere clean, and they land
+  there *instead of* the suite you picked at the top of the panel.
+- **Skip the judge** — the cases go to your suite and its current evaluators score them.
 
-You can also decline the judge and add the cases anyway.
+All three say what they will do before you choose, so nothing about the outcome waits until after
+you commit. The one the agent recommends is marked and selected for you.
 
 ### Pick the trace where the agent decided
 
@@ -143,8 +160,8 @@ The captured response is only a starting point. When the traced output is *not* 
 want the agent to produce — you intend to change the agent to hit a target — edit the
 expected output directly:
 
-- **In the Add test dialog**, the *Expected output* section is editable before you add the
-  case to a suite.
+- **In the Generate tests panel**, each candidate's expected output is editable before you add it
+  to a suite.
 - **In the suite detail panel**, select a case and choose **Edit expected output** to revise
   an existing case.
 

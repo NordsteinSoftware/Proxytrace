@@ -3,7 +3,7 @@ import type { AgentCallDto } from '../../api/models';
 import { agentColor, modelColor } from '../../lib/colors';
 import { fmtDateTime } from '../../lib/format';
 import { cn } from '../../lib/cn';
-import { PlusIcon, ChevronRightIcon, KeyIcon, SparklesIcon, LockIcon } from '../icons';
+import { ChevronRightIcon, KeyIcon, SparklesIcon, LockIcon } from '../icons';
 import { useFeature } from '../../hooks/useLicense';
 import { showUpgradeModal } from '../license/UpgradeModal';
 import { CopyButton } from '../ui/CopyButton';
@@ -24,7 +24,6 @@ interface Props {
   onPrev?: () => void;
   onNext?: () => void;
   onAskTracey: () => void;
-  promote: HeaderAction;
   generate: HeaderAction;
 }
 
@@ -33,8 +32,11 @@ interface Props {
  * page) + model + HTTP status, with prev/next navigation. Provenance row: the full trace ID
  * (mono, copyable, truncates first) + exact capture time, with the actions. Message/tool-call
  * counts are deliberately absent — the tab badges below already carry them.
+ *
+ * Generate tests is the drawer's only test-creation action, so it holds the primary slot. Adding a
+ * case by hand lives on the Test Suites page ("Add from traces"), which is not license-gated.
  */
-export function TraceDetailHeader({ trace, onClose, onPrev, onNext, onAskTracey, promote, generate }: Props) {
+export function TraceDetailHeader({ trace, onClose, onPrev, onNext, onAskTracey, generate }: Props) {
   const navigate = useNavigate();
   const { t } = useLingui();
   const canGenerate = useFeature('TestCaseSynthesis');
@@ -132,22 +134,11 @@ export function TraceDetailHeader({ trace, onClose, onPrev, onNext, onAskTracey,
             }}
             disabled={canGenerate && generate.disabled}
             title={canGenerate ? generate.tooltip || undefined : undefined}
-            variant="secondary"
+            variant="primary"
             size="sm"
             leftIcon={canGenerate ? <SparklesIcon size={12} /> : <LockIcon size={12} />}
           >
             {canGenerate ? <Trans>Generate tests</Trans> : <Trans>Upgrade to generate</Trans>}
-          </Button>
-          <Button
-            data-testid="promote-btn"
-            onClick={() => !promote.disabled && promote.onStart()}
-            disabled={promote.disabled}
-            title={promote.tooltip || undefined}
-            variant="primary"
-            size="sm"
-            leftIcon={<PlusIcon strokeWidth={2.5} size={12} />}
-          >
-            <Trans>Add test</Trans>
           </Button>
         </div>
       </div>

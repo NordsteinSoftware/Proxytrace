@@ -1,11 +1,17 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Trans, useLingui } from '@lingui/react/macro';
 import { XIcon, ArrowUpRightIcon } from '../icons';
-import ToastContext, { type ErrorToastOptions, type ToastItem } from '../../contexts/ToastContext';
+import ToastContext, { type ToastAction, type ToastOptions, type ToastItem } from '../../contexts/ToastContext';
 import { cn } from '../../lib/cn';
+import { FOCUS_RING } from '../../lib/constants';
 import { canViewErrorLog, navigateToErrorLog } from '../../lib/errorLogNav';
 
 type ToastType = ToastItem['type'];
+
+/** How long a non-error toast stays up. An actionable one has to survive being read *and* decided
+ *  on, which 3s does not cover; a plain confirmation does not need the extra dwell. */
+const DISMISS_MS = 3000;
+const DISMISS_WITH_ACTION_MS = 8000;
 
 // Finite-state styling (DESIGN §6): each type maps to a fixed border + text class.
 // Tokens resolve to the same CSS vars as the previous inline typeColor():
@@ -22,10 +28,37 @@ const TOAST_TEXT: Record<ToastType, string> = {
   info: cn('text-accent'),
 };
 
-let globalShow: ((message: string, type: ToastItem['type'], options?: ErrorToastOptions) => void) | null = null;
+/** The follow-up link shared by the error deep-link and the generic toast action. */
+const TOAST_LINK_CLS = cn(
+  'inline-flex items-start gap-1.5 text-left cursor-pointer',
+  'rounded-sm hover:underline underline-offset-2 transition-colors',
+  FOCUS_RING,
+);
+
+/**
+ * The toast's follow-up link. Lives here rather than in the two render branches because the plain
+ * and error layouts are structurally different but must offer the action identically.
+ */
+function ToastActionLink(
+  { action, onDone, className }: { action: ToastAction; onDone: () => void; className?: string },
+) {
+  return (
+    <button
+      type="button"
+      onClick={() => { action.onClick(); onDone(); }}
+      data-testid="toast-action-btn"
+      className={cn(TOAST_LINK_CLS, 'mt-1.5 text-body-sm font-semibold', className)}
+    >
+      <span>{action.label}</span>
+      <ArrowUpRightIcon size={12} strokeWidth={1.75} className="shrink-0 mt-0.5" />
+    </button>
+  );
+}
+
+let globalShow: ((message: string, type: ToastItem['type'], options?: ToastOptions) => void) | null = null;
 
 // eslint-disable-next-line react-refresh/only-export-components
-export function showToast(message: string, type: ToastItem['type'] = 'info', options?: ErrorToastOptions) {
+export function showToast(message: string, type: ToastItem['type'] = 'info', options?: ToastOptions) {
   globalShow?.(message, type, options);
 }
 
@@ -34,12 +67,13 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const nextId = useRef(0);
 
-  const show = useCallback((message: string, type: ToastItem['type'] = 'info', options?: ErrorToastOptions) => {
+  const show = useCallback((message: string, type: ToastItem['type'] = 'info', options?: ToastOptions) => {
     const id = ++nextId.current;
     setToasts(prev => [...prev, { id, message, type, ...options }]);
 
     if (type !== 'error') {
-      setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 3000);
+      const after = options?.action ? DISMISS_WITH_ACTION_MS : DISMISS_MS;
+      setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), after);
     }
   }, []);
 
@@ -60,6 +94,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
       <div className="fixed bottom-6 right-6 flex flex-col gap-2 z-[100] pointer-events-none">
         {toasts.map(toast => {
           if (toast.type !== 'error') {
+            const { action } = toast;
             return (
               <div
                 key={toast.id}
@@ -67,9 +102,14 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
                   'fade-up bg-card rounded-md px-4 py-2.5 text-title font-medium max-w-[320px] shadow-[var(--shadow-float)] border',
                   TOAST_BORDER[toast.type],
                   TOAST_TEXT[toast.type],
+                  // Only an actionable toast takes pointer events; a plain one must not sit in
+                  // front of whatever it is covering.
+                  action && 'pointer-events-auto',
                 )}
+                data-testid="toast"
               >
-                {toast.message}
+                <div>{toast.message}</div>
+                {action && <ToastActionLink action={action} onDone={() => dismiss(toast.id)} />}
               </div>
             );
           }
@@ -98,9 +138,8 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
                     data-testid="error-toast-view-btn"
                     aria-label={t`View this error in the Error Log`}
                     className={cn(
-                      'flex-1 min-w-0 text-left inline-flex items-start gap-1.5 text-h2 font-semibold leading-snug cursor-pointer',
-                      'rounded-sm hover:underline underline-offset-2 transition-colors',
-                      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color-mix(in_srgb,var(--accent-primary)_60%,transparent)]',
+                      TOAST_LINK_CLS,
+                      'flex-1 min-w-0 text-h2 font-semibold leading-snug',
                       TOAST_TEXT[toast.type],
                     )}
                   >
@@ -120,6 +159,13 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
                   <XIcon size={16} strokeWidth={1.5} />
                 </button>
               </div>
+              {toast.action && (
+                <ToastActionLink
+                  action={toast.action}
+                  onDone={() => dismiss(toast.id)}
+                  className={TOAST_TEXT[toast.type]}
+                />
+              )}
               {isDev && toast.stacktrace && (
                 <details className="mt-2">
                   <summary className="text-body-sm text-muted cursor-pointer hover:text-secondary transition-colors select-none">

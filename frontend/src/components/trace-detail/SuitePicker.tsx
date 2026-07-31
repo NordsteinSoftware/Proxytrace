@@ -4,12 +4,9 @@ import { cn } from '../../lib/cn';
 import { CheckIcon } from '../icons';
 import { RowButton } from '../ui/RowButton';
 
-/**
- * Default `data-testid` prefix — the id the promote flow's e2e selectors already use, so
- * extracting this out of PromoteModal changed no test.
- */
+/** Default `data-testid` prefix — the destination-suite rows in the Generate-tests panel. */
 // eslint-disable-next-line lingui/no-unlocalized-strings -- test id token, not UI copy
-const DEFAULT_TEST_ID_PREFIX = 'promote-suite-option';
+const DEFAULT_TEST_ID_PREFIX = 'suite-option';
 
 interface Props {
   suites: TestSuiteListItemDto[];

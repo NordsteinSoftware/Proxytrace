@@ -9,7 +9,7 @@ const ADMIN_PASSWORD = 'E2ePassword1!';
 // it which turns are worth testing, so this is a real LLM round-trip: @llm-gated, generously timed,
 // and asserted on the parts the model does not get to choose. WHICH turns it proposes, and how
 // many, is its call; that it proposes something, that the panel approves exactly what was ticked,
-// and that exactly those cases land in the destination suite is not.
+// that exactly those cases land in the destination suite, and that the snackbar leads there, is not.
 test.describe('@llm Generate test cases from a trace', () => {
   test.skip(!process.env.OPENAI_API_KEY, 'requires OPENAI_API_KEY env var');
 
@@ -100,15 +100,15 @@ test.describe('@llm Generate test cases from a trace', () => {
     const modal = page.getByTestId('synthesize-tests-modal');
     await expect(modal).toBeVisible();
 
-    // Pick the destination first: the request carries the suite so the agent can see how the cases
-    // would be scored, and it decides its judge suggestion from that.
-    await page.getByTestId(`promote-suite-option-${suiteId}`).click();
-
-    // Nothing is generated until asked — that is the point of the explicit button.
-    await expect(page.getByTestId('synthesis-proposal-list')).toHaveCount(0);
-    await page.getByTestId('synthesize-generate-btn').click();
-
+    // Generation starts with the panel — the header button IS the generate action, so there is no
+    // second click and no idle empty state to wait through.
+    await expect(page.getByTestId('synthesize-generate-btn')).toHaveCount(0);
     await expect(page.getByTestId('synthesis-proposal-list')).toBeVisible({ timeout: 180_000 });
+
+    // The destination is chosen after the fact. The first round runs against the default suite, so
+    // switching here changes where the cases land (and what a refinement round would be scored
+    // against) — not the candidates already on screen.
+    await page.getByTestId(`suite-option-${suiteId}`).click();
 
     const toggles = page.locator('[data-testid^="synthesis-proposal-toggle-"]');
     const proposalCount = await toggles.count();
@@ -130,10 +130,11 @@ test.describe('@llm Generate test cases from a trace', () => {
     }
 
     // The agent may also suggest an agentic judge, and the panel defaults to its recommendation —
-    // which can be a NEW suite. Decline it so the cases go to the suite we picked. The button only
-    // renders while a judge is chosen, so its absence means there was nothing to decline.
-    const declineJudge = page.getByTestId('synthesis-judge-decline-btn');
-    if (await declineJudge.count() > 0) await declineJudge.click();
+    // which can be a NEW suite. Pick "Skip the judge" so the cases go to the suite we chose. The
+    // option only renders when a judge was suggested, so its absence means there was nothing to
+    // decline.
+    const skipJudge = page.getByTestId('synthesis-judge-none');
+    if (await skipJudge.count() > 0) await skipJudge.click();
 
     const submit = page.getByTestId('synthesize-submit-btn');
     await expect(submit).toContainText(String(approved));
@@ -144,5 +145,11 @@ test.describe('@llm Generate test cases from a trace', () => {
       async () => (await api.getTestSuite(suiteId)).testCases.length,
       { timeout: 30_000, intervals: [1_000], message: 'the approved proposals did not land in the suite' },
     ).toBe(1 + approved);
+
+    // The snackbar is the hand-off: it says what landed and takes the user to where it landed.
+    const snackbarAction = page.getByTestId('toast-action-btn');
+    await expect(snackbarAction).toBeVisible();
+    await snackbarAction.click();
+    await expect(page).toHaveURL(new RegExp(`/suites\\?id=${suiteId}`));
   });
 });

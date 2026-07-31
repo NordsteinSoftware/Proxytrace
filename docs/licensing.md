@@ -155,6 +155,7 @@ JWT carries one extra claim, `offline` (a JSON boolean), and the server emits it
   `POST /api/agent-calls/{id}/test-case-proposals` carries
   `[RequiresFeature(LicenseFeature.TestCaseSynthesis)]` (**402**); the button stays visible on Free
   and routes to the upgrade modal instead of opening the panel, so the capability is discoverable
-  without being usable. Promoting a trace by hand (*Add test*) is ungated and unaffected — only the
-  agent-proposed path is premium. Attaching the judge it may suggest additionally requires
+  without being usable. It is the trace drawer's only test-creation action; building a suite by hand
+  (*Add from traces*, on the Test Suites page) is ungated and unaffected — only the agent-proposed
+  path is premium. Attaching the judge it may suggest additionally requires
   `AgenticEvaluators`, and the new-suite path additionally consumes the `MaxTestSuites` limit.

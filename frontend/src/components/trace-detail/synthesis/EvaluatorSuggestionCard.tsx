@@ -1,12 +1,17 @@
+import type { ReactNode } from 'react';
 import { Plural, Trans, useLingui } from '@lingui/react/macro';
 import { EvaluatorSuggestionTarget, type EvaluatorSuggestionDto } from '../../../api/models';
-import { Button } from '../../ui/Button';
+import { Badge } from '../../ui/Badge';
 import { Input } from '../../ui/Input';
-import { SegmentedControl, type Segment } from '../../ui/SegmentedControl';
+import { Radio, RadioGroup } from '../../ui/Radio';
 import { EYEBROW_CLS } from '../../ui/classes';
+import { cn } from '../../../lib/cn';
 
 /** What the user decided to do with the agent's judge suggestion. `none` = declined. */
 export type JudgeTarget = EvaluatorSuggestionTarget | 'none';
+
+/** The declined answer, named so it reads as a value rather than as copy at the call site. */
+const NO_JUDGE: JudgeTarget = 'none';
 
 export interface JudgeChoice {
   target: JudgeTarget;
@@ -15,7 +20,7 @@ export interface JudgeChoice {
 
 interface Props {
   suggestion: EvaluatorSuggestionDto;
-  destination: { caseCount: number; limitReached: boolean };
+  destination: { name: string; caseCount: number; limitReached: boolean };
   licensed: boolean;
   choice: JudgeChoice;
   onChange: (choice: JudgeChoice) => void;
@@ -27,27 +32,16 @@ interface Props {
  * A suite's evaluators apply to every case in it and a case passes only when EVERY attached
  * evaluator passes, so attaching a judge is never a local change. The card says that out loud
  * rather than letting the user discover it in the next run.
+ *
+ * The three answers are a radio list rather than a segmented control, and each carries its
+ * consequence permanently. A segmented control reads as "interchangeable views of one thing", which
+ * these are not: one of them widens what the destination suite grades, and one quietly sends the
+ * cases somewhere other than the suite picked at the top of the panel. Showing every consequence at
+ * once is what lets the choice be compared instead of discovered — the old card revealed the blast
+ * radius only *after* the option was selected, and never mentioned the redirect at all.
  */
 export function EvaluatorSuggestionCard({ suggestion, destination, licensed, choice, onChange }: Props) {
   const { t } = useLingui();
-
-  const segments: Segment<JudgeTarget>[] = [
-    { value: 'none', label: t`No judge`, testId: 'synthesis-judge-none' },
-    {
-      value: EvaluatorSuggestionTarget.Attach,
-      label: t`Add to this suite`,
-      testId: 'synthesis-judge-attach',
-    },
-    // The Free tier caps MaxTestSuites at 1, so there is no room for a second suite — offer the
-    // option only where it can actually succeed rather than letting the server 402 the click.
-    ...(destination.limitReached
-      ? []
-      : [{
-        value: EvaluatorSuggestionTarget.NewSuite,
-        label: t`Put in a new suite`,
-        testId: 'synthesis-judge-new-suite',
-      } as Segment<JudgeTarget>]),
-  ];
 
   return (
     <div
@@ -56,53 +50,103 @@ export function EvaluatorSuggestionCard({ suggestion, destination, licensed, cho
     >
       <span className={EYEBROW_CLS}><Trans>Scoring</Trans></span>
       <p className="text-body-sm text-secondary">{suggestion.reason}</p>
-      <p className="text-body font-semibold text-primary">{suggestion.name}</p>
+      <p className="text-h2 font-semibold text-primary">{suggestion.name}</p>
 
       {!licensed ? (
-        <p className="text-body-sm text-muted">
+        <p className="text-body-sm text-secondary">
           <Trans>
             Agentic evaluators are not included in your licence, so these cases will be scored by
             the suite's existing evaluators.
           </Trans>
         </p>
       ) : (
-        <>
-          <SegmentedControl
-            value={choice.target}
-            onChange={target => onChange({ ...choice, target })}
-            segments={segments}
-          />
-          {choice.target === EvaluatorSuggestionTarget.Attach && (
-            <p className="text-body-sm text-warn">
+        <RadioGroup
+          name="synthesis-judge"
+          ariaLabel={t`What to do with this judge`}
+          value={choice.target}
+          onChange={target => onChange({ ...choice, target: target as JudgeTarget })}
+        >
+          <JudgeOption
+            value={EvaluatorSuggestionTarget.Attach}
+            testId="synthesis-judge-attach"
+            recommended={suggestion.target === EvaluatorSuggestionTarget.Attach}
+            title={t`Add the judge to ${destination.name}`}
+            consequence={
               <Plural
                 value={destination.caseCount}
-                one="This judge will also score the # case already in this suite."
-                other="This judge will also score the # cases already in this suite."
+                one="It will also score the # case already there."
+                other="It will also score the # cases already there."
               />
-            </p>
-          )}
-          {choice.target === EvaluatorSuggestionTarget.NewSuite && (
-            <Input
-              value={choice.newSuiteName}
-              onChange={event => onChange({ ...choice, newSuiteName: event.target.value })}
-              placeholder={t`New suite name`}
-              aria-label={t`New suite name`}
-              data-testid="synthesis-new-suite-name"
+            }
+            caution
+          />
+
+          {/* The Free tier caps MaxTestSuites at 1, so there is no room for a second suite — offer
+              the option only where it can actually succeed rather than letting the server 402. */}
+          {!destination.limitReached && (
+            <JudgeOption
+              value={EvaluatorSuggestionTarget.NewSuite}
+              testId="synthesis-judge-new-suite"
+              recommended={suggestion.target === EvaluatorSuggestionTarget.NewSuite}
+              title={t`Put the cases in a new suite`}
+              consequence={t`They go there instead of ${destination.name}, with the judge attached.`}
             />
           )}
-          {choice.target !== 'none' && (
-            <Button
-              variant="link"
-              size="sm"
-              onClick={() => onChange({ ...choice, target: 'none' })}
-              className="self-start"
-              data-testid="synthesis-judge-decline-btn"
-            >
-              <Trans>Add the cases without this judge</Trans>
-            </Button>
+          {choice.target === EvaluatorSuggestionTarget.NewSuite && (
+            <div className="pl-6">
+              <Input
+                value={choice.newSuiteName}
+                onChange={event => onChange({ ...choice, newSuiteName: event.target.value })}
+                placeholder={t`New suite name`}
+                aria-label={t`New suite name`}
+                data-testid="synthesis-new-suite-name"
+              />
+            </div>
           )}
-        </>
+
+          <JudgeOption
+            value={NO_JUDGE}
+            testId="synthesis-judge-none"
+            title={t`Skip the judge`}
+            consequence={t`${destination.name}'s current evaluators score the cases.`}
+          />
+        </RadioGroup>
       )}
     </div>
+  );
+}
+
+/**
+ * One answer: what it does, and what it costs. The consequence is never hidden behind selection —
+ * that is the whole point of the list.
+ */
+function JudgeOption({ value, testId, title, consequence, caution, recommended }: {
+  value: string;
+  testId: string;
+  title: string;
+  consequence: ReactNode;
+  /** Widens what an existing suite grades — the one outcome that reaches beyond these cases. */
+  caution?: boolean;
+  recommended?: boolean;
+}) {
+  return (
+    <Radio
+      value={value}
+      testId={testId}
+      align="start"
+      label={
+        <span className="flex flex-col gap-0.5">
+          <span className="flex items-center gap-2 flex-wrap">
+            <span className="text-title text-primary">{title}</span>
+            {recommended && (
+              <Badge label={<Trans>Recommended</Trans>} variant="accent" size="sm" />
+            )}
+          </span>
+          <span className={cn('text-body-sm', caution ? 'text-warn' : 'text-secondary')}>
+            {consequence}
+          </span>
+        </span>
+      }
+    />
   );
 }

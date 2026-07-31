@@ -115,10 +115,6 @@ msgstr "{0, plural, one {# Beispiel je} other {# Beispiele je}}"
 msgid "{0, plural, one {# sample} other {# samples}}"
 msgstr "{0, plural, one {# Beispiel} other {# Beispiele}}"
 
-#. placeholder {0}: suites.length
-msgid "{0, plural, one {# suite for this agent} other {# suites for this agent}}"
-msgstr "{0, plural, one {# Suite für diesen Agent} other {# Suites für diesen Agent}}"
-
 #. placeholder {0}: suitePassRates.length
 #. placeholder {0}: suites.length
 msgid "{0, plural, one {# suite} other {# suites}}"
@@ -154,13 +150,13 @@ msgstr "{0, plural, one {+# weiteres Endpoint} other {+# weitere Endpoints}}"
 msgid "{0, plural, one {case} other {cases}}"
 msgstr "{0, plural, one {Fall} other {Fälle}}"
 
+#. placeholder {0}: destination.caseCount
+msgid "{0, plural, one {It will also score the # case already there.} other {It will also score the # cases already there.}}"
+msgstr "{0, plural, one {Es wird auch den # Fall bewerten, der bereits vorhanden ist.} other {Es wird auch die # Fälle bewerten, die bereits vorhanden sind.}}"
+
 #. placeholder {0}: lines.length - maxLines
 msgid "{0, plural, one {Show # more line} other {Show # more lines}}"
 msgstr "{0, plural, one {Zeige # weitere Zeile} other {Zeige # weitere Zeilen}}"
-
-#. placeholder {0}: destination.caseCount
-msgid "{0, plural, one {This judge will also score the # case already in this suite.} other {This judge will also score the # cases already in this suite.}}"
-msgstr "{0, plural, one {Dieser Bewerter wird auch den # Testfall, der bereits in dieser Suite ist, bewerten.} other {Dieser Bewerter wird auch die # Testfälle, die bereits in dieser Suite sind, bewerten.}}"
 
 #. placeholder {0}: pending.length
 msgid "{0, plural, one {Waiting for # action} other {Waiting for # actions}}"
@@ -422,6 +418,10 @@ msgstr "{0}: wird bewertet…"
 #. placeholder {0}: cell.run.endpointName
 msgid "{0}: queued"
 msgstr "{0}: in Warteschlange"
+
+#. placeholder {0}: destination.name
+msgid "{0}'s current evaluators score the cases."
+msgstr "Die aktuellen Evaluatoren von {0} bewerten die Fälle."
 
 #. placeholder {0}: evaluator.name
 msgid "{0}’s reasoning"
@@ -856,17 +856,12 @@ msgstr "Nachricht hinzufügen"
 msgid "Add provider"
 msgstr "Provider hinzufügen"
 
-msgid "Add test"
-msgstr "Test hinzufügen"
-
-msgid "Add the cases without this judge"
-msgstr "Testfälle ohne diesen Bewerter hinzufügen"
+#. placeholder {0}: destination.name
+msgid "Add the judge to {0}"
+msgstr "Fügen Sie den Judge zu {0} hinzu"
 
 msgid "Add to suite"
 msgstr "Zu Suite hinzufügen"
-
-msgid "Add to this suite"
-msgstr "Zu dieser Suite hinzufügen"
 
 msgid "Add tool request"
 msgstr "Tool-Anfrage hinzufügen"
@@ -883,15 +878,6 @@ msgstr "Füge deinen ersten Provider hinzu, um loszulegen."
 #. placeholder {0}: writes.length
 msgid "Added {added} of {0} — the rest failed."
 msgstr "{added} von {0} hinzugefügt — der Rest fehlgeschlagen."
-
-msgid "Added to {suiteName}"
-msgstr "Zu {suiteName} hinzugefügt"
-
-msgid "Adding…"
-msgstr "Wird hinzugefügt…"
-
-msgid "Adds this trace as a single test case to the selected suite."
-msgstr "Fügt diesen Trace als einzelnen Testfall zur ausgewählten Suite hinzu."
 
 msgid "Admin already exists."
 msgstr "Admin ist bereits vorhanden."
@@ -1357,9 +1343,6 @@ msgstr "Fall-Ergebnisse"
 #. placeholder {0}: data.suiteName ?? data.agentName
 msgid "Case results · {0}"
 msgstr "Fall-Ergebnisse · {0}"
-
-msgid "Cases"
-msgstr "Fälle"
 
 msgid "Change provider kind"
 msgstr "Provider-Typ ändern"
@@ -2068,9 +2051,6 @@ msgstr "Zeitplan bearbeiten"
 msgid "editable"
 msgstr "bearbeitbar"
 
-msgid "Editable"
-msgstr "Bearbeitbar"
-
 msgid "edited"
 msgstr "bearbeitet"
 
@@ -2260,9 +2240,6 @@ msgstr "Erwartet"
 msgid "Expected · reference"
 msgstr "Erwartet · Referenz"
 
-msgid "Expected output"
-msgstr "Erwartete Ausgabe"
-
 msgid "Expected output updated"
 msgstr "Erwartete Ausgabe aktualisiert"
 
@@ -2314,9 +2291,6 @@ msgstr "Fehlgeschlagen"
 
 msgid "Failed Sign-In"
 msgstr "Anmeldung fehlgeschlagen"
-
-msgid "Failed to add test case"
-msgstr "Testfall konnte nicht hinzugefügt werden"
 
 msgid "Failed to check"
 msgstr "Prüfung fehlgeschlagen"
@@ -2615,10 +2589,6 @@ msgstr "Ingestion-URL"
 
 msgid "Input"
 msgstr "Input"
-
-#. placeholder {0}: inputMessages.length
-msgid "Input · {0, plural, one {# message} other {# messages}}"
-msgstr "Input · {0, plural, one {# Nachricht} other {# Nachrichten}}"
 
 msgid "Input / 1M €"
 msgstr "Input / 1M €"
@@ -3406,12 +3376,6 @@ msgstr "Keine Verbesserung"
 msgid "No improvement — theory rejected."
 msgstr "Keine Verbesserung — Theory abgelehnt."
 
-msgid "No input messages."
-msgstr "Keine Eingabemessages."
-
-msgid "No judge"
-msgstr "Kein Bewerter"
-
 msgid "No longer available"
 msgstr "Nicht mehr verfügbar"
 
@@ -3640,9 +3604,6 @@ msgstr "Nicht-Model-Daten gelöscht"
 
 msgid "None"
 msgstr "Keine"
-
-msgid "None configured"
-msgstr "Keine konfiguriert"
 
 msgid "Not attached to any suite yet."
 msgstr "Noch keinem Suite zugeordnet."
@@ -4225,8 +4186,8 @@ msgstr "pt"
 msgid "Pulled from the provider; prices load automatically."
 msgstr "Vom Provider übernommen; Preise werden automatisch geladen."
 
-msgid "Put in a new suite"
-msgstr "In eine neue Suite einfügen"
+msgid "Put the cases in a new suite"
+msgstr "Die Fälle in eine neue Suite legen"
 
 msgid "Question"
 msgstr "Frage"
@@ -4318,6 +4279,9 @@ msgstr "Aktuelle Ausreißer"
 
 msgid "Recent traces"
 msgstr "Letzte Traces"
+
+msgid "Recommended"
+msgstr "Empfohlen"
 
 msgid "RED"
 msgstr "ROT"
@@ -5057,6 +5021,9 @@ msgstr "erheblich"
 msgid "sk-…"
 msgstr "sk-…"
 
+msgid "Skip the judge"
+msgstr "Den Judge überspringen"
+
 msgid "SMTP host"
 msgstr "SMTP-Host"
 
@@ -5244,9 +5211,6 @@ msgstr "System-Anweisung"
 msgid "System instructions sent to the agent"
 msgstr "An den Agent gesendete System-Anweisungen"
 
-msgid "System messages excluded"
-msgstr "Systemmeldungen ausgeschlossen"
-
 msgid "System prompt"
 msgstr "System-Prompt"
 
@@ -5432,6 +5396,9 @@ msgstr "Die weiche Grenze darf die harte Grenze nicht überschreiten."
 msgid "The soft limit warns. The hard limit warns and rejects further proxied calls until the month resets or you raise it."
 msgstr "Die weiche Grenze gibt eine Warnung aus. Die harte Grenze warnt und lehnt weitere proxierte Aufrufe ab, bis der Monat zurückgesetzt wird oder Sie sie erhöhen."
 
+msgid "the suite"
+msgstr "die Suite"
+
 msgid "Theories appear here when an optimizer, you, or Tracey AI proposes a change to validate."
 msgstr "Theorien erscheinen hier, wenn ein Optimizer, Sie oder Tracey AI eine zu validierende Änderung vorschlägt."
 
@@ -5463,6 +5430,10 @@ msgstr "Theory validiert"
 
 msgid "Theory Validation Failed"
 msgstr "Theory-Validierung fehlgeschlagen"
+
+#. placeholder {0}: destination.name
+msgid "They go there instead of {0}, with the judge attached."
+msgstr "Sie gehen stattdessen mit dem angehängten Judge zu {0}."
 
 msgid "Thinking…"
 msgstr "Denken…"
@@ -5573,11 +5544,11 @@ msgstr "Dadurch werden zukünftige Runs gestoppt. Bereits erzeugte Runs bleiben 
 msgid "This theory was dismissed without running an A/B validation."
 msgstr "Diese Theory wurde ohne Durchführung einer A/B-Validierung verworfen."
 
-msgid "This trace has no response and cannot be promoted."
-msgstr "Dieser Trace hat keine Antwort und kann nicht promoted werden."
+msgid "This trace has no response, so there is nothing to generate tests from."
+msgstr "Dieser Trace hat keine Antwort, daher gibt es nichts, um Tests daraus zu generieren."
 
-msgid "This trace is not linked to an agent and cannot be promoted."
-msgstr "Dieser Trace ist keinem Agent zugeordnet und kann nicht promoted werden."
+msgid "This trace is not linked to an agent, so there is nothing to generate tests against."
+msgstr "Dieser Trace ist nicht mit einem Agent verknüpft, also gibt es nichts, um Tests dagegen zu generieren."
 
 msgid "This turn's input already contains the tool calls and their results, so a corrected answer can never pass. Correct the earlier call that made the decision instead."
 msgstr "Die Eingabe dieser Runde enthält bereits die Tool-Aufrufe und deren Ergebnisse, daher kann eine korrigierte Antwort nie bestehen. Korrigieren Sie stattdessen den früheren Aufruf, der die Entscheidung getroffen hat."
@@ -6041,6 +6012,9 @@ msgstr "Vorschläge anzeigen"
 msgid "View run"
 msgstr "Run anzeigen"
 
+msgid "View suite"
+msgstr "Suite anzeigen"
+
 msgid "View Test Runs →"
 msgstr "Test Runs anzeigen →"
 
@@ -6109,6 +6083,9 @@ msgstr "Wonach das Judge-Modell in einem passenden Call sucht."
 
 msgid "What the judge model should look for in a matched turn."
 msgstr "Wonach das Judge-Modell in einem passenden Turn suchen soll."
+
+msgid "What to do with this judge"
+msgstr "Was mit diesem Judge tun"
 
 msgid "When"
 msgstr "Wann"

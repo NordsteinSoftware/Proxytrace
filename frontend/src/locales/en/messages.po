@@ -115,10 +115,6 @@ msgstr "{0, plural, one {# sample each} other {# samples each}}"
 msgid "{0, plural, one {# sample} other {# samples}}"
 msgstr "{0, plural, one {# sample} other {# samples}}"
 
-#. placeholder {0}: suites.length
-msgid "{0, plural, one {# suite for this agent} other {# suites for this agent}}"
-msgstr "{0, plural, one {# suite for this agent} other {# suites for this agent}}"
-
 #. placeholder {0}: suitePassRates.length
 #. placeholder {0}: suites.length
 msgid "{0, plural, one {# suite} other {# suites}}"
@@ -154,13 +150,13 @@ msgstr "{0, plural, one {+# more endpoint} other {+# more endpoints}}"
 msgid "{0, plural, one {case} other {cases}}"
 msgstr "{0, plural, one {case} other {cases}}"
 
+#. placeholder {0}: destination.caseCount
+msgid "{0, plural, one {It will also score the # case already there.} other {It will also score the # cases already there.}}"
+msgstr "{0, plural, one {It will also score the # case already there.} other {It will also score the # cases already there.}}"
+
 #. placeholder {0}: lines.length - maxLines
 msgid "{0, plural, one {Show # more line} other {Show # more lines}}"
 msgstr "{0, plural, one {Show # more line} other {Show # more lines}}"
-
-#. placeholder {0}: destination.caseCount
-msgid "{0, plural, one {This judge will also score the # case already in this suite.} other {This judge will also score the # cases already in this suite.}}"
-msgstr "{0, plural, one {This judge will also score the # case already in this suite.} other {This judge will also score the # cases already in this suite.}}"
 
 #. placeholder {0}: pending.length
 msgid "{0, plural, one {Waiting for # action} other {Waiting for # actions}}"
@@ -422,6 +418,10 @@ msgstr "{0}: evaluating…"
 #. placeholder {0}: cell.run.endpointName
 msgid "{0}: queued"
 msgstr "{0}: queued"
+
+#. placeholder {0}: destination.name
+msgid "{0}'s current evaluators score the cases."
+msgstr "{0}'s current evaluators score the cases."
 
 #. placeholder {0}: evaluator.name
 msgid "{0}’s reasoning"
@@ -856,17 +856,12 @@ msgstr "Add message"
 msgid "Add provider"
 msgstr "Add provider"
 
-msgid "Add test"
-msgstr "Add test"
-
-msgid "Add the cases without this judge"
-msgstr "Add the cases without this judge"
+#. placeholder {0}: destination.name
+msgid "Add the judge to {0}"
+msgstr "Add the judge to {0}"
 
 msgid "Add to suite"
 msgstr "Add to suite"
-
-msgid "Add to this suite"
-msgstr "Add to this suite"
 
 msgid "Add tool request"
 msgstr "Add tool request"
@@ -883,15 +878,6 @@ msgstr "Add your first provider to get started."
 #. placeholder {0}: writes.length
 msgid "Added {added} of {0} — the rest failed."
 msgstr "Added {added} of {0} — the rest failed."
-
-msgid "Added to {suiteName}"
-msgstr "Added to {suiteName}"
-
-msgid "Adding…"
-msgstr "Adding…"
-
-msgid "Adds this trace as a single test case to the selected suite."
-msgstr "Adds this trace as a single test case to the selected suite."
 
 msgid "Admin already exists."
 msgstr "Admin already exists."
@@ -1357,9 +1343,6 @@ msgstr "Case results"
 #. placeholder {0}: data.suiteName ?? data.agentName
 msgid "Case results · {0}"
 msgstr "Case results · {0}"
-
-msgid "Cases"
-msgstr "Cases"
 
 msgid "Change provider kind"
 msgstr "Change provider kind"
@@ -2068,9 +2051,6 @@ msgstr "Edit schedule"
 msgid "editable"
 msgstr "editable"
 
-msgid "Editable"
-msgstr "Editable"
-
 msgid "edited"
 msgstr "edited"
 
@@ -2260,9 +2240,6 @@ msgstr "Expected"
 msgid "Expected · reference"
 msgstr "Expected · reference"
 
-msgid "Expected output"
-msgstr "Expected output"
-
 msgid "Expected output updated"
 msgstr "Expected output updated"
 
@@ -2314,9 +2291,6 @@ msgstr "Failed"
 
 msgid "Failed Sign-In"
 msgstr "Failed Sign-In"
-
-msgid "Failed to add test case"
-msgstr "Failed to add test case"
 
 msgid "Failed to check"
 msgstr "Failed to check"
@@ -2615,10 +2589,6 @@ msgstr "Ingestion URL"
 
 msgid "Input"
 msgstr "Input"
-
-#. placeholder {0}: inputMessages.length
-msgid "Input · {0, plural, one {# message} other {# messages}}"
-msgstr "Input · {0, plural, one {# message} other {# messages}}"
 
 msgid "Input / 1M €"
 msgstr "Input / 1M €"
@@ -3406,12 +3376,6 @@ msgstr "No improvement"
 msgid "No improvement — theory rejected."
 msgstr "No improvement — theory rejected."
 
-msgid "No input messages."
-msgstr "No input messages."
-
-msgid "No judge"
-msgstr "No judge"
-
 msgid "No longer available"
 msgstr "No longer available"
 
@@ -3640,9 +3604,6 @@ msgstr "Non-model data deleted"
 
 msgid "None"
 msgstr "None"
-
-msgid "None configured"
-msgstr "None configured"
 
 msgid "Not attached to any suite yet."
 msgstr "Not attached to any suite yet."
@@ -4225,8 +4186,8 @@ msgstr "pt"
 msgid "Pulled from the provider; prices load automatically."
 msgstr "Pulled from the provider; prices load automatically."
 
-msgid "Put in a new suite"
-msgstr "Put in a new suite"
+msgid "Put the cases in a new suite"
+msgstr "Put the cases in a new suite"
 
 msgid "Question"
 msgstr "Question"
@@ -4318,6 +4279,9 @@ msgstr "Recent outliers"
 
 msgid "Recent traces"
 msgstr "Recent traces"
+
+msgid "Recommended"
+msgstr "Recommended"
 
 msgid "RED"
 msgstr "RED"
@@ -5057,6 +5021,9 @@ msgstr "significant"
 msgid "sk-…"
 msgstr "sk-…"
 
+msgid "Skip the judge"
+msgstr "Skip the judge"
+
 msgid "SMTP host"
 msgstr "SMTP host"
 
@@ -5244,9 +5211,6 @@ msgstr "System instruction"
 msgid "System instructions sent to the agent"
 msgstr "System instructions sent to the agent"
 
-msgid "System messages excluded"
-msgstr "System messages excluded"
-
 msgid "System prompt"
 msgstr "System prompt"
 
@@ -5432,6 +5396,9 @@ msgstr "The soft limit must not exceed the hard limit."
 msgid "The soft limit warns. The hard limit warns and rejects further proxied calls until the month resets or you raise it."
 msgstr "The soft limit warns. The hard limit warns and rejects further proxied calls until the month resets or you raise it."
 
+msgid "the suite"
+msgstr "the suite"
+
 msgid "Theories appear here when an optimizer, you, or Tracey AI proposes a change to validate."
 msgstr "Theories appear here when an optimizer, you, or Tracey AI proposes a change to validate."
 
@@ -5463,6 +5430,10 @@ msgstr "Theory Validated"
 
 msgid "Theory Validation Failed"
 msgstr "Theory Validation Failed"
+
+#. placeholder {0}: destination.name
+msgid "They go there instead of {0}, with the judge attached."
+msgstr "They go there instead of {0}, with the judge attached."
 
 msgid "Thinking…"
 msgstr "Thinking…"
@@ -5573,11 +5544,11 @@ msgstr "This stops future runs. Existing runs it produced are kept. This action 
 msgid "This theory was dismissed without running an A/B validation."
 msgstr "This theory was dismissed without running an A/B validation."
 
-msgid "This trace has no response and cannot be promoted."
-msgstr "This trace has no response and cannot be promoted."
+msgid "This trace has no response, so there is nothing to generate tests from."
+msgstr "This trace has no response, so there is nothing to generate tests from."
 
-msgid "This trace is not linked to an agent and cannot be promoted."
-msgstr "This trace is not linked to an agent and cannot be promoted."
+msgid "This trace is not linked to an agent, so there is nothing to generate tests against."
+msgstr "This trace is not linked to an agent, so there is nothing to generate tests against."
 
 msgid "This turn's input already contains the tool calls and their results, so a corrected answer can never pass. Correct the earlier call that made the decision instead."
 msgstr "This turn's input already contains the tool calls and their results, so a corrected answer can never pass. Correct the earlier call that made the decision instead."
@@ -6041,6 +6012,9 @@ msgstr "View proposals"
 msgid "View run"
 msgstr "View run"
 
+msgid "View suite"
+msgstr "View suite"
+
 msgid "View Test Runs →"
 msgstr "View Test Runs →"
 
@@ -6109,6 +6083,9 @@ msgstr "What the judge model looks for in a matched call."
 
 msgid "What the judge model should look for in a matched turn."
 msgstr "What the judge model should look for in a matched turn."
+
+msgid "What to do with this judge"
+msgstr "What to do with this judge"
 
 msgid "When"
 msgstr "When"

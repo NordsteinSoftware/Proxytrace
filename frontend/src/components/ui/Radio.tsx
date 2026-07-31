@@ -17,16 +17,20 @@ interface RadioGroupProps {
   onChange: (value: string) => void;
   disabled?: boolean;
   className?: string;
+  /** Names the choice for screen readers when no visible heading labels the group. */
+  ariaLabel?: string;
   children: ReactNode;
 }
 
 /**
  * Radio group container. Wraps `Radio` children and owns the selected value.
  */
-export function RadioGroup({ name, value, onChange, disabled, className, children }: RadioGroupProps) {
+export function RadioGroup({
+  name, value, onChange, disabled, className, ariaLabel, children,
+}: RadioGroupProps) {
   return (
     <RadioGroupContext.Provider value={{ name, value, onChange, disabled }}>
-      <div role="radiogroup" className={cn('flex flex-col gap-2', className)}>
+      <div role="radiogroup" aria-label={ariaLabel} className={cn('flex flex-col gap-2', className)}>
         {children}
       </div>
     </RadioGroupContext.Provider>
@@ -37,12 +41,22 @@ interface RadioProps {
   value: string;
   label?: ReactNode;
   disabled?: boolean;
+  /**
+   * `start` puts the marker on the first line instead of centring it on the whole label — the
+   * correct alignment when the label carries a description under its title, where a centred marker
+   * floats between the two lines and belongs to neither.
+   */
+  align?: 'center' | 'start';
+  /** Stable hook for e2e selection of this specific option, mirroring `Segment.testId`. */
+  testId?: string;
 }
 
 /**
  * A single radio option. Must be rendered inside a `RadioGroup`.
  */
-export function Radio({ value, label, disabled: ownDisabled }: RadioProps) {
+export function Radio({
+  value, label, disabled: ownDisabled, align = 'center', testId,
+}: RadioProps) {
   const ctx = useContext(RadioGroupContext);
   // eslint-disable-next-line lingui/no-unlocalized-strings -- thrown developer error, not UI copy
   if (!ctx) throw new Error('Radio must be used within a RadioGroup');
@@ -50,8 +64,10 @@ export function Radio({ value, label, disabled: ownDisabled }: RadioProps) {
   const checked = ctx.value === value;
   return (
     <label
+      data-testid={testId}
       className={cn(
-        'inline-flex items-center gap-2 select-none',
+        'inline-flex gap-2 select-none',
+        align === 'start' ? 'items-start' : 'items-center',
         disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer',
       )}
     >

@@ -60,6 +60,32 @@ still a plain promotion or correction underneath. Nothing the model says is trus
 response, and flags the traps below rather than hiding them. Gated by
 `LicenseFeature.TestCaseSynthesis` (see [`licensing.md`](licensing.md)).
 
+**The synthesis call asks for no reasoning.** A user watches a panel block on this single model
+call, and on a reasoning model the hidden thinking dwarfs the answer: measured against a four-call
+conversation, one round spent 1.7k–3.0k reasoning tokens to produce a ~300-token JSON answer and
+took 25–44s, where asking for none returned the same proposals in 8–13s. So
+`TestCaseSynthesisService` passes `ModelOptions` with `ReasoningEffort = "none"` rather than the
+`null` options that let the provider's default apply. This is a request, never a requirement — a
+model with no such knob rejects the parameter — OpenAI answers it with a 400 on a gpt-4o-class
+model, and an o-series model refuses a level it does not implement — and `ModelClient` retries once
+without it, so the answer is slower, not absent. Only a 400 that names the parameter earns that
+retry, so a genuinely malformed request still fails on the first try rather than being sent twice.
+It is scoped to this agent on purpose: the judges and optimizers are
+background work where thinking may be worth its latency, and turning it off for them is a separate
+quality decision, not a free win.
+
+Two things had to be true for that to work at all, and only one of them was. `ModelSamplingParameters`
+carries the value, but `ChatClientExtensions` used to put it in `ChatOptions.AdditionalProperties`,
+which the `Microsoft.Extensions.AI` OpenAI adapter **silently discards** — so no sampling parameter
+without a first-class `ChatOptions` member ever reached a provider, and the playground's
+Reasoning-effort control did nothing at all. It now travels via
+`ChatOptions.RawRepresentationFactory` onto the OpenAI SDK's own options type, which the adapter
+starts from and only partially overwrites. Choice count (`n`) has no public member there and is
+still dropped — tracked in [#496](https://github.com/SyntaktikEU/Proxytrace/issues/496). Assert
+this kind of thing against the **outgoing request body**, not against `ChatOptions`: a test that
+reads the mapping cannot tell "the provider was told" from "a dictionary was filled and thrown
+away", which is exactly how this survived.
+
 **An errored evaluator is not a failing case.** `TestResultExtensions.IsPass` — the canonical verdict,
 mirrored in the frontend by `lib/runResults.ts` — passes a result when at least one evaluation
 produced a verdict and every such verdict passed. Evaluations that **errored** are excluded from the

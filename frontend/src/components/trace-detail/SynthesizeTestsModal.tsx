@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router';
 import { Trans, useLingui } from '@lingui/react/macro';
 import { plural } from '@lingui/core/macro';
 import {
@@ -29,11 +30,15 @@ interface Props {
 
 /**
  * Review panel for agent-proposed test cases: the conversation on the left, the ranked candidates
- * on the right, a free-text instruction at the bottom. Generation never runs on open — opening a
- * modal must not spend tokens on the project's system endpoint.
+ * on the right, a free-text instruction at the bottom.
+ *
+ * Generation starts on open. "Generate tests" in the trace header *is* the generate action, so the
+ * click that opens this panel is the click that spends the tokens — making the user click a second
+ * time inside an empty panel bought nothing. Re-opening the panel therefore generates again.
  */
 export function SynthesizeTestsModal({ trace, suites, onClose }: Props) {
   const { t } = useLingui();
+  const navigate = useNavigate();
   const { show: toast } = useToast();
   const { currentProjectId } = useCurrentProject();
   const [suiteId, setSuiteId] = useState(suites[0]?.id ?? '');
@@ -76,6 +81,34 @@ export function SynthesizeTestsModal({ trace, suites, onClose }: Props) {
     );
   }
 
+  // Synchronizing with something outside React — the generation request. The header button opens
+  // this panel *in order to* generate, so it fires once on mount.
+  //
+  // It is scheduled rather than called inline, and guarded by its own cleanup rather than by a ref,
+  // because a mutation started during the FIRST of StrictMode's two mount passes is orphaned:
+  // tearing the effects down between the passes unsubscribes `useMutation`'s observer, and
+  // `MutationObserver.onUnsubscribe` removes it from the mutation that is still in flight — with no
+  // matching re-attach when it re-subscribes. The request then completes normally (the mutation's
+  // own `onSuccess` still lands the proposals) but no observer ever hears the status change, so
+  // `isPending` stays true and the panel shows its loading state forever, over a response it
+  // already has. A ref guard makes that worse, not better: it suppresses the second pass's call,
+  // which is the one whose observer would have survived.
+  //
+  // Deferring by a tick and clearing on cleanup means the first pass's timer is cancelled and only
+  // the final mount's call runs — exactly one round, with an observer that stays attached.
+  useEffect(() => {
+    const timer = setTimeout(runGenerate, 0);
+    return () => clearTimeout(timer);
+    // Mount-only on purpose: re-running when the suite or instruction changes would generate behind
+    // the user's back. Refinement is explicit, via the instruction bar.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  /** Sends the user to where the cases actually landed — a toast that only says "done" is a dead end. */
+  function viewSuiteAction() {
+    return { label: t`View suite`, onClick: () => navigate(`/suites?id=${suiteId}`) };
+  }
+
   function submit() {
     if (!proposals) return;
     const writes = selection.writes(proposals.proposals);
@@ -97,16 +130,24 @@ export function SynthesizeTestsModal({ trace, suites, onClose }: Props) {
       newSuiteName: judge.newSuiteName.trim() || suggestion?.name || t`Generated suite`,
     }, {
       onSuccess: added => {
-        // eslint-disable-next-line lingui/no-unlocalized-strings -- toast tone token, not UI copy
-        toast(plural(added, { one: 'Added # test case', other: 'Added # test cases' }), 'success');
+        toast(
+          plural(added, { one: 'Added # test case', other: 'Added # test cases' }),
+          // eslint-disable-next-line lingui/no-unlocalized-strings -- toast tone token, not UI copy
+          'success',
+          { action: viewSuiteAction() },
+        );
         onClose();
       },
       onError: () => {
         // The writes are sequential, so a mid-way failure leaves the earlier ones applied — say how
-        // many landed rather than implying nothing did.
+        // many landed rather than implying nothing did, and still offer the suite if any did.
         const added = synthesis.addedBeforeFailure.current;
-        // eslint-disable-next-line lingui/no-unlocalized-strings -- toast tone token, not UI copy
-        toast(t`Added ${added} of ${writes.length} — the rest failed.`, 'error');
+        toast(
+          t`Added ${added} of ${writes.length} — the rest failed.`,
+          // eslint-disable-next-line lingui/no-unlocalized-strings -- toast tone token, not UI copy
+          'error',
+          added > 0 ? { action: viewSuiteAction() } : undefined,
+        );
       },
     });
   }
@@ -156,6 +197,9 @@ export function SynthesizeTestsModal({ trace, suites, onClose }: Props) {
                 onChange: setJudge,
                 licensed: canJudge,
                 destination: {
+                  // Named, not "this suite": the options say what happens to a suite the user can
+                  // see by name at the top of this same column.
+                  name: selectedSuite?.name ?? t`the suite`,
                   caseCount: selectedSuite?.testCaseCount ?? 0,
                   limitReached: suiteLimitReached,
                 },

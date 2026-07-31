@@ -14,10 +14,12 @@ follow [Semantic Versioning](https://semver.org). Ongoing work is collected unde
 - **Agent-proposed test cases.** The trace detail panel gains a **Generate tests** action: an agent
   reads the trace's *whole* conversation and proposes the test cases actually worth building —
   the turns where the agent decided something, not every turn — as GREEN promotions (lock in what it
-  did) or RED corrections (assert what it should have done), each with its reasoning. Review them
-  beside the transcript, edit any expected output, refine with a plain-language request ("test that
-  this tool call is made with `order_id=91`"), and add the ones you want in one go. Turns it passed
-  over are listed with the reason, so its judgement is auditable rather than opaque.
+  did) or RED corrections (assert what it should have done), each with its reasoning. The panel
+  starts reading the moment it opens, so the action is one click rather than two. Review the
+  candidates beside the transcript, edit any expected output, refine with a plain-language request
+  ("test that this tool call is made with `order_id=91`"), and add the ones you want in one go. Turns
+  it passed over are listed with the reason, so its judgement is auditable rather than opaque. Once
+  the cases land, a message confirms how many were added and links straight to the suite.
 
   It also avoids a trap that is easy to fall into by hand: a correction built on the *last* call of a
   tool loop can never pass, because that call's input already contains the tool calls **and** their
@@ -32,6 +34,36 @@ follow [Semantic Versioning](https://semver.org). Ongoing work is collected unde
   Enterprise.
 
 ### Changed
+
+- **Generate tests replaces Add test on a trace.** The trace detail panel used to offer two
+  competing ways to build a test case; it now offers one. **Generate tests** takes the primary slot,
+  and the single-click **Add test** promote dialog is gone — what it did by hand is a subset of what
+  the agent proposes, with the expected output editable either way. To add traces to a suite without
+  the agent, open the suite on the **Test Suites** page and use **Add from traces**; unlike
+  generation, that route is not license-gated.
+
+- **Generate tests is roughly three times faster, and says it is working.** The panel spent most of
+  its wait on hidden model reasoning it did not need: on a reasoning model, a round burnt several
+  thousand thinking tokens to produce a few hundred tokens of answer — measured at 25–44s for a
+  four-call conversation. Generation now asks the model not to reason, which returned the same
+  proposals in 8–13s. A model that has no such setting is asked again without it, so the worst case
+  is the old speed rather than an error. While a round runs, the candidate column now names what it
+  is doing and shows a running clock instead of blank placeholders.
+
+- **The judge choice in Generate tests says what each option does.** The panel used to offer the
+  agent's suggested judge as a three-way toggle plus a separate "Add the cases without this judge"
+  link — two controls for one decision, where the link was the loudest thing on the card. It is now
+  a single list of three answers, each with its consequence written next to it: how many existing
+  cases the judge would start scoring, that a new suite takes the cases *instead of* the one you
+  picked, and what happens if you skip it. The destination is named rather than called "this
+  suite", and the option the agent recommends is marked as such instead of just arriving
+  pre-selected.
+
+- **Sampling parameters actually reach the provider.** Reasoning effort was mapped onto the outgoing
+  request and then silently dropped before it left the process, so the playground's
+  **Reasoning effort** control did nothing at all — no effect, no error. It is now sent for real.
+  (Choice count, `n`, is still dropped; that one needs a different mechanism and is tracked
+  separately.)
 
 - **Exact Match now compares tool calls.** An expected output that *is* a tool call carries no text
   content, so the previous content-only comparison scored **any** tool-free response as a pass — a
