@@ -28,6 +28,8 @@ having. If you want to check that a support agent grants refunds correctly, what
 whether it *looked up the order* and whether it *reacted correctly* — not that it said "you're
 welcome" at the end.
 
+![The Generate test cases panel: the captured conversation on the left, and on the right the destination suite, two approved candidates with their reasoning, and the editable expected tool call.](/screenshots/suites/generate-tests.png)
+
 Open a trace and click **Generate tests**. Proxytrace reads the whole conversation and proposes
 only the turns where the agent **decided** something — it chose a tool, chose its arguments,
 refused, escalated. Each candidate tells you what it asserts and why it is worth testing:
@@ -39,6 +41,17 @@ Nothing is generated until you click, and nothing is written until you approve. 
 candidates beside the conversation, edit any expected output, tick the ones you want, and add them
 to a suite in one go. Turns it passed over are listed under **N turns skipped**, each with the
 reason — so you can see what it decided not to test, and disagree.
+
+### When a candidate can't be made to pass
+
+![A candidate carrying a warning: this turn's input already contains the tool calls and their results, so a corrected answer can never pass — correct the earlier call that made the decision instead.](/screenshots/suites/generate-tests-unpassable.png)
+
+Some turns cannot carry a RED test at all. If a turn's input already contains the tool calls **and**
+their results, the only thing left to grade is the closing summary — so an expected answer that
+contradicts those results can never be produced, and the case stays red forever no matter how the
+agent is fixed. A candidate like that says so in place and arrives **unticked**; correct the earlier
+call that made the decision instead. See [Pick the trace where the agent
+decided](#pick-the-trace-where-the-agent-decided) for the whole story.
 
 ### Asking for something specific
 
