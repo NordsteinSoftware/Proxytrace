@@ -59,6 +59,8 @@ const SUITES = [
     testCaseCount: 2,
     evaluators: [{ id: 'eval-existing', kind: 'ExactMatch' }],
   },
+  // A second suite so a test can switch destination — which re-renders the panel mid-request.
+  { id: 'suite-2', name: 'Escalation suite', testCaseCount: 0, evaluators: [] },
 ] as unknown as TestSuiteListItemDto[];
 
 function proposalSet(): TestCaseProposalSetDto {
@@ -217,6 +219,32 @@ describe('SynthesizeTestsModal', () => {
     expect(evaluatorsApi.create).not.toHaveBeenCalled();
     expect(testSuitesApi.updateEvaluators).not.toHaveBeenCalled();
     expect(testSuitesApi.addTestCase).toHaveBeenCalledTimes(1);
+  });
+
+  it('survives a re-render while a generation is in flight', async () => {
+    // Regression (caught by e2e): `abort` was a fresh closure every render, so the panel's
+    // `useEffect(() => abort, [abort])` saw a changed dependency on EVERY re-render and ran its
+    // cleanup — cancelling the request that was still in flight. Any state change during
+    // generation triggered it (in the browser, the conversation query settling); switching the
+    // destination suite is the same thing with no timing to arrange. The other tests here resolve
+    // the mock synchronously, which closes the window entirely.
+    let capturedSignal: AbortSignal | undefined;
+    let settle: ((value: TestCaseProposalSetDto) => void) | undefined;
+    agentCallsApi.proposeTestCases.mockImplementation(
+      (_id: string, _body: unknown, options?: { signal?: AbortSignal }) => {
+        capturedSignal = options?.signal;
+        return new Promise<TestCaseProposalSetDto>(resolve => { settle = resolve; });
+      },
+    );
+    render();
+
+    await act(async () => { click('synthesize-generate-btn'); });
+    await act(async () => { click('promote-suite-option-suite-2'); });
+
+    expect(capturedSignal?.aborted, 'the panel cancelled its own request').toBe(false);
+
+    await act(async () => { settle?.(proposalSet()); });
+    expect(document.body.querySelector('[data-testid="synthesis-proposal-list"]')).not.toBeNull();
   });
 
   it('explains itself when the agent finds nothing worth testing', async () => {

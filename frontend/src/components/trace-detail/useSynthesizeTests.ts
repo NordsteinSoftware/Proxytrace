@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { agentCallsApi } from '../../api/agent-calls';
 import { QUERY_KEYS } from '../../api/query-keys';
@@ -34,6 +34,11 @@ export function useSynthesizeTests(trace: AgentCallDto) {
   // walked away from tears down its HTTP call instead of running on to completion on their budget.
   const inFlight = useRef<AbortController | null>(null);
   const { approve, addedBeforeFailure } = useApproveProposals();
+
+  // MUST be stable. The panel holds this as `useEffect(() => abort, [abort])`, so a fresh function
+  // identity each render would re-run that effect — firing its cleanup, and aborting the very
+  // generation the render was reporting progress for. A new identity here breaks the feature.
+  const abort = useCallback(() => inFlight.current?.abort(), []);
 
   const conversationQuery = useQuery({
     queryKey: QUERY_KEYS.traceConversation(trace.conversationId),
@@ -87,6 +92,6 @@ export function useSynthesizeTests(trace: AgentCallDto) {
     approve,
     addedBeforeFailure,
     /** Called from the panel's unmount cleanup — synchronizing with an in-flight fetch. */
-    abort: () => inFlight.current?.abort(),
+    abort,
   };
 }
