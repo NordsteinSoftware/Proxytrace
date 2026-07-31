@@ -21,6 +21,9 @@ export const QUERY_KEYS = {
   agentCallsHistogramRoot: ['agent-calls', 'histogram'] as const,
   agentCallsSummary: (filter: object) => ['agent-calls', 'summary', filter] as const,
   agentCallsSummaryRoot: ['agent-calls', 'summary'] as const,
+  /** Every full trace of one conversation — the transcript behind the generate-tests panel. */
+  traceConversation: (conversationId: string | null) =>
+    ['agent-calls', 'conversation', conversationId ?? null] as const,
   agentCallToolNames: (projectId?: string, agentId?: string) => ['agent-calls', 'tool-names', projectId ?? null, agentId ?? null] as const,
   agentCallsForSuiteCreate: (agentId: string, from?: string) => ['agent-calls', 'suite-create', agentId, from ?? null] as const,
   agentCallsForSuiteEdit: (agentId?: string) => ['agent-calls', 'suite-edit', agentId] as const,
