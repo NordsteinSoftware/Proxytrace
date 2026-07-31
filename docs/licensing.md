@@ -20,7 +20,7 @@ public interface ILicenseService
 - **Gate every premium capability through `ILicenseService`.** Before exposing or executing a gated
   feature, check `IsFeatureEnabled(...)` / `GetLimit(...)`. Current gated features:
   `OptimizationProposals`, `AgenticEvaluators`, `CustomEvaluators`, `SsoOidc`, `AuditLog`, `Tracey`,
-  `ScheduledTestRuns`, `CustomAnomalyDetectors`, `CostControls`.
+  `ScheduledTestRuns`, `CustomAnomalyDetectors`, `CostControls`, `TestCaseSynthesis`.
 - **`Current` is never null** and defaults to the **Free** tier — write code that degrades to Free,
   never code that assumes a paid tier or null-guards the snapshot.
 - **Treat `long.MaxValue` from `GetLimit` as unlimited** — do not cap or special-case it elsewhere.
@@ -150,3 +150,11 @@ JWT carries one extra claim, `offline` (a JSON boolean), and the server emits it
   blocks nothing — re-licensing restores enforcement on the next guard tick without re-entering
   anything (mirroring `ScheduledTestRuns` / `CustomAnomalyDetectors`). See
   [`cost-controls.md`](cost-controls.md).
+- **`TestCaseSynthesis`** (Enterprise) gates the agent that proposes test cases from a captured
+  conversation — the trace detail's *Generate tests* action and Tracey's `propose_test_cases`.
+  `POST /api/agent-calls/{id}/test-case-proposals` carries
+  `[RequiresFeature(LicenseFeature.TestCaseSynthesis)]` (**402**); the button stays visible on Free
+  and routes to the upgrade modal instead of opening the panel, so the capability is discoverable
+  without being usable. Promoting a trace by hand (*Add test*) is ungated and unaffected — only the
+  agent-proposed path is premium. Attaching the judge it may suggest additionally requires
+  `AgenticEvaluators`, and the new-suite path additionally consumes the `MaxTestSuites` limit.

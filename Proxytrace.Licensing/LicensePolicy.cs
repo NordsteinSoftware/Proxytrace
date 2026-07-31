@@ -32,6 +32,7 @@ public static class LicensePolicy
             LicenseFeature.ScheduledTestRuns,
             LicenseFeature.CustomAnomalyDetectors,
             LicenseFeature.CostControls,
+            LicenseFeature.TestCaseSynthesis,
         },
         new Dictionary<LicenseLimit, long>
         {

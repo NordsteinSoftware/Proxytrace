@@ -19,7 +19,8 @@ export type LicenseFeature =
   | 'Tracey'
   | 'ScheduledTestRuns'
   | 'CustomAnomalyDetectors'
-  | 'CostControls';
+  | 'CostControls'
+  | 'TestCaseSynthesis';
 
 /** Quantitative caps a license may impose. Mirrors backend `LicenseLimit`. */
 export type LicenseLimit =

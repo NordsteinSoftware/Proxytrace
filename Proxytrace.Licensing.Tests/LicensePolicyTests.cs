@@ -35,6 +35,8 @@ public sealed class LicensePolicyTests
         definition.Features.Should().Contain(LicenseFeature.Tracey);
         definition.Features.Should().Contain(LicenseFeature.ScheduledTestRuns);
         definition.Features.Should().Contain(LicenseFeature.CustomAnomalyDetectors);
+        definition.Features.Should().Contain(LicenseFeature.CostControls);
+        definition.Features.Should().Contain(LicenseFeature.TestCaseSynthesis);
         definition.Limits[LicenseLimit.MaxProjects].Should().Be(long.MaxValue);
         definition.Limits[LicenseLimit.MaxUsers].Should().Be(long.MaxValue);
         definition.Limits[LicenseLimit.MaxAgents].Should().Be(long.MaxValue);
