@@ -65,7 +65,7 @@ msgid "{0, plural, one {# case not comparable (suite changed between runs).} oth
 msgstr "{0, plural, one {# case not comparable (suite changed between runs).} other {# cases not comparable (suite changed between runs).}}"
 
 #. placeholder {0}: cases.length
-#. placeholder {0}: s.testCaseCount
+#. placeholder {0}: suite.testCaseCount
 #. placeholder {0}: suite.testCases.length
 msgid "{0, plural, one {# case} other {# cases}}"
 msgstr "{0, plural, one {# case} other {# cases}}"
@@ -74,7 +74,7 @@ msgstr "{0, plural, one {# case} other {# cases}}"
 msgid "{0, plural, one {# column} other {# columns}}"
 msgstr "{0, plural, one {# column} other {# columns}}"
 
-#. placeholder {0}: s.evaluators.length
+#. placeholder {0}: suite.evaluators.length
 msgid "{0, plural, one {# evaluator} other {# evaluators}}"
 msgstr "{0, plural, one {# evaluator} other {# evaluators}}"
 
@@ -137,6 +137,10 @@ msgstr "{0, plural, one {# trace} other {# traces}}"
 #. placeholder {0}: d.triggers.length
 msgid "{0, plural, one {# trigger} other {# triggers}}"
 msgstr "{0, plural, one {# trigger} other {# triggers}}"
+
+#. placeholder {0}: skipped.length
+msgid "{0, plural, one {# turn skipped} other {# turns skipped}}"
+msgstr "{0, plural, one {# turn skipped} other {# turns skipped}}"
 
 #. placeholder {0}: turns.length
 msgid "{0, plural, one {# turn} other {# turns}}"
@@ -457,6 +461,9 @@ msgstr "{0}% pass"
 #. placeholder {0}: suiteSchedules.length
 msgid "{activeCount} active · {0} total"
 msgstr "{activeCount} active · {0} total"
+
+msgid "{added, plural, one {Added # test case} other {Added # test cases}}"
+msgstr "{added, plural, one {Added # test case} other {Added # test cases}}"
 
 msgid "{argCount, plural, one {# arg} other {# args}}"
 msgstr "{argCount, plural, one {# arg} other {# args}}"
@@ -818,6 +825,9 @@ msgstr "Actual"
 msgid "Add {0} to suite"
 msgstr "Add {0} to suite"
 
+msgid "Add {selectedCount} to suite"
+msgstr "Add {selectedCount} to suite"
+
 msgid "Add a provider to route traffic through Proxytrace."
 msgstr "Add a provider to route traffic through Proxytrace."
 
@@ -859,6 +869,10 @@ msgstr "Add users to this project to grant them access."
 
 msgid "Add your first provider to get started."
 msgstr "Add your first provider to get started."
+
+#. placeholder {0}: writes.length
+msgid "Added {added} of {0} — the rest failed."
+msgstr "Added {added} of {0} — the rest failed."
 
 msgid "Added to {suiteName}"
 msgstr "Added to {suiteName}"
@@ -926,6 +940,9 @@ msgstr "Agent stats · 30d"
 
 msgid "Agent Version Moved"
 msgstr "Agent Version Moved"
+
+msgid "Agent-proposed test cases"
+msgstr "Agent-proposed test cases"
 
 msgid "Agent:"
 msgstr "Agent:"
@@ -1274,6 +1291,10 @@ msgstr "Cached"
 
 msgid "Cached / 1M €"
 msgstr "Cached / 1M €"
+
+#. placeholder {0}: index + 1
+msgid "Call {0}"
+msgstr "Call {0}"
 
 msgid "Calls"
 msgstr "Calls"
@@ -2000,6 +2021,9 @@ msgstr "e.g. production-agent"
 msgid "e.g. Refund promise watcher"
 msgstr "e.g. Refund promise watcher"
 
+msgid "e.g. test that issue_refund is called with order_id=91"
+msgstr "e.g. test that issue_refund is called with order_id=91"
+
 msgid "Edge Cases"
 msgstr "Edge Cases"
 
@@ -2411,6 +2435,12 @@ msgstr "Generate one to start proxying requests."
 msgid "Generate schema"
 msgstr "Generate schema"
 
+msgid "Generate test cases"
+msgstr "Generate test cases"
+
+msgid "Generate tests"
+msgstr "Generate tests"
+
 msgid "Get data-driven improvement proposals, validated with A/B runs before you ship them."
 msgstr "Get data-driven improvement proposals, validated with A/B runs before you ship them."
 
@@ -2428,6 +2458,9 @@ msgstr "Grace period"
 
 msgid "Grading rubric"
 msgstr "Grading rubric"
+
+msgid "GREEN"
+msgstr "GREEN"
 
 msgid "Grok models via xAI’s OpenAI-compatible API."
 msgstr "Grok models via xAI’s OpenAI-compatible API."
@@ -2449,6 +2482,9 @@ msgstr "Hide system agents"
 
 msgid "Hide tools"
 msgstr "Hide tools"
+
+msgid "high"
+msgstr "high"
 
 msgid "High"
 msgstr "High"
@@ -2903,6 +2939,9 @@ msgstr "Logged evaluation"
 msgid "Logout"
 msgstr "Logout"
 
+msgid "low"
+msgstr "low"
+
 msgid "Low"
 msgstr "Low"
 
@@ -2982,6 +3021,9 @@ msgstr "Measuring spend"
 
 msgid "Measuring this month's spend…"
 msgstr "Measuring this month's spend…"
+
+msgid "medium"
+msgstr "medium"
 
 msgid "Medium"
 msgstr "Medium"
@@ -3282,6 +3324,9 @@ msgstr "No budget is blocking"
 msgid "No budgets configured"
 msgstr "No budgets configured"
 
+msgid "No calls in this conversation."
+msgstr "No calls in this conversation."
+
 msgid "No cases match this filter."
 msgstr "No cases match this filter."
 
@@ -3541,6 +3586,9 @@ msgstr "No traces yet"
 msgid "No traces yet."
 msgstr "No traces yet."
 
+msgid "No turn here is worth a test"
+msgstr "No turn here is worth a test"
+
 msgid "No user message"
 msgstr "No user message"
 
@@ -3600,6 +3648,9 @@ msgstr "Not valid JSON — {detail}"
 
 msgid "Not valid JSON — showing raw text"
 msgstr "Not valid JSON — showing raw text"
+
+msgid "Nothing generated yet"
+msgstr "Nothing generated yet"
 
 msgid "Nothing here yet"
 msgstr "Nothing here yet"
@@ -4204,6 +4255,9 @@ msgstr "Read"
 msgid "Reading the run…"
 msgstr "Reading the run…"
 
+msgid "Reads this trace's whole conversation and proposes the test cases worth building."
+msgstr "Reads this trace's whole conversation and proposes the test cases worth building."
+
 msgid "Reasoning"
 msgstr "Reasoning"
 
@@ -4230,6 +4284,15 @@ msgstr "Recent outliers"
 
 msgid "Recent traces"
 msgstr "Recent traces"
+
+msgid "RED"
+msgstr "RED"
+
+msgid "Refine"
+msgstr "Refine"
+
+msgid "Refine the proposed test cases"
+msgstr "Refine the proposed test cases"
 
 msgid "Regex"
 msgstr "Regex"
@@ -4418,6 +4481,12 @@ msgstr "Role"
 #. placeholder {0}: preview.role
 msgid "Role: <0>{0}</0>"
 msgstr "Role: <0>{0}</0>"
+
+msgid "Round {roundsUsed} of {maxRounds}"
+msgstr "Round {roundsUsed} of {maxRounds}"
+
+msgid "Round limit reached — close and generate again."
+msgstr "Round limit reached — close and generate again."
 
 msgid "Route your agent through the proxy and every LLM call lands here automatically. Point your OpenAI client at this project's <0>base_url</0> — keep your existing provider API key — and nothing else changes."
 msgstr "Route your agent through the proxy and every LLM call lands here automatically. Point your OpenAI client at this project's <0>base_url</0> — keep your existing provider API key — and nothing else changes."
@@ -5308,6 +5377,9 @@ msgstr "The configured license could not be validated{0}. The installation runs 
 msgid "The configured license is invalid — running with Free-tier limits."
 msgstr "The configured license is invalid — running with Free-tier limits."
 
+msgid "The expected output calls a tool this agent was not offered."
+msgstr "The expected output calls a tool this agent was not offered."
+
 msgid "The installation falls back to the environment-supplied license, or the Free tier. Enterprise features stop working immediately if no other license is configured."
 msgstr "The installation falls back to the environment-supplied license, or the Free tier. Enterprise features stop working immediately if no other license is configured."
 
@@ -5469,6 +5541,9 @@ msgstr "This trace has no response and cannot be promoted."
 
 msgid "This trace is not linked to an agent and cannot be promoted."
 msgstr "This trace is not linked to an agent and cannot be promoted."
+
+msgid "This turn's input already contains the tool calls and their results, so a corrected answer can never pass. Correct the earlier call that made the decision instead."
+msgstr "This turn's input already contains the tool calls and their results, so a corrected answer can never pass. Correct the earlier call that made the decision instead."
 
 #. placeholder {0}: confirmResetMfa.email
 msgid "This turns off two-factor authentication for {0} and discards their backup codes. They can set it up again from their account."
@@ -5774,6 +5849,9 @@ msgstr "Updated"
 
 msgid "Upgrade to Enterprise"
 msgstr "Upgrade to Enterprise"
+
+msgid "Upgrade to generate"
+msgstr "Upgrade to generate"
 
 msgid "Upgrade to schedule"
 msgstr "Upgrade to schedule"

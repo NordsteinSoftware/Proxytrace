@@ -3,8 +3,7 @@ import type { AgentCallDto, TestSuiteListItemDto } from '../../api/models';
 import { usePromoteTrace } from './usePromoteTrace';
 import { agentColor, EVALUATOR_KIND_COLOR } from '../../lib/colors';
 import { fmtRelative, fmtPct100 } from '../../lib/format';
-import { cn } from '../../lib/cn';
-import { PlusIcon, CheckIcon } from '../icons';
+import { PlusIcon } from '../icons';
 import { ColoredBadge } from '../ui/ColoredBadge';
 import { MessageBubble } from '../ui/MessageBubble';
 import { ExpectedOutputEditor } from '../expected-output/ExpectedOutputEditor';
@@ -15,8 +14,8 @@ import {
 } from '../expected-output/expectedOutput';
 import useToast from '../../hooks/useToast';
 import { Button } from '../ui/Button';
-import { RowButton } from '../ui/RowButton';
 import { Modal } from '../overlays/Modal';
+import { SuitePicker } from './SuitePicker';
 import { Trans, Plural, useLingui } from '@lingui/react/macro';
 
 interface Props {
@@ -134,42 +133,8 @@ export function PromoteModal({ trace, suites, onClose }: Props) {
               </div>
             </div>
 
-            <div className="flex-1 min-h-0 overflow-y-auto px-5 pb-3 flex flex-col gap-1.5">
-              {suites.map(s => {
-                const isSel = s.id === suiteId;
-                return (
-                  <RowButton
-                    key={s.id}
-                    data-testid={`promote-suite-option-${s.id}`}
-                    onClick={() => setSuiteId(s.id)}
-                    className={cn(
-                      'px-3 py-2.5 transition-all duration-150 flex items-start gap-2',
-                      isSel
-                        ? 'bg-accent-subtle shadow-[inset_0_0_0_1.5px_color-mix(in_srgb,var(--accent-primary)_67%,transparent)]'
-                        : 'bg-card-2 shadow-[inset_0_0_0_1px_var(--border-color)]',
-                    )}
-                  >
-                    <span
-                      className={cn(
-                        'w-[14px] h-[14px] mt-0.5 shrink-0 flex items-center justify-center transition-all duration-150',
-                        isSel
-                          ? 'bg-accent border border-accent'
-                          : 'bg-transparent border border-border shadow-none',
-                      )}
-                    >
-                      {isSel && <span className="text-accent-ink inline-flex"><CheckIcon size={9} strokeWidth={3} /></span>}
-                    </span>
-                    <span className="flex-1 min-w-0">
-                      <span className={cn('block text-body font-semibold truncate', isSel ? 'text-primary' : 'text-secondary')}>
-                        {s.name}
-                      </span>
-                      <span className="block text-caption text-muted mt-0.5">
-                        <Plural value={s.testCaseCount} one="# case" other="# cases" /> · <Plural value={s.evaluators.length} one="# evaluator" other="# evaluators" />
-                      </span>
-                    </span>
-                  </RowButton>
-                );
-              })}
+            <div className="flex-1 min-h-0 px-5 pb-3 flex flex-col">
+              <SuitePicker suites={suites} value={suiteId} onChange={setSuiteId} />
             </div>
 
             {/* Stats panel */}

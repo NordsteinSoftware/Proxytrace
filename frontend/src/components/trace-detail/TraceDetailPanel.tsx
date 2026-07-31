@@ -12,6 +12,7 @@ import { Button } from '../ui/Button';
 import { Tabs } from '../ui/Tabs';
 import { DetailPanel } from '../overlays/DetailPanel';
 import { PromoteModal } from './PromoteModal';
+import { SynthesizeTestsModal } from './SynthesizeTestsModal';
 import { AskTraceyModal } from './AskTraceyModal';
 import { DrawerStat } from './DrawerStat';
 import { TraceAnomalyBanner } from './TraceAnomalyBanner';
@@ -47,6 +48,7 @@ export function TraceDetailPanel({ trace, onClose, onPrev, onNext }: Props) {
   // eslint-disable-next-line lingui/no-unlocalized-strings -- Tab id token (display label from TAB_LABELS)
   const [tab, setTab] = useState<Tab>('Messages');
   const [promoting, setPromoting] = useState(false);
+  const [generating, setGenerating] = useState(false);
   const [askingTracey, setAskingTracey] = useState(false);
   const [prevTraceId, setPrevTraceId] = useState(trace.id);
 
@@ -56,6 +58,7 @@ export function TraceDetailPanel({ trace, onClose, onPrev, onNext }: Props) {
     // eslint-disable-next-line lingui/no-unlocalized-strings -- Tab id token (display label from TAB_LABELS)
     setTab('Messages');
     setPromoting(false);
+    setGenerating(false);
     setAskingTracey(false);
   }
 
@@ -102,7 +105,7 @@ export function TraceDetailPanel({ trace, onClose, onPrev, onNext }: Props) {
 
   return (
     <>
-      <DetailPanel onClose={onClose} onPrev={onPrev} onNext={onNext} keyboardEnabled={!promoting && !askingTracey} testId="trace-detail">
+      <DetailPanel onClose={onClose} onPrev={onPrev} onNext={onNext} keyboardEnabled={!promoting && !generating && !askingTracey} testId="trace-detail">
         <TraceDetailHeader
           trace={trace}
           onClose={onClose}
@@ -113,6 +116,12 @@ export function TraceDetailPanel({ trace, onClose, onPrev, onNext }: Props) {
             disabled: promoteDisabled,
             tooltip: promoteTooltip,
             onStart: () => setPromoting(true),
+          }}
+          generate={{
+            // Same preconditions as promotion: an agent, a response, and somewhere to put the cases.
+            disabled: promoteDisabled,
+            tooltip: promoteTooltip,
+            onStart: () => setGenerating(true),
           }}
         />
 
@@ -188,6 +197,9 @@ export function TraceDetailPanel({ trace, onClose, onPrev, onNext }: Props) {
       </DetailPanel>
 
       {promoting && <PromoteModal trace={trace} suites={suites} onClose={() => setPromoting(false)} />}
+      {generating && (
+        <SynthesizeTestsModal trace={trace} suites={suites} onClose={() => setGenerating(false)} />
+      )}
       {askingTracey && (
         <AskTraceyModal
           traceId={trace.id}

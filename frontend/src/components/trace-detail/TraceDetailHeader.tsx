@@ -3,14 +3,16 @@ import type { AgentCallDto } from '../../api/models';
 import { agentColor, modelColor } from '../../lib/colors';
 import { fmtDateTime } from '../../lib/format';
 import { cn } from '../../lib/cn';
-import { PlusIcon, ChevronRightIcon, KeyIcon } from '../icons';
+import { PlusIcon, ChevronRightIcon, KeyIcon, SparklesIcon, LockIcon } from '../icons';
+import { useFeature } from '../../hooks/useLicense';
+import { showUpgradeModal } from '../license/UpgradeModal';
 import { CopyButton } from '../ui/CopyButton';
 import { ColoredBadge } from '../ui/ColoredBadge';
 import { Button, IconButton } from '../ui/Button';
 import { AskTraceyButton } from '../tracey/AskTraceyButton';
 import { Trans, useLingui } from '@lingui/react/macro';
 
-export interface PromoteAction {
+export interface HeaderAction {
   disabled: boolean;
   tooltip: string;
   onStart: () => void;
@@ -22,7 +24,8 @@ interface Props {
   onPrev?: () => void;
   onNext?: () => void;
   onAskTracey: () => void;
-  promote: PromoteAction;
+  promote: HeaderAction;
+  generate: HeaderAction;
 }
 
 /**
@@ -31,9 +34,10 @@ interface Props {
  * (mono, copyable, truncates first) + exact capture time, with the actions. Message/tool-call
  * counts are deliberately absent — the tab badges below already carry them.
  */
-export function TraceDetailHeader({ trace, onClose, onPrev, onNext, onAskTracey, promote }: Props) {
+export function TraceDetailHeader({ trace, onClose, onPrev, onNext, onAskTracey, promote, generate }: Props) {
   const navigate = useNavigate();
   const { t } = useLingui();
+  const canGenerate = useFeature('TestCaseSynthesis');
 
   const aColor = agentColor(trace.agentId ?? trace.id);
   const statusOk = trace.httpStatus >= 200 && trace.httpStatus < 300;
@@ -118,6 +122,22 @@ export function TraceDetailHeader({ trace, onClose, onPrev, onNext, onAskTracey,
             data-testid="ask-tracey-btn-trace"
             onClick={onAskTracey}
           />
+          <Button
+            data-testid="generate-tests-btn"
+            onClick={() => {
+              // Keep the action discoverable on Free: route to the upgrade modal rather than
+              // hiding it, so the capability is visible without being usable.
+              if (!canGenerate) { showUpgradeModal({ errorType: 'FeatureNotLicensed' }); return; }
+              if (!generate.disabled) generate.onStart();
+            }}
+            disabled={canGenerate && generate.disabled}
+            title={canGenerate ? generate.tooltip || undefined : undefined}
+            variant="secondary"
+            size="sm"
+            leftIcon={canGenerate ? <SparklesIcon size={12} /> : <LockIcon size={12} />}
+          >
+            {canGenerate ? <Trans>Generate tests</Trans> : <Trans>Upgrade to generate</Trans>}
+          </Button>
           <Button
             data-testid="promote-btn"
             onClick={() => !promote.disabled && promote.onStart()}

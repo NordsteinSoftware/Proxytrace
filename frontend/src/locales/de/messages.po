@@ -65,7 +65,7 @@ msgid "{0, plural, one {# case not comparable (suite changed between runs).} oth
 msgstr "{0, plural, one {# nicht vergleichbarer Fall (Suite zwischen Runs geändert).} other {# nicht vergleichbare Fälle (Suite zwischen Runs geändert).}}"
 
 #. placeholder {0}: cases.length
-#. placeholder {0}: s.testCaseCount
+#. placeholder {0}: suite.testCaseCount
 #. placeholder {0}: suite.testCases.length
 msgid "{0, plural, one {# case} other {# cases}}"
 msgstr "{0, plural, one {# Fall} other {# Fälle}}"
@@ -74,7 +74,7 @@ msgstr "{0, plural, one {# Fall} other {# Fälle}}"
 msgid "{0, plural, one {# column} other {# columns}}"
 msgstr "{0, plural, one {# Spalte} other {# Spalten}}"
 
-#. placeholder {0}: s.evaluators.length
+#. placeholder {0}: suite.evaluators.length
 msgid "{0, plural, one {# evaluator} other {# evaluators}}"
 msgstr "{0, plural, one {# Evaluator} other {# Evaluators}}"
 
@@ -137,6 +137,10 @@ msgstr "{0, plural, one {# Trace} other {# Traces}}"
 #. placeholder {0}: d.triggers.length
 msgid "{0, plural, one {# trigger} other {# triggers}}"
 msgstr "{0, plural, one {# Auslöser} other {# Auslöser}}"
+
+#. placeholder {0}: skipped.length
+msgid "{0, plural, one {# turn skipped} other {# turns skipped}}"
+msgstr ""
 
 #. placeholder {0}: turns.length
 msgid "{0, plural, one {# turn} other {# turns}}"
@@ -457,6 +461,9 @@ msgstr "{0}% bestanden"
 #. placeholder {0}: suiteSchedules.length
 msgid "{activeCount} active · {0} total"
 msgstr "{activeCount} aktiv · {0} gesamt"
+
+msgid "{added, plural, one {Added # test case} other {Added # test cases}}"
+msgstr ""
 
 msgid "{argCount, plural, one {# arg} other {# args}}"
 msgstr "{argCount, plural, one {# Arg} other {# Args}}"
@@ -818,6 +825,9 @@ msgstr "Istwert"
 msgid "Add {0} to suite"
 msgstr "{0} zur Suite hinzufügen"
 
+msgid "Add {selectedCount} to suite"
+msgstr ""
+
 msgid "Add a provider to route traffic through Proxytrace."
 msgstr "Füge einen Provider hinzu, um Traffic über Proxytrace zu leiten."
 
@@ -859,6 +869,10 @@ msgstr "Füge Benutzer zu diesem Projekt hinzu, um ihnen Zugriff zu gewähren."
 
 msgid "Add your first provider to get started."
 msgstr "Füge deinen ersten Provider hinzu, um loszulegen."
+
+#. placeholder {0}: writes.length
+msgid "Added {added} of {0} — the rest failed."
+msgstr ""
 
 msgid "Added to {suiteName}"
 msgstr "Zu {suiteName} hinzugefügt"
@@ -926,6 +940,9 @@ msgstr "Agent-Statistiken · 30 Tage"
 
 msgid "Agent Version Moved"
 msgstr "Agent-Version verschoben"
+
+msgid "Agent-proposed test cases"
+msgstr ""
 
 msgid "Agent:"
 msgstr "Agent:"
@@ -1274,6 +1291,10 @@ msgstr "Im Cache"
 
 msgid "Cached / 1M €"
 msgstr "Zwischengespeichert / 1 Mio. €"
+
+#. placeholder {0}: index + 1
+msgid "Call {0}"
+msgstr ""
 
 msgid "Calls"
 msgstr "Aufrufe"
@@ -2000,6 +2021,9 @@ msgstr "z. B. production-agent"
 msgid "e.g. Refund promise watcher"
 msgstr "z. B. Refund promise watcher"
 
+msgid "e.g. test that issue_refund is called with order_id=91"
+msgstr ""
+
 msgid "Edge Cases"
 msgstr "Edge Cases"
 
@@ -2411,6 +2435,12 @@ msgstr "Generiere einen, um mit dem Proxying von Anfragen zu beginnen."
 msgid "Generate schema"
 msgstr "Schema generieren"
 
+msgid "Generate test cases"
+msgstr ""
+
+msgid "Generate tests"
+msgstr ""
+
 msgid "Get data-driven improvement proposals, validated with A/B runs before you ship them."
 msgstr "Erhalte datenbasierte Verbesserungsvorschläge, validiert mit A/B runs, bevor du sie ausrollst."
 
@@ -2428,6 +2458,9 @@ msgstr "Kulanzzeitraum"
 
 msgid "Grading rubric"
 msgstr "Bewertungsrubrik"
+
+msgid "GREEN"
+msgstr ""
 
 msgid "Grok models via xAI’s OpenAI-compatible API."
 msgstr "Grok-Modelle über die OpenAI-kompatible API von xAI."
@@ -2449,6 +2482,9 @@ msgstr "System-Agents ausblenden"
 
 msgid "Hide tools"
 msgstr "Tools ausblenden"
+
+msgid "high"
+msgstr ""
 
 msgid "High"
 msgstr "Hoch"
@@ -2903,6 +2939,9 @@ msgstr "Auswertung protokolliert"
 msgid "Logout"
 msgstr "Abmelden"
 
+msgid "low"
+msgstr ""
+
 msgid "Low"
 msgstr "Niedrig"
 
@@ -2982,6 +3021,9 @@ msgstr "Ausgaben messen"
 
 msgid "Measuring this month's spend…"
 msgstr "Ausgaben dieses Monats werden gemessen…"
+
+msgid "medium"
+msgstr ""
 
 msgid "Medium"
 msgstr "Mittel"
@@ -3282,6 +3324,9 @@ msgstr "Kein Budget sperrt"
 msgid "No budgets configured"
 msgstr "Keine Budgets konfiguriert"
 
+msgid "No calls in this conversation."
+msgstr ""
+
 msgid "No cases match this filter."
 msgstr "Keine Fälle entsprechen diesem Filter."
 
@@ -3541,6 +3586,9 @@ msgstr "Noch keine Traces"
 msgid "No traces yet."
 msgstr "Noch keine Traces."
 
+msgid "No turn here is worth a test"
+msgstr ""
+
 msgid "No user message"
 msgstr "Keine User-Nachricht"
 
@@ -3600,6 +3648,9 @@ msgstr "Kein gültiges JSON — {detail}"
 
 msgid "Not valid JSON — showing raw text"
 msgstr "Kein gültiges JSON — Rohtext wird angezeigt"
+
+msgid "Nothing generated yet"
+msgstr ""
 
 msgid "Nothing here yet"
 msgstr "Noch nichts hier"
@@ -4204,6 +4255,9 @@ msgstr "Gelesen"
 msgid "Reading the run…"
 msgstr "Lese den Durchlauf …"
 
+msgid "Reads this trace's whole conversation and proposes the test cases worth building."
+msgstr ""
+
 msgid "Reasoning"
 msgstr "Reasoning"
 
@@ -4230,6 +4284,15 @@ msgstr "Aktuelle Ausreißer"
 
 msgid "Recent traces"
 msgstr "Letzte Traces"
+
+msgid "RED"
+msgstr ""
+
+msgid "Refine"
+msgstr ""
+
+msgid "Refine the proposed test cases"
+msgstr ""
 
 msgid "Regex"
 msgstr "Regex"
@@ -4418,6 +4481,12 @@ msgstr "Rolle"
 #. placeholder {0}: preview.role
 msgid "Role: <0>{0}</0>"
 msgstr "Rolle: <0>{0}</0>"
+
+msgid "Round {roundsUsed} of {maxRounds}"
+msgstr ""
+
+msgid "Round limit reached — close and generate again."
+msgstr ""
 
 msgid "Route your agent through the proxy and every LLM call lands here automatically. Point your OpenAI client at this project's <0>base_url</0> — keep your existing provider API key — and nothing else changes."
 msgstr "Leite deinen Agent über den Proxy, und jeder LLM-Aufruf landet hier automatisch. Richte deinen OpenAI-Client auf die <0>base_url</0> dieses Projekts aus — behalte deinen bestehenden Provider-API-Schlüssel bei — und sonst ändert sich nichts."
@@ -5308,6 +5377,9 @@ msgstr "Die konfigurierte Lizenz konnte nicht validiert werden{0}. Die Installat
 msgid "The configured license is invalid — running with Free-tier limits."
 msgstr "Die konfigurierte Lizenz ist ungültig — es laufen Free-Tier-Limits."
 
+msgid "The expected output calls a tool this agent was not offered."
+msgstr ""
+
 msgid "The installation falls back to the environment-supplied license, or the Free tier. Enterprise features stop working immediately if no other license is configured."
 msgstr "Die Installation fällt auf die vom System bereitgestellte Lizenz oder den Free-Tier zurück. Enterprise-Features funktionieren sofort nicht mehr, wenn keine andere Lizenz konfiguriert ist."
 
@@ -5469,6 +5541,9 @@ msgstr "Dieser Trace hat keine Antwort und kann nicht promoted werden."
 
 msgid "This trace is not linked to an agent and cannot be promoted."
 msgstr "Dieser Trace ist keinem Agent zugeordnet und kann nicht promoted werden."
+
+msgid "This turn's input already contains the tool calls and their results, so a corrected answer can never pass. Correct the earlier call that made the decision instead."
+msgstr ""
 
 #. placeholder {0}: confirmResetMfa.email
 msgid "This turns off two-factor authentication for {0} and discards their backup codes. They can set it up again from their account."
@@ -5774,6 +5849,9 @@ msgstr "Aktualisiert"
 
 msgid "Upgrade to Enterprise"
 msgstr "Auf Enterprise upgraden"
+
+msgid "Upgrade to generate"
+msgstr ""
 
 msgid "Upgrade to schedule"
 msgstr "Zum Planen upgraden"
