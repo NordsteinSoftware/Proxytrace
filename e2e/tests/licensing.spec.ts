@@ -28,6 +28,7 @@ test.describe('Free-tier feature gates', () => {
     expect(license.tier).toBe('free');
     expect(license.features).not.toContain('OptimizationProposals');
     expect(license.features).not.toContain('Tracey');
+    expect(license.features).not.toContain('TestCaseSynthesis');
   });
 
   test('the optimization-proposals API is gated with HTTP 402', async ({ request }) => {
@@ -41,6 +42,16 @@ test.describe('Free-tier feature gates', () => {
   test('the Tracey session API is gated with HTTP 402', async ({ request }) => {
     const api = new ProxytraceApiClient(request, token);
     const res = await api.traceySessionResponse();
+    expect(res.status(), 'a Free-tier install must be refused the gated endpoint').toBe(402);
+    const body = await res.json();
+    expect(body.error?.type).toBe('FeatureNotLicensed');
+  });
+
+  test('the test-case synthesis API is gated with HTTP 402', async ({ request }) => {
+    const api = new ProxytraceApiClient(request, token);
+    // The feature gate runs before the action, so an id that resolves to nothing still 402s —
+    // which is the point: an unlicensed install never reaches the model call.
+    const res = await api.testCaseProposalsResponse('00000000-0000-0000-0000-000000000001');
     expect(res.status(), 'a Free-tier install must be refused the gated endpoint').toBe(402);
     const body = await res.json();
     expect(body.error?.type).toBe('FeatureNotLicensed');

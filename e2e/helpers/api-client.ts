@@ -363,6 +363,16 @@ export class ProxytraceApiClient {
     return this.request.get('/api/tracey/session', { headers: this.headers() });
   }
 
+  // Raw POST /api/agent-calls/{id}/test-case-proposals returning the response so callers can assert
+  // on the status code. The [RequiresFeature(TestCaseSynthesis)] gate runs before the action, so on
+  // the Free tier this replies 402 whatever the id resolves to — no trace needs to exist.
+  testCaseProposalsResponse(agentCallId: string): Promise<APIResponse> {
+    return this.request.post(`/api/agent-calls/${agentCallId}/test-case-proposals`, {
+      headers: this.headers(),
+      data: { suiteId: null, instruction: null, rounds: null },
+    });
+  }
+
   // ── Optimization theories ────────────────────────────────────────────────
   // POST /api/theories submits an unproven theory; the validator A/B-tests it in the
   // background. Submission itself is synchronous and needs no LLM, so the 202 response and the
