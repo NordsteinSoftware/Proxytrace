@@ -21,6 +21,9 @@ export const QUERY_KEYS = {
   agentCallsHistogramRoot: ['agent-calls', 'histogram'] as const,
   agentCallsSummary: (filter: object) => ['agent-calls', 'summary', filter] as const,
   agentCallsSummaryRoot: ['agent-calls', 'summary'] as const,
+  /** Every full trace of one conversation — the transcript behind the generate-tests panel. */
+  traceConversation: (conversationId: string | null) =>
+    ['agent-calls', 'conversation', conversationId ?? null] as const,
   agentCallToolNames: (projectId?: string, agentId?: string) => ['agent-calls', 'tool-names', projectId ?? null, agentId ?? null] as const,
   agentCallsForSuiteCreate: (agentId: string, from?: string) => ['agent-calls', 'suite-create', agentId, from ?? null] as const,
   agentCallsForSuiteEdit: (agentId?: string) => ['agent-calls', 'suite-edit', agentId] as const,
@@ -36,6 +39,8 @@ export const QUERY_KEYS = {
   agentCounts: (agentId: string) => ['agent-counts', agentId] as const,
 
   evaluators: (projectId?: string) => ['evaluators', projectId ?? null] as const,
+  /** Prefix matching every evaluators query — use for invalidation. */
+  evaluatorsRoot: ['evaluators'] as const,
   evaluatorSummaries: (projectId?: string) => ['evaluators', 'summaries', projectId ?? null] as const,
   evaluatorsOverview: (projectId: string, rangeKey: string) => ['evaluators', 'overview', projectId, rangeKey] as const,
   evaluatorDetail: (evaluatorId: string, rangeKey: string) => ['evaluators', 'detail', evaluatorId, rangeKey] as const,

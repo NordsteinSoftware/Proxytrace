@@ -510,6 +510,85 @@ export interface SuiteRunStatsDto {
   totalCost: number | null;
 }
 
+/* ── Test-case proposals ── */
+
+/**
+ * Whether a proposal locks in the recorded behaviour (GREEN) or asserts a corrected one (RED).
+ *
+ * Named for its family rather than shortened to `ProposalKind`: that name is already taken by the
+ * OPTIMIZATION proposal kind below (SystemPrompt / Tool / ModelSwitch). The backend keeps the two
+ * apart by namespace; this module is flat, so the distinction has to live in the name.
+ */
+export enum TestCaseProposalKind {
+  Promotion = 'Promotion',
+  Correction = 'Correction',
+}
+
+export enum TestCaseProposalRelevance {
+  Low = 'Low',
+  Medium = 'Medium',
+  High = 'High',
+}
+
+export enum TestCaseProposalFlag {
+  /** A correction whose input already resolved its tool calls — it can never pass. */
+  Unpassable = 'Unpassable',
+  /** The expected output calls a tool the agent was not offered on that call. */
+  UnknownTool = 'UnknownTool',
+}
+
+export enum EvaluatorSuggestionTarget {
+  Attach = 'Attach',
+  NewSuite = 'NewSuite',
+}
+
+export interface ProposedExpectedOutputDto {
+  content: string;
+  toolRequests: ToolRequestInputDto[];
+}
+
+export interface TestCaseProposalDto {
+  agentCallId: string;
+  kind: TestCaseProposalKind;
+  title: string;
+  rationale: string;
+  relevance: TestCaseProposalRelevance;
+  /** Set for a Correction only; null means promote the recorded response as-is. */
+  expectedOutput: ProposedExpectedOutputDto | null;
+  flags: TestCaseProposalFlag[];
+}
+
+export interface SkippedTurnDto {
+  agentCallId: string;
+  reason: string;
+}
+
+export interface EvaluatorSuggestionDto {
+  name: string;
+  instructions: string;
+  reason: string;
+  target: EvaluatorSuggestionTarget;
+}
+
+export interface TestCaseProposalSetDto {
+  summary: string;
+  proposals: TestCaseProposalDto[];
+  skipped: SkippedTurnDto[];
+  evaluatorSuggestion: EvaluatorSuggestionDto | null;
+}
+
+/** One completed refinement exchange: the instruction that produced these proposals. */
+export interface SynthesisRoundDto {
+  instruction: string | null;
+  proposals: TestCaseProposalSetDto;
+}
+
+export interface SynthesizeTestCasesRequest {
+  suiteId?: string;
+  instruction?: string;
+  rounds?: SynthesisRoundDto[];
+}
+
 /* ── Test Runs ── */
 export interface EvaluatorSummaryDto {
   totalEvaluations: number;

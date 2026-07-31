@@ -14,4 +14,5 @@ public enum LicenseFeature
     ScheduledTestRuns,
     CustomAnomalyDetectors,
     CostControls,
+    TestCaseSynthesis,
 }

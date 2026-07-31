@@ -13,10 +13,25 @@ families.
 
 | Evaluator | Scores by |
 |---|---|
-| **Exact Match** | The response equals the expected value exactly. |
+| **Exact Match** | The response equals the expected value exactly — text **and** tool calls. |
 | **Numeric Match** | A numeric answer falls within tolerance of the expected number. |
 | **JSON Schema Match** | The response conforms to an expected JSON schema. |
 | **Tool Usage** | The agent called (or avoided) the expected tool(s). |
+
+::: warning Exact Match now checks tool calls
+Until version 1.11, **Exact Match** compared only the response *text*. An expected output that was
+a tool call had no text, so it matched any response that made no tool call at all — the expectation
+looked right in the UI but asserted nothing.
+
+It now compares tool calls too: the tool name must match, and the arguments must be equivalent JSON
+(key order and formatting don't matter, so `{"amount": 40}` and `{"amount": 40.0}` still match).
+Several calls in one response are compared as a set, since parallel tool calls have no meaningful
+order.
+
+**If you already have cases with tool-call expectations, some may start failing after upgrading.**
+That is the check finally running — look at the case before assuming the agent regressed. Past run
+results are left as they were, so a suite's pass-rate trend can show a step at the upgrade.
+:::
 
 ::: tip Generate the schema from an example
 When creating a **JSON Schema Match** evaluator you don't have to write the schema by hand:

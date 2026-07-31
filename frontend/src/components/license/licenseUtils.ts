@@ -14,6 +14,7 @@ export const FEATURE_LABELS: Record<LicenseFeature, MessageDescriptor> = {
   ScheduledTestRuns: msg`Scheduled test runs`,
   CustomAnomalyDetectors: msg`Custom anomaly detectors`,
   CostControls: msg`Cost budgets & alerting`,
+  TestCaseSynthesis: msg`Agent-proposed test cases`,
 };
 
 /**

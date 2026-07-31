@@ -10,13 +10,97 @@ The intended workflow is to **promote production traces** into durable benchmark
 
 1. Find a [trace](/guide/capturing-traces) that represents a critical behavior or a
    regression you want to guard against.
-2. Open its detail panel and click **Add test** — the captured input becomes the case input.
+2. Open its detail panel and click **Generate tests** — Proxytrace reads the conversation and
+   proposes the cases worth keeping (see [below](#let-proxytrace-propose-the-cases)).
 3. Group related cases into a test suite.
 
 Because cases come from real traffic, suites stay grounded in behaviors that actually
 matter.
 
+To add traces to a suite yourself, without the agent's help, open the suite on the **Test Suites**
+page and use **Add from traces** — pick the traces, and each becomes a case. That route works on
+every license tier.
+
+## Let Proxytrace propose the cases
+
+::: tip Enterprise feature
+Generating test cases requires an Enterprise license. On other tiers, build suites by hand with
+**Add from traces** on the Test Suites page.
+:::
+
+A multi-turn conversation offers a lot of possible test cases, and most of them are not worth
+having. If you want to check that a support agent grants refunds correctly, what matters is
+whether it *looked up the order* and whether it *reacted correctly* — not that it said "you're
+welcome" at the end.
+
+![The Generate test cases panel: the captured conversation on the left, and on the right the destination suite, two approved candidates with their reasoning, and the editable expected tool call.](/screenshots/suites/generate-tests.png)
+
+Open a trace and click **Generate tests**. The panel opens and starts reading straight away — it
+takes in the whole conversation and proposes only the turns where the agent **decided** something:
+it chose a tool, chose its arguments, refused, escalated. A clock in the candidate column counts the
+wait, which is usually a few seconds and depends on the model your project's system endpoint points
+at. Each candidate tells you what it asserts and why it is worth testing:
+
+- **GREEN** locks in what the agent actually did, as a regression test.
+- **RED** asserts what it *should* have done — a test that fails until the agent is fixed.
+
+Nothing is written until you approve. Review the candidates beside the conversation, edit any
+expected output, tick the ones you want, and add them to a suite in one go. Turns it passed over are
+listed under **N turns skipped**, each with the reason — so you can see what it decided not to test,
+and disagree.
+
+The **Destination suite** picker sets where the approved cases land, and you can change it at any
+point before you add them. The first round is read against whichever suite is selected when the
+panel opens; if you switch and want the candidates reconsidered against the new suite's evaluators,
+ask for a refinement round from the box at the bottom.
+
+Once the cases are added, a message in the corner confirms how many landed and offers **View
+suite** — one click to the suite you just filled.
+
+### When a candidate can't be made to pass
+
+![A candidate carrying a warning: this turn's input already contains the tool calls and their results, so a corrected answer can never pass — correct the earlier call that made the decision instead.](/screenshots/suites/generate-tests-unpassable.png)
+
+Some turns cannot carry a RED test at all. If a turn's input already contains the tool calls **and**
+their results, the only thing left to grade is the closing summary — so an expected answer that
+contradicts those results can never be produced, and the case stays red forever no matter how the
+agent is fixed. A candidate like that says so in place and arrives **unticked**; correct the earlier
+call that made the decision instead. See [Pick the trace where the agent
+decided](#pick-the-trace-where-the-agent-decided) for the whole story.
+
+### Asking for something specific
+
+The box at the bottom takes a plain-language request, for example:
+
+> test that `issue_refund` is called with `order_id=91`
+
+It re-runs against your request and revises what it proposed, keeping the rest stable. Your edits
+travel with it, so a follow-up refines what you are looking at rather than starting over. You get
+five rounds per session; close and reopen the panel for a fresh start.
+
+### When the suite cannot score the cases
+
+A suite's evaluators score **every** case in it, and a case passes only when all of them pass. If
+the cases it proposes need judgement the destination suite cannot deliver — "did it react
+sensibly?" is not something Exact Match can answer — it offers an **agentic judge** and asks where
+to put it:
+
+- **Add the judge to *your suite*** — it will also score the cases already there, and the panel
+  says how many that is before you commit.
+- **Put the cases in a new suite** — the cases and the judge go somewhere clean, and they land
+  there *instead of* the suite you picked at the top of the panel.
+- **Skip the judge** — the cases go to your suite and its current evaluators score them.
+
+All three say what they will do before you choose, so nothing about the outcome waits until after
+you commit. The one the agent recommends is marked and selected for you.
+
 ### Pick the trace where the agent decided
+
+::: tip
+The **Generate tests** flow above already avoids this trap for you — it targets the deciding call,
+and flags any proposal that would land on a summary. The rest of this section matters when you are
+promoting traces by hand.
+:::
 
 A run asks the agent for **one** reply per case: it sends the case input and scores the next
 message. It does not replay a whole conversation.
@@ -76,8 +160,8 @@ The captured response is only a starting point. When the traced output is *not* 
 want the agent to produce — you intend to change the agent to hit a target — edit the
 expected output directly:
 
-- **In the Add test dialog**, the *Expected output* section is editable before you add the
-  case to a suite.
+- **In the Generate tests panel**, each candidate's expected output is editable before you add it
+  to a suite.
 - **In the suite detail panel**, select a case and choose **Edit expected output** to revise
   an existing case.
 

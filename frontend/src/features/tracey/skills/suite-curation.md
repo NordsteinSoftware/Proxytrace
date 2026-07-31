@@ -1,7 +1,7 @@
 ---
 name: suite-curation
 description: Build and edit benchmark test suites from captured traces. Load when the user wants to create a suite, turn traces into test cases, or add/remove/edit a suite's cases.
-tools: list_suites, get_suite, find_traces, get_trace, create_suite, add_to_suite, remove_test_case, update_expected_output, list_evaluators, create_evaluator, set_suite_evaluators
+tools: list_suites, get_suite, propose_test_cases, find_traces, get_trace, create_suite, add_to_suite, remove_test_case, update_expected_output, list_evaluators, create_evaluator, set_suite_evaluators
 ---
 
 # Skill: Suite curation
@@ -16,6 +16,19 @@ locate the interactions worth capturing — typically failures or notable cases 
 with `verbose: true` to read one in full (its whole conversation and response), which is what tells
 you whether it is worth locking in as a case. You need their agent-call ids for the write tools
 below.
+
+## Let the agent pick the turns
+
+For a MULTI-TURN conversation, don't choose the turns yourself — call `propose_test_cases` with the
+trace id. It reads the whole conversation and returns only the consequential decision points, each
+with the `agentCallId` to build the case from, whether it should be a plain promotion or a
+correction, and any flag (an `Unpassable` correction, an `UnknownTool`). Pass the user's own words
+as `instruction` when they asked for something specific. It writes nothing — feed the candidates you
+keep to `add_to_suite` / `create_suite` as `cases`.
+
+It also reports `skippedCount` (turns it judged not worth testing) and may return one
+`evaluatorSuggestion` when the destination suite's evaluators cannot score what it proposes — act on
+that with `create_evaluator` + `set_suite_evaluators`, or say why you didn't.
 
 ## Build or extend
 

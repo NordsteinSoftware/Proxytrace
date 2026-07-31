@@ -188,10 +188,7 @@ internal class ModelClient : IModelClient
         Stopwatch sw = Stopwatch.StartNew();
         try
         {
-            ChatResponse response = await chatClient.GetResponseAsync(
-                conversation.ToChatMessages(),
-                options.ToChatOptions(),
-                cancellationToken);
+            ChatResponse response = await GetResponseAsync(conversation, options, cancellationToken);
 
             TimeSpan latency = sw.Elapsed;
 
@@ -256,6 +253,53 @@ internal class ModelClient : IModelClient
                ?? throw new InvalidOperationException(
                    "Completion is null after successful response. This should not happen.");
     }
+
+    /// <summary>
+    /// Sends the completion request, retrying once without the reasoning budget when the provider
+    /// rejects that parameter.
+    /// </summary>
+    /// <remarks>
+    /// <c>reasoning_effort</c> only exists on models that have reasoning to constrain: OpenAI
+    /// answers it with a 400 on a gpt-4o-class model, and a reasoning model rejects a level it does
+    /// not implement (o-series takes low/medium/high, so <c>none</c> is an error there). Callers set
+    /// the budget to keep an *internal* feature quick — the operator picked the model, not the
+    /// parameter — so the honest answer to "this model has no such knob" is to ask again without
+    /// it. The user waits longer; they do not get a broken feature. The retry is deliberately
+    /// narrow: only a 400 that names the parameter qualifies, so a genuinely malformed request
+    /// still fails once rather than being sent twice.
+    /// </remarks>
+    private async Task<ChatResponse> GetResponseAsync(
+        Conversation conversation,
+        ModelOptions options,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await chatClient.GetResponseAsync(
+                conversation.ToChatMessages(),
+                options.ToChatOptions(),
+                cancellationToken);
+        }
+        catch (ClientResultException ex) when (RejectsReasoningEffort(ex, options.Sampling))
+        {
+            ModelOptions withoutReasoning = options with
+            {
+                Sampling = options.Sampling is { } sampling
+                    ? sampling with { ReasoningEffort = null }
+                    : null,
+            };
+
+            return await chatClient.GetResponseAsync(
+                conversation.ToChatMessages(),
+                withoutReasoning.ToChatOptions(),
+                cancellationToken);
+        }
+    }
+
+    private static bool RejectsReasoningEffort(ClientResultException error, ModelSamplingParameters? sampling)
+        => sampling?.ReasoningEffort is not null
+           && error.Status == (int)HttpStatusCode.BadRequest
+           && error.Message.Contains("reasoning", StringComparison.OrdinalIgnoreCase);
 
     public async IAsyncEnumerable<ModelStreamUpdate> StreamAsync(
         SystemMessage systemMessage,

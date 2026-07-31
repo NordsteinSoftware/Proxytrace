@@ -1,5 +1,5 @@
 import { api, qs, type RequestOptions } from './client';
-import type { AgentCallDto, AgentCallListItemDto, AgentCallFilter, AgentCallSummaryDto, PagedResult, TracesOverviewDto, TraceHistogramBucket } from './models';
+import type { AgentCallDto, AgentCallListItemDto, AgentCallFilter, AgentCallSummaryDto, PagedResult, SynthesizeTestCasesRequest, TestCaseProposalSetDto, TracesOverviewDto, TraceHistogramBucket } from './models';
 
 export const agentCallsApi = {
   list: (filter?: AgentCallFilter) =>
@@ -22,5 +22,8 @@ export const agentCallsApi = {
   toolNames: (projectId: string, agentId?: string) =>
     api.get<string[]>(`/api/agent-calls/tool-names${qs({ projectId, agentId })}`),
   get: (id: string, opts?: RequestOptions) => api.get<AgentCallDto>(`/api/agent-calls/${id}`, opts),
+  /** Agent-proposed test cases for this trace's whole conversation. Read-only; writes nothing. */
+  proposeTestCases: (id: string, body: SynthesizeTestCasesRequest, opts?: RequestOptions) =>
+    api.post<TestCaseProposalSetDto>(`/api/agent-calls/${id}/test-case-proposals`, body, opts),
   delete: (id: string) => api.del(`/api/agent-calls/${id}`),
 };

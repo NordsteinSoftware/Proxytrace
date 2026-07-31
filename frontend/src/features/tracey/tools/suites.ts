@@ -1,8 +1,9 @@
 import { z } from 'zod';
+import { agentCallsApi } from '../../../api/agent-calls';
 import { agentsApi } from '../../../api/agents';
 import { testSuitesApi } from '../../../api/test-suites';
 import { testCasesApi } from '../../../api/test-cases';
-import type { TestSuiteDto } from '../../../api/models';
+import type { TestCaseProposalSetDto, TestSuiteDto } from '../../../api/models';
 import { type ToolFactory, tool, CANCELLED, ignore404, isEntityId, listDigest, presentArg } from './shared';
 import { clip } from './run-analysis';
 
@@ -13,6 +14,32 @@ import { clip } from './run-analysis';
  * evaluator passes, so the whole set has to be visible before anyone changes it; and the case ids
  * are what `remove_test_case`, `update_expected_output` and `get_case_results` all take.
  */
+/**
+ * The compact digest for `propose_test_cases`. Carries `agentCallId` and `kind` per candidate
+ * because those two are exactly what `add_to_suite` / `create_suite` need next — the model must be
+ * able to act on a proposal without a second read.
+ */
+const proposalsDigest = (set: TestCaseProposalSetDto) => ({
+  summary: clip(set.summary, 200),
+  proposals: listDigest(set.proposals, 20, (proposal) => ({
+    agentCallId: proposal.agentCallId,
+    kind: proposal.kind,
+    title: clip(proposal.title, 120),
+    rationale: clip(proposal.rationale, 200),
+    relevance: proposal.relevance,
+    flags: proposal.flags,
+    expected: proposal.expectedOutput ? clip(proposal.expectedOutput.content, 120) : null,
+  })),
+  skippedCount: set.skipped.length,
+  evaluatorSuggestion: set.evaluatorSuggestion
+    ? {
+      name: set.evaluatorSuggestion.name,
+      target: set.evaluatorSuggestion.target,
+      reason: clip(set.evaluatorSuggestion.reason, 200),
+    }
+    : null,
+});
+
 const suiteDigest = (suite: TestSuiteDto) => ({
   id: suite.id,
   name: suite.name,
@@ -132,6 +159,36 @@ export const createSuiteTools: ToolFactory = (ctx, store) => {
         const suite = await ignore404(() => testSuitesApi.get(suiteId, { silentStatuses: [404] }));
         if (!suite) return { notFound: suiteId };
         return store('suite', suite, suiteDigest(suite));
+      },
+    }),
+    propose_test_cases: tool({
+      description:
+        'Propose the test cases worth building from ONE captured trace and its whole conversation. ' +
+        'READ-ONLY — nothing is created. Returns a ranked shortlist: each candidate names the ' +
+        'agentCallId to build the case from, whether it locks in the recorded behaviour (Promotion) ' +
+        'or asserts a corrected one (Correction), why it matters, and any flags. Feed the candidates ' +
+        'you keep to add_to_suite / create_suite as `cases` to actually create them. Pass the user\'s ' +
+        'own words as `instruction` when they asked for something specific ("test that issue_refund ' +
+        'is called with order_id=91"); leave it off to let the agent choose which turns matter.',
+      parameters: z.object({
+        present: presentArg,
+        traceId: z.string().describe('The id of the trace whose conversation to propose cases from.'),
+        suiteId: z.string().optional().describe(
+          'The suite the cases would land in — lets the agent warn when its evaluators cannot score them.',
+        ),
+        instruction: z.string().optional().describe("The user's specific request for this round."),
+      }),
+      confirm: false,
+      execute: async ({ traceId, suiteId, instruction }) => {
+        if (!isEntityId(traceId)) return { notFound: traceId };
+        if (suiteId !== undefined && !isEntityId(suiteId)) return { notFound: suiteId };
+        const proposed = await ignore404(() => agentCallsApi.proposeTestCases(
+          traceId,
+          { suiteId, instruction },
+          { silentStatuses: [404] },
+        ));
+        if (!proposed) return { notFound: traceId };
+        return store('test-case-proposals', proposed, proposalsDigest(proposed));
       },
     }),
     create_suite: tool({

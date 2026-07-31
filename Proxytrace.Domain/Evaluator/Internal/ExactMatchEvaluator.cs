@@ -3,6 +3,7 @@ using System.Diagnostics;
 using JetBrains.Annotations;
 using Proxytrace.Domain.Evaluation;
 using Proxytrace.Domain.Internal;
+using Proxytrace.Domain.Message;
 using Proxytrace.Domain.Project;
 using Proxytrace.Domain.TestResult;
 
@@ -51,32 +52,33 @@ internal record ExactMatchEvaluator : DomainEntity<IEvaluator>, IExactMatchEvalu
         var expectedOutput = testResult.TestCase.ExpectedOutput;
         var actualOutput = testResult.ActualResponse;
 
-        EvaluationScore score;
-        string? reasoning = null;
+        List<string> differences = [];
+
         if (expectedOutput.Contents.Count != actualOutput.Contents.Count)
         {
             // An exact match requires the same number of content parts. Zip alone would silently
             // truncate to the shorter sequence, passing a partial or padded response.
-            score = EvaluationScore.Terrible;
-            reasoning =
-                $"Expected {expectedOutput.Contents.Count} content part(s) but got {actualOutput.Contents.Count}.";
+            differences.Add(
+                $"Expected {expectedOutput.Contents.Count} content part(s) but got {actualOutput.Contents.Count}.");
         }
         else
         {
-            var pairs = expectedOutput.Contents.Zip(actualOutput.Contents, (e, a) => (Expected: e, Actual: a));
-            var differences = pairs.Where(p => !p.Expected.Equals(p.Actual)).ToArray();
-            if (differences.Length > 0)
-            {
-                score = EvaluationScore.Terrible;
-                reasoning = string.Join(
-                    Environment.NewLine,
-                    differences.Select(d => $"Expected '{d.Expected}' but got '{d.Actual}'"));
-            }
-            else
-            {
-                score = EvaluationScore.Acceptable;
-            }
+            differences.AddRange(expectedOutput.Contents
+                .Zip(actualOutput.Contents, (expected, actual) => (Expected: expected, Actual: actual))
+                .Where(pair => !pair.Expected.Equals(pair.Actual))
+                .Select(pair => $"Expected '{pair.Expected}' but got '{pair.Actual}'"));
         }
+
+        // Tool requests live beside Contents, not inside them, so a tool-call expectation is
+        // invisible to a content-only comparison — an expected call contributes zero content parts
+        // and matched any tool-free response. Compared id-blind and unordered; see ToolRequestMatch.
+        differences.AddRange(
+            ToolRequestMatch.Differences(expectedOutput.ToolRequests, actualOutput.ToolRequests));
+
+        EvaluationScore score = differences.Count == 0 ? EvaluationScore.Acceptable : EvaluationScore.Terrible;
+        string? reasoning = differences.Count == 0
+            ? null
+            : string.Join(Environment.NewLine, differences);
 
         IEvaluation evaluation = evaluationFactory(
             this,

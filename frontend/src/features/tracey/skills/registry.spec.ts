@@ -35,7 +35,8 @@ describe('tracey skills registry', () => {
   it('registers test-driven-improvement with the tools its red/green loop needs', () => {
     const skill = getSkill('test-driven-improvement');
     expect(skill?.tools).toEqual(expect.arrayContaining([
-      'get_trace', 'list_suites', 'get_suite', 'create_suite', 'add_to_suite',
+      // propose_test_cases picks WHICH call to correct — the step the loop used to get wrong.
+      'get_trace', 'propose_test_cases', 'list_suites', 'get_suite', 'create_suite', 'add_to_suite',
       'list_evaluators', 'create_evaluator', 'set_suite_evaluators',
       'start_test_run', 'get_case_results', 'compare_runs',
       'list_theories', 'submit_optimization_theory', 'await_actions',

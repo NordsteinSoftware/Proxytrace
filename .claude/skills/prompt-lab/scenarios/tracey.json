@@ -11,7 +11,9 @@
     {
       "id": "run-triage",
       "intent": "The everyday case. Should read live state before answering, then land one short verdict — no narration between calls, no restating the numbers the card already shows.",
-      "turns": ["how did my latest test run go?"]
+      "turns": [
+        "how did my latest test run go?"
+      ]
     },
     {
       "id": "follow-up-diagnosis",
@@ -24,30 +26,204 @@
     {
       "id": "skill-dispatch",
       "intent": "A task with a playbook. Should load the matching skill BEFORE acting and then follow it silently — never announce that it loaded one, never mirror its numbered steps back as headings.",
-      "turns": ["The Customer Support Agent keeps approving refunds it shouldn't. Can you help me fix it?"]
+      "turns": [
+        "The Customer Support Agent keeps approving refunds it shouldn't. Can you help me fix it?"
+      ]
     },
     {
       "id": "docs-question",
       "intent": "A product question, not a data question: should search the manual and cite a /docs link inline, instead of reaching for the data tools or answering from memory.",
-      "turns": ["how do I point my existing app at the proxy without changing my code?"]
+      "turns": [
+        "how do I point my existing app at the proxy without changing my code?"
+      ]
     },
     {
       "id": "usage-comparison",
       "intent": "Comparative numbers across agents — the case for rendering a component instead of prose. Should pull the stats in one read and show them, not narrate a list of figures.",
-      "turns": ["which of my agents is burning the most tokens?"]
+      "turns": [
+        "which of my agents is burning the most tokens?"
+      ]
     },
     {
       "id": "german-brevity",
       "intent": "Brevity is a limit on length, not on language: should answer in German and stay just as short.",
-      "turns": ["Welcher meiner Agenten hat die meisten Fehler?"]
+      "turns": [
+        "Welcher meiner Agenten hat die meisten Fehler?"
+      ]
     },
     {
       "id": "empty-world",
       "intent": "Nothing to report. Should say so plainly instead of inventing ids, names or numbers to fill the silence.",
-      "turns": ["show me the optimization theories you've validated so far"],
+      "turns": [
+        "show me the optimization theories you've validated so far"
+      ],
       "fixtures": {
-        "list_theories": { "count": 0, "items": [] },
-        "list_proposals": { "count": 0, "items": [] }
+        "list_theories": {
+          "count": 0,
+          "items": []
+        },
+        "list_proposals": {
+          "count": 0,
+          "items": []
+        }
+      }
+    },
+    {
+      "id": "defect-target-call",
+      "intent": "A reported defect inside a TOOL LOOP. test-driven-improvement now says to ask propose_test_cases which call to correct, and to treat an `Unpassable` candidate as a stop — the flagged one is ranked first here, and correcting it yields a case that can never go green. Should load the skill, call propose_test_cases, and build the case on the DECIDING call (b0c1d2e3…), never the flagged summary call (c1d2e3f4…).",
+      "turns": [
+        "The Customer Support Agent in trace c1d2e3f4-a5b6-4788-9a0b-1c2d3e4f5061 refunded an order 45 days after delivery — our window is 30 days. Turn that into a regression test."
+      ],
+      "fixtures": {
+        "find_traces": {
+          "count": 2,
+          "items": [
+            {
+              "id": "c1d2e3f4-a5b6-4788-9a0b-1c2d3e4f5061",
+              "agentName": "Customer Support Agent",
+              "conversationId": "9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d",
+              "toolCallsRequested": 0,
+              "model": "gpt-4o-mini",
+              "httpStatus": 200,
+              "preview": "I lost my job last month… order #20114…",
+              "createdAt": "2026-07-24T09:12:46Z"
+            },
+            {
+              "id": "b0c1d2e3-f4a5-4677-8899-0a1b2c3d4e5f",
+              "agentName": "Customer Support Agent",
+              "conversationId": "9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d",
+              "toolCallsRequested": 1,
+              "model": "gpt-4o-mini",
+              "httpStatus": 200,
+              "preview": "I lost my job last month… order #20114…",
+              "createdAt": "2026-07-24T09:12:44Z"
+            }
+          ]
+        },
+        "get_trace": {
+          "id": "c1d2e3f4-a5b6-4788-9a0b-1c2d3e4f5061",
+          "agentId": "4b1c2a7e-9f30-4d18-8c55-1a2b3c4d5e6f",
+          "agentName": "Customer Support Agent",
+          "conversationId": "9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d",
+          "model": "gpt-4o-mini",
+          "httpStatus": 200,
+          "durationMs": 2140,
+          "inputTokens": 1204,
+          "outputTokens": 278,
+          "createdAt": "2026-07-24T09:12:46Z",
+          "messages": [
+            {
+              "role": "system",
+              "content": "You are a friendly, concise customer-support agent for an e-commerce store. Returns are accepted within 30 days of delivery…"
+            },
+            {
+              "role": "user",
+              "content": "I lost my job last month… I bought a VortexBlend 700 (order #20114) about 45 days ago… Maria promised me a full refund even though it's past the return window. Could you process it?"
+            },
+            {
+              "role": "assistant",
+              "content": null,
+              "tool_calls": [
+                {
+                  "name": "lookup_order",
+                  "arguments": "{\"orderId\":\"20114\"}"
+                }
+              ]
+            },
+            {
+              "role": "tool",
+              "content": "{\"orderId\":\"20114\",\"status\":\"delivered\",\"deliveredDaysAgo\":45,\"total\":89.90}"
+            },
+            {
+              "role": "assistant",
+              "content": null,
+              "tool_calls": [
+                {
+                  "name": "issue_refund",
+                  "arguments": "{\"orderId\":\"20114\",\"amount\":89.90}"
+                }
+              ]
+            },
+            {
+              "role": "tool",
+              "content": "{\"refundId\":\"rf-8831\",\"status\":\"completed\",\"amount\":89.90}"
+            },
+            {
+              "role": "assistant",
+              "content": "All sorted — I've refunded €89.90 to your original payment method. So sorry again about the timing."
+            }
+          ]
+        },
+        "propose_test_cases": {
+          "summary": "One refund conversation across two model calls; the refund was decided on the second turn.",
+          "proposals": [
+            {
+              "agentCallId": "c1d2e3f4-a5b6-4788-9a0b-1c2d3e4f5061",
+              "kind": "Correction",
+              "title": "Should refuse the out-of-window refund",
+              "rationale": "The closing message confirms a refund that breaks the 30-day rule.",
+              "relevance": "High",
+              "flags": [
+                "Unpassable"
+              ],
+              "expected": "I'm sorry — order #20114 was delivered 45 days ago, which is outside our 30-day return window, so I can't process a refund. I can pass this to a supervisor if you'd like."
+            },
+            {
+              "agentCallId": "b0c1d2e3-f4a5-4677-8899-0a1b2c3d4e5f",
+              "kind": "Correction",
+              "title": "Should refuse instead of calling issue_refund",
+              "rationale": "This is the turn that decided: lookup_order had already returned deliveredDaysAgo=45 and the agent called issue_refund anyway.",
+              "relevance": "High",
+              "flags": [],
+              "expected": "I'm sorry — order #20114 was delivered 45 days ago, which is outside our 30-day return window, so I can't process a refund. I can pass this to a supervisor if you'd like."
+            }
+          ],
+          "skippedCount": 1,
+          "evaluatorSuggestion": {
+            "name": "Return-window policy judge",
+            "target": "Attach",
+            "reason": "Exact Match cannot tell a correct refusal from a differently-worded one."
+          }
+        },
+        "add_to_suite": {
+          "id": "5e6f7a8b-9c0d-4e1f-a2b3-c4d5e6f7a8b9",
+          "name": "Refund policy regressions",
+          "agentName": "Customer Support Agent",
+          "caseCount": 9,
+          "addedCases": [
+            {
+              "caseId": "ee55ff66-a077-4b88-9c99-d00e11f22a33",
+              "agentCallId": "b0c1d2e3-f4a5-4677-8899-0a1b2c3d4e5f",
+              "isCorrection": true
+            }
+          ]
+        },
+        "set_suite_evaluators": {
+          "id": "5e6f7a8b-9c0d-4e1f-a2b3-c4d5e6f7a8b9",
+          "name": "Refund policy regressions",
+          "evaluators": [
+            "Policy adherence judge",
+            "Helpfulness judge",
+            "Return-window policy judge"
+          ],
+          "status": "updated"
+        },
+        "get_case_results": {
+          "runId": "3d4e5f6a-7b8c-4d9e-af01-2b3c4d5e6f70",
+          "suiteName": "Refund policy regressions",
+          "agentName": "Customer Support Agent",
+          "runStatus": "Completed",
+          "passRate": 0.889,
+          "totalCases": 9,
+          "cases": [
+            {
+              "testCaseId": "ee55ff66-a077-4b88-9c99-d00e11f22a33",
+              "verdict": "fail",
+              "case": "Refund decided 45 days after delivery — should have refused",
+              "reasoning": "The response calls issue_refund for an order delivered 45 days ago, outside the 30-day return window."
+            }
+          ]
+        }
       }
     }
   ]

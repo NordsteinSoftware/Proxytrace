@@ -479,5 +479,8 @@ public sealed class AgentCallsControllerTests : BaseTest<Module>
         services.GetRequiredService<Proxytrace.Domain.AgentCall.IAgentCall.CreateNew>(),
         services.GetRequiredService<Proxytrace.Domain.Completion.ICompletion.Create>(),
         guard,
-        NullLogger<Audit>.Instance);
+        NullLogger<Audit>.Instance,
+        services.GetRequiredService<Proxytrace.Domain.TestSuite.ITestSuiteRepository>(),
+        services.GetRequiredService<Proxytrace.Application.TestCase.ITestCaseSynthesisService>(),
+        services.GetRequiredService<Proxytrace.Api.Dto.TestCases.TestCaseProposalDtoMapper>());
 }

@@ -123,6 +123,15 @@ export default defineConfig({
       dependencies: ['setup'],
     },
     {
+      // The Generate-tests panel asks the project's system endpoint to propose test cases from a
+      // captured conversation. It seeds its own conversation + suite, so it needs only setup.
+      name: 'llm-generate-tests',
+      testMatch: ['**/generate-tests.spec.ts'],
+      retries: LLM_RETRIES,
+      use: { ...CHROME, storageState: STORAGE_STATE },
+      dependencies: ['setup'],
+    },
+    {
       // Playground drives a live agent against an endpoint; needs an ingested agent present.
       name: 'llm-playground',
       testMatch: ['**/playground.spec.ts'],

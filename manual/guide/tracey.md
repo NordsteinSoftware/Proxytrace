@@ -232,6 +232,12 @@ at the traces you care about and she'll do the curation:
 - **"Set the expected answer for that case to …"** A captured response isn't always the *ideal*
   answer, so she can **set a case's expected output** — what the case is scored against — or
   **remove** a case that isn't useful.
+- **"Which test cases are worth making from trace `8f3a…`?"** For a multi-turn conversation she
+  can **propose the cases worth building** — the turns where the agent actually decided something,
+  each marked as locking in the current behavior or asserting a corrected one. She proposes only;
+  nothing is created until you tell her to add them. This is the same agent behind
+  [**Generate tests**](/guide/test-suites-and-cases#let-proxytrace-propose-the-cases) in the trace
+  detail panel, and it needs an Enterprise license.
 
 The resulting suite renders as a card you can open. A natural flow: find notable traces → build
 or extend a suite → refine the key cases → start a run.
@@ -348,15 +354,20 @@ She then works a test-first loop:
 2. **State the rule.** She writes the rule that was broken as one sentence — *"a refund must be
    refused when the request falls outside the return window"*. That sentence becomes both the
    expected answer and the criterion the evaluator scores against.
-3. **Write a failing test.** She adds the trace to a fitting suite (or creates one) as a **test case
+3. **Pick the turn that decided.** In a conversation where the agent used tools, one turn is several
+   calls, and only one of them *made* the wrong move — the rest report it. Correcting the wrong one
+   produces a test that can never pass, which looks exactly like a fix that didn't work. So she asks
+   the [test-case agent](/guide/test-suites-and-cases#let-proxytrace-propose-the-cases) which call to
+   correct, passing along your description of the problem.
+4. **Write a failing test.** She adds that call to a fitting suite (or creates one) as a **test case
    whose expected answer is what the agent should have said** — not what it did say. She also makes
    sure the suite has an evaluator that can actually judge the rule, creating an LLM judge for it if
    none fits.
-4. **Prove it fails.** She runs the suite and checks *that specific case*. This step is the point of
+5. **Prove it fails.** She runs the suite and checks *that specific case*. This step is the point of
    the whole loop. If the case unexpectedly **passes**, the test doesn't capture your bug, and she
    fixes the test rather than proposing a change. If the evaluator itself errored, she says so — a
    broken judge is not evidence the agent is wrong.
-5. **Propose a fix and prove it works.** She submits an optimization theory, and when the background
+6. **Propose a fix and prove it works.** She submits an optimization theory, and when the background
    A/B test finishes she checks your case again against the candidate — showing it move from failing
    to passing.
 

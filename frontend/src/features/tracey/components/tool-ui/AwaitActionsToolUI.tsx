@@ -10,7 +10,7 @@ import { AwaitPendingRunRow } from './AwaitPendingRunRow';
 import { AwaitPendingTheoryRow } from './AwaitPendingTheoryRow';
 import { AwaitResultRow } from './AwaitResultRow';
 import { AwaitErrorRow } from './AwaitErrorRow';
-import { ElapsedStopwatch } from './ElapsedStopwatch';
+import { ElapsedStopwatch } from '../../../../components/ui/ElapsedStopwatch';
 import { awaitOutcome, type AwaitOutcomeTone } from './await-card-logic';
 
 interface AwaitActionsArgs {

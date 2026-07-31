@@ -279,4 +279,84 @@ public sealed class EvaluatorBehaviorTests : BaseTest<Module>
         result.TestCase.Returns(testCase);
         return result;
     }
+
+    /// <summary>A result whose expected/actual sides are tool calls rather than text.</summary>
+    private static ITestResult BuildToolResult(
+        IReadOnlyList<ToolRequest> expected,
+        IReadOnlyList<ToolRequest> actual)
+    {
+        var testCase = Substitute.For<ITestCase>();
+        testCase.ExpectedOutput.Returns(new AssistantMessage([], expected));
+        var result = Substitute.For<ITestResult>();
+        result.ActualResponse.Returns(new AssistantMessage([], actual));
+        result.TestCase.Returns(testCase);
+        return result;
+    }
+
+    [TestMethod]
+    public async Task ExactMatch_MatchingToolCall_PassesRegardlessOfCallId()
+    {
+        IServiceProvider services = GetServices();
+        var evaluator = await services.GetRequiredService<IDomainEntityGenerator<IExactMatchEvaluator>>()
+            .CreateAsync(CancellationToken);
+        var testResult = BuildToolResult(
+            expected: [new ToolRequest("local-1", "get_order", """{"order_id":"91"}""")],
+            actual: [new ToolRequest("call_xyz", "get_order", """{"order_id":"91"}""")]);
+
+        var result = await evaluator.EvaluateAsync(testResult, CancellationToken);
+
+        result.Should().NotBeNull();
+        result.Score.Should().Be(EvaluationScore.Acceptable);
+    }
+
+    [TestMethod]
+    public async Task ExactMatch_WrongToolArgument_Fails()
+    {
+        IServiceProvider services = GetServices();
+        var evaluator = await services.GetRequiredService<IDomainEntityGenerator<IExactMatchEvaluator>>()
+            .CreateAsync(CancellationToken);
+        var testResult = BuildToolResult(
+            expected: [new ToolRequest("a", "issue_refund", """{"order_id":"91"}""")],
+            actual: [new ToolRequest("b", "issue_refund", """{"order_id":"92"}""")]);
+
+        var result = await evaluator.EvaluateAsync(testResult, CancellationToken);
+
+        result.Should().NotBeNull();
+        result.Score.Should().Be(EvaluationScore.Terrible);
+        result.Reasoning.Should().Contain("issue_refund");
+    }
+
+    [TestMethod]
+    public async Task ExactMatch_ExpectedToolCallNeverMade_Fails()
+    {
+        // The regression this whole change exists for: before tool requests were compared, an
+        // expected tool call had zero content parts and matched ANY tool-free response.
+        IServiceProvider services = GetServices();
+        var evaluator = await services.GetRequiredService<IDomainEntityGenerator<IExactMatchEvaluator>>()
+            .CreateAsync(CancellationToken);
+        var testResult = BuildToolResult(
+            expected: [new ToolRequest("a", "get_order", "{}")],
+            actual: []);
+
+        var result = await evaluator.EvaluateAsync(testResult, CancellationToken);
+
+        result.Should().NotBeNull();
+        result.Score.Should().Be(EvaluationScore.Terrible);
+        result.Reasoning.Should().Contain("was not called");
+    }
+
+    [TestMethod]
+    public async Task ExactMatch_UnexpectedToolCall_Fails()
+    {
+        IServiceProvider services = GetServices();
+        var evaluator = await services.GetRequiredService<IDomainEntityGenerator<IExactMatchEvaluator>>()
+            .CreateAsync(CancellationToken);
+        var testResult = BuildToolResult(expected: [], actual: [new ToolRequest("b", "delete_order", "{}")]);
+
+        var result = await evaluator.EvaluateAsync(testResult, CancellationToken);
+
+        result.Should().NotBeNull();
+        result.Score.Should().Be(EvaluationScore.Terrible);
+        result.Reasoning.Should().Contain("delete_order");
+    }
 }

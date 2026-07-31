@@ -1,5 +1,8 @@
+using System.ClientModel;
 using System.ClientModel.Primitives;
+using System.Net;
 using System.Reflection;
+using System.Text;
 using System.Text.Json;
 using OpenAI;
 using Autofac;
@@ -138,6 +141,38 @@ public sealed class ModelClientTests : BaseTest<Module>
     {
         return Conversation.Create()
             .With(Message.CreateUserMessage(userText));
+    }
+
+    /// <summary>
+    /// Records the JSON body of the outgoing model request and answers with a canned completion.
+    /// Substituting <see cref="IChatClient"/> proves what we hand the adapter; this proves what the
+    /// adapter then puts on the wire, which is the only place a dropped parameter shows up.
+    /// </summary>
+    private sealed class CapturingHandler : HttpMessageHandler
+    {
+        private const string CannedCompletion =
+            """
+            {"id":"chatcmpl-test","object":"chat.completion","created":0,"model":"gpt-5",
+             "choices":[{"index":0,"message":{"role":"assistant","content":"ok"},"finish_reason":"stop"}],
+             "usage":{"prompt_tokens":1,"completion_tokens":1,"total_tokens":2}}
+            """;
+
+        public string? RequestBody { get; private set; }
+
+        protected override async Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken)
+        {
+            if (request.Content is not null)
+            {
+                RequestBody = await request.Content.ReadAsStringAsync(cancellationToken);
+            }
+
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(CannedCompletion, Encoding.UTF8, "application/json"),
+            };
+        }
     }
 
     // ── client options (timeout / retry) ──────────────────────────────────────
@@ -430,8 +465,144 @@ public sealed class ModelClientTests : BaseTest<Module>
         capturedOptions?.MaxOutputTokens.Should().Be(512);
         capturedOptions?.Seed.Should().Be(42);
         capturedOptions?.StopSequences.Should().ContainSingle().Which.Should().Be("END");
-        capturedOptions?.AdditionalProperties?["reasoning_effort"].Should().Be("high");
         capturedOptions?.AdditionalProperties?["n"].Should().Be(2);
+        // Reasoning effort rides on the provider's own options type, not the dictionary — asserting
+        // it here would only prove we filled a dictionary the OpenAI adapter throws away. The test
+        // that it actually reaches the provider reads the outgoing request body; see
+        // ToChatOptions_WithReasoningEffort_PutsItOnTheWire.
+        capturedOptions?.RawRepresentationFactory.Should().NotBeNull();
+    }
+
+    [TestMethod]
+    public async Task ToChatOptions_WithReasoningEffort_PutsItOnTheWire()
+    {
+        // Reads the bytes that leave the process, because the mapping assertion above cannot tell
+        // "the provider was told" from "a dictionary was filled and discarded". It could not: for
+        // as long as reasoning effort travelled in ChatOptions.AdditionalProperties the OpenAI
+        // adapter dropped it, so the playground's control silently did nothing — and so did any
+        // attempt to hold down an internal agent's reasoning budget.
+        var handler = new CapturingHandler();
+        OpenAIClientOptions clientOptions = ModelClient.BuildClientOptions(MakeEndpoint());
+        clientOptions.Transport = new HttpClientPipelineTransport(new HttpClient(handler));
+
+        using IChatClient chatClient = new OpenAIClient(new ApiKeyCredential("sk-test"), clientOptions)
+            .GetChatClient("gpt-5")
+            .AsIChatClient();
+
+        var options = new ModelOptions("gpt-5", [], new ModelSamplingParameters(ReasoningEffort: "none"));
+        await chatClient.GetResponseAsync(
+            [new ChatMessage(ChatRole.User, "Hello")],
+            options.ToChatOptions(),
+            CancellationToken);
+
+        handler.RequestBody.Should().NotBeNull();
+        JsonDocument.Parse(handler.RequestBody!).RootElement
+            .GetProperty("reasoning_effort").GetString().Should().Be("none");
+    }
+
+    [TestMethod]
+    public async Task CompleteAsync_WhenTheModelRejectsTheReasoningBudget_RetriesWithoutIt()
+    {
+        // The budget is asked for by internal features to stay quick; the operator picked the model.
+        // A gpt-4o-class model has no reasoning to constrain and answers the parameter with a 400,
+        // so the feature must degrade to a slower answer rather than fail outright.
+        List<ChatOptions?> seen = [];
+
+        IChatClient chatClient = Substitute.For<IChatClient>();
+        chatClient.GetResponseAsync(
+                Arg.Any<IEnumerable<ChatMessage>>(),
+                Arg.Any<ChatOptions>(),
+                Arg.Any<CancellationToken>())
+            .Returns(callInfo =>
+            {
+                seen.Add(callInfo.Arg<ChatOptions>());
+                return seen.Count == 1
+                    ? throw UnsupportedParameter("Unsupported parameter: 'reasoning_effort' is not supported with this model.")
+                    : Task.FromResult(TextResponse("done"));
+            });
+
+        var services = GetServices(config =>
+        {
+            RegisterEndpoint(config);
+            config.RegisterInstance(chatClient).As<IChatClient>();
+        });
+
+        var client = services.GetRequiredService<IModelClient>();
+        var result = await client.CompleteAsync(
+            SimpleConversation(),
+            new ModelOptions("gpt-4o", [], new ModelSamplingParameters(ReasoningEffort: "none")),
+            cancellationToken: CancellationToken);
+
+        result.Response.Contents.Should().ContainSingle().Which.Text.Should().Be("done");
+        seen.Should().HaveCount(2);
+        seen[0]?.RawRepresentationFactory.Should().NotBeNull();
+        seen[1]?.RawRepresentationFactory.Should().BeNull();
+    }
+
+    [TestMethod]
+    public async Task CompleteAsync_WhenTheRequestIsRejectedForSomethingElse_DoesNotRetry()
+    {
+        // Only a rejection that names the reasoning parameter earns a second call — otherwise a
+        // genuinely malformed request would be sent twice and the caller would wait twice as long
+        // for the same failure.
+        var attempts = 0;
+
+        IChatClient chatClient = Substitute.For<IChatClient>();
+        chatClient.GetResponseAsync(
+                Arg.Any<IEnumerable<ChatMessage>>(),
+                Arg.Any<ChatOptions>(),
+                Arg.Any<CancellationToken>())
+            .Returns<Task<ChatResponse>>(_ =>
+            {
+                attempts++;
+                throw UnsupportedParameter("Invalid value for 'temperature': must be <= 2.");
+            });
+
+        var services = GetServices(config =>
+        {
+            RegisterEndpoint(config);
+            config.RegisterInstance(chatClient).As<IChatClient>();
+        });
+
+        var client = services.GetRequiredService<IModelClient>();
+        await FluentActions
+            .Invoking(() => client.CompleteAsync(
+                SimpleConversation(),
+                new ModelOptions("gpt-4o", [], new ModelSamplingParameters(ReasoningEffort: "none")),
+                cancellationToken: CancellationToken))
+            .Should().ThrowAsync<ClientResultException>();
+
+        attempts.Should().Be(1);
+    }
+
+    private static ClientResultException UnsupportedParameter(string message)
+    {
+        PipelineResponse response = Substitute.For<PipelineResponse>();
+        response.Status.Returns((int)HttpStatusCode.BadRequest);
+        return new ClientResultException(message, response);
+    }
+
+    [TestMethod]
+    public async Task ToChatOptions_WithNoReasoningEffort_SendsNoReasoningField()
+    {
+        // A model with no reasoning to constrain answers the parameter with a 400, so an untouched
+        // control must leave it off the request entirely rather than send a default.
+        var handler = new CapturingHandler();
+        OpenAIClientOptions clientOptions = ModelClient.BuildClientOptions(MakeEndpoint());
+        clientOptions.Transport = new HttpClientPipelineTransport(new HttpClient(handler));
+
+        using IChatClient chatClient = new OpenAIClient(new ApiKeyCredential("sk-test"), clientOptions)
+            .GetChatClient("gpt-4o")
+            .AsIChatClient();
+
+        await chatClient.GetResponseAsync(
+            [new ChatMessage(ChatRole.User, "Hello")],
+            new ModelOptions("gpt-4o", []).ToChatOptions(),
+            CancellationToken);
+
+        handler.RequestBody.Should().NotBeNull();
+        JsonDocument.Parse(handler.RequestBody!).RootElement
+            .TryGetProperty("reasoning_effort", out _).Should().BeFalse();
     }
 
     [TestMethod]

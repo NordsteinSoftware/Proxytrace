@@ -111,6 +111,10 @@ docker compose -f docker-compose.kiosk.yml up --build
 and the chat client from drifting to different models (which would cause ingestion to flip the demo
 agent's endpoint mid-demo).
 
+These three are the machine's **general-purpose local model config**, not kiosk-only: the
+`prompt-lab` skill and `npm run i18n:translate` (see [`i18n.md`](i18n.md)) both fall back to them,
+so one endpoint set up once serves every local tool that needs a model.
+
 See `sample-client/README.md` for the demo script and walk-through.
 
 ## Manual toolchain (VitePress) — the Vite override

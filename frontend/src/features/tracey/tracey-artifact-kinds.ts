@@ -11,6 +11,7 @@ import type {
   ProviderDto,
   TestRunDto,
   TestRunGroupDto,
+  TestCaseProposalSetDto,
   TestSuiteDto,
   TestSuiteListItemDto,
   TheoryDto,
@@ -56,6 +57,7 @@ export interface ArtifactPayloads {
   'suite-list': TestSuiteListItemDto[];
   'evaluator-list': EvaluatorDetailDto[];
   suite: TestSuiteDto;
+  'test-case-proposals': TestCaseProposalSetDto;
   'run-list': TestRunDto[];
   run: TestRunDto;
   'case-results': CaseResultsArtifact;
