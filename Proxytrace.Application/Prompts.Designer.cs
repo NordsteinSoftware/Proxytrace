@@ -91,5 +91,11 @@ namespace Proxytrace.Application {
                 return ResourceManager.GetString("helpfulness_evaluator", resourceCulture);
             }
         }
+
+        internal static string test_case_synthesizer {
+            get {
+                return ResourceManager.GetString("test_case_synthesizer", resourceCulture);
+            }
+        }
     }
 }

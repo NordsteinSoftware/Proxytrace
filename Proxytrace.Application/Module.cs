@@ -227,6 +227,7 @@ public sealed class Module : Autofac.Module
         builder.RegisterModule<Optimization.Module>();
         builder.RegisterModule<Statistics.Module>();
         builder.RegisterModule<PlaygroundModule>();
+        builder.RegisterModule<TestCase.TestCaseModule>();
 
         builder.RegisterModule<SearchModule>();
 
