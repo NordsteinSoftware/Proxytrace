@@ -154,7 +154,9 @@ button that puts it on your clipboard, and the exact **capture time** (date and 
 second). The header also holds the panel's actions: **Ask Tracey** opens a question box where
 you can ask something specific about this call (for example, “Why was the refund approved?”),
 then hands the trace ID and your question to the [AI assistant](/guide/tracey). **Add test** promotes it into a
-[test case](/guide/test-suites-and-cases).
+[test case](/guide/test-suites-and-cases), and **Generate tests** asks Proxytrace to read the whole
+conversation and [propose the cases worth building](/guide/test-suites-and-cases#let-proxytrace-propose-the-cases)
+(Enterprise).
 
 If the call was [flagged as an outlier](/guide/outliers) or by a
 [custom anomaly detector](/guide/anomaly-dashboard#custom-anomaly-detectors), an **Anomalous

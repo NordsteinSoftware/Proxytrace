@@ -232,6 +232,12 @@ at the traces you care about and she'll do the curation:
 - **"Set the expected answer for that case to …"** A captured response isn't always the *ideal*
   answer, so she can **set a case's expected output** — what the case is scored against — or
   **remove** a case that isn't useful.
+- **"Which test cases are worth making from trace `8f3a…`?"** For a multi-turn conversation she
+  can **propose the cases worth building** — the turns where the agent actually decided something,
+  each marked as locking in the current behavior or asserting a corrected one. She proposes only;
+  nothing is created until you tell her to add them. This is the same agent behind
+  [**Generate tests**](/guide/test-suites-and-cases#let-proxytrace-propose-the-cases) in the trace
+  detail panel, and it needs an Enterprise license.
 
 The resulting suite renders as a card you can open. A natural flow: find notable traces → build
 or extend a suite → refine the key cases → start a run.

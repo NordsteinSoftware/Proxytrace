@@ -16,7 +16,61 @@ The intended workflow is to **promote production traces** into durable benchmark
 Because cases come from real traffic, suites stay grounded in behaviors that actually
 matter.
 
+## Let Proxytrace propose the cases
+
+::: tip Enterprise feature
+Generating test cases requires an Enterprise license. Promoting a trace by hand with **Add test**
+works on every tier.
+:::
+
+A multi-turn conversation offers a lot of possible test cases, and most of them are not worth
+having. If you want to check that a support agent grants refunds correctly, what matters is
+whether it *looked up the order* and whether it *reacted correctly* — not that it said "you're
+welcome" at the end.
+
+Open a trace and click **Generate tests**. Proxytrace reads the whole conversation and proposes
+only the turns where the agent **decided** something — it chose a tool, chose its arguments,
+refused, escalated. Each candidate tells you what it asserts and why it is worth testing:
+
+- **GREEN** locks in what the agent actually did, as a regression test.
+- **RED** asserts what it *should* have done — a test that fails until the agent is fixed.
+
+Nothing is generated until you click, and nothing is written until you approve. Review the
+candidates beside the conversation, edit any expected output, tick the ones you want, and add them
+to a suite in one go. Turns it passed over are listed under **N turns skipped**, each with the
+reason — so you can see what it decided not to test, and disagree.
+
+### Asking for something specific
+
+The box at the bottom takes a plain-language request, for example:
+
+> test that `issue_refund` is called with `order_id=91`
+
+It re-runs against your request and revises what it proposed, keeping the rest stable. Your edits
+travel with it, so a follow-up refines what you are looking at rather than starting over. You get
+five rounds per session; close and reopen the panel for a fresh start.
+
+### When the suite cannot score the cases
+
+A suite's evaluators score **every** case in it, and a case passes only when all of them pass. If
+the cases it proposes need judgement the destination suite cannot deliver — "did it react
+sensibly?" is not something Exact Match can answer — it offers an **agentic judge** and asks where
+to put it:
+
+- **Add to this suite** — the judge also scores the cases already there. The panel tells you how
+  many that is before you commit.
+- **Put in a new suite** — the new cases and the judge go somewhere clean, leaving the existing
+  suite untouched.
+
+You can also decline the judge and add the cases anyway.
+
 ### Pick the trace where the agent decided
+
+::: tip
+The **Generate tests** flow above already avoids this trap for you — it targets the deciding call,
+and flags any proposal that would land on a summary. The rest of this section matters when you are
+promoting traces by hand.
+:::
 
 A run asks the agent for **one** reply per case: it sends the case input and scores the next
 message. It does not replay a whole conversation.

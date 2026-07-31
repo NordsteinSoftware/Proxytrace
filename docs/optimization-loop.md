@@ -47,6 +47,19 @@ chain `trace → case` stays answerable; synthetic cases carry `null`. Both the 
 (`POST /api/test-suites/{id}/test-cases`) and the MCP `add_trace_to_suite` tool expose the correction
 path (see [`mcp.md`](mcp.md)).
 
+**A promotion or correction can also be agent-proposed.** A multi-turn conversation is several
+`AgentCall`s sharing one `ConversationId`, and one case per turn is rarely what anyone wants — the
+turns worth testing are the few where the agent *decided* something. `ITestCaseSynthesisService`
+(`Proxytrace.Application/TestCase/`) reads the whole conversation, hands a budgeted transcript to a
+system agent on the project's `SystemEndpoint` (prompt `test_case_synthesizer`), and returns ranked
+proposals over `POST /api/agent-calls/{id}/test-case-proposals`. The proposals are **ephemeral** —
+no entity, no migration; they are reviewed in the trace detail's *Generate tests* panel (or via
+Tracey's `propose_test_cases`) and written through the ordinary endpoints above, so every case is
+still a plain promotion or correction underneath. Nothing the model says is trusted:
+`ProposalValidator` re-checks every `agentCallId` against the real conversation, drops a call with no
+response, and flags the traps below rather than hiding them. Gated by
+`LicenseFeature.TestCaseSynthesis` (see [`licensing.md`](licensing.md)).
+
 **An errored evaluator is not a failing case.** `TestResultExtensions.IsPass` — the canonical verdict,
 mirrored in the frontend by `lib/runResults.ts` — passes a result when at least one evaluation
 produced a verdict and every such verdict passed. Evaluations that **errored** are excluded from the
@@ -78,6 +91,11 @@ grades a summary. `add_trace_to_suite` says so in its tool description, and Trac
 input — see [`../frontend/docs/TRACEY.md`](../frontend/docs/TRACEY.md). Straight promotions are not
 flagged: they assert the response the agent actually gave, which agrees with their own input by
 construction.
+
+The synthesis path checks the same thing machine-side: `ProposalValidator` marks a proposed
+correction on such an input `ProposalFlag.Unpassable`, the panel explains the trap in place, and the
+proposal is never pre-selected. The `test_case_synthesizer` prompt is also told to build the case
+from the call whose own *response* holds the decision, so the trap is avoided before it is flagged.
 
 `ITestRunnerService` executes the suite:
 

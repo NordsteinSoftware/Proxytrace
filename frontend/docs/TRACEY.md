@@ -236,6 +236,7 @@ column is which bundle activates the tool (`core` = always available).
 | `show_chart` / `show_table` / `show_text` | render | no | core | `ChartToolUI` / `TableToolUI` / `TextToolUI` |
 | `ask_questions` | interactive (HITL) | no | core | `AskQuestionsToolUI` |
 | `list_suites` / `get_suite` | read | no | `test-suites-and-runs`, `suite-curation`, `diagnose-agent` | `SuiteListToolUI` / `SuiteCardToolUI` |
+| `propose_test_cases` | read | no | `suite-curation` | `ProposedCasesToolUI` |
 | `create_suite` / `add_to_suite` | write | **yes** | `suite-curation`, `diagnose-agent` | `SuiteCardToolUI` |
 | `remove_test_case` | write | **yes** | `suite-curation` | `SuiteCardToolUI` |
 | `update_expected_output` | write | **yes** | `suite-curation`, `diagnose-agent`, `test-driven-improvement` | `ToolCallCard` |
@@ -442,6 +443,13 @@ adapter. Each domain factory also receives a `StoreFn` bound to the artifact sto
   needs one read, not `get_agent_stats` per agent (the prompt's "card economy" rules lean on
   this). `get_trace` additionally takes `verbose: true` to return the whole captured conversation
   instead of the metadata digest — see "Verbose reads" above.
+  `propose_test_cases` is the one read tool whose work happens **server-side**: it posts to
+  `POST /api/agent-calls/{id}/test-case-proposals`, where a system agent reads the trace's whole
+  conversation and returns the turns worth testing (see
+  [`../../docs/optimization-loop.md`](../../docs/optimization-loop.md)). It writes nothing; its
+  digest carries `agentCallId` + `kind` per candidate precisely so the model can hand them straight
+  to `add_to_suite` / `create_suite` without a second read. It is the chat-side twin of the trace
+  detail's *Generate tests* panel, and both are gated by `LicenseFeature.TestCaseSynthesis`.
 - **Write tools** (`start_test_run`, `cancel_test_run`, `set_proposal_status`,
   `submit_optimization_theory`, and the suite-curation writes `create_suite` / `add_to_suite` /
   `remove_test_case` / `update_expected_output`) set `confirm: true`. They call `ctx.confirm(summary)`

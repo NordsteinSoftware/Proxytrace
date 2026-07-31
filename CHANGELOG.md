@@ -9,6 +9,37 @@ follow [Semantic Versioning](https://semver.org). Ongoing work is collected unde
 
 ## [Unreleased]
 
+### Added
+
+- **Agent-proposed test cases.** The trace detail panel gains a **Generate tests** action: an agent
+  reads the trace's *whole* conversation and proposes the test cases actually worth building —
+  the turns where the agent decided something, not every turn — as GREEN promotions (lock in what it
+  did) or RED corrections (assert what it should have done), each with its reasoning. Review them
+  beside the transcript, edit any expected output, refine with a plain-language request ("test that
+  this tool call is made with `order_id=91`"), and add the ones you want in one go. Turns it passed
+  over are listed with the reason, so its judgement is auditable rather than opaque.
+
+  It also avoids a trap that is easy to fall into by hand: a correction built on the *last* call of a
+  tool loop can never pass, because that call's input already contains the tool calls **and** their
+  results, so the only thing left to grade is the closing summary. Such a proposal is flagged and
+  left unchecked, and the agent is told to target the call whose own response holds the decision.
+
+  When the destination suite's evaluators cannot score what it proposes, it offers an agentic judge —
+  either added to that suite (with the blast radius stated up front, since a suite's evaluators score
+  *every* case in it) or carried by a new suite instead. Tracey can do the same in chat via
+  `propose_test_cases`. Enterprise.
+
+### Changed
+
+- **Exact Match now compares tool calls.** An expected output that *is* a tool call carries no text
+  content, so the previous content-only comparison scored **any** tool-free response as a pass — a
+  tool-call expectation asserted nothing at all. Tool calls are now compared as an unordered multiset
+  (parallel calls have no meaningful order), ignoring the provider-generated call id and comparing
+  arguments as canonical JSON, so `{"amount": 40}` and `{"amount": 40.0}` still match. **Existing
+  cases with tool-call expectations are judged for real from this release, so some will correctly
+  start failing.** A/B validation is unaffected — baseline and candidate runs both use the new rule —
+  but historical run pass rates are not recomputed, so a suite's trend line may show a step here.
+
 ## [1.10.0] - 2026-07-30
 
 ### Added
