@@ -3,13 +3,10 @@
 How the in-app **Tracey AI** assistant works on the frontend. Read this before changing anything
 in `frontend/src/features/tracey/`. It is the source of truth for the chat architecture. Sibling
 docs: [`./DESIGN.md`](./DESIGN.md) (visual system) and [`./BEST_PRACTICES.md`](./BEST_PRACTICES.md)
-(code architecture). The backend side (call attribution, agent seeding) and the design decisions
-behind the harder pieces live in the specs under
-[`../../docs/superpowers/specs/`](../../docs/superpowers/specs/) —
-`*-tracey-client-agent-design.md` (the planes + name attribution),
-`*-tracey-proactive-await-actions-design.md` (`await_actions`), and
-`*-tracey-tool-result-store-design.md` (the artifact store). User-facing behavior lives in
-[`../../manual/guide/tracey.md`](../../manual/guide/tracey.md).
+(code architecture). The rationale for the harder pieces is in this file, not elsewhere: the planes
+in "The two planes", name attribution and agent seeding in "Backend surface", the wait tool in
+"Wait tool: `await_actions`", and the artifact store in "The artifact store". User-facing behavior
+lives in [`../../manual/guide/tracey.md`](../../manual/guide/tracey.md).
 
 All paths below are relative to the feature root `frontend/src/features/tracey/` unless noted.
 
@@ -90,6 +87,35 @@ the wire and attributes the call to her agent by name (`X-Proxytrace-Agent` / sa
   the `prompt-lab` skill (`.claude/skills/prompt-lab/SKILL.md`) runs her real prompt and tools
   against the kiosk endpoint and A/Bs your working copy against the committed version. Unit tests
   cannot see a prompt regression; a transcript can.
+
+## Backend surface (seeding + name attribution)
+
+Only two things about Tracey live on the server, and both exist so the client can own everything
+else:
+
+- **Her agent is seeded, never inferred.** `TraceyAgentProvisioner.EnsureTraceyAgentAsync`
+  (`Proxytrace.Application/Tracey/Internal/`) ensures one agent per project named `Tracey`, flagged
+  `isSystemAgent: true`, on the project's `SystemEndpoint`, with **no tools and a placeholder v1
+  prompt**. It is idempotent and called from three places: project creation, the
+  `TraceyAgentSeederHostedService` at boot (which backfills projects created before Tracey existed),
+  and `GET /api/tracey/session` — that last one is why the page must call `activate()`, and why the
+  session query is described as having backend side effects. Seeding rather than letting her first
+  call create the agent buys three things: the session response can return `agentId` before any call
+  exists, `isSystemAgent` is set *before* her traces land (so she never pollutes agent lists,
+  dashboards or trace searches — see "System agents hidden by default"), and her version chain
+  starts at v1 instead of at whatever the first captured call happened to be.
+- **Attribution is by name, not by fingerprint.** Ingestion normally matches a captured call to an
+  agent by prompt/tool similarity. `TraceyChatController.Forward` instead passes the provisioned
+  agent's `Name` as `IngestMessage.AgentName`, and `AgentCallProcessor` takes its explicit-attribution
+  branch (`ResolveVersionForNamedAgentAsync`), skipping the matcher entirely — the same mechanism the
+  standalone proxy exposes as the `X-Proxytrace-Agent` header. **This is what allows the prompt and
+  tools to live only on the client**: whatever goes over the wire is what gets captured, so there is
+  nothing to keep in sync and no similarity threshold to trip when a tool description changes. The
+  consequence is intended, not a bug — editing `TRACEY_SYSTEM_PROMPT` or a tool shows up in the app
+  as a **new version of the Tracey agent**.
+
+The controller's other job (reading `x-proxytrace-conversation-id` into the call's `ConversationId`,
+and deliberately leaving `SessionId` null) is covered under "Per-response status row".
 
 ## File map
 

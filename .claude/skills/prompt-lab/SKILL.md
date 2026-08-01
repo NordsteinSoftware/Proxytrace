@@ -103,6 +103,33 @@ multi-tool turn stays self-consistent — ids in the agent list reappear in the 
 case results. Keep that property when you extend it; a fixture world that contradicts itself
 produces confused answers you will misread as prompt regressions.
 
+**An entry can echo the call it is answering**, which is what keeps that property under writes. A
+constant is fine for a read of a world that already exists; it is wrong the moment the model writes
+something. A model that posts a *correction* and reads back `isCorrection: false`, or that probes two
+suites and is handed the same one twice, concludes its own correct call did not land — it retries,
+burns the step budget, and the report shows a failure the prompt never caused. The vocabulary
+(resolved by `scripts/fixture-world.mjs`, JSON only — no functions in the fixture file):
+
+| Shape | Does |
+|---|---|
+| `{"_byArg": "suiteId", "_cases": {"<id>": …}, "_default": …}` | branch on an argument; with no branch and no `_default` the answer is `{ notFound: <value> }`, exactly what the real by-id tools return |
+| `{"_forEach": "cases", "_item": …, "_empty": …}` | one output entry per element of an array argument |
+| `{"_like": "get_suite", …}` | resolve another entry against the same arguments, then override keys on top — one suite body, not five copies |
+| `"$args.x"`, `"$item"`, `"$item.x"` | a value from the arguments or the current `_forEach` element |
+| `"$has.args.x"`, `"$count.args.x"`, `"$index"` | was it sent · array length · position |
+| `"$uuid"` | a minted id, stable for the same call so an A/B diff is never id noise |
+| `"$$…"`, `_comment` | a literal `$`-leading string; a key that is dropped |
+
+The `_byArg` default matters as much as the echo: a by-id read of something the world does not have
+answers `notFound` rather than another entity's data, so "I probed a second suite" cannot read as
+"there are two identical suites". After editing the file, run the resolver's self-check — it asserts
+the shapes the scenarios lean on, including that a case created mid-scenario reaches a `fail` verdict
+in the run it was added to and a `pass` in the A/B candidate run:
+
+```bash
+node --test .claude/skills/prompt-lab/scripts/fixture-world.test.mjs
+```
+
 `navigate`, `load_skill` and `search_docs` are never stubbed — they run their real implementations,
 so skill loading and progressive tool disclosure behave exactly as in the app. Sample-client agents
 need no fixtures at all: `chat.js` ships the tool simulator the demo itself runs on.
@@ -118,6 +145,9 @@ ways worth knowing before you over-read a transcript:
 - No forced `await_actions` after a pending awaitable, and no message windowing: long-conversation
   and long-poll behavior is not exercised here.
 - Fixtures are not your data. Tool *selection* is real; what the tools return is invented.
+- A fixture write echoes, it does not mutate: `add_to_suite` reports the cases it was handed, but
+  the suite it returns is the one that was there before, and `unpassableCases` is never reported —
+  that flag comes from the backend. `fixtures/tracey.json`'s `_readme` lists the rest.
 - Sample-client multi-turn scenarios replay prior turns as plain assistant text (tool messages are
   dropped from the replayed history), so deep multi-turn tool chains drift from production.
 

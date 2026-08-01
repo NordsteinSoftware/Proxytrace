@@ -6,6 +6,7 @@ import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { fixtureResult } from './fixture-world.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const VIRTUAL_ID = 'virtual:prompt-lab';
@@ -55,7 +56,10 @@ export async function openTraceyLab(checkoutRoot) {
 
   return {
     systemPrompt: () => mod.getSystemPrompt(),
-    run: (cfg) => mod.runScenario(cfg),
+    // The fixture resolver is injected rather than imported by the lab module: that module is served
+    // as a virtual Vite module, so a relative import from it has nothing to resolve against. Passing
+    // it in also keeps the DSL in plain Node, where it is directly testable (fixture-world.test.mjs).
+    run: (cfg) => mod.runScenario({ ...cfg, fixtureResult }),
     close: async () => {
       await server.close();
       process.chdir(previousCwd);
