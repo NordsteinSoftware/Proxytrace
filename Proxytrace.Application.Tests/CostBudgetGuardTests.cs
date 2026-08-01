@@ -84,11 +84,10 @@ public sealed class CostBudgetGuardTests : BaseTest<Module>
             Arg.Any<CancellationToken>());
 
         var breaches = services.GetRequiredService<ICostLimitBreachRepository>();
-        IReadOnlyList<ICostLimitBreach> recorded =
-            await breaches.GetForMonthAsync(CostMonth.StartOf(clock.UtcNow), CancellationToken);
+        IReadOnlyList<FiredThreshold> recorded = await breaches.GetFiredThresholdsAsync(
+            CostMonth.StartOf(clock.UtcNow), cancellationToken: CancellationToken);
         recorded.Should().ContainSingle()
-            .Which.Should().Match<ICostLimitBreach>(b =>
-                b.Threshold == CostThreshold.Soft && b.CostLimit.Id == limit.Id);
+            .Which.Should().Be(new FiredThreshold(limit.Id, CostThreshold.Soft));
     }
 
     [TestMethod]
@@ -119,8 +118,8 @@ public sealed class CostBudgetGuardTests : BaseTest<Module>
             Arg.Any<CancellationToken>());
 
         var breaches = services.GetRequiredService<ICostLimitBreachRepository>();
-        IReadOnlyList<ICostLimitBreach> recorded =
-            await breaches.GetForMonthAsync(CostMonth.StartOf(clock.UtcNow), CancellationToken);
+        IReadOnlyList<FiredThreshold> recorded = await breaches.GetFiredThresholdsAsync(
+            CostMonth.StartOf(clock.UtcNow), cancellationToken: CancellationToken);
         recorded.Should().HaveCount(2);
         recorded.Should().ContainSingle(b => b.Threshold == CostThreshold.Hard);
     }
@@ -173,7 +172,8 @@ public sealed class CostBudgetGuardTests : BaseTest<Module>
         // Use-time degrade: the configuration survives, nothing fires and nothing blocks.
         await notifications.DidNotReceive().NotifyAsync(Arg.Any<NotificationRequest>(), Arg.Any<CancellationToken>());
         var breaches = services.GetRequiredService<ICostLimitBreachRepository>();
-        (await breaches.GetForMonthAsync(CostMonth.StartOf(clock.UtcNow), CancellationToken))
+        (await breaches.GetFiredThresholdsAsync(
+                CostMonth.StartOf(clock.UtcNow), cancellationToken: CancellationToken))
             .Should().BeEmpty();
     }
 
@@ -351,11 +351,10 @@ public sealed class CostBudgetGuardTests : BaseTest<Module>
             Arg.Any<CancellationToken>());
 
         var breaches = services.GetRequiredService<ICostLimitBreachRepository>();
-        IReadOnlyList<ICostLimitBreach> recorded =
-            await breaches.GetForMonthAsync(CostMonth.StartOf(clock.UtcNow), CancellationToken);
+        IReadOnlyList<FiredThreshold> recorded = await breaches.GetFiredThresholdsAsync(
+            CostMonth.StartOf(clock.UtcNow), cancellationToken: CancellationToken);
         recorded.Should().ContainSingle()
-            .Which.Should().Match<ICostLimitBreach>(b =>
-                b.Threshold == CostThreshold.Hard && b.CostLimit.Id == limit.Id);
+            .Which.Should().Be(new FiredThreshold(limit.Id, CostThreshold.Hard));
     }
 
     [TestMethod]

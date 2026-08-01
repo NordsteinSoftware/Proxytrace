@@ -19,13 +19,15 @@ import { ConfirmDialog } from '../../components/overlays/ConfirmDialog';
 import { scopeIds, toLimitScope, type LimitDraft } from './limitDraft';
 import { canCreateAny, scopeAvailability } from './scopeAvailability';
 import { useCostLimitMutations, useCostLimits } from './hooks/useCostLimits';
-import { useCostOverview } from './hooks/useCostQueries';
+import { useBudgetStatus, useCostOverview } from './hooks/useCostQueries';
 import { useProjectApiKeys } from './hooks/useProjectApiKeys';
 import { agentPoints, apiKeyNames, apiKeyPoints, densifyCostSeries, totalOf } from './costSeries';
 import { parseAmount } from './budgetMeter';
 
 // The page opens on the period budgets are measured over, so what the meters say and what the
-// chart shows agree until the user deliberately widens the window.
+// chart shows agree until the user deliberately widens the window. An unbounded range resolves to
+// the current UTC month here (`resolveCostWindow`) rather than to all history — which is why the
+// picker is told to *say* "This month" for it instead of the shared "All time" label.
 const DEFAULT_RANGE: TimeRange = { kind: 'all' };
 
 type EditorState = { mode: 'closed' } | { mode: 'create' } | { mode: 'edit'; id: string };
@@ -50,7 +52,9 @@ export default function Costs() {
   const isAdmin = useCurrentUser()?.role === 'Admin';
   const licensed = useFeature('CostControls');
 
-  const { overview, from, to, isLoading, isError } = useCostOverview(timeRange, bucket);
+  const { overview, from, to, effectiveBucket, isLoading, isError } = useCostOverview(timeRange, bucket);
+  // Budgets are their own cheap read — a budget change re-runs this, never the telemetry above.
+  const { budgets, isLoading: budgetsLoading } = useBudgetStatus();
   const { data: limits = [], isLoading: limitsLoading } = useCostLimits();
   const { create, update, remove } = useCostLimitMutations();
   const { allAgents } = useAgents();
@@ -59,14 +63,17 @@ export default function Costs() {
   // the cost overview, which every member may read.
   const { apiKeys } = useProjectApiKeys(isAdmin);
 
+  // Densified against the bucket the API actually aggregated at, not the one the toolbar shows: a
+  // fine bucket over a wide window is coarsened server-side, and folding those rows onto a 5-minute
+  // grid would scatter each day's spend into one bar per day with 287 empty ones between.
   const series = useMemo(
-    () => densifyCostSeries(agentPoints(overview?.series ?? []), from, to, bucket),
-    [overview?.series, from, to, bucket],
+    () => densifyCostSeries(agentPoints(overview?.series ?? []), from, to, effectiveBucket),
+    [overview?.series, from, to, effectiveBucket],
   );
 
   const keySeries = useMemo(
-    () => densifyCostSeries(apiKeyPoints(overview?.apiKeySeries ?? []), from, to, bucket),
-    [overview?.apiKeySeries, from, to, bucket],
+    () => densifyCostSeries(apiKeyPoints(overview?.apiKeySeries ?? []), from, to, effectiveBucket),
+    [overview?.apiKeySeries, from, to, effectiveBucket],
   );
 
   const { t } = useLingui();
@@ -80,7 +87,6 @@ export default function Costs() {
     };
   }, [allAgents, overview?.apiKeyTotals, t]);
 
-  const budgets = overview?.budgets ?? [];
   const editing = editor.mode === 'edit' ? limits.find(l => l.id === editor.id) ?? null : null;
   const deleting = deleteId === null ? null : budgets.find(b => b.costLimitId === deleteId) ?? null;
   const projectScopeLabel = t`Whole project`;
@@ -150,14 +156,15 @@ export default function Costs() {
         previousMonthEur={overview?.previousMonthSpendEur ?? 0}
         windowTotalEur={totalOf(series)}
         blockedCount={budgets.filter(b => b.enabled && b.hardBreached).length}
-        isLoading={isLoading}
+        isLoading={isLoading || budgetsLoading}
       />
 
       <div className="grid grid-cols-1 @4xl:grid-cols-[minmax(0,1fr)_380px] gap-4 items-start @container">
         <CostOverTimeSection
           byAgent={series}
           byApiKey={keySeries}
-          bucket={bucket}
+          bucket={effectiveBucket}
+          requestedBucket={bucket}
           nameOf={seriesName}
           isLoading={isLoading}
           isError={isError}
@@ -167,7 +174,7 @@ export default function Costs() {
             budgets={budgets}
             canEdit={isAdmin && licensed}
             isAdmin={isAdmin}
-            isLoading={isLoading || limitsLoading}
+            isLoading={budgetsLoading || limitsLoading}
             canCreate={canCreateAny(availability)}
             onCreate={() => openEditor({ mode: 'create' })}
             onEdit={id => openEditor({ mode: 'edit', id })}

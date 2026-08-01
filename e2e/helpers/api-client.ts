@@ -1279,6 +1279,14 @@ export class ProxytraceApiClient {
     return this.getList<CostOverviewDto>('/api/statistics/cost-overview', params);
   }
 
+  /**
+   * The project's budgets with this month's spend and breach state. Its own endpoint, so a budget
+   * change costs one or two aggregate scans instead of the whole overview.
+   */
+  async costBudgetStatus(projectId: string): Promise<CostBudgetStatusDto[]> {
+    return this.getList<CostBudgetStatusDto[]>('/api/cost-limits/status', { projectId });
+  }
+
   private async getList<T>(path: string, params: Record<string, string | number | undefined>): Promise<T> {
     const qs = new URLSearchParams();
     for (const [k, v] of Object.entries(params)) if (v != null) qs.set(k, String(v));
@@ -1318,19 +1326,22 @@ export interface CostOverviewDto {
     keyPrefix: string | null;
     costEur: number;
   }>;
-  budgets: Array<{
-    costLimitId: string;
-    agentId: string | null;
-    agentName: string | null;
-    apiKeyId: string | null;
-    apiKeyName: string | null;
-    softLimitEur: number | null;
-    hardLimitEur: number | null;
-    enabled: boolean;
-    monthToDateSpendEur: number;
-    softBreached: boolean;
-    hardBreached: boolean;
-  }>;
   hasUnpricedEndpoints: boolean;
+  /** The granularity actually aggregated at — the request, coarsened to fit the window. */
   bucket: string;
+}
+
+/** One budget joined with this month's spend and breach state (`/api/cost-limits/status`). */
+export interface CostBudgetStatusDto {
+  costLimitId: string;
+  agentId: string | null;
+  agentName: string | null;
+  apiKeyId: string | null;
+  apiKeyName: string | null;
+  softLimitEur: number | null;
+  hardLimitEur: number | null;
+  enabled: boolean;
+  monthToDateSpendEur: number;
+  softBreached: boolean;
+  hardBreached: boolean;
 }

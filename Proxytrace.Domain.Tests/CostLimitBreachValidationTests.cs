@@ -66,7 +66,7 @@ public sealed class CostLimitBreachValidationTests : DomainTest<Module>
     }
 
     [TestMethod]
-    public async Task GetForMonthAsync_ReturnsOnlyThatMonthsBreaches()
+    public async Task GetFiredThresholdsAsync_ReturnsOnlyThatMonthsBreaches()
     {
         IServiceProvider services = GetServices();
         var factory = services.GetRequiredService<ICostLimitBreach.CreateNew>();
@@ -77,9 +77,59 @@ public sealed class CostLimitBreachValidationTests : DomainTest<Module>
         await breaches.AddAsync(factory(limit, ThisMonth, CostThreshold.Soft, 60m), CancellationToken);
         await breaches.AddAsync(factory(limit, ThisMonth.AddMonths(-1), CostThreshold.Hard, 200m), CancellationToken);
 
-        IReadOnlyList<ICostLimitBreach> current = await breaches.GetForMonthAsync(ThisMonth, CancellationToken);
+        IReadOnlyList<FiredThreshold> current =
+            await breaches.GetFiredThresholdsAsync(ThisMonth, cancellationToken: CancellationToken);
 
-        current.Should().ContainSingle().Which.Threshold.Should().Be(CostThreshold.Soft);
+        FiredThreshold fired = current.Should().ContainSingle().Subject;
+        fired.Threshold.Should().Be(CostThreshold.Soft);
+        fired.CostLimitId.Should().Be(limit.Id);
+    }
+
+    [TestMethod]
+    public async Task GetFiredThresholdsAsync_WithoutProject_ReturnsEveryProjectsBreaches()
+    {
+        IServiceProvider services = GetServices();
+        var factory = services.GetRequiredService<ICostLimitBreach.CreateNew>();
+        var breaches = services.GetRequiredService<ICostLimitBreachRepository>();
+        var projectGenerator = services.GetRequiredService<IDomainEntityGenerator<IProject>>();
+
+        IProject one = await projectGenerator.CreateAsync(CancellationToken);
+        IProject two = await projectGenerator.CreateAsync(CancellationToken);
+        ICostLimit limitOne = await CreateLimit(services, one, null, CancellationToken);
+        ICostLimit limitTwo = await CreateLimit(services, two, null, CancellationToken);
+
+        await breaches.AddAsync(factory(limitOne, ThisMonth, CostThreshold.Soft, 60m), CancellationToken);
+        await breaches.AddAsync(factory(limitTwo, ThisMonth, CostThreshold.Hard, 200m), CancellationToken);
+
+        // The guard evaluates every tenant in one tick, so its read is deliberately unscoped.
+        IReadOnlyList<FiredThreshold> all =
+            await breaches.GetFiredThresholdsAsync(ThisMonth, cancellationToken: CancellationToken);
+
+        all.Select(f => f.CostLimitId).Should().BeEquivalentTo([limitOne.Id, limitTwo.Id]);
+    }
+
+    [TestMethod]
+    public async Task GetFiredThresholdsAsync_WithProject_ExcludesOtherTenantsBreaches()
+    {
+        IServiceProvider services = GetServices();
+        var factory = services.GetRequiredService<ICostLimitBreach.CreateNew>();
+        var breaches = services.GetRequiredService<ICostLimitBreachRepository>();
+        var projectGenerator = services.GetRequiredService<IDomainEntityGenerator<IProject>>();
+
+        IProject mine = await projectGenerator.CreateAsync(CancellationToken);
+        IProject theirs = await projectGenerator.CreateAsync(CancellationToken);
+        ICostLimit myLimit = await CreateLimit(services, mine, null, CancellationToken);
+        ICostLimit theirLimit = await CreateLimit(services, theirs, null, CancellationToken);
+
+        await breaches.AddAsync(factory(myLimit, ThisMonth, CostThreshold.Soft, 60m), CancellationToken);
+        await breaches.AddAsync(factory(theirLimit, ThisMonth, CostThreshold.Hard, 200m), CancellationToken);
+
+        // The Costs page reads one project; another tenant's threshold crossings are neither its
+        // business nor its cost to pay for.
+        IReadOnlyList<FiredThreshold> scoped =
+            await breaches.GetFiredThresholdsAsync(ThisMonth, mine.Id, CancellationToken);
+
+        scoped.Should().ContainSingle().Which.CostLimitId.Should().Be(myLimit.Id);
     }
 
     [TestMethod]
@@ -96,7 +146,8 @@ public sealed class CostLimitBreachValidationTests : DomainTest<Module>
 
         await breaches.DeleteForLimitAsync(limit.Id, CancellationToken);
 
-        IReadOnlyList<ICostLimitBreach> remaining = await breaches.GetForMonthAsync(ThisMonth, CancellationToken);
+        IReadOnlyList<FiredThreshold> remaining =
+            await breaches.GetFiredThresholdsAsync(ThisMonth, cancellationToken: CancellationToken);
         remaining.Should().BeEmpty();
     }
 

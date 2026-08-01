@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Trans, useLingui } from '@lingui/react/macro';
+import { msg } from '@lingui/core/macro';
+import type { MessageDescriptor } from '@lingui/core';
 import { Card } from '../../../components/ui/Card';
 import { EmptyState } from '../../../components/ui/EmptyState';
 import { Skeleton } from '../../../components/ui/Skeleton';
@@ -15,12 +17,24 @@ export type CostDimension = 'agent' | 'apiKey';
 interface CostOverTimeSectionProps {
   byAgent: DenseCostSeries;
   byApiKey: DenseCostSeries;
+  /** The granularity the data actually came back at — see `requestedBucket`. */
   bucket: StatisticsBucket;
+  /**
+   * What the toolbar asked for. When it differs from `bucket` the API coarsened the aggregate to
+   * fit the window, and the chart says so rather than leaving the toolbar contradicting the axis.
+   */
+  requestedBucket: StatisticsBucket;
   /** Resolves a series key to its display name; receives null for the unattributed key group. */
   nameOf: (dimension: CostDimension, seriesKey: string | null) => string;
   isLoading: boolean;
   isError: boolean;
 }
+
+const BUCKET_LABEL: Record<StatisticsBucket, MessageDescriptor> = {
+  fiveMinutes: msg`5-minute`,
+  hourly: msg`hourly`,
+  daily: msg`daily`,
+};
 
 /**
  * Spend over the selected window, stacked so a single runaway series is visible at a glance. The
@@ -31,11 +45,12 @@ export function CostOverTimeSection({
   byAgent,
   byApiKey,
   bucket,
+  requestedBucket,
   nameOf,
   isLoading,
   isError,
 }: CostOverTimeSectionProps) {
-  const { t } = useLingui();
+  const { t, i18n } = useLingui();
   // eslint-disable-next-line lingui/no-unlocalized-strings -- CostDimension token, not UI copy
   const [dimension, setDimension] = useState<CostDimension>('agent');
 
@@ -46,13 +61,20 @@ export function CostOverTimeSection({
   );
   const total = useMemo(() => totalOf(series), [series]);
 
+  // The API coarsened the aggregate because the requested granularity would have produced far more
+  // buckets than this chart draws. Saying so keeps the toolbar from silently contradicting the axis.
+  const coarsened = bucket !== requestedBucket;
+  const description = coarsened
+    ? t`This window is too wide for ${i18n._(BUCKET_LABEL[requestedBucket])} buckets — showing ${i18n._(BUCKET_LABEL[bucket])} spend instead.`
+    : series.truncated
+      ? t`Showing the most recent buckets — narrow the window or widen the bucket for the full range.`
+      : undefined;
+
   return (
     <Card padding="md" data-testid="cost-over-time">
       <Card.Header
         title={t`Spend over time`}
-        description={series.truncated
-          ? t`Showing the most recent buckets — narrow the window or widen the bucket for the full range.`
-          : undefined}
+        description={description}
         action={
           <div className="flex items-center gap-3">
             <SegmentedControl

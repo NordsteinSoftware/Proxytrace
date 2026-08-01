@@ -164,7 +164,6 @@ public sealed class StatisticsControllerTests : BaseTest<Module>
     {
         var projectId = Guid.NewGuid();
         var agentId = Guid.NewGuid();
-        var limitId = Guid.NewGuid();
         var bucketStart = new DateTimeOffset(2026, 7, 1, 0, 0, 0, TimeSpan.Zero);
 
         var costStatistics = Substitute.For<Proxytrace.Application.CostControl.ICostStatistics>();
@@ -178,20 +177,17 @@ public sealed class StatisticsControllerTests : BaseTest<Module>
                 AgentTotals: [new Proxytrace.Application.CostControl.AgentCostTotal(agentId, "Support bot", 12.5m)],
                 ApiKeySeries: [],
                 ApiKeyTotals: [],
-                Budgets:
-                [
-                    new Proxytrace.Application.CostControl.CostBudgetStatus(
-                        limitId, null, null, null, null, 10m, 100m, true, 12.5m,
-                        SoftBreached: true, HardBreached: false),
-                ],
-                HasUnpricedEndpoints: true));
+                HasUnpricedEndpoints: true,
+                // The service coarsened the requested 5-minute bucket to fit the window; the
+                // response must report what it actually aggregated at.
+                Bucket: StatisticsBucket.Daily));
 
         var controller = ResolveController(costStatistics: costStatistics);
         var now = DateTimeOffset.UtcNow;
 
         var result = await controller.GetCostOverview(
             projectId, from: now.AddDays(-30), to: now,
-            bucket: StatisticsBucket.Daily, cancellationToken: CancellationToken);
+            bucket: StatisticsBucket.FiveMinutes, cancellationToken: CancellationToken);
 
         Proxytrace.Api.Dto.Costs.CostOverviewDto? maybeDto = result.Value;
         ArgumentNullException.ThrowIfNull(maybeDto);
@@ -200,13 +196,13 @@ public sealed class StatisticsControllerTests : BaseTest<Module>
         dto.PreviousMonthSpendEur.Should().Be(30m);
         dto.Series.Should().ContainSingle().Which.AgentId.Should().Be(agentId);
         dto.AgentTotals.Should().ContainSingle().Which.AgentName.Should().Be("Support bot");
-        dto.Budgets.Should().ContainSingle().Which.SoftBreached.Should().BeTrue();
         dto.HasUnpricedEndpoints.Should().BeTrue();
+        // The effective bucket, not the requested one — the client densifies against this.
         dto.Bucket.Should().Be("daily");
 
         await costStatistics.Received(1).GetCostOverviewAsync(
             projectId, Arg.Any<DateTimeOffset>(), Arg.Any<DateTimeOffset>(),
-            StatisticsBucket.Daily, Arg.Any<CancellationToken>());
+            StatisticsBucket.FiveMinutes, Arg.Any<CancellationToken>());
     }
 
     private StatisticsController ResolveController(

@@ -118,14 +118,9 @@ test.describe('Cost budgets', () => {
       })
       .toBe(500);
 
-    // The overview reports breach state; after an edit the budget must read as un-breached.
-    const overview = await api.costOverview({
-      projectId,
-      from: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-      to: new Date().toISOString(),
-      bucket: 'daily',
-    });
-    const budget = overview.budgets.find(b => b.costLimitId === created.id);
+    // The budget-status endpoint reports breach state; after an edit it must read as un-breached.
+    const statuses = await api.costBudgetStatus(projectId);
+    const budget = statuses.find(b => b.costLimitId === created.id);
     expect(budget?.hardBreached).toBe(false);
   });
 
@@ -252,7 +247,7 @@ test.describe('Cost budgets', () => {
       })
       .toBe(1);
 
-    // Both budgets coexist, and the new row appears without waiting on the heavy overview refetch.
+    // Both budgets coexist, and the new row appears without waiting on the status refetch.
     const [agentLimit] = (await api.listCostLimits(projectId)).filter(l => l.agentId === agent.id);
     await expect(page.getByTestId(`budget-row-${agentLimit.id}`)).toBeVisible();
     await expect(page.getByTestId('budget-list').getByTestId(/^budget-row-/)).toHaveCount(2);

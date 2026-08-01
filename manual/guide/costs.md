@@ -30,6 +30,10 @@ budgets built on them will fire late. Set prices on every endpoint you actually 
 
 All amounts are in **EUR**. Budget periods are **calendar months in UTC** and reset on the 1st.
 
+The page opens on **This month**, the period budgets are measured over, so the meters and the chart
+agree until you deliberately widen the range with the time picker. The budget meters always read the
+calendar month regardless of what the chart is showing — changing the range never moves them.
+
 ## The summary
 
 The four cards across the top are the management view:
@@ -47,6 +51,13 @@ the background instead of hiding in a single total line. Use the bucket control 
 hourly / daily) to zoom from "what just happened" out to "how has this month gone", and the
 **By agent / By API key** toggle to change what the stack is cut by. Both views come from the same
 window, so switching is instant.
+
+::: tip The chart widens the bucket when it has to
+A fine bucket over a wide window would be thousands of bars in a chart that draws a few hundred, so
+the chart falls back to the next granularity that fits and says so above it — *"This window is too
+wide for 5-minute buckets — showing daily spend instead."* Narrow the time range to get the finer
+view back. Your bucket choice is remembered; it is not silently rewritten.
+:::
 
 **Spend by agent** breaks the same window down as a share ring plus exact figures, largest first —
 *who* spent the money.

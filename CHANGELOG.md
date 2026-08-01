@@ -74,6 +74,31 @@ follow [Semantic Versioning](https://semver.org). Ongoing work is collected unde
   start failing.** A/B validation is unaffected — baseline and candidate runs both use the new rule —
   but historical run pass rates are not recomputed, so a suite's trend line may show a step here.
 
+- **The Costs page no longer says "All time" when it means "this month".** An unbounded range on
+  that page has always been bounded to the current UTC calendar month, so the budget meters and the
+  chart describe the same period — deliberate, but the picker still promised the full history. It
+  now reads **This month**, which is what it does.
+
+- **Changing a budget no longer re-derives the whole Costs page.** Budget state moved out of the
+  cost-overview payload into its own read (`GET /api/cost-limits/status`), which needs one or two
+  aggregate scans instead of seven — and none at all for a project with no budgets configured.
+  Creating, editing or deleting a budget now refreshes just that list. On a populated install this
+  removes seconds of database work per click.
+
+- **A fine bucket over a wide window no longer ships data the chart throws away.** The Costs chart
+  draws at most a few hundred bars, but the API returned every bucket in the window — and the bucket
+  choice is remembered, so a user who once picked *5 minutes* kept sending month-wide requests at
+  that granularity (8,640 buckets per series, aggregated, transferred and folded to render 400).
+  The series is now aggregated at the finest granularity that fits the window, and the chart says
+  when it widened one — *"This window is too wide for 5-minute buckets — showing daily spend
+  instead."* Your bucket choice is kept; only the response is adjusted.
+
+- **Loading the Costs page no longer reads other projects' budget state.** The breach lookup behind
+  the budget meters fetched every project's threshold crossings for the month and then resolved each
+  one's budget with its own database round trip. It is now scoped to the project being viewed and
+  read in a single query, so the cost grows with your own budgets rather than with the whole
+  install's.
+
 ## [1.10.0] - 2026-07-30
 
 ### Added

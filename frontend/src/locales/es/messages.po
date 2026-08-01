@@ -719,6 +719,9 @@ msgstr "1 Suite"
 msgid "5 min"
 msgstr "5 min"
 
+msgid "5-minute"
+msgstr "5 minutos"
+
 msgid "6-digit code"
 msgstr "Código de 6 dígitos"
 
@@ -1799,6 +1802,9 @@ msgstr "Rango personalizado"
 msgid "Custom…"
 msgstr "Personalizado…"
 
+msgid "daily"
+msgstr "diario"
+
 msgid "Daily"
 msgstr "Diario"
 
@@ -2493,6 +2499,9 @@ msgstr "Mayor tasa de aprobación"
 
 msgid "History"
 msgstr "Historial"
+
+msgid "hourly"
+msgstr "por hora"
 
 msgid "Hourly"
 msgstr "Por hora"
@@ -5502,6 +5511,9 @@ msgstr "Esta licencia se activó desde la UI y se almacena en la base de datos. 
 msgid "This license was supplied via the PROXYTRACE_LICENSE environment variable. A key activated here is stored in the database and takes precedence over it."
 msgstr "Esta licencia se proporcionó mediante la variable de entorno PROXYTRACE_LICENSE. Una key activada aquí se almacena en la base de datos y tiene prioridad sobre ella."
 
+msgid "This month"
+msgstr "Este mes"
+
 msgid "This part of the app didn't load."
 msgstr "Esta parte de la aplicación no se pudo cargar."
 
@@ -5560,6 +5572,11 @@ msgstr "Esto desactiva la autenticación de dos factores para {0} y descarta sus
 #. placeholder {0}: deleteTarget.name
 msgid "This will permanently remove <0>{0}</0> and detach it from all test suites."
 msgstr "Esto eliminará permanentemente <0>{0}</0> y lo desvinculará de todos los test suites."
+
+#. placeholder {0}: i18n._(BUCKET_LABEL[requestedBucket])
+#. placeholder {1}: i18n._(BUCKET_LABEL[bucket])
+msgid "This window is too wide for {0} buckets — showing {1} spend instead."
+msgstr "Esta ventana es demasiado amplia para intervalos de {0}: se muestra el gasto {1} en su lugar."
 
 msgid "Throughput"
 msgstr "Throughput"

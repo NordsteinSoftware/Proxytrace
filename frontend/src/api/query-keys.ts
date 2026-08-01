@@ -145,12 +145,15 @@ export const QUERY_KEYS = {
   /** Prefix matching every notifications query — use for invalidation. */
   notificationsRoot: ['notifications'] as const,
 
-  /** The whole Costs page payload for one project + window (spend, series, budgets). */
+  /** The Costs page's spend telemetry for one project + window (totals and series, no budgets). */
   costOverview: (projectId: string | null, rangeKey: string) => ['cost-overview', projectId ?? null, rangeKey] as const,
-  /** Prefix matching every cost-overview query — use for invalidation after a budget change. */
-  costOverviewRoot: ['cost-overview'] as const,
   /** Configured monthly budgets of a project. */
   costLimits: (projectId: string | null) => ['cost-limits', projectId ?? null] as const,
+  /**
+   * A project's budgets joined with this month's spend and breach state. Separate from
+   * `costOverview` so a budget change re-reads one or two aggregates, not the whole page.
+   */
+  costBudgetStatus: (projectId: string | null) => ['cost-budget-status', projectId ?? null] as const,
 
   /** Bucketed per-agent anomaly timeline for the anomaly dashboard. */
   anomalyTimeline: (filter: object) => ['anomaly-timeline', filter] as const,

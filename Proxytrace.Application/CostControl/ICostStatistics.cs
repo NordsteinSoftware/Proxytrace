@@ -11,15 +11,32 @@ namespace Proxytrace.Application.CostControl;
 public interface ICostStatistics
 {
     /// <summary>
-    /// Composes the Costs page payload for one project: month-to-date and previous-month totals,
-    /// the per-agent cost series and totals over <paramref name="from"/>..<paramref name="to"/>,
-    /// and the project's budgets joined with the current month's breach state.
+    /// Composes the Costs page's spend telemetry for one project: month-to-date and previous-month
+    /// totals, and the per-agent and per-key cost series and totals over
+    /// <paramref name="from"/>..<paramref name="to"/>.
     /// </summary>
+    /// <param name="bucket">
+    /// The requested series granularity. It is coarsened when the window would exceed the buckets
+    /// the chart can render — the effective value comes back on <see cref="CostOverview.Bucket"/>.
+    /// </param>
     Task<CostOverview> GetCostOverviewAsync(
         Guid projectId,
         DateTimeOffset from,
         DateTimeOffset to,
         StatisticsBucket bucket,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// One project's budgets joined with the current month's spend and breach state.
+    /// </summary>
+    /// <remarks>
+    /// Split out of <see cref="GetCostOverviewAsync"/> on purpose. This is the part of the Costs
+    /// page that reacts to a click — every budget create/edit/delete invalidates it — and it needs
+    /// one aggregate scan (two when a key-scoped budget exists) rather than the overview's seven. A
+    /// project with no budgets configured runs none at all.
+    /// </remarks>
+    Task<IReadOnlyList<CostBudgetStatus>> GetBudgetStatusAsync(
+        Guid projectId,
         CancellationToken cancellationToken = default);
 
     /// <summary>

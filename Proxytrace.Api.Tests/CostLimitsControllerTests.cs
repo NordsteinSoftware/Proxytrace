@@ -11,6 +11,7 @@ using Proxytrace.Api.Auth.Licensing;
 using Proxytrace.Domain.ApiKey;
 using Proxytrace.Api.Controllers;
 using Proxytrace.Api.Dto.Costs;
+using Proxytrace.Application.CostControl;
 using Proxytrace.Domain;
 using Proxytrace.Domain.Agent;
 using Proxytrace.Domain.AuditLog;
@@ -50,6 +51,97 @@ public sealed class CostLimitsControllerTests : BaseTest<Module>
         CostLimitsController controller = ResolveController(services, guard);
 
         IReadOnlyList<CostLimitDto> result = await controller.GetAll(project.Id, CancellationToken);
+
+        result.Should().BeEmpty();
+    }
+
+    [TestMethod]
+    public async Task GetStatus_WithNoBudgets_ReturnsEmpty()
+    {
+        IServiceProvider services = GetServices();
+        CostLimitsController controller = ResolveController(services);
+        IProject project = await GetProject(services);
+
+        IReadOnlyList<CostBudgetStatusDto> result = await controller.GetStatus(project.Id, CancellationToken);
+
+        result.Should().BeEmpty();
+    }
+
+    [TestMethod]
+    public async Task GetStatus_ReturnsTheBudgetWithItsMonthToDateSpend()
+    {
+        IServiceProvider services = GetServices();
+        CostLimitsController controller = ResolveController(services);
+        IProject project = await GetProject(services);
+        ICostLimit limit = await CreateLimit(services, project, agent: null);
+
+        IReadOnlyList<CostBudgetStatusDto> result = await controller.GetStatus(project.Id, CancellationToken);
+
+        CostBudgetStatusDto dto = result.Should().ContainSingle().Subject;
+        dto.CostLimitId.Should().Be(limit.Id);
+        dto.SoftLimitEur.Should().Be(50m);
+        dto.HardLimitEur.Should().Be(100m);
+        // No traffic seeded, so the derived spend is zero rather than absent.
+        dto.MonthToDateSpendEur.Should().Be(0m);
+        dto.SoftBreached.Should().BeFalse();
+        dto.HardBreached.Should().BeFalse();
+    }
+
+    [TestMethod]
+    public async Task GetStatus_ReportsThisMonthsBreachFlags()
+    {
+        IServiceProvider services = GetServices();
+        CostLimitsController controller = ResolveController(services);
+        IProject project = await GetProject(services);
+        ICostLimit limit = await CreateLimit(services, project, agent: null);
+
+        var breaches = services.GetRequiredService<ICostLimitBreachRepository>();
+        DateTimeOffset monthStart = CostMonth.StartOf(DateTimeOffset.UtcNow);
+        await breaches.AddAsync(
+            services.GetRequiredService<ICostLimitBreach.CreateNew>()(
+                limit, monthStart, CostThreshold.Hard, 150m),
+            CancellationToken);
+
+        IReadOnlyList<CostBudgetStatusDto> result = await controller.GetStatus(project.Id, CancellationToken);
+
+        CostBudgetStatusDto dto = result.Should().ContainSingle().Subject;
+        dto.HardBreached.Should().BeTrue();
+        dto.SoftBreached.Should().BeFalse();
+    }
+
+    [TestMethod]
+    public async Task GetStatus_IgnoresBreachesOfLastMonth()
+    {
+        IServiceProvider services = GetServices();
+        CostLimitsController controller = ResolveController(services);
+        IProject project = await GetProject(services);
+        ICostLimit limit = await CreateLimit(services, project, agent: null);
+
+        var breaches = services.GetRequiredService<ICostLimitBreachRepository>();
+        DateTimeOffset monthStart = CostMonth.StartOf(DateTimeOffset.UtcNow);
+        await breaches.AddAsync(
+            services.GetRequiredService<ICostLimitBreach.CreateNew>()(
+                limit, monthStart.AddMonths(-1), CostThreshold.Hard, 150m),
+            CancellationToken);
+
+        IReadOnlyList<CostBudgetStatusDto> result = await controller.GetStatus(project.Id, CancellationToken);
+
+        // Nothing is cleaned up on the 1st — the rollover lifts a block by the query moving on.
+        result.Should().ContainSingle().Which.HardBreached.Should().BeFalse();
+    }
+
+    [TestMethod]
+    public async Task GetStatus_ForInaccessibleProject_ReturnsEmptyRatherThanRevealingExistence()
+    {
+        IServiceProvider services = GetServices();
+        IProject project = await GetProject(services);
+        await CreateLimit(services, project, agent: null);
+
+        var guard = Substitute.For<IProjectAccessGuard>();
+        guard.CanAccessProjectAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>()).Returns(false);
+        CostLimitsController controller = ResolveController(services, guard);
+
+        IReadOnlyList<CostBudgetStatusDto> result = await controller.GetStatus(project.Id, CancellationToken);
 
         result.Should().BeEmpty();
     }
@@ -297,7 +389,8 @@ public sealed class CostLimitsControllerTests : BaseTest<Module>
         await controller.Update(limit.Id, new UpdateCostLimitRequest(100m, 500m, true), CancellationToken);
 
         // Raising the hard limit must actually lift the block — the breach row is what the proxy reads.
-        (await breaches.GetForMonthAsync(monthStart, CancellationToken)).Should().BeEmpty();
+        (await breaches.GetFiredThresholdsAsync(monthStart, cancellationToken: CancellationToken))
+            .Should().BeEmpty();
     }
 
     [TestMethod]
@@ -388,6 +481,7 @@ public sealed class CostLimitsControllerTests : BaseTest<Module>
         IProjectAccessGuard? accessGuard = null) => new(
         services.GetRequiredService<ICostLimitRepository>(),
         services.GetRequiredService<ICostLimitBreachRepository>(),
+        services.GetRequiredService<ICostStatistics>(),
         services.GetRequiredService<IProjectRepository>(),
         services.GetRequiredService<IAgentRepository>(),
         services.GetRequiredService<IApiKeyRepository>(),

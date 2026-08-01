@@ -1,3 +1,5 @@
+using Proxytrace.Domain.CostLimit;
+
 namespace Proxytrace.Domain.CostLimitBreach;
 
 /// <summary>
@@ -22,11 +24,31 @@ public sealed record BudgetHardBlock(
     string? AgentName,
     Guid? ApiKeyId = null);
 
+/// <summary>
+/// One threshold that has already fired this month, as the two fields every reader actually uses.
+/// </summary>
+/// <remarks>
+/// Deliberately not a mapped <see cref="ICostLimitBreach"/>: mapping resolves the full
+/// <c>ICostLimit</c> per row, and <c>CostLimitEntity</c> is not cacheable — so a mapped read cost one
+/// serial database round trip per fired threshold to produce an id both callers already had. Same
+/// reasoning as <see cref="BudgetHardBlock"/>.
+/// </remarks>
+public sealed record FiredThreshold(Guid CostLimitId, CostThreshold Threshold);
+
 public interface ICostLimitBreachRepository : IRepository<ICostLimitBreach>
 {
-    /// <summary>Every breach recorded for the given calendar month, across all limits.</summary>
-    Task<IReadOnlyList<ICostLimitBreach>> GetForMonthAsync(
+    /// <summary>
+    /// The thresholds already fired in the given calendar month — the Costs page's breach flags and
+    /// the guard's "has this alert already gone out?" set.
+    /// </summary>
+    /// <param name="projectId">
+    /// Scopes the result to one project's limits. Null reads every project's, which only the
+    /// cross-tenant guard wants: a project-scoped caller passing null would fetch (and pay for)
+    /// every other tenant's threshold crossings.
+    /// </param>
+    Task<IReadOnlyList<FiredThreshold>> GetFiredThresholdsAsync(
         DateTimeOffset monthStart,
+        Guid? projectId = null,
         CancellationToken cancellationToken = default);
 
     /// <summary>
