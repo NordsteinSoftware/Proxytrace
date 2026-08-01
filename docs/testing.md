@@ -100,3 +100,11 @@ Use it whenever you change Tracey's system prompt, one of her skills or tool des
 credentials in the repo-root `.env` and makes real (paid) model calls; it needs no Docker, no
 database and no login, because Tracey's data tools answer from fixtures. Transcripts land in the
 gitignored `.prompt-lab/`.
+
+The fixture world (`.claude/skills/prompt-lab/fixtures/tracey.json`) is declarative JSON that may
+**echo the call it answers** — a by-id read returns the entity that was asked for (or `notFound`), a
+write reports what was actually posted. That is not a nicety: a fixture that contradicts the model's
+own correct call makes it retry until the step budget runs out, and the report then shows a
+regression the prompt never caused. The resolver has a self-check —
+`node --test .claude/skills/prompt-lab/scripts/fixture-world.test.mjs` — run it after editing the
+fixtures.

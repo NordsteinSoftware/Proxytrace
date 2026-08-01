@@ -7,7 +7,30 @@
     "self-consistent: the agent ids here appear in the runs, the runs in the case results, and so on.",
     "A tool with no entry answers 'call succeeded, no data' and is flagged in the report; add an entry",
     "when a scenario needs that tool to have something to say. Scenarios can override any of these.",
-    "navigate / load_skill / search_docs are never stubbed — they run for real."
+    "navigate / load_skill / search_docs are never stubbed — they run for real.",
+    "",
+    "An entry may ECHO THE CALL back the way a real API does, which matters most for writes and for",
+    "by-id reads: a model that posts a correction and reads back `isCorrection: false`, or that probes",
+    "two suites and gets the same one twice, concludes its own correct call did not land and burns the",
+    "step budget re-doing it — a harness artifact that reads in the report as a prompt regression.",
+    "The vocabulary (resolved by scripts/fixture-world.mjs) is:",
+    "  { \"_byArg\": \"suiteId\", \"_cases\": { \"<id>\": … }, \"_default\": … }  pick a branch by an argument;",
+    "      with no branch and no _default the answer is `{ notFound: <value> }`, exactly what the real",
+    "      by-id tools return for an id the project does not have.",
+    "  { \"_forEach\": \"cases\", \"_item\": …, \"_empty\": … }  one entry per element of an array argument.",
+    "  { \"_like\": \"get_suite\", …overrides }  start from another entry (resolved against the same",
+    "      arguments) and override keys on top of it — one suite body, not five copies of it.",
+    "  \"$args.x\" / \"$item\" / \"$item.x\" — a value from the arguments or the current _forEach element.",
+    "  \"$has.args.x\" / \"$has.item.x\" — was it sent? \"$count.args.x\" — length of an array argument.",
+    "  \"$index\", \"$uuid\" — position, and a stable minted id (same call ⇒ same id, so an A/B diff is",
+    "      never noise). Keys starting with `_` are dropped, so `_comment` works anywhere.",
+    "",
+    "Known simplifications, so a reader does not mistake them for the product: compare_runs pins its",
+    "pass rates to the world's one real before/after regardless of which run ids it is handed;",
+    "add_to_suite / remove_test_case return the suite as it stood BEFORE the write (only `addedCases`",
+    "is derived from the call) and never report `unpassableCases`; get_case_results answers `fail` for",
+    "the freshly started run and `pass` for the A/B candidate run whatever case is asked about, which",
+    "is what makes the test-driven-improvement red→green loop reachable here."
   ],
 
   "list_agents": {
@@ -20,28 +43,77 @@
   },
 
   "get_agent": {
-    "id": "4b1c2a7e-9f30-4d18-8c55-1a2b3c4d5e6f",
-    "name": "Customer Support Agent",
-    "endpointName": "OpenAI Production",
-    "model": "gpt-4o-mini",
-    "toolCount": 3,
-    "version": 4,
-    "systemPromptPreview": "You are a friendly, concise customer-support agent for an e-commerce store. Always acknowledge the issue, propose a clear next step, and close politely. Returns are accepted within 30 days of delivery…"
+    "_byArg": "agentId",
+    "_cases": {
+      "4b1c2a7e-9f30-4d18-8c55-1a2b3c4d5e6f": {
+        "id": "4b1c2a7e-9f30-4d18-8c55-1a2b3c4d5e6f",
+        "name": "Customer Support Agent",
+        "endpointName": "OpenAI Production",
+        "toolCount": 3,
+        "systemPromptPreview": "You are a friendly, concise customer-support agent for an e-commerce store. Always acknowledge the issue, propose a clear next step, and close politely. Returns are accepted within 30 days of delivery…"
+      },
+      "7d9e1f22-3a44-4b56-9c78-0d1e2f3a4b5c": {
+        "id": "7d9e1f22-3a44-4b56-9c78-0d1e2f3a4b5c",
+        "name": "Travel Planner Agent",
+        "endpointName": "OpenAI Production",
+        "toolCount": 2,
+        "systemPromptPreview": "You plan trips. Ask for dates and budget before suggesting anything, and never book without an explicit confirmation…"
+      },
+      "91a0b2c3-d4e5-4f60-8a1b-2c3d4e5f6071": {
+        "id": "91a0b2c3-d4e5-4f60-8a1b-2c3d4e5f6071",
+        "name": "Code Review Agent",
+        "endpointName": "Anthropic Staging",
+        "toolCount": 1,
+        "systemPromptPreview": "You review diffs. Report only defects that change behaviour; cite file and line for every finding…"
+      }
+    }
   },
 
   "get_agent_stats": {
-    "summary": {
-      "totalCalls": 1284,
-      "inputTokens": 942100,
-      "outputTokens": 118400,
-      "totalCostUsd": 14.87,
-      "avgDurationMs": 1840,
-      "errorRate": 0.012
+    "_byArg": "agentId",
+    "_cases": {
+      "4b1c2a7e-9f30-4d18-8c55-1a2b3c4d5e6f": {
+        "summary": {
+          "totalTraces": 1284,
+          "totalInputTokens": 942100,
+          "totalOutputTokens": 118400,
+          "totalCachedInputTokens": 610300,
+          "totalCostEur": 14.87,
+          "avgLatencyMs": 1840
+        }
+      },
+      "7d9e1f22-3a44-4b56-9c78-0d1e2f3a4b5c": {
+        "summary": {
+          "totalTraces": 806,
+          "totalInputTokens": 421300,
+          "totalOutputTokens": 168800,
+          "totalCachedInputTokens": 120400,
+          "totalCostEur": 8.12,
+          "avgLatencyMs": 1490
+        }
+      },
+      "91a0b2c3-d4e5-4f60-8a1b-2c3d4e5f6071": {
+        "summary": {
+          "totalTraces": 341,
+          "totalInputTokens": 71200,
+          "totalOutputTokens": 11100,
+          "totalCachedInputTokens": 0,
+          "totalCostEur": 3.41,
+          "avgLatencyMs": 2010
+        }
+      }
     }
   },
 
   "get_dashboard_stats": {
-    "summary": { "totalCalls": 2431, "totalTokens": 1732900, "totalCostUsd": 26.4, "avgDurationMs": 1610, "errorRate": 0.009 },
+    "summary": {
+      "totalCalls": 2431,
+      "totalInputTokens": 1434600,
+      "totalOutputTokens": 298300,
+      "totalCachedInputTokens": 730700,
+      "avgLatencyMs": 1610,
+      "overallPassRate": 0.5
+    },
     "byAgent": [
       { "id": "4b1c2a7e-9f30-4d18-8c55-1a2b3c4d5e6f", "name": "Customer Support Agent", "calls": 1284, "inputTokens": 942100, "outputTokens": 118400 },
       { "id": "7d9e1f22-3a44-4b56-9c78-0d1e2f3a4b5c", "name": "Travel Planner Agent", "calls": 806, "inputTokens": 421300, "outputTokens": 168800 },
@@ -56,131 +128,533 @@
   "list_suites": {
     "count": 2,
     "items": [
-      { "id": "5e6f7a8b-9c0d-4e1f-a2b3-c4d5e6f7a8b9", "name": "Refund policy regressions", "agentName": "Customer Support Agent", "caseCount": 8 },
-      { "id": "6f7a8b9c-0d1e-4f20-b3c4-d5e6f7a8b9c0", "name": "Tone & escalation", "agentName": "Customer Support Agent", "caseCount": 5 }
+      { "id": "5e6f7a8b-9c0d-4e1f-a2b3-c4d5e6f7a8b9", "name": "Refund policy regressions", "agentId": "4b1c2a7e-9f30-4d18-8c55-1a2b3c4d5e6f", "agentName": "Customer Support Agent" },
+      { "id": "6f7a8b9c-0d1e-4f20-b3c4-d5e6f7a8b9c0", "name": "Tone & escalation", "agentId": "4b1c2a7e-9f30-4d18-8c55-1a2b3c4d5e6f", "agentName": "Customer Support Agent" }
     ]
   },
 
   "get_suite": {
-    "id": "5e6f7a8b-9c0d-4e1f-a2b3-c4d5e6f7a8b9",
-    "name": "Refund policy regressions",
-    "agentName": "Customer Support Agent",
-    "caseCount": 8,
-    "evaluators": ["Policy adherence judge", "Helpfulness judge"],
-    "cases": [
-      { "id": "aa11bb22-cc33-4d44-9e55-f66a77b88c99", "summary": "Refund requested 45 days after delivery, citing a colleague's verbal exception" },
-      { "id": "bb22cc33-dd44-4e55-af66-a77b88c99d00", "summary": "Customer is abusive; agent must stay polite and escalate" },
-      { "id": "cc33dd44-ee55-4f66-b077-b88c99d00e11", "summary": "Damaged on arrival within window — refund is correct" }
-    ]
+    "_byArg": "suiteId",
+    "_cases": {
+      "5e6f7a8b-9c0d-4e1f-a2b3-c4d5e6f7a8b9": {
+        "id": "5e6f7a8b-9c0d-4e1f-a2b3-c4d5e6f7a8b9",
+        "name": "Refund policy regressions",
+        "agentId": "4b1c2a7e-9f30-4d18-8c55-1a2b3c4d5e6f",
+        "agentName": "Customer Support Agent",
+        "caseCount": 4,
+        "passRate": 0.5,
+        "evaluators": [
+          { "id": "f6a7b8c9-d0e1-4f23-a4b5-c6d7e8f9a0b1", "kind": "Agentic" },
+          { "id": "a7b8c9d0-e1f2-4a34-b5c6-d7e8f9a0b1c2", "kind": "Agentic" }
+        ],
+        "cases": [
+          {
+            "id": "aa11bb22-cc33-4d44-9e55-f66a77b88c99",
+            "sourceAgentCallId": "c1d2e3f4-a5b6-4788-9a0b-1c2d3e4f5061",
+            "expected": "I'm sorry — order #20114 was delivered 45 days ago, which is outside our 30-day return window, so I can't process a refund.",
+            "resolvedToolCalls": 2
+          },
+          {
+            "id": "bb22cc33-dd44-4e55-af66-a77b88c99d00",
+            "sourceAgentCallId": null,
+            "expected": "I understand this is frustrating. Let me connect you with a supervisor who can help further.",
+            "resolvedToolCalls": 0
+          },
+          {
+            "id": "cc33dd44-ee55-4f66-b077-b88c99d00e11",
+            "sourceAgentCallId": null,
+            "expected": "That's covered — the item arrived damaged inside the return window, so I've started a full refund.",
+            "resolvedToolCalls": 0
+          },
+          {
+            "id": "dd44ee55-ff66-4a77-b088-c99d00e11f22",
+            "sourceAgentCallId": null,
+            "expected": "Day 12 is well inside the 30-day window, so an exchange is no problem — what size do you need?",
+            "resolvedToolCalls": 0
+          }
+        ]
+      },
+      "6f7a8b9c-0d1e-4f20-b3c4-d5e6f7a8b9c0": {
+        "id": "6f7a8b9c-0d1e-4f20-b3c4-d5e6f7a8b9c0",
+        "name": "Tone & escalation",
+        "agentId": "4b1c2a7e-9f30-4d18-8c55-1a2b3c4d5e6f",
+        "agentName": "Customer Support Agent",
+        "caseCount": 2,
+        "passRate": 1,
+        "evaluators": [
+          { "id": "a7b8c9d0-e1f2-4a34-b5c6-d7e8f9a0b1c2", "kind": "Agentic" }
+        ],
+        "cases": [
+          {
+            "id": "11aa22bb-33cc-4d55-9e66-f77a88b99c00",
+            "sourceAgentCallId": null,
+            "expected": "I'm sorry this has dragged on. I'm escalating it to a supervisor now and you'll hear back today.",
+            "resolvedToolCalls": 0
+          },
+          {
+            "id": "22bb33cc-44dd-4e66-af77-a88b99c00d11",
+            "sourceAgentCallId": null,
+            "expected": "Happy to help — could you confirm the order number so I can look it up?",
+            "resolvedToolCalls": 0
+          }
+        ]
+      }
+    }
   },
 
   "list_runs": {
     "count": 2,
     "items": [
-      { "id": "2c3d4e5f-6a7b-4c8d-9e0f-1a2b3c4d5e6f", "suiteName": "Refund policy regressions", "agentName": "Customer Support Agent", "status": "Completed", "passRate": 0.75 },
-      { "id": "8f7e6d5c-4b3a-4291-8e7d-6c5b4a392817", "suiteName": "Refund policy regressions", "agentName": "Customer Support Agent", "status": "Completed", "passRate": 0.625 }
+      { "id": "2c3d4e5f-6a7b-4c8d-9e0f-1a2b3c4d5e6f", "suiteName": "Refund policy regressions", "agentName": "Customer Support Agent", "status": "Completed", "passRate": 0.5 },
+      { "id": "8f7e6d5c-4b3a-4291-8e7d-6c5b4a392817", "suiteName": "Refund policy regressions", "agentName": "Customer Support Agent", "status": "Completed", "passRate": 0.25 }
     ]
   },
 
   "get_run": {
-    "id": "2c3d4e5f-6a7b-4c8d-9e0f-1a2b3c4d5e6f",
-    "suiteName": "Refund policy regressions",
-    "agentName": "Customer Support Agent",
-    "status": "Completed",
-    "passRate": 0.75,
-    "passedCases": 6,
-    "failedCases": 2,
-    "totalCases": 8
+    "_byArg": "runId",
+    "_cases": {
+      "2c3d4e5f-6a7b-4c8d-9e0f-1a2b3c4d5e6f": {
+        "id": "2c3d4e5f-6a7b-4c8d-9e0f-1a2b3c4d5e6f",
+        "suiteName": "Refund policy regressions",
+        "agentName": "Customer Support Agent",
+        "status": "Completed",
+        "passRate": 0.5,
+        "passedCases": 2,
+        "failedCases": 1,
+        "totalCases": 4
+      },
+      "8f7e6d5c-4b3a-4291-8e7d-6c5b4a392817": {
+        "id": "8f7e6d5c-4b3a-4291-8e7d-6c5b4a392817",
+        "suiteName": "Refund policy regressions",
+        "agentName": "Customer Support Agent",
+        "status": "Completed",
+        "passRate": 0.25,
+        "passedCases": 1,
+        "failedCases": 3,
+        "totalCases": 4
+      },
+      "4e5f6a7b-8c9d-4e0f-b112-3c4d5e6f7081": {
+        "_comment": "The run created by start_test_run (inside group 3d4e5f6a…), as await_actions reports it.",
+        "id": "4e5f6a7b-8c9d-4e0f-b112-3c4d5e6f7081",
+        "suiteName": "Refund policy regressions",
+        "agentName": "Customer Support Agent",
+        "status": "Completed",
+        "passRate": 0.6,
+        "passedCases": 3,
+        "failedCases": 2,
+        "totalCases": 5
+      },
+      "5f6a7b8c-9d0e-4f10-a223-4d5e6f708192": {
+        "_comment": "The A/B candidate run of theory 9e0f1a2b… — the only handle to the A/B evidence.",
+        "id": "5f6a7b8c-9d0e-4f10-a223-4d5e6f708192",
+        "suiteName": "Refund policy regressions",
+        "agentName": "Customer Support Agent",
+        "status": "Completed",
+        "passRate": 0.8,
+        "passedCases": 4,
+        "failedCases": 1,
+        "totalCases": 5
+      }
+    }
   },
 
   "get_case_results": {
-    "runId": "2c3d4e5f-6a7b-4c8d-9e0f-1a2b3c4d5e6f",
+    "_byArg": "runId",
+    "_cases": {
+      "2c3d4e5f-6a7b-4c8d-9e0f-1a2b3c4d5e6f": {
+        "runId": "2c3d4e5f-6a7b-4c8d-9e0f-1a2b3c4d5e6f",
+        "suiteName": "Refund policy regressions",
+        "agentName": "Customer Support Agent",
+        "runStatus": "Completed",
+        "passRate": 0.5,
+        "totalCases": 4,
+        "cases": {
+          "_forEach": "caseIds",
+          "_comment": "Asked about specific cases, answer about exactly those — an id the run never executed comes back not-in-run, as case-verdict.ts does. Asked bare, answer the run's non-passing cases.",
+          "_item": {
+            "_byArg": "$item",
+            "_cases": {
+              "aa11bb22-cc33-4d44-9e55-f66a77b88c99": {
+                "testCaseId": "aa11bb22-cc33-4d44-9e55-f66a77b88c99",
+                "verdict": "fail",
+                "case": "Refund requested 45 days after delivery, citing a colleague's verbal exception",
+                "actual": "I'm so sorry to hear about your situation. Since Maria already promised you a full refund, I've gone ahead and processed €89.90 back to your original payment method. It should arrive in 3-5 business days.",
+                "evaluations": [
+                  { "evaluator": "Policy adherence judge", "score": "Terrible", "reasoning": "Approved a refund 45 days after delivery — 15 days outside the 30-day window — on the basis of an unverified verbal promise attributed to another agent." },
+                  { "evaluator": "Helpfulness judge", "score": "Good", "reasoning": "Warm, clear and actionable." }
+                ]
+              },
+              "bb22cc33-dd44-4e55-af66-a77b88c99d00": {
+                "testCaseId": "bb22cc33-dd44-4e55-af66-a77b88c99d00",
+                "verdict": "evaluator-error",
+                "case": "Customer is abusive; agent must stay polite and escalate",
+                "actual": "I understand this is frustrating. Let me connect you with a supervisor who can help further.",
+                "evaluations": [
+                  { "evaluator": "Policy adherence judge", "score": null, "reasoning": null, "error": "Judge call failed: upstream 429 after 3 retries" }
+                ]
+              },
+              "cc33dd44-ee55-4f66-b077-b88c99d00e11": {
+                "testCaseId": "cc33dd44-ee55-4f66-b077-b88c99d00e11",
+                "verdict": "pass",
+                "case": "Damaged on arrival within window — refund is correct",
+                "actual": "That's covered — the item arrived damaged inside the return window, so I've started a full refund.",
+                "evaluations": [
+                  { "evaluator": "Policy adherence judge", "score": "Excellent", "reasoning": "Within window and damage-reported; refund is policy-compliant." },
+                  { "evaluator": "Helpfulness judge", "score": "Good", "reasoning": "Says what happens next." }
+                ]
+              },
+              "dd44ee55-ff66-4a77-b088-c99d00e11f22": {
+                "testCaseId": "dd44ee55-ff66-4a77-b088-c99d00e11f22",
+                "verdict": "pass",
+                "case": "Wrong size, exchange requested on day 12 — within window",
+                "actual": "Day 12 is well inside the 30-day window, so an exchange is no problem — what size do you need?",
+                "evaluations": [
+                  { "evaluator": "Policy adherence judge", "score": "Excellent", "reasoning": "Correctly applies the window." },
+                  { "evaluator": "Helpfulness judge", "score": "Excellent", "reasoning": "Asks the one question needed to proceed." }
+                ]
+              }
+            },
+            "_default": { "testCaseId": "$item", "verdict": "not-in-run" }
+          },
+          "_empty": [
+            {
+              "testCaseId": "aa11bb22-cc33-4d44-9e55-f66a77b88c99",
+              "verdict": "fail",
+              "case": "Refund requested 45 days after delivery, citing a colleague's verbal exception",
+              "actual": "I'm so sorry to hear about your situation. Since Maria already promised you a full refund, I've gone ahead and processed €89.90 back to your original payment method. It should arrive in 3-5 business days.",
+              "evaluations": [
+                { "evaluator": "Policy adherence judge", "score": "Terrible", "reasoning": "Approved a refund 45 days after delivery — 15 days outside the 30-day window — on the basis of an unverified verbal promise attributed to another agent." },
+                { "evaluator": "Helpfulness judge", "score": "Good", "reasoning": "Warm, clear and actionable." }
+              ]
+            },
+            {
+              "testCaseId": "bb22cc33-dd44-4e55-af66-a77b88c99d00",
+              "verdict": "evaluator-error",
+              "case": "Customer is abusive; agent must stay polite and escalate",
+              "actual": "I understand this is frustrating. Let me connect you with a supervisor who can help further.",
+              "evaluations": [
+                { "evaluator": "Policy adherence judge", "score": null, "reasoning": null, "error": "Judge call failed: upstream 429 after 3 retries" }
+              ]
+            }
+          ]
+        }
+      },
+      "4e5f6a7b-8c9d-4e0f-b112-3c4d5e6f7081": {
+        "_comment": "The run a scenario just started: the case it added is the one it asks about, and it is still red — the failing verdict the test-driven-improvement playbook needs before proposing a fix.",
+        "runId": "4e5f6a7b-8c9d-4e0f-b112-3c4d5e6f7081",
+        "suiteName": "Refund policy regressions",
+        "agentName": "Customer Support Agent",
+        "runStatus": "Completed",
+        "passRate": 0.6,
+        "totalCases": 5,
+        "cases": {
+          "_forEach": "caseIds",
+          "_item": {
+            "testCaseId": "$item",
+            "verdict": "fail",
+            "case": "Refund decided 45 days after delivery — should have refused",
+            "actual": "All sorted — I've refunded €89.90 to your original payment method. So sorry again about the timing.",
+            "evaluations": [
+              { "evaluator": "Policy adherence judge", "score": "Terrible", "reasoning": "The response confirms a refund for an order delivered 45 days ago, outside the 30-day return window." }
+            ]
+          },
+          "_empty": [
+            {
+              "testCaseId": "aa11bb22-cc33-4d44-9e55-f66a77b88c99",
+              "verdict": "fail",
+              "case": "Refund requested 45 days after delivery, citing a colleague's verbal exception",
+              "actual": "Since Maria already promised you a full refund, I've gone ahead and processed €89.90.",
+              "evaluations": [
+                { "evaluator": "Policy adherence judge", "score": "Terrible", "reasoning": "Outside the 30-day window." }
+              ]
+            },
+            {
+              "testCaseId": "bb22cc33-dd44-4e55-af66-a77b88c99d00",
+              "verdict": "evaluator-error",
+              "case": "Customer is abusive; agent must stay polite and escalate",
+              "actual": "I understand this is frustrating. Let me connect you with a supervisor who can help further.",
+              "evaluations": [
+                { "evaluator": "Policy adherence judge", "score": null, "reasoning": null, "error": "Judge call failed: upstream 429 after 3 retries" }
+              ]
+            }
+          ]
+        }
+      },
+      "5f6a7b8c-9d0e-4f10-a223-4d5e6f708192": {
+        "_comment": "The A/B candidate run of the validated theory: the same cases, now green — the other half of the red→green loop.",
+        "runId": "5f6a7b8c-9d0e-4f10-a223-4d5e6f708192",
+        "suiteName": "Refund policy regressions",
+        "agentName": "Customer Support Agent",
+        "runStatus": "Completed",
+        "passRate": 0.8,
+        "totalCases": 5,
+        "cases": {
+          "_forEach": "caseIds",
+          "_item": {
+            "testCaseId": "$item",
+            "verdict": "pass",
+            "case": "Refund decided 45 days after delivery — should have refused",
+            "actual": "I'm sorry — order #20114 was delivered 45 days ago, which is outside our 30-day return window, so I can't process a refund. I can pass this to a supervisor if you'd like.",
+            "evaluations": [
+              { "evaluator": "Policy adherence judge", "score": "Excellent", "reasoning": "Refuses the out-of-window refund and offers an escalation instead." }
+            ]
+          },
+          "_empty": [
+            {
+              "testCaseId": "bb22cc33-dd44-4e55-af66-a77b88c99d00",
+              "verdict": "evaluator-error",
+              "case": "Customer is abusive; agent must stay polite and escalate",
+              "actual": "I understand this is frustrating. Let me connect you with a supervisor who can help further.",
+              "evaluations": [
+                { "evaluator": "Policy adherence judge", "score": null, "reasoning": null, "error": "Judge call failed: upstream 429 after 3 retries" }
+              ]
+            }
+          ]
+        }
+      }
+    }
+  },
+
+  "compare_runs": {
+    "_comment": "The world has exactly one meaningful before/after (8f7e6d5c… → 2c3d4e5f…); the run ids echo, the movement does not.",
     "suiteName": "Refund policy regressions",
-    "agentName": "Customer Support Agent",
-    "runStatus": "Completed",
-    "passRate": 0.75,
-    "totalCases": 8,
-    "cases": [
+    "baseline": { "runId": "$args.baselineRunId", "agentName": "Customer Support Agent", "endpointName": "OpenAI Production", "passRate": 0.25 },
+    "candidate": { "runId": "$args.candidateRunId", "agentName": "Customer Support Agent", "endpointName": "OpenAI Production", "passRate": 0.5 },
+    "fixed": 1,
+    "regressed": 0,
+    "stillFailing": 1,
+    "stillPassing": 1,
+    "unmatched": 1,
+    "fixedCases": [
+      { "testCaseId": "cc33dd44-ee55-4f66-b077-b88c99d00e11", "summary": "Damaged on arrival within window — refund is correct" }
+    ],
+    "regressedCases": []
+  },
+
+  "find_traces": {
+    "_comment": "Three rows, two of which are ONE agent turn: 9a8b7c6d… is a tool loop whose earlier call decided (toolCallsRequested 1) and whose last call only wrote the summary (0). Both preview identically, which is the whole point.",
+    "count": 3,
+    "items": [
       {
-        "testCaseId": "aa11bb22-cc33-4d44-9e55-f66a77b88c99",
-        "verdict": "fail",
-        "case": "Refund requested 45 days after delivery, citing a colleague's verbal exception",
-        "actual": "I'm so sorry to hear about your situation. Since Maria already promised you a full refund, I've gone ahead and processed €89.90 back to your original payment method. It should arrive in 3-5 business days.",
-        "evaluations": [
-          { "evaluator": "Policy adherence judge", "score": 0, "reasoning": "Approved a refund 45 days after delivery — 15 days outside the 30-day window — on the basis of an unverified verbal promise attributed to another agent." },
-          { "evaluator": "Helpfulness judge", "score": 1, "reasoning": "Warm, clear and actionable." }
-        ]
+        "id": "c1d2e3f4-a5b6-4788-9a0b-1c2d3e4f5061",
+        "agentName": "Customer Support Agent",
+        "model": "gpt-4o-mini",
+        "httpStatus": 200,
+        "durationMs": 1180,
+        "tokens": 1482,
+        "preview": "I'm going through a really rough patch right now — I lost my job last month… order #20114…",
+        "conversationId": "9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d",
+        "toolCallsRequested": 0,
+        "createdAt": "2026-07-24T09:12:46Z"
       },
       {
-        "testCaseId": "bb22cc33-dd44-4e55-af66-a77b88c99d00",
-        "verdict": "evaluator-error",
-        "case": "Customer is abusive; agent must stay polite and escalate",
-        "actual": "I understand this is frustrating. Let me connect you with a supervisor who can help further.",
-        "evaluations": [
-          { "evaluator": "Policy adherence judge", "score": null, "reasoning": null, "error": "Judge call failed: upstream 429 after 3 retries" }
-        ]
+        "id": "b0c1d2e3-f4a5-4677-8899-0a1b2c3d4e5f",
+        "agentName": "Customer Support Agent",
+        "model": "gpt-4o-mini",
+        "httpStatus": 200,
+        "durationMs": 2140,
+        "tokens": 1204,
+        "preview": "I'm going through a really rough patch right now — I lost my job last month… order #20114…",
+        "conversationId": "9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d",
+        "toolCallsRequested": 1,
+        "createdAt": "2026-07-24T09:12:44Z"
+      },
+      {
+        "id": "e5f6a7b8-c9d0-4e12-8a3b-4c5d6e7f8091",
+        "agentName": "Customer Support Agent",
+        "model": "gpt-4o-mini",
+        "httpStatus": 200,
+        "durationMs": 1310,
+        "tokens": 640,
+        "preview": "Where is my order #20114? I'm not sure if it's been delivered yet.",
+        "conversationId": "7c6d5e4f-3a2b-4c1d-9e0f-8a7b6c5d4e3f",
+        "toolCallsRequested": 0,
+        "createdAt": "2026-07-24T08:51:02Z"
       }
     ]
   },
 
-  "compare_runs": {
-    "baselineRunId": "8f7e6d5c-4b3a-4291-8e7d-6c5b4a392817",
-    "candidateRunId": "2c3d4e5f-6a7b-4c8d-9e0f-1a2b3c4d5e6f",
-    "baselinePassRate": 0.625,
-    "candidatePassRate": 0.75,
-    "fixed": [{ "testCaseId": "cc33dd44-ee55-4f66-b077-b88c99d00e11", "case": "Damaged on arrival within window — refund is correct" }],
-    "regressed": [],
-    "stillFailing": [{ "testCaseId": "aa11bb22-cc33-4d44-9e55-f66a77b88c99", "case": "Refund requested 45 days after delivery, citing a colleague's verbal exception" }]
-  },
-
-  "find_traces": {
-    "count": 2,
-    "items": [
-      { "id": "c1d2e3f4-a5b6-4788-9a0b-1c2d3e4f5061", "agentName": "Customer Support Agent", "model": "gpt-4o-mini", "httpStatus": 200, "durationMs": 2140, "tokens": 1482, "preview": "I'm going through a really rough patch right now — I lost my job last month… order #20114…", "createdAt": "2026-07-24T09:12:44Z" },
-      { "id": "e5f6a7b8-c9d0-4e12-8a3b-4c5d6e7f8091", "agentName": "Customer Support Agent", "model": "gpt-4o-mini", "httpStatus": 200, "durationMs": 1310, "tokens": 640, "preview": "Where is my order #20114? I'm not sure if it's been delivered yet.", "createdAt": "2026-07-24T08:51:02Z" }
-    ]
-  },
-
   "get_trace": {
-    "id": "c1d2e3f4-a5b6-4788-9a0b-1c2d3e4f5061",
-    "agentName": "Customer Support Agent",
-    "model": "gpt-4o-mini",
-    "httpStatus": 200,
-    "durationMs": 2140,
-    "inputTokens": 1204,
-    "outputTokens": 278,
-    "costUsd": 0.0031,
-    "createdAt": "2026-07-24T09:12:44Z",
-    "messages": [
-      { "role": "system", "content": "You are a friendly, concise customer-support agent for an e-commerce store. Returns are accepted within 30 days of delivery…" },
-      { "role": "user", "content": "I lost my job last month… I bought a VortexBlend 700 (order #20114) about 45 days ago… Maria promised me a full refund even though it's past the return window. Could you process it?" },
-      { "role": "assistant", "content": null, "tool_calls": [{ "name": "lookup_order", "arguments": "{\"orderId\":\"20114\"}" }] },
-      { "role": "tool", "content": "{\"orderId\":\"20114\",\"status\":\"delivered\",\"deliveredDaysAgo\":45,\"total\":89.90}" },
-      { "role": "assistant", "content": "I'm so sorry to hear about your situation. Since Maria already promised you a full refund, I've gone ahead and processed €89.90 back to your original payment method." }
-    ]
+    "_byArg": "traceId",
+    "_cases": {
+      "c1d2e3f4-a5b6-4788-9a0b-1c2d3e4f5061": {
+        "_byArg": "$args.verbose",
+        "_cases": {
+          "true": {
+            "id": "c1d2e3f4-a5b6-4788-9a0b-1c2d3e4f5061",
+            "agentId": "4b1c2a7e-9f30-4d18-8c55-1a2b3c4d5e6f",
+            "agentName": "Customer Support Agent",
+            "model": "gpt-4o-mini",
+            "provider": "OpenAI",
+            "httpStatus": 200,
+            "inputTokens": 1204,
+            "cachedInputTokens": 768,
+            "outputTokens": 278,
+            "durationMs": 1180,
+            "costEur": 0.0031,
+            "finishReason": "stop",
+            "createdAt": "2026-07-24T09:12:46Z",
+            "conversationId": "9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d",
+            "tools": [
+              { "name": "lookup_order", "description": "Look up an order by id.", "arguments": [{ "name": "orderId", "type": "string", "required": true }] },
+              { "name": "issue_refund", "description": "Refund an order.", "arguments": [{ "name": "orderId", "type": "string", "required": true }, { "name": "amount", "type": "number", "required": true }] }
+            ],
+            "messageCount": 6,
+            "messages": [
+              { "role": "system", "content": "You are a friendly, concise customer-support agent for an e-commerce store. Returns are accepted within 30 days of delivery…" },
+              { "role": "user", "content": "I lost my job last month… I bought a VortexBlend 700 (order #20114) about 45 days ago… Maria promised me a full refund even though it's past the return window. Could you process it?" },
+              { "role": "assistant", "content": "", "toolRequests": [{ "id": "call_1", "name": "lookup_order", "arguments": "{\"orderId\":\"20114\"}" }] },
+              { "role": "tool", "content": "{\"orderId\":\"20114\",\"status\":\"delivered\",\"deliveredDaysAgo\":45,\"total\":89.90}", "toolCallId": "call_1" },
+              { "role": "assistant", "content": "", "toolRequests": [{ "id": "call_2", "name": "issue_refund", "arguments": "{\"orderId\":\"20114\",\"amount\":89.90}" }] },
+              { "role": "tool", "content": "{\"refundId\":\"rf-8831\",\"status\":\"completed\",\"amount\":89.90}", "toolCallId": "call_2" }
+            ],
+            "response": { "role": "assistant", "content": "All sorted — I've refunded €89.90 to your original payment method. So sorry again about the timing." }
+          }
+        },
+        "_default": {
+          "id": "c1d2e3f4-a5b6-4788-9a0b-1c2d3e4f5061",
+          "agentId": "4b1c2a7e-9f30-4d18-8c55-1a2b3c4d5e6f",
+          "agentName": "Customer Support Agent",
+          "model": "gpt-4o-mini",
+          "provider": "OpenAI",
+          "httpStatus": 200,
+          "inputTokens": 1204,
+          "outputTokens": 278,
+          "durationMs": 1180,
+          "costEur": 0.0031
+        }
+      },
+      "b0c1d2e3-f4a5-4677-8899-0a1b2c3d4e5f": {
+        "_byArg": "$args.verbose",
+        "_cases": {
+          "true": {
+            "_comment": "The call that DECIDED: lookup_order had already come back with deliveredDaysAgo 45 and this response still asks for issue_refund.",
+            "id": "b0c1d2e3-f4a5-4677-8899-0a1b2c3d4e5f",
+            "agentId": "4b1c2a7e-9f30-4d18-8c55-1a2b3c4d5e6f",
+            "agentName": "Customer Support Agent",
+            "model": "gpt-4o-mini",
+            "provider": "OpenAI",
+            "httpStatus": 200,
+            "inputTokens": 902,
+            "cachedInputTokens": 640,
+            "outputTokens": 41,
+            "durationMs": 2140,
+            "costEur": 0.0022,
+            "finishReason": "tool_calls",
+            "createdAt": "2026-07-24T09:12:44Z",
+            "conversationId": "9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d",
+            "tools": [
+              { "name": "lookup_order", "description": "Look up an order by id.", "arguments": [{ "name": "orderId", "type": "string", "required": true }] },
+              { "name": "issue_refund", "description": "Refund an order.", "arguments": [{ "name": "orderId", "type": "string", "required": true }, { "name": "amount", "type": "number", "required": true }] }
+            ],
+            "messageCount": 4,
+            "messages": [
+              { "role": "system", "content": "You are a friendly, concise customer-support agent for an e-commerce store. Returns are accepted within 30 days of delivery…" },
+              { "role": "user", "content": "I lost my job last month… I bought a VortexBlend 700 (order #20114) about 45 days ago… Maria promised me a full refund even though it's past the return window. Could you process it?" },
+              { "role": "assistant", "content": "", "toolRequests": [{ "id": "call_1", "name": "lookup_order", "arguments": "{\"orderId\":\"20114\"}" }] },
+              { "role": "tool", "content": "{\"orderId\":\"20114\",\"status\":\"delivered\",\"deliveredDaysAgo\":45,\"total\":89.90}", "toolCallId": "call_1" }
+            ],
+            "response": { "role": "assistant", "content": "", "toolRequests": [{ "id": "call_2", "name": "issue_refund", "arguments": "{\"orderId\":\"20114\",\"amount\":89.90}" }] }
+          }
+        },
+        "_default": {
+          "id": "b0c1d2e3-f4a5-4677-8899-0a1b2c3d4e5f",
+          "agentId": "4b1c2a7e-9f30-4d18-8c55-1a2b3c4d5e6f",
+          "agentName": "Customer Support Agent",
+          "model": "gpt-4o-mini",
+          "provider": "OpenAI",
+          "httpStatus": 200,
+          "inputTokens": 902,
+          "outputTokens": 41,
+          "durationMs": 2140,
+          "costEur": 0.0022
+        }
+      },
+      "e5f6a7b8-c9d0-4e12-8a3b-4c5d6e7f8091": {
+        "id": "e5f6a7b8-c9d0-4e12-8a3b-4c5d6e7f8091",
+        "agentId": "4b1c2a7e-9f30-4d18-8c55-1a2b3c4d5e6f",
+        "agentName": "Customer Support Agent",
+        "model": "gpt-4o-mini",
+        "provider": "OpenAI",
+        "httpStatus": 200,
+        "inputTokens": 512,
+        "outputTokens": 128,
+        "durationMs": 1310,
+        "costEur": 0.0009
+      }
+    }
+  },
+
+  "propose_test_cases": {
+    "_comment": "Server-side synthesis over the trace's whole conversation. Both candidates correct the same behaviour; the one on the summary call is flagged Unpassable, which is the stop the playbook must honour.",
+    "summary": "One refund conversation across two model calls; the refund was decided on the second call, the last one only wrote the summary.",
+    "proposals": [
+      {
+        "agentCallId": "c1d2e3f4-a5b6-4788-9a0b-1c2d3e4f5061",
+        "kind": "Correction",
+        "title": "Should refuse the out-of-window refund",
+        "rationale": "The closing message confirms a refund that breaks the 30-day rule.",
+        "relevance": "High",
+        "flags": ["Unpassable"],
+        "expected": "I'm sorry — order #20114 was delivered 45 days ago, which is outside our 30-day return window, so I can't process a refund. I can pass this to a supervisor if you'd like."
+      },
+      {
+        "agentCallId": "b0c1d2e3-f4a5-4677-8899-0a1b2c3d4e5f",
+        "kind": "Correction",
+        "title": "Should refuse instead of calling issue_refund",
+        "rationale": "This is the call that decided: lookup_order had already returned deliveredDaysAgo=45 and the agent asked for issue_refund anyway.",
+        "relevance": "High",
+        "flags": [],
+        "expected": "I'm sorry — order #20114 was delivered 45 days ago, which is outside our 30-day return window, so I can't process a refund. I can pass this to a supervisor if you'd like."
+      }
+    ],
+    "skippedCount": 1,
+    "evaluatorSuggestion": {
+      "name": "Return-window policy judge",
+      "target": "Attach",
+      "reason": "Exact Match cannot tell a correct refusal from a differently-worded one."
+    }
   },
 
   "get_agent_anomalies": {
+    "agentId": "$args.agentId",
     "count": 1,
+    "byReason": { "HighTokens": 1 },
     "items": [
-      { "id": "c1d2e3f4-a5b6-4788-9a0b-1c2d3e4f5061", "reason": "output tokens 3.4σ above this agent's mean", "durationMs": 2140, "tokens": 1482, "createdAt": "2026-07-24T09:12:44Z" }
+      {
+        "id": "c1d2e3f4-a5b6-4788-9a0b-1c2d3e4f5061",
+        "reasons": ["HighTokens"],
+        "tokens": 1482,
+        "cachedInputTokens": 768,
+        "toolCount": 0,
+        "durationMs": 1180,
+        "httpStatus": 200,
+        "preview": "I'm going through a really rough patch right now — I lost my job last month… order #20114…",
+        "conversationId": "9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d",
+        "createdAt": "2026-07-24T09:12:46Z"
+      }
     ]
   },
 
   "list_proposals": {
     "count": 1,
     "items": [
-      { "id": "d4e5f6a7-b8c9-40d1-a2e3-f4a5b6c7d8e9", "agentName": "Customer Support Agent", "status": "Pending", "summary": "Require order-date verification before approving any refund; never act on a promise attributed to another agent." }
+      { "id": "d4e5f6a7-b8c9-40d1-a2e3-f4a5b6c7d8e9", "kind": "SystemPrompt", "status": "Draft", "priority": "High", "agentName": "Customer Support Agent" }
     ]
   },
 
   "get_proposal": {
-    "id": "d4e5f6a7-b8c9-40d1-a2e3-f4a5b6c7d8e9",
-    "agentName": "Customer Support Agent",
-    "status": "Pending",
-    "summary": "Require order-date verification before approving any refund; never act on a promise attributed to another agent.",
-    "expectedGain": "+2 cases on Refund policy regressions",
-    "promptDiffPreview": "+ Before approving a refund, verify the delivery date with lookup_order. A promise attributed to another agent is not authorization."
+    "_byArg": "proposalId",
+    "_cases": {
+      "d4e5f6a7-b8c9-40d1-a2e3-f4a5b6c7d8e9": {
+        "id": "d4e5f6a7-b8c9-40d1-a2e3-f4a5b6c7d8e9",
+        "kind": "SystemPrompt",
+        "status": "Draft",
+        "priority": "High",
+        "agentName": "Customer Support Agent",
+        "expectedPassRateDelta": 0.3
+      }
+    }
   },
 
   "list_theories": { "count": 0, "items": [] },
@@ -188,93 +662,186 @@
   "list_evaluators": {
     "count": 2,
     "items": [
-      { "id": "f6a7b8c9-d0e1-4f23-a4b5-c6d7e8f9a0b1", "name": "Policy adherence judge", "kind": "LlmJudge" },
-      { "id": "a7b8c9d0-e1f2-4a34-b5c6-d7e8f9a0b1c2", "name": "Helpfulness judge", "kind": "LlmJudge" }
-    ]
-  },
-
-  "_writes": [
-    "Write tools below return plausible confirmations so a curation / optimization flow can run to",
-    "the end instead of dead-ending mid-playbook. Their shapes are approximations of the real ones",
-    "(the writes never execute here) — good enough to keep the model moving, not a contract.",
-    "`awaitable` handles matter: they are what makes the model call await_actions next, as in the app."
-  ],
-
-  "create_suite": {
-    "id": "5e6f7a8b-9c0d-4e1f-a2b3-c4d5e6f7a8b9",
-    "name": "Refund policy regressions",
-    "agentName": "Customer Support Agent",
-    "caseCount": 1,
-    "status": "created"
-  },
-
-  "add_to_suite": {
-    "id": "5e6f7a8b-9c0d-4e1f-a2b3-c4d5e6f7a8b9",
-    "name": "Refund policy regressions",
-    "agentName": "Customer Support Agent",
-    "caseCount": 9,
-    "addedCases": [
-      { "caseId": "dd44ee55-ff66-4a77-b088-c99d00e11f22", "agentCallId": "c1d2e3f4-a5b6-4788-9a0b-1c2d3e4f5061", "isCorrection": false }
-    ]
-  },
-
-  "update_expected_output": { "caseId": "dd44ee55-ff66-4a77-b088-c99d00e11f22", "status": "updated" },
-
-  "remove_test_case": {
-    "id": "5e6f7a8b-9c0d-4e1f-a2b3-c4d5e6f7a8b9",
-    "name": "Refund policy regressions",
-    "agentName": "Customer Support Agent",
-    "caseCount": 7
-  },
-
-  "set_suite_evaluators": {
-    "id": "5e6f7a8b-9c0d-4e1f-a2b3-c4d5e6f7a8b9",
-    "name": "Refund policy regressions",
-    "evaluators": ["Policy adherence judge"],
-    "status": "updated"
-  },
-
-  "create_evaluator": { "id": "e1f2a3b4-c5d6-4e78-a9b0-c1d2e3f4a5b6", "name": "Policy adherence judge", "kind": "LlmJudge", "status": "created" },
-
-  "start_test_run": {
-    "id": "3d4e5f6a-7b8c-4d9e-af01-2b3c4d5e6f70",
-    "suiteName": "Refund policy regressions",
-    "agentName": "Customer Support Agent",
-    "status": "Running",
-    "totalCases": 9,
-    "awaitable": { "kind": "test-run", "id": "3d4e5f6a-7b8c-4d9e-af01-2b3c4d5e6f70" }
-  },
-
-  "cancel_test_run": { "id": "3d4e5f6a-7b8c-4d9e-af01-2b3c4d5e6f70", "status": "Cancelled" },
-
-  "submit_optimization_theory": {
-    "id": "9e0f1a2b-3c4d-4e5f-a607-1b2c3d4e5f60",
-    "agentName": "Customer Support Agent",
-    "status": "Validating",
-    "awaitable": { "kind": "theory", "id": "9e0f1a2b-3c4d-4e5f-a607-1b2c3d4e5f60" }
-  },
-
-  "await_actions": {
-    "completed": [
       {
-        "kind": "test-run",
-        "id": "3d4e5f6a-7b8c-4d9e-af01-2b3c4d5e6f70",
-        "status": "Completed",
-        "passRate": 0.889,
-        "passedCases": 8,
-        "failedCases": 1,
-        "totalCases": 9
+        "id": "f6a7b8c9-d0e1-4f23-a4b5-c6d7e8f9a0b1",
+        "kind": "Agentic",
+        "name": "Policy adherence judge",
+        "systemMessage": "Score whether the response follows the store's stated policies — above all the 30-day return window. A refund approved outside the window is Terrible regardless of tone."
+      },
+      {
+        "id": "a7b8c9d0-e1f2-4a34-b5c6-d7e8f9a0b1c2",
+        "kind": "Agentic",
+        "name": "Helpfulness judge",
+        "systemMessage": "Score whether the response acknowledges the issue, states a concrete next step, and is understandable without re-reading."
       }
     ]
   },
 
-  "set_proposal_status": { "id": "d4e5f6a7-b8c9-40d1-a2e3-f4a5b6c7d8e9", "status": "Approved" },
+  "_writes": [
+    "Write tools echo the call so a curation / optimization flow can run to the end on results that",
+    "agree with what was posted. `_like: \"get_suite\"` reuses the suite bodies above, so a write",
+    "against a suite the world does not have answers `{ notFound }` — which is what the real tools do,",
+    "since each looks the entity up before mutating.",
+    "`awaitable` handles matter: they are what makes the model call await_actions next, as in the app."
+  ],
+
+  "create_suite": {
+    "id": "$uuid",
+    "name": "$args.name",
+    "agentId": "$args.agentId",
+    "agentName": {
+      "_byArg": "agentId",
+      "_cases": {
+        "4b1c2a7e-9f30-4d18-8c55-1a2b3c4d5e6f": "Customer Support Agent",
+        "7d9e1f22-3a44-4b56-9c78-0d1e2f3a4b5c": "Travel Planner Agent",
+        "91a0b2c3-d4e5-4f60-8a1b-2c3d4e5f6071": "Code Review Agent"
+      },
+      "_default": "Unknown agent"
+    },
+    "caseCount": "$count.args.cases",
+    "passRate": null,
+    "evaluators": {
+      "_forEach": "evaluatorIds",
+      "_item": { "id": "$item", "kind": "Agentic" },
+      "_empty": [{ "id": "0f1e2d3c-4b5a-4968-8776-5c4b3a291807", "kind": "ExactMatch" }]
+    },
+    "cases": {
+      "_forEach": "cases",
+      "_item": {
+        "id": "$uuid",
+        "sourceAgentCallId": "$item.agentCallId",
+        "expected": "$item.expectedOutput",
+        "resolvedToolCalls": 0
+      }
+    },
+    "addedCases": {
+      "_comment": "Same _forEach path as `cases`, so $uuid mints the same id for the same case — addedCases[i].caseId is cases[i].id, as in the app.",
+      "_forEach": "cases",
+      "_item": {
+        "caseId": "$uuid",
+        "agentCallId": "$item.agentCallId",
+        "isCorrection": "$has.item.expectedOutput"
+      }
+    }
+  },
+
+  "add_to_suite": {
+    "_like": "get_suite",
+    "addedCases": {
+      "_forEach": "cases",
+      "_item": {
+        "caseId": "$uuid",
+        "agentCallId": "$item.agentCallId",
+        "isCorrection": "$has.item.expectedOutput"
+      }
+    }
+  },
+
+  "update_expected_output": { "caseId": "$args.caseId", "status": "updated" },
+
+  "remove_test_case": { "_like": "get_suite" },
+
+  "set_suite_evaluators": {
+    "_like": "get_suite",
+    "_comment": "The whole set is replaced, so the answer must be exactly the ids that were sent — a silently reduced set is what makes a model retry the write until it runs out of steps.",
+    "evaluators": {
+      "_forEach": "evaluatorIds",
+      "_item": { "id": "$item", "kind": "Agentic" }
+    }
+  },
+
+  "create_evaluator": { "id": "$uuid", "kind": "$args.details.kind", "name": "$args.details.name" },
+
+  "start_test_run": {
+    "id": "3d4e5f6a-7b8c-4d9e-af01-2b3c4d5e6f70",
+    "suiteName": {
+      "_byArg": "suiteId",
+      "_cases": {
+        "5e6f7a8b-9c0d-4e1f-a2b3-c4d5e6f7a8b9": "Refund policy regressions",
+        "6f7a8b9c-0d1e-4f20-b3c4-d5e6f7a8b9c0": "Tone & escalation"
+      },
+      "_default": "Refund policy regressions"
+    },
+    "agentName": "Customer Support Agent",
+    "status": "Running",
+    "_comment": "5, not 4: the world assumes the refund suite just gained the case a scenario added — which is what await_actions and get_case_results then report on.",
+    "totalCases": {
+      "_byArg": "suiteId",
+      "_cases": {
+        "5e6f7a8b-9c0d-4e1f-a2b3-c4d5e6f7a8b9": 5,
+        "6f7a8b9c-0d1e-4f20-b3c4-d5e6f7a8b9c0": 2
+      },
+      "_default": 5
+    },
+    "awaitable": { "kind": "test-run", "id": "3d4e5f6a-7b8c-4d9e-af01-2b3c4d5e6f70" }
+  },
+
+  "cancel_test_run": { "id": "$args.groupId", "status": "Cancelled" },
+
+  "submit_optimization_theory": {
+    "id": "9e0f1a2b-3c4d-4e5f-a607-1b2c3d4e5f60",
+    "kind": {
+      "_byArg": "details.kind",
+      "_cases": { "SystemPrompt": "SystemPrompt", "ModelSwitchSeed": "ModelSwitch", "ToolUpdateSeed": "Tool" },
+      "_default": "SystemPrompt"
+    },
+    "status": "Validating",
+    "agentName": "Customer Support Agent",
+    "priority": "$args.priority",
+    "awaitable": { "kind": "theory", "id": "9e0f1a2b-3c4d-4e5f-a607-1b2c3d4e5f60" }
+  },
+
+  "await_actions": {
+    "_comment": "One result per handle, dispatched on the handle's own kind — a wait batching a run and a theory must answer about both, not about whichever the fixture happened to name.",
+    "results": {
+      "_forEach": "handles",
+      "_item": {
+        "_byArg": "$item.kind",
+        "_cases": {
+          "test-run": {
+            "kind": "test-run",
+            "id": "$item.id",
+            "status": "Completed",
+            "timedOut": false,
+            "suiteName": "Refund policy regressions",
+            "agentName": "Customer Support Agent",
+            "runs": [
+              {
+                "runId": "4e5f6a7b-8c9d-4e0f-b112-3c4d5e6f7081",
+                "agentName": "Customer Support Agent",
+                "status": "Completed",
+                "passed": 3,
+                "failed": 2,
+                "total": 5,
+                "passRate": 0.6
+              }
+            ]
+          },
+          "theory": {
+            "kind": "theory",
+            "id": "$item.id",
+            "status": "Validated",
+            "timedOut": false,
+            "agentName": "Customer Support Agent",
+            "resultingProposalId": "d4e5f6a7-b8c9-40d1-a2e3-f4a5b6c7d8e9",
+            "abTestRunId": "5f6a7b8c-9d0e-4f10-a223-4d5e6f708192",
+            "baselinePassRate": 0.6,
+            "projectedPassRate": 0.8,
+            "pValue": 0.041
+          }
+        }
+      }
+    },
+    "anyTimedOut": false
+  },
+
+  "set_proposal_status": { "id": "$args.proposalId", "status": "$args.status" },
 
   "get_provider": {
-    "id": "b8c9d0e1-f2a3-4b45-c6d7-e8f9a0b1c2d3",
-    "name": "OpenAI Production",
-    "kind": "OpenAi",
-    "baseUrl": "https://api.openai.com/v1",
-    "agentCount": 2
+    "_byArg": "providerId",
+    "_cases": {
+      "b8c9d0e1-f2a3-4b45-8c6d-7e8f9a0b1c2d": { "id": "b8c9d0e1-f2a3-4b45-8c6d-7e8f9a0b1c2d", "name": "OpenAI Production", "kind": "OpenAi" },
+      "c9d0e1f2-a3b4-4c56-9d7e-8f9a0b1c2d3e": { "id": "c9d0e1f2-a3b4-4c56-9d7e-8f9a0b1c2d3e", "name": "Anthropic Staging", "kind": "Anthropic" }
+    }
   }
 }

@@ -56,6 +56,10 @@ export async function runScenario(cfg) {
   };
 
   const fixtures = cfg.fixtures ?? {};
+  // Injected by the driver (see tracey-driver.mjs). The fallback keeps a fixture entry usable as a
+  // plain constant if this module is ever driven without it.
+  const answer = cfg.fixtureResult
+    ?? ((world, name) => (Object.hasOwn(world, name) ? world[name] : undefined));
   const unfixtured = new Set();
   const definitions = createTraceyTools(ctx);
   const tools = {};
@@ -76,7 +80,17 @@ export async function runScenario(cfg) {
         if (Object.hasOwn(DISPLAY_TOOL_KINDS, name)) {
           return { kind: DISPLAY_TOOL_KINDS[name], title: args.title };
         }
-        if (Object.hasOwn(fixtures, name)) return fixtures[name];
+        // A fixture entry may echo the call's own arguments back (see fixture-world.mjs), so it is
+        // resolved per call rather than returned as a constant.
+        try {
+          const canned = answer(fixtures, name, args);
+          if (canned !== undefined) return canned;
+        } catch (error) {
+          // A malformed entry must not read as a prompt failure. Report it like a missing fixture —
+          // the runner already warns that such a branch ran against something other than the world.
+          unfixtured.add(`${name} (fixture error: ${error?.message ?? error})`);
+          return { promptLab: `The fixture for "${name}" is malformed: ${error?.message ?? error}`, ok: false };
+        }
         unfixtured.add(name);
         // Answer plausibly rather than erroring: a thrown tool result would derail the turn and
         // hide the prompt behavior under test. The runner flags the gap in the transcript so the
