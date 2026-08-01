@@ -59,6 +59,11 @@ public record ApiKeyCostPointDto(DateTimeOffset BucketStart, Guid? ApiKeyId, dec
 /// </summary>
 public record ApiKeyCostTotalDto(Guid? ApiKeyId, string? ApiKeyName, string? KeyPrefix, decimal CostEur);
 
+/// <summary>
+/// One budget joined with this month's spend and breach state — the payload of
+/// <c>GET /api/cost-limits/status</c>. Kept out of <see cref="CostOverviewDto"/> so a budget change
+/// re-reads one or two aggregates instead of the whole page's telemetry.
+/// </summary>
 public record CostBudgetStatusDto(
     Guid CostLimitId,
     Guid? AgentId,
@@ -73,10 +78,15 @@ public record CostBudgetStatusDto(
     bool HardBreached);
 
 /// <summary>
-/// The Costs page payload. <c>HasUnpricedEndpoints</c> reports that some traffic in the window ran
-/// on an endpoint with no configured price and therefore contributes nothing to these figures —
-/// the estimate is incomplete, not merely approximate.
+/// The Costs page's spend telemetry. <c>HasUnpricedEndpoints</c> reports that some traffic in the
+/// window ran on an endpoint with no configured price and therefore contributes nothing to these
+/// figures — the estimate is incomplete, not merely approximate.
 /// </summary>
+/// <param name="Bucket">
+/// The granularity the series was actually aggregated at. It is the requested bucket coarsened when
+/// the window would produce more cells than the chart draws, so the client must label and densify
+/// against this value rather than against what it asked for.
+/// </param>
 public record CostOverviewDto(
     decimal MonthToDateSpendEur,
     decimal PreviousMonthSpendEur,
@@ -84,6 +94,5 @@ public record CostOverviewDto(
     IReadOnlyList<AgentCostTotalDto> AgentTotals,
     IReadOnlyList<ApiKeyCostPointDto> ApiKeySeries,
     IReadOnlyList<ApiKeyCostTotalDto> ApiKeyTotals,
-    IReadOnlyList<CostBudgetStatusDto> Budgets,
     bool HasUnpricedEndpoints,
     string Bucket);

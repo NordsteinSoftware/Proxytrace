@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using Proxytrace.Api.Auth;
 using Proxytrace.Api.Auth.Licensing;
 using Proxytrace.Api.Dto.Costs;
+using Proxytrace.Application.CostControl;
 using Proxytrace.Domain;
 using Proxytrace.Domain.Agent;
 using Proxytrace.Domain.ApiKey;
@@ -30,6 +31,7 @@ public class CostLimitsController : ControllerBase
 {
     private readonly ICostLimitRepository costLimits;
     private readonly ICostLimitBreachRepository breaches;
+    private readonly ICostStatistics costStatistics;
     private readonly IProjectRepository projects;
     private readonly IAgentRepository agents;
     private readonly IApiKeyRepository apiKeys;
@@ -41,6 +43,7 @@ public class CostLimitsController : ControllerBase
     public CostLimitsController(
         ICostLimitRepository costLimits,
         ICostLimitBreachRepository breaches,
+        ICostStatistics costStatistics,
         IProjectRepository projects,
         IAgentRepository agents,
         IApiKeyRepository apiKeys,
@@ -51,6 +54,7 @@ public class CostLimitsController : ControllerBase
     {
         this.costLimits = costLimits;
         this.breaches = breaches;
+        this.costStatistics = costStatistics;
         this.projects = projects;
         this.agents = agents;
         this.apiKeys = apiKeys;
@@ -71,6 +75,40 @@ public class CostLimitsController : ControllerBase
 
         IReadOnlyList<ICostLimit> limits = await costLimits.GetByProjectAsync(projectId, cancellationToken);
         return limits.Select(ToDto).ToArray();
+    }
+
+    /// <summary>
+    /// The project's budgets joined with this month's spend and breach state — what the Costs page
+    /// draws its consumption meters from.
+    /// </summary>
+    /// <remarks>
+    /// Its own endpoint rather than a slice of <c>GET /api/statistics/cost-overview</c>: this is the
+    /// read a budget create/edit/delete invalidates, and it needs one aggregate scan of the trace
+    /// table (two when a key-scoped budget exists) against the overview's seven. Free for every
+    /// project member, exactly like the budget list itself.
+    ///
+    /// The literal route sits above <c>{id:guid}</c>, and "status" is not a GUID, so the two can
+    /// never collide.
+    /// </remarks>
+    [HttpGet("status")]
+    public async Task<IReadOnlyList<CostBudgetStatusDto>> GetStatus(
+        [FromQuery] Guid projectId,
+        CancellationToken cancellationToken = default)
+    {
+        // Empty rather than 404, matching GetAll: a non-member must not learn whether the project
+        // exists.
+        if (!await accessGuard.CanAccessProjectAsync(projectId, cancellationToken))
+            return [];
+
+        IReadOnlyList<CostBudgetStatus> statuses =
+            await costStatistics.GetBudgetStatusAsync(projectId, cancellationToken);
+
+        return statuses
+            .Select(b => new CostBudgetStatusDto(
+                b.CostLimitId, b.AgentId, b.AgentName, b.ApiKeyId, b.ApiKeyName,
+                b.SoftLimitEur, b.HardLimitEur,
+                b.Enabled, b.MonthToDateSpendEur, b.SoftBreached, b.HardBreached))
+            .ToArray();
     }
 
     [HttpGet("{id:guid}")]

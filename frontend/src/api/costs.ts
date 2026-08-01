@@ -68,7 +68,12 @@ export interface ApiKeyCostTotalDto {
   costEur: number;
 }
 
-/** A budget joined with this month's spend and breach state. */
+/**
+ * A budget joined with this month's spend and breach state — the payload of
+ * `GET /api/cost-limits/status`. Deliberately not part of the cost overview: a budget change
+ * invalidates this list, and re-reading it costs one or two aggregate scans instead of the
+ * overview's seven.
+ */
 export interface CostBudgetStatusDto {
   costLimitId: string;
   agentId: string | null;
@@ -91,13 +96,17 @@ export interface CostOverviewDto {
   agentTotals: AgentCostTotalDto[];
   apiKeySeries: ApiKeyCostPointDto[];
   apiKeyTotals: ApiKeyCostTotalDto[];
-  budgets: CostBudgetStatusDto[];
   /**
    * True when some traffic in the window ran on an endpoint with no configured price. Those calls
    * contribute nothing to any figure here, so the numbers are an *incomplete* estimate.
    */
   hasUnpricedEndpoints: boolean;
-  bucket: string;
+  /**
+   * The granularity the series was actually aggregated at — the requested bucket, coarsened
+   * server-side when the window would produce more cells than the chart draws. Densify and label
+   * against this, never against what was asked for.
+   */
+  bucket: StatisticsBucket;
 }
 
 export type CostOverviewParams = {
@@ -113,6 +122,8 @@ export const costsApi = {
   limits: {
     list: (projectId: string) =>
       api.get<CostLimitDto[]>(`/api/cost-limits${qs({ projectId })}`),
+    status: (projectId: string) =>
+      api.get<CostBudgetStatusDto[]>(`/api/cost-limits/status${qs({ projectId })}`),
     create: (body: CreateCostLimitRequest) => api.post<CostLimitDto>('/api/cost-limits', body),
     update: (id: string, body: UpdateCostLimitRequest) =>
       api.put<CostLimitDto>(`/api/cost-limits/${id}`, body),

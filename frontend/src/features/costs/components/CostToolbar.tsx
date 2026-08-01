@@ -17,7 +17,17 @@ export function CostToolbar({ timeRange, bucket, onTimeRangeChange, onBucketChan
 
   return (
     <div className="flex items-center gap-2 flex-wrap shrink-0" data-testid="cost-toolbar">
-      <TimeRangePicker value={timeRange} onChange={onTimeRangeChange} testId="cost-time" />
+      {/*
+        An unbounded range is bounded to the current UTC month on this page (`resolveCostWindow`),
+        so budgets and the chart agree on the period. The picker's default "All time" label would
+        promise the full history and quietly show one month, so it is named for what it does.
+      */}
+      <TimeRangePicker
+        value={timeRange}
+        onChange={onTimeRangeChange}
+        testId="cost-time"
+        unboundedLabel={t`This month`}
+      />
 
       {/*
         h-9 matches TimeRangePicker's trigger height. Without it the control sizes itself from its

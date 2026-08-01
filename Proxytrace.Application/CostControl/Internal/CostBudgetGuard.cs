@@ -124,9 +124,12 @@ internal sealed class CostBudgetGuard : BackgroundService
                     .ToDictionary(g => g.Key, g => g.Sum(s => s.CostEur))
                 : [];
 
-            IReadOnlyList<ICostLimitBreach> existing = await breaches.GetForMonthAsync(monthStart, cancellationToken);
+            // Cross-tenant on purpose: one tick evaluates every project's limits, so it wants every
+            // project's already-fired thresholds.
+            IReadOnlyList<FiredThreshold> existing =
+                await breaches.GetFiredThresholdsAsync(monthStart, cancellationToken: cancellationToken);
             HashSet<(Guid LimitId, CostThreshold Threshold)> fired = existing
-                .Select(b => (b.CostLimit.Id, b.Threshold))
+                .Select(b => (b.CostLimitId, b.Threshold))
                 .ToHashSet();
 
             foreach (ICostLimit limit in limits)

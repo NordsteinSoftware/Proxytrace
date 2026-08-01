@@ -64,4 +64,56 @@ public static class StatisticsTime
         if (span <= TimeSpan.FromDays(2)) return StatisticsBucket.Hourly;
         return StatisticsBucket.Daily;
     }
+
+    /// <summary>Coarsest-first order, so coarsening is a walk to the right of the requested value.</summary>
+    private static readonly StatisticsBucket[] FineToCoarse =
+        [StatisticsBucket.FiveMinutes, StatisticsBucket.Hourly, StatisticsBucket.Daily];
+
+    /// <summary>
+    /// The finest bucket **no finer than <paramref name="bucket"/>** whose grid over
+    /// <paramref name="from"/>..<paramref name="to"/> fits in <paramref name="maxBuckets"/> cells.
+    /// </summary>
+    /// <remarks>
+    /// A caller that renders at most N buckets should not be sent more: the extra rows are
+    /// aggregated, serialized, transferred and then discarded. Unlike <see cref="ForWindow"/> this
+    /// never *refines* — an explicitly chosen granularity is honoured whenever it fits — and it
+    /// returns the coarsest available bucket when even that overflows, which is the closest a
+    /// caller can get to the request.
+    /// </remarks>
+    public static StatisticsBucket CoarsenToFit(
+        this StatisticsBucket bucket,
+        DateTimeOffset from,
+        DateTimeOffset to,
+        int maxBuckets)
+    {
+        if (maxBuckets <= 0 || to <= from)
+            return bucket;
+
+        int start = Array.IndexOf(FineToCoarse, bucket);
+        if (start < 0)
+            return bucket;
+
+        for (int i = start; i < FineToCoarse.Length; i++)
+        {
+            if (BucketCount(FineToCoarse[i], from, to) <= maxBuckets)
+                return FineToCoarse[i];
+        }
+
+        return FineToCoarse[^1];
+    }
+
+    /// <summary>
+    /// Cells on the UTC-aligned grid spanned by the window — the inclusive count of bucket starts,
+    /// matching the dense axis the client builds from the same two instants.
+    /// </summary>
+    public static long BucketCount(this StatisticsBucket bucket, DateTimeOffset from, DateTimeOffset to)
+    {
+        if (to < from)
+            return 0;
+
+        double width = bucket.WidthMilliseconds();
+        long firstIndex = (long)Math.Floor(from.ToUniversalTime().ToUnixTimeMilliseconds() / width);
+        long lastIndex = (long)Math.Floor(to.ToUniversalTime().ToUnixTimeMilliseconds() / width);
+        return lastIndex - firstIndex + 1;
+    }
 }

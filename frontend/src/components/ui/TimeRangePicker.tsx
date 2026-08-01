@@ -24,6 +24,12 @@ interface TimeRangePickerProps {
   onChange: (range: TimeRange) => void;
   /** Prefix for the component's data-testid hooks (e.g. "error-log-time", "traces-time"). */
   testId?: string;
+  /**
+   * Overrides the trigger label for the unbounded range. Pass this when the page does **not** query
+   * all of history for it — the Costs page bounds an unbounded range to the current UTC month, and
+   * a trigger reading "All time" would be telling the user something untrue.
+   */
+  unboundedLabel?: string;
 }
 
 interface Draft {
@@ -46,7 +52,12 @@ function seedDraft(value: TimeRange): Draft {
  * From/To time-range filter for the Error Log. Combines one-click relative presets with an
  * absolute custom range, in a single popover. Pure range logic lives in `../timeRange.ts`.
  */
-export function TimeRangePicker({ value, onChange, testId = 'time-range' }: TimeRangePickerProps) {
+export function TimeRangePicker({
+  value,
+  onChange,
+  testId = 'time-range',
+  unboundedLabel,
+}: TimeRangePickerProps) {
   const { t, i18n } = useLingui();
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<Draft>(() => seedDraft(value));
@@ -93,7 +104,7 @@ export function TimeRangePicker({ value, onChange, testId = 'time-range' }: Time
       className={cn('h-9 font-medium', active && 'text-primary border-accent/60')}
       data-testid={`${testId}-trigger`}
     >
-      {formatRangeLabel(value, i18n)}
+      {value.kind === 'all' && unboundedLabel ? unboundedLabel : formatRangeLabel(value, i18n)}
     </Button>
   );
 

@@ -140,11 +140,15 @@ public class StatisticsController : ControllerBase
     }
 
     /// <summary>
-    /// The Costs page payload for one project: month-to-date and previous-month spend, the
-    /// per-agent cost series and totals over the requested window, and the project's budgets joined
-    /// with this month's breach state. Free for every project member — only *changing* a budget is
-    /// licensed.
+    /// The Costs page's spend telemetry for one project: month-to-date and previous-month spend,
+    /// and the per-agent and per-key cost series and totals over the requested window. Free for
+    /// every project member.
     /// </summary>
+    /// <remarks>
+    /// Budget state is <b>not</b> part of this payload — it is
+    /// <c>GET /api/cost-limits/status</c>. This one costs seven aggregate scans of the trace table;
+    /// the budget list costs one or two and is what a budget edit invalidates.
+    /// </remarks>
     [HttpGet("cost-overview")]
     public async Task<ActionResult<CostOverviewDto>> GetCostOverview(
         [FromQuery] Guid projectId,
@@ -177,14 +181,10 @@ public class StatisticsController : ControllerBase
                 .Select(p => new ApiKeyCostPointDto(p.BucketStart, p.ApiKeyId, p.CostEur)).ToArray(),
             ApiKeyTotals: overview.ApiKeyTotals
                 .Select(t => new ApiKeyCostTotalDto(t.ApiKeyId, t.ApiKeyName, t.KeyPrefix, t.CostEur)).ToArray(),
-            Budgets: overview.Budgets
-                .Select(b => new CostBudgetStatusDto(
-                    b.CostLimitId, b.AgentId, b.AgentName, b.ApiKeyId, b.ApiKeyName,
-                    b.SoftLimitEur, b.HardLimitEur,
-                    b.Enabled, b.MonthToDateSpendEur, b.SoftBreached, b.HardBreached))
-                .ToArray(),
             HasUnpricedEndpoints: overview.HasUnpricedEndpoints,
-            Bucket: bucket switch
+            // The *effective* bucket, not the requested one: a fine bucket over a wide window is
+            // coarsened server-side, and the client densifies against whatever came back.
+            Bucket: overview.Bucket switch
             {
                 StatisticsBucket.FiveMinutes => "fiveMinutes",
                 StatisticsBucket.Hourly => "hourly",

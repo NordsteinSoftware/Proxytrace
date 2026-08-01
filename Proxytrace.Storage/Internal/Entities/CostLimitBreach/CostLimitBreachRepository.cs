@@ -22,17 +22,35 @@ internal class CostLimitBreachRepository
     {
     }
 
-    public async Task<IReadOnlyList<ICostLimitBreach>> GetForMonthAsync(
+    public async Task<IReadOnlyList<FiredThreshold>> GetFiredThresholdsAsync(
         DateTimeOffset monthStart,
+        Guid? projectId = null,
         CancellationToken cancellationToken = default)
     {
-        var stored = await contextFactory()
-            .Set<CostLimitBreachEntity>()
-            .AsNoTracking()
-            .Where(e => e.MonthStart == monthStart)
-            .ToListAsync(cancellationToken);
+        // Scalar projection only — no domain mapping, for the same reason as
+        // GetActiveHardBlocksAsync below: Map resolves the full ICostLimit per row, and
+        // CostLimitEntity is not cacheable, so mapping N breaches meant N serial round trips to
+        // recover an id the projection already carries.
+        var context = contextFactory();
 
-        return await Map(stored, cancellationToken);
+        IQueryable<CostLimitBreachEntity> month = context.Set<CostLimitBreachEntity>()
+            .AsNoTracking()
+            .Where(b => b.MonthStart == monthStart);
+
+        // The project filter is a join rather than a column on the breach: the tenant lives on the
+        // limit. Unscoped is the guard's cross-tenant read and nothing else.
+        IQueryable<FiredThreshold> query = projectId is { } scopedProjectId
+            ? month
+                .Join(
+                    context.Set<Entities.CostLimit.CostLimitEntity>().AsNoTracking(),
+                    b => b.CostLimit,
+                    l => l.Id,
+                    (b, l) => new { Breach = b, Limit = l })
+                .Where(x => x.Limit.Project == scopedProjectId)
+                .Select(x => new FiredThreshold(x.Breach.CostLimit, x.Breach.Threshold))
+            : month.Select(b => new FiredThreshold(b.CostLimit, b.Threshold));
+
+        return await query.ToListAsync(cancellationToken);
     }
 
     public async Task DeleteForLimitAsync(Guid costLimitId, CancellationToken cancellationToken = default)

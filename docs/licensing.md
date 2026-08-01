@@ -142,7 +142,8 @@ JWT carries one extra claim, `offline` (a JSON boolean), and the server emits it
   accepted consequence: a revoked-but-unexpired license keeps blocking active in the proxy until it
   expires or the stored key is removed.
 - **`CostControls`** (Enterprise) gates **changing** a monthly cost budget, not seeing one. The Costs
-  page, `GET /api/statistics/cost-overview` and `GET /api/cost-limits` are ungated so the page reads
+  page, `GET /api/statistics/cost-overview`, `GET /api/cost-limits` and
+  `GET /api/cost-limits/status` are ungated so the page reads
   identically on every tier; only `POST`/`PUT`/`DELETE /api/cost-limits` carry
   `[RequiresFeature(LicenseFeature.CostControls)]` (**402**) on top of the `Admin` role. At use time
   both enforcement paths degrade: `CostBudgetGuard` returns early and `CachedBudgetBlockProvider`

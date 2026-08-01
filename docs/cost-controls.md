@@ -116,6 +116,40 @@ the rows the guard reads every tick for two figures each wanted on its own.
 grouping by the *nullable* `ApiKeyId` does not push the aggregate client-side — and `perf/` measures
 them (`statsCostByAgent`, `statsCostSeriesByAgent`, `statsCostByApiKey`, `statsCostSeriesByApiKey`).
 
+### Telemetry and budget status are two reads, not one
+
+`ICostStatistics` exposes them separately because they cost wildly different amounts and change for
+wildly different reasons:
+
+| Read | Endpoint | Aggregate scans | Invalidated by |
+|---|---|---|---|
+| `GetCostOverviewAsync` | `GET /api/statistics/cost-overview` | 7 | the window/bucket changing |
+| `GetBudgetStatusAsync` | `GET /api/cost-limits/status?projectId=` | 1–2, **0** with no budgets | any budget create/edit/delete |
+
+Folding the budget list into the overview meant a change to one ~200-byte configuration row
+re-derived a payload that was ~90% telemetry (#491). The budget read needs only the month-to-date
+per-agent aggregate, the per-key one **when a key-scoped limit exists** (the same conditional the
+guard uses), and the month's fired thresholds.
+
+`CostOverview.Bucket` reports the granularity the series was *actually* aggregated at:
+`StatisticsTime.CoarsenToFit` widens the requested bucket until the window fits
+`CostStatistics.MaxSeriesBuckets` (400, mirroring `MAX_BUCKETS` in `costSeries.ts`). It only ever
+coarsens — an explicit choice that fits is honoured — so the wire never carries cells the chart is
+guaranteed to discard: a month at the 5-minute bucket is 8,640 of them to draw 400 bars (#493).
+
+### Breach state is read as a scalar
+
+`ICostLimitBreachRepository.GetFiredThresholdsAsync(monthStart, projectId?)` returns
+`FiredThreshold(CostLimitId, Threshold)` — the only two fields either caller ever reads. It is
+deliberately **not** a mapped `ICostLimitBreach`: mapping resolves the full `ICostLimit` per row and
+`CostLimitEntity` is not `[Cacheable]`, so it cost one serial round trip per fired threshold to
+recover an id the caller already had (#492). Same reasoning, and same shape, as
+`GetActiveHardBlocksAsync`.
+
+`projectId` is optional and the distinction is load-bearing: the Costs page passes it (another
+tenant's threshold crossings are neither its business nor its cost), the guard omits it because one
+tick evaluates every project.
+
 ### Key attribution on the trace
 
 `AgentCallEntity.ApiKeyId` is a nullable `uuid` with **no FK and no index**, both deliberate:
@@ -204,24 +238,32 @@ scope free", and `LimitEditor` seeds its scope once when it opens, so a click la
 rather than looked up in the roster. The roster excludes budgeted agents, so a lookup could not
 resolve the value being edited — which is how the picker once rendered a raw `agent:<uuid>`.
 
-**Mutations patch the cached overview before invalidating it** (`budgetPatch.ts`,
-`useCostLimits.ts`). The meters render from `overview.budgets`, and one overview refetch is eight
-aggregate scans of `AgentCallEntity` (see `GetCostOverviewAsync` above) — waiting on it for a change
-to one configuration row left the list visibly unchanged for seconds. `upsertBudget`/`dropBudget`
-are applied to **every** cached window (each embeds the same `budgets` array), then the broad
-`costOverviewRoot` invalidation still runs and reconciles in the background.
+**Mutations patch the cached budget status before invalidating it** (`budgetPatch.ts`,
+`useCostLimits.ts`). The meters render from `useBudgetStatus()`, and `upsertBudget`/`dropBudget`
+fold the saved limit into that cached list so the row moves in the same tick as the toast — a
+dialog closing, a success toast and an unchanged list is a response indistinguishable from "nothing
+happened". The patch runs *before* the invalidation, since `refetchQueries` cancels an in-flight
+request and a response already on the wire must not land on top of the optimistic row.
 
-A created budget's month-to-date spend is only known exactly when the cached window *is* the current
-month (`isMonthToDateWindow`) — except for the project scope, whose figure the API derives from the
-month regardless of the window. When it cannot be known, `BudgetRow.monthToDateSpendEur` is **null**
-and the meter renders a `measuring` state. A fabricated €0 would read as "the full limit is still
-available" for a scope that may already be over it.
+The **cost overview is not touched by a budget mutation at all** any more. That is the point of the
+split above: the telemetry does not depend on which budgets exist.
+
+A created budget's `monthToDateSpendEur` is left **null** — the meter's `measuring` state — until
+the status refetch measures it. That is one cheap round trip, so nothing is gained by guessing, and
+a fabricated €0 would read as "the full limit is still available" for a scope that may already be
+over it. (The old code derived it from the charted window when that window happened to be the
+calendar month; the read is now cheap enough that the special case earns nothing.)
+
+**The window picker says "This month", not "All time"** (`CostToolbar`, via the picker's
+`unboundedLabel` prop). An unbounded range is bounded to the current UTC month here
+(`resolveCostWindow`) so budgets and chart agree on the period — deliberate, but a trigger reading
+"All time" promised the full history and quietly showed one month (#493).
 
 ## Licensing and permissions
 
 | Surface | Gate |
 |---|---|
-| Costs page, `GET /api/statistics/cost-overview`, `GET /api/cost-limits` | free, any project member |
+| Costs page, `GET /api/statistics/cost-overview`, `GET /api/cost-limits`, `GET /api/cost-limits/status` | free, any project member |
 | `POST`/`PUT`/`DELETE /api/cost-limits` | `Admin` role **and** `RequiresFeature(CostControls)` (402) |
 | The guard and the proxy block | degrade silently when unlicensed |
 

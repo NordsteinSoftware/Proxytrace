@@ -37,15 +37,27 @@ public record CostBudgetStatus(
     bool HardBreached);
 
 /// <summary>
-/// The whole Costs page in one payload: month-to-date and prior-month totals for the management
-/// summary, the per-agent series and totals for the window the user selected, and the budget
-/// states.
+/// The Costs page's spend telemetry: month-to-date and prior-month totals for the management
+/// summary, plus the per-agent and per-key series and totals for the window the user selected.
 /// </summary>
 /// <remarks>
+/// <para>
+/// Budget state is deliberately <b>not</b> here — it is its own read
+/// (<see cref="ICostStatistics.GetBudgetStatusAsync"/>). This payload costs seven aggregate scans
+/// of the highest-volume table; the budget list costs one or two, and it is the part that has to
+/// react to a click. Folding them together made every budget edit re-derive the whole page.
+/// </para>
+/// <para>
 /// <see cref="HasUnpricedEndpoints"/> reports that some traffic in the window ran on an endpoint
 /// with no configured price. Those calls contribute nothing to any figure here, so the page must
 /// present the numbers as an incomplete estimate rather than a total.
+/// </para>
 /// </remarks>
+/// <param name="Bucket">
+/// The granularity the series was actually aggregated at, which is the requested one coarsened when
+/// the window would otherwise produce more buckets than the chart renders. The client must label
+/// and densify against this, not against what it asked for.
+/// </param>
 public record CostOverview(
     decimal MonthToDateSpendEur,
     decimal PreviousMonthSpendEur,
@@ -53,5 +65,5 @@ public record CostOverview(
     IReadOnlyList<AgentCostTotal> AgentTotals,
     IReadOnlyList<ApiKeyCostPoint> ApiKeySeries,
     IReadOnlyList<ApiKeyCostTotal> ApiKeyTotals,
-    IReadOnlyList<CostBudgetStatus> Budgets,
-    bool HasUnpricedEndpoints);
+    bool HasUnpricedEndpoints,
+    StatisticsBucket Bucket);
