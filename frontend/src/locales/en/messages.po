@@ -3168,9 +3168,6 @@ msgstr "My judge"
 msgid "My regression suite"
 msgstr "My regression suite"
 
-msgid "N"
-msgstr "N"
-
 msgid "Name"
 msgstr "Name"
 

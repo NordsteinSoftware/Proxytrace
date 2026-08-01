@@ -1,6 +1,6 @@
 import { msg } from '@lingui/core/macro';
 import type { MessageDescriptor } from '@lingui/core';
-import type { AgentCallDto, MessageDto } from '../../api/models';
+import type { AgentCallDto, MessageDto, ModelParametersDto } from '../../api/models';
 
 // ─── Right rail section types ────────────────────────────────────────────────
 export type SectionKey = 'system' | 'parameters' | 'tools';
@@ -10,7 +10,7 @@ export const SECTION_TITLES: Record<SectionKey, MessageDescriptor> = {
   parameters: msg`Parameters`,
   tools: msg`Tools`,
 };
-import type { PlaygroundMessagePayload } from '../../api/playground';
+import type { PlaygroundMessagePayload, PlaygroundParametersPayload } from '../../api/playground';
 import { makeMessage } from './state/usePlaygroundSession';
 import type { PlaygroundMessage, PlaygroundRole, PlaygroundToolRequest } from './state/types';
 
@@ -32,6 +32,28 @@ export function agentCallToMessages(call: AgentCallDto): PlaygroundMessage[] {
   const out: PlaygroundMessage[] = call.request.map(toMsg);
   if (call.response) out.push(toMsg(call.response));
   return out;
+}
+
+/**
+ * Drops choice count (`n`) from the session's parameters on the way out.
+ *
+ * The session seeds its parameters from the agent's stored ones, which share the shape used for a
+ * captured trace and so can still carry an `n`. The playground has no way to render more than one
+ * completion (see {@link PlaygroundParametersPayload}), so the value is not forwarded.
+ */
+export function toPayloadParameters(p: ModelParametersDto): PlaygroundParametersPayload {
+  // Listed rather than spread-minus-`n`, so a field added to the shared shape has to be opted into
+  // the playground request deliberately instead of leaking into it.
+  return {
+    temperature: p.temperature,
+    topP: p.topP,
+    reasoningEffort: p.reasoningEffort,
+    frequencyPenalty: p.frequencyPenalty,
+    presencePenalty: p.presencePenalty,
+    maxTokens: p.maxTokens,
+    seed: p.seed,
+    stop: p.stop,
+  };
 }
 
 export function toPayloadMessage(m: PlaygroundMessage): PlaygroundMessagePayload {
