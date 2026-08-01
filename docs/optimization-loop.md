@@ -80,11 +80,21 @@ which the `Microsoft.Extensions.AI` OpenAI adapter **silently discards** — so 
 without a first-class `ChatOptions` member ever reached a provider, and the playground's
 Reasoning-effort control did nothing at all. It now travels via
 `ChatOptions.RawRepresentationFactory` onto the OpenAI SDK's own options type, which the adapter
-starts from and only partially overwrites. Choice count (`n`) has no public member there and is
-still dropped — tracked in [#496](https://github.com/SyntaktikEU/Proxytrace/issues/496). Assert
-this kind of thing against the **outgoing request body**, not against `ChatOptions`: a test that
-reads the mapping cannot tell "the provider was told" from "a dictionary was filled and thrown
-away", which is exactly how this survived.
+starts from and only partially overwrites. Assert this kind of thing against the **outgoing request
+body**, not against `ChatOptions`: a test that reads the mapping cannot tell "the provider was told"
+from "a dictionary was filled and thrown away", which is exactly how this survived. Nothing may be
+routed through `AdditionalProperties` at all — `ToChatOptions_WithSamplingParameters_PutsThemOnThe-
+Wire` reads the bytes for every sampling override.
+
+Choice count (`n`) is the one control that was **removed** rather than repaired
+([#496](https://github.com/SyntaktikEU/Proxytrace/issues/496)). It can be put on the wire — the
+OpenAI SDK's `JsonPatch` escape hatch reaches fields it exposes no property for — but nothing
+downstream can use the answer: `StreamingChatCompletionUpdate` carries **no choice index**, so every
+completion's tokens arrive flattened into one indistinguishable stream. Sending an `n` would bill
+for N completions and render them interleaved into a single garbled playground message, which is a
+worse bug than the silent drop it replaced. `ModelSamplingParameters` therefore has no choice-count
+member and the playground offers no such control. Rendering N completions properly is a feature
+(a per-choice channel through `ModelStreamUpdate`, the SSE frames, and the UI), not a mapping fix.
 
 **An errored evaluator is not a failing case.** `TestResultExtensions.IsPass` — the canonical verdict,
 mirrored in the frontend by `lib/runResults.ts` — passes a result when at least one evaluation

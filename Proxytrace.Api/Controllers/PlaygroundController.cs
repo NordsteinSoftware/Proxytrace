@@ -125,8 +125,7 @@ public class PlaygroundController : ControllerBase
             dto.Parameters.PresencePenalty,
             dto.Parameters.MaxTokens,
             dto.Parameters.Seed,
-            dto.Parameters.Stop,
-            dto.Parameters.N),
+            dto.Parameters.Stop),
         dto.Tools.Select(t => new PlaygroundToolSpecification(
             t.Name,
             t.Description,

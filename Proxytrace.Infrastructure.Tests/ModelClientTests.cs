@@ -420,11 +420,16 @@ public sealed class ModelClientTests : BaseTest<Module>
     }
 
     [TestMethod]
-    public async Task CompleteAsync_WithSamplingParameters_SendsThemToTheProvider()
+    public async Task CompleteAsync_WithSamplingParameters_MapsThemOntoChatOptions()
     {
         // The playground offers these controls and mapped them all the way to its request DTO — and
         // then dropped them, because ModelOptions had nowhere to put them. Changing temperature did
         // nothing at all, with no error and no indication.
+        //
+        // This proves only the mapping. That a mapped value actually leaves the process is a
+        // separate question and a separate test — see ToChatOptions_WithSamplingParameters_PutsThem-
+        // OnTheWire. Conflating the two is what let a silently-dropped parameter survive under a
+        // test named "..._SendsThemToTheProvider".
         ChatOptions? capturedOptions = null;
 
         IChatClient chatClient = Substitute.For<IChatClient>();
@@ -448,8 +453,7 @@ public sealed class ModelClientTests : BaseTest<Module>
             MaxOutputTokens: 512,
             Seed: 42,
             StopSequences: ["END"],
-            ReasoningEffort: "high",
-            ChoiceCount: 2);
+            ReasoningEffort: "high");
 
         var client = services.GetRequiredService<IModelClient>();
         await client.CompleteAsync(
@@ -465,12 +469,98 @@ public sealed class ModelClientTests : BaseTest<Module>
         capturedOptions?.MaxOutputTokens.Should().Be(512);
         capturedOptions?.Seed.Should().Be(42);
         capturedOptions?.StopSequences.Should().ContainSingle().Which.Should().Be("END");
-        capturedOptions?.AdditionalProperties?["n"].Should().Be(2);
         // Reasoning effort rides on the provider's own options type, not the dictionary — asserting
         // it here would only prove we filled a dictionary the OpenAI adapter throws away. The test
         // that it actually reaches the provider reads the outgoing request body; see
         // ToChatOptions_WithReasoningEffort_PutsItOnTheWire.
         capturedOptions?.RawRepresentationFactory.Should().NotBeNull();
+        // Nothing may travel in AdditionalProperties: the OpenAI adapter discards that dictionary,
+        // so anything routed through it is dropped in-process with no error.
+        capturedOptions?.AdditionalProperties.Should().BeNull();
+    }
+
+    [TestMethod]
+    public async Task ToChatOptions_WithSamplingParameters_PutsThemOnTheWire()
+    {
+        // Reads the bytes that leave the process for *every* sampling override, not just the one
+        // that was once broken. Asserting on the ChatOptions mapping cannot distinguish "the
+        // provider was told" from "a value was written somewhere the adapter throws away", and
+        // that gap is exactly how a dropped parameter went unnoticed behind a green test.
+        var handler = new CapturingHandler();
+        OpenAIClientOptions clientOptions = ModelClient.BuildClientOptions(MakeEndpoint());
+        clientOptions.Transport = new HttpClientPipelineTransport(new HttpClient(handler));
+
+        using IChatClient chatClient = new OpenAIClient(new ApiKeyCredential("sk-test"), clientOptions)
+            .GetChatClient("gpt-5")
+            .AsIChatClient();
+
+        var sampling = new ModelSamplingParameters(
+            Temperature: 0.25,
+            TopP: 0.9,
+            FrequencyPenalty: 0.5,
+            PresencePenalty: 0.75,
+            MaxOutputTokens: 512,
+            Seed: 42,
+            StopSequences: ["END"],
+            ReasoningEffort: "high");
+
+        await chatClient.GetResponseAsync(
+            [new ChatMessage(ChatRole.User, "Hello")],
+            new ModelOptions("gpt-5", [], sampling).ToChatOptions(),
+            CancellationToken);
+
+        handler.RequestBody.Should().NotBeNull();
+        JsonElement body = JsonDocument.Parse(handler.RequestBody!).RootElement;
+
+        body.GetProperty("temperature").GetDouble().Should().BeApproximately(0.25, 0.0001);
+        body.GetProperty("top_p").GetDouble().Should().BeApproximately(0.9, 0.0001);
+        body.GetProperty("frequency_penalty").GetDouble().Should().BeApproximately(0.5, 0.0001);
+        body.GetProperty("presence_penalty").GetDouble().Should().BeApproximately(0.75, 0.0001);
+        body.GetProperty("seed").GetInt64().Should().Be(42);
+        body.GetProperty("reasoning_effort").GetString().Should().Be("high");
+        body.GetProperty("stop").EnumerateArray().Select(e => e.GetString()).Should().ContainSingle()
+            .Which.Should().Be("END");
+        MaxTokensOf(body).Should().Be(512);
+    }
+
+    [TestMethod]
+    public async Task ToChatOptions_NeverAsksForMoreThanOneChoice()
+    {
+        // Regression for #496. Choice count *can* be put on the wire — the OpenAI SDK's JsonPatch
+        // escape hatch reaches fields it exposes no property for — but nothing downstream could use
+        // the answer: StreamingChatCompletionUpdate carries no choice index, so every completion's
+        // tokens arrive flattened into one indistinguishable stream. Sending an `n` would bill for N
+        // completions and render them interleaved into a single garbled message, so no sampling
+        // override may produce one.
+        var handler = new CapturingHandler();
+        OpenAIClientOptions clientOptions = ModelClient.BuildClientOptions(MakeEndpoint());
+        clientOptions.Transport = new HttpClientPipelineTransport(new HttpClient(handler));
+
+        using IChatClient chatClient = new OpenAIClient(new ApiKeyCredential("sk-test"), clientOptions)
+            .GetChatClient("gpt-5")
+            .AsIChatClient();
+
+        var sampling = new ModelSamplingParameters(Temperature: 0.5, ReasoningEffort: "high");
+
+        await chatClient.GetResponseAsync(
+            [new ChatMessage(ChatRole.User, "Hello")],
+            new ModelOptions("gpt-5", [], sampling).ToChatOptions(),
+            CancellationToken);
+
+        handler.RequestBody.Should().NotBeNull();
+        JsonDocument.Parse(handler.RequestBody!).RootElement
+            .TryGetProperty("n", out _).Should().BeFalse();
+    }
+
+    /// <summary>
+    /// Reads the output-token cap under whichever name the SDK currently emits: the OpenAI adapter
+    /// switched <c>max_tokens</c> to <c>max_completion_tokens</c>, and the assertion is about the
+    /// cap reaching the provider, not about which spelling this SDK version chose.
+    /// </summary>
+    private static int? MaxTokensOf(JsonElement body)
+    {
+        if (body.TryGetProperty("max_completion_tokens", out var newName)) return newName.GetInt32();
+        return body.TryGetProperty("max_tokens", out var oldName) ? oldName.GetInt32() : null;
     }
 
     [TestMethod]

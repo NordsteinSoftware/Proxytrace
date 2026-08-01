@@ -175,6 +175,11 @@ internal sealed class PlaygroundService : IPlaygroundService
     /// <remarks>
     /// A blank stop-sequence list is normalised to <see langword="null"/> so an untouched control
     /// sends nothing at all rather than an empty array the provider then has to interpret.
+    /// <para>
+    /// Choice count (<c>n</c>) is not mapped and is no longer offered: the playground streams into a
+    /// single message, and the OpenAI stream carries no choice index, so more than one completion
+    /// would arrive interleaved and unattributable while billing for all of them. See issue #496.
+    /// </para>
     /// </remarks>
     private static ModelSamplingParameters ToSampling(PlaygroundModelParameters parameters)
         => new(
@@ -185,8 +190,7 @@ internal sealed class PlaygroundService : IPlaygroundService
             MaxOutputTokens: parameters.MaxTokens,
             Seed: parameters.Seed,
             StopSequences: parameters.Stop is { Count: > 0 } stop ? stop : null,
-            ReasoningEffort: string.IsNullOrWhiteSpace(parameters.ReasoningEffort) ? null : parameters.ReasoningEffort,
-            ChoiceCount: parameters.N);
+            ReasoningEffort: string.IsNullOrWhiteSpace(parameters.ReasoningEffort) ? null : parameters.ReasoningEffort);
 
     private static IReadOnlyList<ToolSpecification> ResolveTools(
         IReadOnlyList<ToolSpecification> agentTools,

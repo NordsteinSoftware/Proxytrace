@@ -99,6 +99,20 @@ follow [Semantic Versioning](https://semver.org). Ongoing work is collected unde
   read in a single query, so the cost grows with your own budgets rather than with the whole
   install's.
 
+### Removed
+
+- **The playground's N (choice count) box is gone.** It never reached the provider: the value was
+  written into a dictionary the OpenAI adapter discards, so setting it did nothing at all — no
+  error, no indication, one completion. Sending it properly turned out to be the wrong fix rather
+  than the missing one. The playground streams into a single message and the stream carries no
+  marker saying which completion a token belongs to, so asking for three would have billed for
+  three and rendered them shuffled together into one unreadable answer. A control that does nothing
+  is bad; one that quietly triples the bill and garbles the output is worse, so the box was removed
+  instead. Every other parameter in that panel — temperature, top-P, penalties, max tokens, seed,
+  stop sequences, reasoning effort — is unaffected, and each is now covered by a test that reads the
+  request actually sent rather than the settings object behind it. Choice count observed on a
+  captured trace is still shown as before; only the playground's own control is affected.
+
 ## [1.10.0] - 2026-07-30
 
 ### Added

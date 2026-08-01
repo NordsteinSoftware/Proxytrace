@@ -1,6 +1,10 @@
 /**
  * Sampling / budget controls section of the RightRailDrawer: parameter sliders,
- * numeric max-tokens/seed/n inputs, and the reasoning-effort control.
+ * numeric max-tokens/seed inputs, and the reasoning-effort control.
+ *
+ * There is no choice-count (`n`) input. The playground streams into one message and the OpenAI
+ * stream carries no choice index, so asking for several completions returns them interleaved and
+ * unattributable while billing for all of them — see issue #496.
  */
 import { Trans, useLingui } from '@lingui/react/macro';
 import { Input } from '../../../components/ui/Input';
@@ -63,7 +67,7 @@ export function ParametersSection({
         onChange={v => setParam('presencePenalty', v)}
       />
 
-      <div className="grid grid-cols-3 gap-1.5">
+      <div className="grid grid-cols-2 gap-1.5">
         <label className="flex flex-col gap-0.5">
           <span className="text-caption text-secondary uppercase tracking-[0.06em] font-semibold"><Trans>Max tokens</Trans></span>
           <Input
@@ -80,15 +84,6 @@ export function ParametersSection({
             value={overrides.parameters.seed ?? ''}
             placeholder="—"
             onChange={e => setParamRaw('seed', e.target.value)}
-          />
-        </label>
-        <label className="flex flex-col gap-0.5">
-          <span className="text-caption text-secondary uppercase tracking-[0.06em] font-semibold"><Trans>N</Trans></span>
-          <Input
-            type="number" min={1} step={1}
-            value={overrides.parameters.n ?? ''}
-            placeholder="—"
-            onChange={e => setParamRaw('n', e.target.value)}
           />
         </label>
       </div>

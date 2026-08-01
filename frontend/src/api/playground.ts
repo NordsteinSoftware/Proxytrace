@@ -24,11 +24,22 @@ export interface PlaygroundMessagePayload {
   toolError: string | null;
 }
 
+/**
+ * The sampling parameters the playground actually sends.
+ *
+ * Choice count (`n`) is excluded from the shared {@link ModelParametersDto}: that shape also
+ * describes the parameters *observed* on a captured trace, where an `n` the caller really sent is
+ * legitimate data — but the playground cannot send one. It streams into a single message and the
+ * OpenAI stream carries no choice index, so several completions arrive interleaved and
+ * unattributable while billing for all of them. See issue #496.
+ */
+export type PlaygroundParametersPayload = Omit<ModelParametersDto, 'n'>;
+
 export interface PlaygroundCompletePayload {
   agentId: string;
   endpointId: string;
   systemPrompt: string;
-  parameters: ModelParametersDto;
+  parameters: PlaygroundParametersPayload;
   tools: PlaygroundToolPayload[];
   messages: PlaygroundMessagePayload[];
 }

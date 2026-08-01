@@ -3168,9 +3168,6 @@ msgstr "Mein Gutachter"
 msgid "My regression suite"
 msgstr "Mein Regression Suite"
 
-msgid "N"
-msgstr "N"
-
 msgid "Name"
 msgstr "Name"
 

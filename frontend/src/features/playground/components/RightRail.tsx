@@ -31,7 +31,7 @@ function paramsModified(current: ModelParametersDto, defaults: ModelParametersDt
   if (!defaults) return false;
   const keys: (keyof ModelParametersDto)[] = [
     'temperature', 'topP', 'frequencyPenalty', 'presencePenalty',
-    'maxTokens', 'seed', 'n', 'reasoningEffort',
+    'maxTokens', 'seed', 'reasoningEffort',
   ];
   return keys.some(k => (current[k] ?? null) !== (defaults[k] ?? null));
 }

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { roleFromString, agentCallToMessages, toPayloadMessage } from './playgroundMeta';
-import type { AgentCallDto, MessageDto, ToolRequestDto } from '../../api/models';
+import { roleFromString, agentCallToMessages, toPayloadMessage, toPayloadParameters } from './playgroundMeta';
+import type { AgentCallDto, MessageDto, ModelParametersDto, ToolRequestDto } from '../../api/models';
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
 
@@ -141,5 +141,29 @@ describe('toPayloadMessage', () => {
     expect(payload.toolCallId).toBe('tc1');
     expect(payload.toolSucceeded).toBe(false);
     expect(payload.toolError).toBe('timeout');
+  });
+});
+
+describe('toPayloadParameters', () => {
+  const params: ModelParametersDto = {
+    temperature: 0.4, topP: 0.9, reasoningEffort: 'high',
+    frequencyPenalty: 0.1, presencePenalty: 0.2,
+    maxTokens: 256, seed: 7, stop: ['END'], n: 3,
+  };
+
+  // Regression for #496. The session seeds its parameters from the agent's stored ones, which
+  // share the shape used for a captured trace and so can still carry an `n`. Forwarding it would
+  // bill for N completions and stream them interleaved into one garbled message, because the
+  // OpenAI stream carries no choice index to separate them by.
+  it('drops choice count so the request can never ask for more than one completion', () => {
+    expect('n' in toPayloadParameters(params)).toBe(false);
+  });
+
+  it('forwards every other parameter untouched', () => {
+    expect(toPayloadParameters(params)).toEqual({
+      temperature: 0.4, topP: 0.9, reasoningEffort: 'high',
+      frequencyPenalty: 0.1, presencePenalty: 0.2,
+      maxTokens: 256, seed: 7, stop: ['END'],
+    });
   });
 });

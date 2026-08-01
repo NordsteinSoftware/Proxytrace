@@ -16,8 +16,7 @@ public sealed record PlaygroundModelParameters(
     double? PresencePenalty,
     int? MaxTokens,
     long? Seed,
-    IReadOnlyList<string>? Stop,
-    int? N);
+    IReadOnlyList<string>? Stop);
 
 public sealed record PlaygroundToolSpecification(
     string Name,

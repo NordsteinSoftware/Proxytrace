@@ -3168,9 +3168,6 @@ msgstr "Mi evaluador"
 msgid "My regression suite"
 msgstr "Mi Suite de regresión"
 
-msgid "N"
-msgstr "N"
-
 msgid "Name"
 msgstr "Nombre"
 

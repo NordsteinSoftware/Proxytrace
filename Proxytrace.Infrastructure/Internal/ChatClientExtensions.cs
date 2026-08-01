@@ -95,6 +95,12 @@ internal static class ChatClientExtensions
     /// rather than pinning it to a value the user never chose. Reasoning effort has no first-class
     /// <see cref="ChatOptions"/> member — see <see cref="ApplyReasoningEffort"/> for how it reaches
     /// the wire.
+    /// <para>
+    /// Nothing may be routed through <see cref="ChatOptions.AdditionalProperties"/>: the OpenAI
+    /// adapter discards that dictionary wholesale, so a value put there is dropped in-process with
+    /// no error. Anything without a first-class member goes the <see cref="ApplyReasoningEffort"/>
+    /// way instead, and is covered by a test that reads the outgoing request body.
+    /// </para>
     /// </remarks>
     private static void ApplySampling(ChatOptions chatOptions, ModelSamplingParameters? sampling)
     {
@@ -112,14 +118,6 @@ internal static class ChatClientExtensions
         if (sampling.StopSequences is { Count: > 0 } stop) chatOptions.StopSequences = [.. stop];
 
         ApplyReasoningEffort(chatOptions, sampling.ReasoningEffort);
-
-        // Choice count has no public member on the OpenAI options type (ChatCompletionOptions.N is
-        // documented but not exposed), so it stays in the dictionary — where, per the remarks on
-        // ApplyReasoningEffort, it does NOT reach the provider. Tracked in issue #496.
-        if (sampling.ChoiceCount is { } choiceCount)
-        {
-            (chatOptions.AdditionalProperties ??= [])["n"] = choiceCount;
-        }
     }
 
     /// <summary>

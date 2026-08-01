@@ -137,7 +137,7 @@ public sealed class PlaygroundControllerTests : BaseTest<Module>
     private static PlaygroundCompleteRequestDto BuildRequest() => new(
         Guid.NewGuid(), Guid.NewGuid(),
         "system",
-        new PlaygroundModelParametersDto(null, null, null, null, null, null, null, null, null),
+        new PlaygroundModelParametersDto(null, null, null, null, null, null, null, null),
         [],
         []);
 

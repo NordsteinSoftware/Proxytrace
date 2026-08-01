@@ -8,7 +8,7 @@ import {
   type PlaygroundCompletePayload,
   type PlaygroundStreamEvent,
 } from '../../../api/playground';
-import { toPayloadMessage } from '../playgroundMeta';
+import { toPayloadMessage, toPayloadParameters } from '../playgroundMeta';
 import type { PlaygroundMessage, PlaygroundOverrides, PlaygroundToolRequest } from '../state/types';
 
 type SessionDispatch = ReturnType<typeof import('../state/usePlaygroundSession').usePlaygroundSession>['dispatch'];
@@ -40,7 +40,7 @@ export function usePlaygroundStream({
         agentId,
         endpointId: overrides.endpointId,
         systemPrompt: overrides.systemPrompt,
-        parameters: overrides.parameters,
+        parameters: toPayloadParameters(overrides.parameters),
         tools: overrides.tools.map(t => ({
           name: t.name,
           description: t.description,

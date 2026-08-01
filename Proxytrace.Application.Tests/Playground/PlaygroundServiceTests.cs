@@ -19,7 +19,7 @@ namespace Proxytrace.Application.Tests.Playground;
 public sealed class PlaygroundServiceTests : BaseTest<Module>
 {
     private static readonly PlaygroundModelParameters EmptyParams =
-        new(null, null, null, null, null, null, null, null, null);
+        new(null, null, null, null, null, null, null, null);
 
     private static PlaygroundCompleteRequest Request(
         Guid agentId,

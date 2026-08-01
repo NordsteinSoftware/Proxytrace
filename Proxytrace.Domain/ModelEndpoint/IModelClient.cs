@@ -41,6 +41,14 @@ public record ModelOptions(
 /// provider's own error is the honest answer, and it now actually reaches the user instead of the
 /// value being discarded locally.
 /// </para>
+/// <para>
+/// There is deliberately no choice-count (<c>n</c>) member. It can be put on the wire — the OpenAI
+/// SDK's <c>JsonPatch</c> escape hatch reaches fields it exposes no property for — but nothing
+/// downstream can use the answer: <c>StreamingChatCompletionUpdate</c> carries no choice index, so
+/// every completion's tokens arrive flattened into one indistinguishable stream. Asking for more
+/// than one completion would bill for N and render them interleaved into a single garbled message,
+/// so the parameter is not offered at all. See issue #496.
+/// </para>
 /// </remarks>
 public record ModelSamplingParameters(
     double? Temperature = null,
@@ -50,8 +58,7 @@ public record ModelSamplingParameters(
     int? MaxOutputTokens = null,
     long? Seed = null,
     IReadOnlyList<string>? StopSequences = null,
-    string? ReasoningEffort = null,
-    int? ChoiceCount = null)
+    string? ReasoningEffort = null)
 {
     /// <summary>True when no override is set, so the request carries the provider's defaults.</summary>
     public bool IsEmpty
@@ -62,8 +69,7 @@ public record ModelSamplingParameters(
            && MaxOutputTokens is null
            && Seed is null
            && (StopSequences is null || StopSequences.Count == 0)
-           && string.IsNullOrWhiteSpace(ReasoningEffort)
-           && ChoiceCount is null;
+           && string.IsNullOrWhiteSpace(ReasoningEffort);
 }
 
 public record TypedCompletion<TOutput>(TOutput? Response, TokenUsage? Usage, TimeSpan Latency);
