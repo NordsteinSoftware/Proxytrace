@@ -1,7 +1,7 @@
 # --platform=$BUILDPLATFORM: node build stages always run natively on the build host —
 # the JS bundle output is arch-independent, so multi-arch release builds avoid running
 # npm under QEMU emulation. Only the final nginx stage is per-arch (no compile there).
-FROM --platform=$BUILDPLATFORM node:24-alpine AS build
+FROM --platform=$BUILDPLATFORM node:25-alpine AS build
 ARG BUILD_CONFIGURATION=production
 # Release version baked into the bundle as __APP_VERSION__ (vite define). The SPA primarily
 # shows the backend-reported version from /api/config; this constant is the build's own stamp.
@@ -17,7 +17,7 @@ COPY manual/ /manual/
 RUN npm run build
 
 # Build the VitePress user/operator manual served at /docs.
-FROM --platform=$BUILDPLATFORM node:24-alpine AS manual
+FROM --platform=$BUILDPLATFORM node:25-alpine AS manual
 WORKDIR /manual
 COPY manual/package.json manual/package-lock.json ./
 RUN npm ci
