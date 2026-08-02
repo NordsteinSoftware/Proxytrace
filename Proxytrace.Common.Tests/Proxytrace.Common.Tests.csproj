@@ -14,7 +14,7 @@
           <PrivateAssets>all</PrivateAssets>
         </PackageReference>
         <PackageReference Include="JetBrains.Annotations" Version="2026.2.0" />
-        <PackageReference Include="MSTest" Version="4.3.2" />
+        <PackageReference Include="MSTest" Version="4.3.3" />
     </ItemGroup>
 
     <ItemGroup>
