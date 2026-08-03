@@ -2,7 +2,7 @@
 name: file-issue
 description: >-
   Capture an out-of-scope problem as a well-formed GitHub issue in the
-  SyntaktikEU/Proxytrace repo, then return to the task at hand. Use this the
+  NordsteinSoftware/Proxytrace repo, then return to the task at hand. Use this the
   moment you notice something broken or smelly that is NOT part of what you were
   asked to do and that you would otherwise silently work around or let slide —
   a latent bug, an unrelated failing/flaky test, dead or duplicated code, a
@@ -28,9 +28,9 @@ good. The third option is to spend ~30 seconds writing it down as a GitHub issue
 so someone — maybe you, later — can pick it up with full context. That's what
 this skill is for.
 
-The repo is **`SyntaktikEU/Proxytrace`** (public). `gh` is authenticated; run
+The repo is **`NordsteinSoftware/Proxytrace`** (public). `gh` is authenticated; run
 `gh` commands from inside the repo so the right repo is inferred, or pass
-`-R SyntaktikEU/Proxytrace` explicitly.
+`-R NordsteinSoftware/Proxytrace` explicitly.
 
 ## When to file (and when not to)
 

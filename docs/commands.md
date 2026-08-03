@@ -124,7 +124,7 @@ current latest) still depends on `vite ^5.4.14`, and every Vite at or below **6.
 [GHSA-fx2h-pf6j-xcff](https://github.com/advisories/GHSA-fx2h-pf6j-xcff) (path traversal in the dev
 server's optimized-deps `.map` handling) plus two moderate advisories and the transitive esbuild one
 — so `npm audit` in `manual/` reported one high and two moderates with **no automatic fix available**
-([#373](https://github.com/SyntaktikEU/Proxytrace/issues/373)). The exposure is the preview server a
+([#373](https://github.com/NordsteinSoftware/Proxytrace/issues/373)). The exposure is the preview server a
 contributor runs locally, not the shipped output (the manual builds to static HTML), but it should
 not sit there indefinitely.
 

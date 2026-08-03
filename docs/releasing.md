@@ -66,7 +66,7 @@ Propagation:
    apt install) with `APP_VERSION` injected, and pushes that one build to **both registries**
    with an identical tag set — `X.Y.Z`, `X.Y`, `X`, and `latest` (rolling tags suppressed for
    prereleases):
-   - `ghcr.io/syntaktikeu/proxytrace` — **canonical**; what `deploy/docker-compose.yml`, the
+   - `ghcr.io/nordsteinsoftware/proxytrace` — **canonical**; what `deploy/docker-compose.yml`, the
      README and the manual pin. No anonymous pull-rate limit.
    - `docker.io/proxytrace/proxytrace` — Docker Hub, for discoverability. Same digests (one
      build, two push targets). A final `peter-evans/dockerhub-description` step syncs
@@ -82,7 +82,7 @@ Propagation:
    the same Dockerfile and boots the container on a cold volume, so a broken release image fails
    on the PR, not on the tag.
 
-   Layer cache for this build lives in a **registry** (`ghcr.io/syntaktikeu/proxytrace-buildcache`,
+   Layer cache for this build lives in a **registry** (`ghcr.io/nordsteinsoftware/proxytrace-buildcache`,
    tag `release-allinone`), not in the Actions cache. Two `type=gha,mode=max` image builds
    previously held 8.4 GB of the repo-wide 10 GB Actions budget and LRU-evicted the .NET and npm
    caches every other job restores from. `cache-to` carries `ignore-error=true` so a registry
@@ -126,7 +126,7 @@ and cache. The in-repo copy tracks `latest`; the released zip is fully pinned. K
 from a bare directory containing only the three artifact files — it must never reference repo
 paths (which is why `frontend/nginx.conf` is baked into the image).
 
-The simpler shape — `docker run … ghcr.io/syntaktikeu/proxytrace` with the embedded database —
+The simpler shape — `docker run … ghcr.io/nordsteinsoftware/proxytrace` with the embedded database —
 needs no artifact at all; it is what the README, the website and the Hub page lead with.
 
 ## Changelog discipline

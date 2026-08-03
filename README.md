@@ -13,8 +13,8 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/SyntaktikEU/Proxytrace/releases"><img alt="Latest release" src="https://img.shields.io/github/v/release/SyntaktikEU/Proxytrace?display_name=tag&sort=semver&style=for-the-badge&logo=github&logoColor=white&label=latest&labelColor=0a0f14&color=57c4d3"></a>
-  <a href="https://github.com/SyntaktikEU/Proxytrace/actions/workflows/ci.yml"><img alt="Build status" src="https://img.shields.io/github/actions/workflow/status/SyntaktikEU/Proxytrace/ci.yml?branch=master&style=for-the-badge&logo=githubactions&logoColor=white&label=build&labelColor=0a0f14&color=5aba80"></a>
+  <a href="https://github.com/NordsteinSoftware/Proxytrace/releases"><img alt="Latest release" src="https://img.shields.io/github/v/release/NordsteinSoftware/Proxytrace?display_name=tag&sort=semver&style=for-the-badge&logo=github&logoColor=white&label=latest&labelColor=0a0f14&color=57c4d3"></a>
+  <a href="https://github.com/NordsteinSoftware/Proxytrace/actions/workflows/ci.yml"><img alt="Build status" src="https://img.shields.io/github/actions/workflow/status/NordsteinSoftware/Proxytrace/ci.yml?branch=master&style=for-the-badge&logo=githubactions&logoColor=white&label=build&labelColor=0a0f14&color=5aba80"></a>
 </p>
 
 <p align="center">
@@ -39,7 +39,7 @@ You need Docker. One container includes the web UI, API, ingestion proxy, Postgr
 docker run -d --name proxytrace \
   -p 5101:80 -p 5102:8081 \
   -v proxytrace:/data \
-  ghcr.io/syntaktikeu/proxytrace
+  ghcr.io/nordsteinsoftware/proxytrace
 ```
 
 1. Open [http://localhost:5101](http://localhost:5101).
@@ -48,7 +48,7 @@ docker run -d --name proxytrace \
 
 The `proxytrace` volume contains the database and encryption keys. Keep it when replacing or
 upgrading the container. For a production deployment with separate PostgreSQL and Redis containers,
-use the [`proxytrace.zip` release artifact](https://github.com/SyntaktikEU/Proxytrace/releases/latest)
+use the [`proxytrace.zip` release artifact](https://github.com/NordsteinSoftware/Proxytrace/releases/latest)
 and follow the [deployment guide](manual/admin/installation.md#docker-compose).
 
 ## Route your first call
@@ -126,7 +126,7 @@ A/B test that validated it.
 - [Configure the ingestion proxy](manual/guide/proxy-setup.md)
 - [Connect Claude Code, Cursor, or another MCP client](manual/guide/mcp-server.md)
 - [Install and operate Proxytrace](manual/admin/installation.md)
-- [Report a bug or request a feature](https://github.com/SyntaktikEU/Proxytrace/issues)
+- [Report a bug or request a feature](https://github.com/NordsteinSoftware/Proxytrace/issues)
 - [Read the security policy](SECURITY.md)
 
 ## License

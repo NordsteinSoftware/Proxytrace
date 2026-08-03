@@ -120,7 +120,7 @@ silent and never affect the application.
 {
   "Updates": {
     "Enabled": true,
-    "ManifestUrl": "https://api.github.com/repos/SyntaktikEU/Proxytrace/releases/latest",
+    "ManifestUrl": "https://api.github.com/repos/NordsteinSoftware/Proxytrace/releases/latest",
     "CheckIntervalHours": 24
   }
 }

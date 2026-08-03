@@ -87,7 +87,7 @@ routed through `AdditionalProperties` at all — `ToChatOptions_WithSamplingPara
 Wire` reads the bytes for every sampling override.
 
 Choice count (`n`) is the one control that was **removed** rather than repaired
-([#496](https://github.com/SyntaktikEU/Proxytrace/issues/496)). It can be put on the wire — the
+([#496](https://github.com/NordsteinSoftware/Proxytrace/issues/496)). It can be put on the wire — the
 OpenAI SDK's `JsonPatch` escape hatch reaches fields it exposes no property for — but nothing
 downstream can use the answer: `StreamingChatCompletionUpdate` carries **no choice index**, so every
 completion's tokens arrive flattened into one indistinguishable stream. Sending an `n` would bill

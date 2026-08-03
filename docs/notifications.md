@@ -220,7 +220,7 @@ ephemeral and a restart invalidates any stored ciphertext.
 
 `ISecretProtector` is a general seam. The email SMTP password is the first secret encrypted
 through it. Retrofitting at-rest encryption to **other existing secrets** is tracked as
-[GitHub issue #181](https://github.com/SyntaktikEU/Proxytrace/issues/181).
+[GitHub issue #181](https://github.com/NordsteinSoftware/Proxytrace/issues/181).
 
 ## SMTP sender
 

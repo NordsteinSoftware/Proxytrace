@@ -35,7 +35,7 @@ public sealed class UpdateCheckServiceTests : BaseTest<Module>
     public async Task CheckOnce_NewerRelease_ReportsUpdateAvailable()
     {
         var handler = new StubHandler(HttpStatusCode.OK,
-            """{"tag_name":"v1.2.0","html_url":"https://github.com/SyntaktikEU/Proxytrace/releases/tag/v1.2.0"}""");
+            """{"tag_name":"v1.2.0","html_url":"https://github.com/NordsteinSoftware/Proxytrace/releases/tag/v1.2.0"}""");
         IServiceProvider services = GetServices(builder => RegisterDependencies(builder, handler));
         var service = services.GetRequiredService<UpdateCheckService>();
 
@@ -44,7 +44,7 @@ public sealed class UpdateCheckServiceTests : BaseTest<Module>
         service.Current.UpdateAvailable.Should().BeTrue();
         service.Current.LatestVersion.Should().Be("1.2.0");
         service.Current.CurrentVersion.Should().Be("1.0.0");
-        service.Current.ReleaseUrl.Should().Be("https://github.com/SyntaktikEU/Proxytrace/releases/tag/v1.2.0");
+        service.Current.ReleaseUrl.Should().Be("https://github.com/NordsteinSoftware/Proxytrace/releases/tag/v1.2.0");
         service.Current.CheckedAt.Should().NotBeNull();
     }
 

@@ -103,7 +103,7 @@ jobs:
         uses: docker/metadata-action@v6
         with:
           images: |
-            ghcr.io/syntaktikeu/proxytrace
+            ghcr.io/nordsteinsoftware/proxytrace
             docker.io/${{ env.DOCKERHUB_USERNAME }}/proxytrace
           tags: |
             type=semver,pattern={{version}}
@@ -126,8 +126,8 @@ jobs:
           # caches every other job restores from. GHCR storage for a public package is free and
           # uncapped. Separate ref from ci.yml's: this build is multi-arch, and mixing the two
           # would have each evict the other's platform layers.
-          cache-from: type=registry,ref=ghcr.io/syntaktikeu/proxytrace-buildcache:release-allinone
-          cache-to: type=registry,ref=ghcr.io/syntaktikeu/proxytrace-buildcache:release-allinone,mode=max,ignore-error=true
+          cache-from: type=registry,ref=ghcr.io/nordsteinsoftware/proxytrace-buildcache:release-allinone
+          cache-to: type=registry,ref=ghcr.io/nordsteinsoftware/proxytrace-buildcache:release-allinone,mode=max,ignore-error=true
 
       # Keeps the Docker Hub repo page from being an empty shell: pushes a short overview +
       # the product's short description. Non-fatal — a failure here must not fail a release

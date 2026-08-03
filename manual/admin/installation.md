@@ -22,7 +22,7 @@ PostgreSQL, no Redis, no runtime to install.
 docker run -d --name proxytrace \
   -p 5101:80 -p 5102:8081 \
   -v proxytrace:/data \
-  ghcr.io/syntaktikeu/proxytrace
+  ghcr.io/nordsteinsoftware/proxytrace
 ```
 
 That's the whole install. The container starts PostgreSQL, Redis, the API, the ingestion proxy
@@ -49,7 +49,7 @@ docker run -d --name proxytrace \
   -v proxytrace:/data \
   -e PROXYTRACE_PUBLIC_URL=https://proxytrace.example.com \
   -e PROXYTRACE_PROXY_PUBLIC_URL=https://ingest.proxytrace.example.com \
-  ghcr.io/syntaktikeu/proxytrace
+  ghcr.io/nordsteinsoftware/proxytrace
 ```
 
 `PROXYTRACE_PROXY_PUBLIC_URL` is what the UI advertises to clients as their OpenAI base URL
@@ -60,14 +60,14 @@ docker run -d --name proxytrace \
 
 For production, run the same image against a PostgreSQL and a Redis container of your own, so
 the database is an independent, backup-able, separately upgradable thing. Every
-[GitHub release](https://github.com/SyntaktikEU/Proxytrace/releases) attaches a `proxytrace.zip`
+[GitHub release](https://github.com/NordsteinSoftware/Proxytrace/releases) attaches a `proxytrace.zip`
 (extracting to `proxytrace-<version>/`) with exactly that compose file — pinned to the release
 — plus an `.env` template and a quickstart README. The latest is always at
-`https://github.com/SyntaktikEU/Proxytrace/releases/latest/download/proxytrace.zip`.
+`https://github.com/NordsteinSoftware/Proxytrace/releases/latest/download/proxytrace.zip`.
 
 ```bash
 # 1. Download and unpack the deployment artifact from the latest release
-curl -fLO https://github.com/SyntaktikEU/Proxytrace/releases/latest/download/proxytrace.zip
+curl -fLO https://github.com/NordsteinSoftware/Proxytrace/releases/latest/download/proxytrace.zip
 unzip proxytrace.zip && cd proxytrace-<version>
 
 # 2. Start it — no configuration required
@@ -97,7 +97,7 @@ docker run -d --name proxytrace \
   -p 5101:80 -p 5102:8081 -v proxytrace:/data \
   -e "ConnectionStrings__Default=Host=db.internal;Port=5432;Database=proxytrace;Username=proxytrace;Password=…" \
   -e Redis__ConnectionString=redis.internal:6379 \
-  ghcr.io/syntaktikeu/proxytrace
+  ghcr.io/nordsteinsoftware/proxytrace
 ```
 
 ## What runs inside the container
@@ -124,7 +124,7 @@ tags (`X.Y.Z`, `X.Y`, `X`, `latest`), identical digests, both `linux/amd64` and 
 
 | Registry | Image | Notes |
 |---|---|---|
-| GitHub Container Registry | `ghcr.io/syntaktikeu/proxytrace` | **Default.** What the shipped compose file pins. No anonymous pull-rate limit. |
+| GitHub Container Registry | `ghcr.io/nordsteinsoftware/proxytrace` | **Default.** What the shipped compose file pins. No anonymous pull-rate limit. |
 | Docker Hub | `proxytrace/proxytrace` | Same image. Note Docker Hub rate-limits anonymous pulls per IP. |
 
 Pin the exact `X.Y.Z` tag in production; `latest` is a convenience for evaluation.
