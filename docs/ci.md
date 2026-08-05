@@ -59,7 +59,7 @@ Two separate systems, and the split matters:
 
 - **Actions cache** (`actions/setup-*`, capped at **10 GB repo-wide**, LRU-evicted): NuGet restore
   and npm. Nothing else should go here.
-- **Registry cache** (`ghcr.io/syntaktikeu/proxytrace-buildcache`, free and uncapped for a public
+- **Registry cache** (`ghcr.io/nordsteinsoftware/proxytrace-buildcache`, free and uncapped for a public
   package): every Docker layer cache.
 
 The split exists because it was previously violated. Two `cache-to: type=gha,mode=max` image builds

@@ -39,7 +39,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
-      BUILD_CACHE: ghcr.io/syntaktikeu/proxytrace-buildcache
+      BUILD_CACHE: ghcr.io/nordsteinsoftware/proxytrace-buildcache
 
     steps:
       - name: Checkout

@@ -33,7 +33,7 @@ env:
   # GHCR storage for a public package is free and uncapped, so the two caches no
   # longer compete. Owned by this repo (not the release image's `proxytrace` org)
   # so the workflow's own GITHUB_TOKEN is unambiguously allowed to write it.
-  BUILD_CACHE: ghcr.io/syntaktikeu/proxytrace-buildcache
+  BUILD_CACHE: ghcr.io/nordsteinsoftware/proxytrace-buildcache
 
 jobs:
   # Decides which of the jobs below can be skipped. Fails open — see the action.

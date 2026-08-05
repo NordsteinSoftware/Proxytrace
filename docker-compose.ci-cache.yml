@@ -17,30 +17,30 @@ services:
   api:
     build:
       cache_from:
-        - type=registry,ref=${BUILD_CACHE:-ghcr.io/syntaktikeu/proxytrace-buildcache}:api
+        - type=registry,ref=${BUILD_CACHE:-ghcr.io/nordsteinsoftware/proxytrace-buildcache}:api
       cache_to:
-        - type=registry,ref=${BUILD_CACHE:-ghcr.io/syntaktikeu/proxytrace-buildcache}:api,mode=max,ignore-error=true
+        - type=registry,ref=${BUILD_CACHE:-ghcr.io/nordsteinsoftware/proxytrace-buildcache}:api,mode=max,ignore-error=true
 
   api-free:
     build:
       cache_from:
-        - type=registry,ref=${BUILD_CACHE:-ghcr.io/syntaktikeu/proxytrace-buildcache}:api
+        - type=registry,ref=${BUILD_CACHE:-ghcr.io/nordsteinsoftware/proxytrace-buildcache}:api
 
   proxy:
     build:
       cache_from:
-        - type=registry,ref=${BUILD_CACHE:-ghcr.io/syntaktikeu/proxytrace-buildcache}:proxy
+        - type=registry,ref=${BUILD_CACHE:-ghcr.io/nordsteinsoftware/proxytrace-buildcache}:proxy
       cache_to:
-        - type=registry,ref=${BUILD_CACHE:-ghcr.io/syntaktikeu/proxytrace-buildcache}:proxy,mode=max,ignore-error=true
+        - type=registry,ref=${BUILD_CACHE:-ghcr.io/nordsteinsoftware/proxytrace-buildcache}:proxy,mode=max,ignore-error=true
 
   frontend:
     build:
       cache_from:
-        - type=registry,ref=${BUILD_CACHE:-ghcr.io/syntaktikeu/proxytrace-buildcache}:frontend
+        - type=registry,ref=${BUILD_CACHE:-ghcr.io/nordsteinsoftware/proxytrace-buildcache}:frontend
       cache_to:
-        - type=registry,ref=${BUILD_CACHE:-ghcr.io/syntaktikeu/proxytrace-buildcache}:frontend,mode=max,ignore-error=true
+        - type=registry,ref=${BUILD_CACHE:-ghcr.io/nordsteinsoftware/proxytrace-buildcache}:frontend,mode=max,ignore-error=true
 
   frontend-free:
     build:
       cache_from:
-        - type=registry,ref=${BUILD_CACHE:-ghcr.io/syntaktikeu/proxytrace-buildcache}:frontend
+        - type=registry,ref=${BUILD_CACHE:-ghcr.io/nordsteinsoftware/proxytrace-buildcache}:frontend

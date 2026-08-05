@@ -1,7 +1,7 @@
 # Upgrading
 
 Proxytrace releases follow [semantic versioning](https://semver.org). Release notes for every
-version are published on the [GitHub releases page](https://github.com/SyntaktikEU/Proxytrace/releases).
+version are published on the [GitHub releases page](https://github.com/NordsteinSoftware/Proxytrace/releases).
 
 When a newer release is available, admins see a notice in the app — see
 [Update notifications](/admin/configuration#update-notifications) for how that works and how
@@ -27,10 +27,10 @@ migrations automatically on startup; no manual migration step exists.
 
 ```bash
 # Single container — replace <version> with the release you want
-docker pull ghcr.io/syntaktikeu/proxytrace:<version>
+docker pull ghcr.io/nordsteinsoftware/proxytrace:<version>
 docker rm -f proxytrace
 docker run -d --name proxytrace -p 5101:80 -p 5102:8081 -v proxytrace:/data \
-  ghcr.io/syntaktikeu/proxytrace:<version>
+  ghcr.io/nordsteinsoftware/proxytrace:<version>
 
 # Docker Compose — the artifact's compose file pins the version; edit the tag
 # (or download the new release's artifact, which ships it pre-pinned), then:

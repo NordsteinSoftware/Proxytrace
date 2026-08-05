@@ -5,7 +5,7 @@ make, turns real traces into regression suites, and closes the loop with evidenc
 optimization proposals. Self-hosted, runs entirely on your own infrastructure.
 
 - Website: <https://proxytrace.dev>
-- Source & releases: <https://github.com/SyntaktikEU/Proxytrace>
+- Source & releases: <https://github.com/NordsteinSoftware/Proxytrace>
 - Docs: served at `/docs` in every install
 
 ## Run it
@@ -32,11 +32,11 @@ upgrade by pulling a newer tag and recreating the container. Schema migrations r
 Set `ConnectionStrings__Default` (and optionally `Redis__ConnectionString`) and the container
 skips its embedded services and uses yours instead. That is the recommended production shape,
 and it's exactly what the Docker Compose deployment attached to every
-[GitHub release](https://github.com/SyntaktikEU/Proxytrace/releases) does — a `proxytrace.zip`
+[GitHub release](https://github.com/NordsteinSoftware/Proxytrace/releases) does — a `proxytrace.zip`
 with a pinned compose file (this image + Postgres + Redis) and an `.env` template:
 
 ```bash
-curl -fLO https://github.com/SyntaktikEU/Proxytrace/releases/latest/download/proxytrace.zip
+curl -fLO https://github.com/NordsteinSoftware/Proxytrace/releases/latest/download/proxytrace.zip
 unzip proxytrace.zip && cd proxytrace-<version>
 docker compose up -d        # no .env required — see .env.example for overrides
 ```
@@ -48,12 +48,12 @@ Prereleases (`X.Y.Z-rc.N`) publish only their exact version.
 
 **Platforms:** `linux/amd64`, `linux/arm64`.
 
-The same image is published to GitHub Container Registry as `ghcr.io/syntaktikeu/proxytrace` —
+The same image is published to GitHub Container Registry as `ghcr.io/nordsteinsoftware/proxytrace` —
 identical digests, same tags. GHCR has no anonymous pull-rate limit.
 
 ## License
 
-Source-available under the [Elastic License 2.0](https://github.com/SyntaktikEU/Proxytrace/blob/master/LICENSE):
+Source-available under the [Elastic License 2.0](https://github.com/NordsteinSoftware/Proxytrace/blob/master/LICENSE):
 you may use, copy, modify and redistribute it, but you may not offer it as a managed service to
 third parties, circumvent the license-key functionality, or remove the licensing/copyright notices.
 

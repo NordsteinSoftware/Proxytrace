@@ -7,8 +7,8 @@ enforces tier limits. **You do not need a license to run Proxytrace** — it run
 ## Source availability
 
 Proxytrace's source code is public at
-[github.com/SyntaktikEU/Proxytrace](https://github.com/SyntaktikEU/Proxytrace) under the
-[Elastic License 2.0](https://github.com/SyntaktikEU/Proxytrace/blob/master/LICENSE) —
+[github.com/NordsteinSoftware/Proxytrace](https://github.com/NordsteinSoftware/Proxytrace) under the
+[Elastic License 2.0](https://github.com/NordsteinSoftware/Proxytrace/blob/master/LICENSE) —
 you can audit exactly what your deployment runs. The license does not permit offering
 Proxytrace as a managed service to third parties or circumventing the license-key
 functionality described on this page.

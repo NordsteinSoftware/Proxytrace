@@ -620,9 +620,9 @@ follow [Semantic Versioning](https://semver.org). Ongoing work is collected unde
   the compose file shipped in the release artifact, the one-line `docker run` in the README, the
   installation, deployment and upgrade pages of the manual — pointed at
   `ghcr.io/proxytrace/proxytrace`, a GitHub Container Registry owner that stopped existing when the
-  organisation was renamed to `SyntaktikEU`. Pulls against it fail with `owner not found`, so a new
+  organisation was renamed to `NordsteinSoftware`. Pulls against it fail with `owner not found`, so a new
   operator following the quick start got a registry error instead of a running Proxytrace. All of
-  them now name the canonical `ghcr.io/syntaktikeu/proxytrace`, which is where the images have
+  them now name the canonical `ghcr.io/nordsteinsoftware/proxytrace`, which is where the images have
   actually been published. The Docker Hub address, `proxytrace/proxytrace`, is unchanged and was
   never affected.
 
@@ -676,7 +676,7 @@ follow [Semantic Versioning](https://semver.org). Ongoing work is collected unde
   declared the product *Proprietary*, contradicting the Elastic License 2.0 relicense in 1.5.0 — the
   first licensing statement most evaluators read. It now states the ELv2 terms, the README carries a
   matching License section, and every documented GitHub link (plus the release-manifest URL the
-  update check calls) points at `SyntaktikEU/Proxytrace` instead of relying on GitHub's rename
+  update check calls) points at `NordsteinSoftware/Proxytrace` instead of relying on GitHub's rename
   redirect.
 
 - **The install quick starts now advertise the project-scoped proxy URL.** The installation page,

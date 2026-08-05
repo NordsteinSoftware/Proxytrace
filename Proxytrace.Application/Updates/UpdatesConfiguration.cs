@@ -14,7 +14,7 @@ public sealed record UpdatesConfiguration
     /// Endpoint returning the latest release, in the GitHub "releases/latest" API shape
     /// (<c>tag_name</c> + <c>html_url</c>).
     /// </summary>
-    public string ManifestUrl { get; init; } = "https://api.github.com/repos/SyntaktikEU/Proxytrace/releases/latest";
+    public string ManifestUrl { get; init; } = "https://api.github.com/repos/NordsteinSoftware/Proxytrace/releases/latest";
 
     /// <summary>
     /// How often the background service polls the manifest.
