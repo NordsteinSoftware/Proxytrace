@@ -1,6 +1,13 @@
 # Weekly dependency updates, minor+patch grouped into one PR per ecosystem
 # to keep noise down; majors arrive as individual PRs. Every PR runs the full
 # ci + e2e gates (free on the public repo).
+#
+# `ignore:` blocks hold updates we have evaluated and rejected. Prefer them over
+# the `@dependabot ignore ...` comment command: the command is not accepted on a
+# grouped PR (Dependabot answers "the command you entered is not valid for this
+# pull request"), so a rejection made in a comment silently fails to stick and
+# the same bump returns on the next run. Every entry below states why it exists
+# and what has to happen before it can be deleted.
 version: 2
 updates:
   - package-ecosystem: nuget
@@ -25,6 +32,18 @@ updates:
         update-types:
           - minor
           - patch
+    ignore:
+      # assistant-ui 0.15 removes the useThread, useMessage, useComposer and
+      # useComposerRuntime hooks that six Tracey components import, so the bump
+      # fails `tsc -b`. The two sibling packages peer-depend on
+      # @assistant-ui/react ^0.15.0 and cannot move ahead of it.
+      # Remove all three entries once #514 migrates Tracey to the 0.15 API.
+      - dependency-name: "@assistant-ui/react"
+        versions: [">=0.15.0"]
+      - dependency-name: "@assistant-ui/react-markdown"
+        versions: [">=0.14.8"]
+      - dependency-name: "@assistant-ui/react-ai-sdk"
+        versions: [">=1.4.2"]
 
   - package-ecosystem: github-actions
     directory: /
@@ -48,3 +67,10 @@ updates:
         update-types:
           - minor
           - patch
+    ignore:
+      # Node 25 is an odd-numbered line: never an LTS, EOL since 2026-06-01. The
+      # frontend image stays on 24 (Active LTS to 2026-10-20, maintenance to
+      # 2028-04-30) until Node 26 becomes LTS on 2026-10-28, which this entry
+      # still allows through.
+      - dependency-name: "node"
+        versions: ["25.x"]
