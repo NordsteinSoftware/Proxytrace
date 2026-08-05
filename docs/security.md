@@ -377,6 +377,12 @@ are committed on purpose — the test-signed e2e/perf license JWT, demo-data key
   updates (vulnerability-driven PRs) are enabled in the repo settings. Every Dependabot PR runs
   the normal ci + e2e gates.
 
+  Bumps we have evaluated and rejected are recorded as `ignore:` entries in that file, each
+  annotated with the reason and the condition for removing it. Record a rejection there rather
+  than with an `@dependabot ignore ...` comment: the comment command is rejected on a grouped
+  PR ("the command you entered is not valid for this pull request"), so it fails silently and
+  the bump comes back on the next run. The `triage-dependency-prs` skill walks the queue.
+
 ## Out of scope
 
 `StoredLicense` JWT is left plaintext: it is a signed license token, not a credential, so encrypting
