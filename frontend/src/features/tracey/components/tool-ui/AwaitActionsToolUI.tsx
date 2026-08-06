@@ -1,4 +1,4 @@
-import { type ToolCallMessagePartComponent, useThread } from '@assistant-ui/react';
+import { type ToolCallMessagePartComponent, useAuiState } from '@assistant-ui/react';
 import { Trans, useLingui } from '@lingui/react/macro';
 import { msg, plural } from '@lingui/core/macro';
 import { type MessageDescriptor } from '@lingui/core';
@@ -40,7 +40,7 @@ const OUTCOME_LABEL: Record<AwaitOutcomeTone, MessageDescriptor> = {
  */
 export const AwaitActionsToolUI: ToolCallMessagePartComponent = ({ args, result, status, isError }) => {
   const { t, i18n } = useLingui();
-  const threadRunning = useThread((thread) => thread.isRunning);
+  const threadRunning = useAuiState((s) => s.thread.isRunning);
   const resolved = result as AwaitActionsResult | undefined;
   // User hit Stop while the wait was polling: the poll aborts, but the test run / theory keeps
   // running on the backend — so this is a calm "stopped", not a red error. Two shapes reach here:

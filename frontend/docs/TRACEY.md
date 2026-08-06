@@ -215,7 +215,7 @@ propagates the whole way down both planes:
   renders a calm "Wait stopped" state (not a red error). It detects the stop two ways: assistant-ui
   sometimes finalizes the part as `incomplete/cancelled`, but a Stop that lands mid-`execute` leaves
   the aborted tool call **orphaned in `running`** (no terminal delta, no result), so the card also
-  treats a still-`running` part as stopped once the thread itself is idle (`useThread(t => t.isRunning)`)
+  treats a still-`running` part as stopped once the thread itself is idle (`useAuiState(s => s.thread.isRunning)`)
   — otherwise it would spin on "Waiting for N actions" forever.
 
 ## Progressive tool disclosure (skills gate tools)

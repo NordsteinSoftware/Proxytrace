@@ -1,4 +1,4 @@
-import { useComposerRuntime, useThread } from '@assistant-ui/react';
+import { useAui, useAuiState } from '@assistant-ui/react';
 import { useLingui } from '@lingui/react/macro';
 import { Badge } from '../../../components/ui/Badge';
 import { cn } from '../../../lib/cn';
@@ -19,9 +19,9 @@ const CHIP = cn(
 export function FollowUpSuggestions() {
   const { t } = useLingui();
   const { followUps } = useTraceyChatContext();
-  const composer = useComposerRuntime();
-  const isRunning = useThread(thread => thread.isRunning);
-  const lastMessageId = useThread(thread => thread.messages.at(-1)?.id);
+  const composer = useAui().composer;
+  const isRunning = useAuiState(s => s.thread.isRunning);
+  const lastMessageId = useAuiState(s => s.thread.messages.at(-1)?.id);
 
   if (!followUps || isRunning || followUps.messageId !== lastMessageId) return null;
 

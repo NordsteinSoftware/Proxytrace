@@ -1,4 +1,4 @@
-import { useComposerRuntime } from '@assistant-ui/react';
+import { useAui } from '@assistant-ui/react';
 import { useLingui } from '@lingui/react/macro';
 import { Badge } from '../../../components/ui/Badge';
 import { cn } from '../../../lib/cn';
@@ -11,7 +11,7 @@ const CHIP = cn(
 
 /** Starter chips above the composer that surface available quick-actions; clicking one sends its prompt. */
 export function ToolChips() {
-  const composer = useComposerRuntime();
+  const composer = useAui().composer;
   const { i18n } = useLingui();
 
   const sendPrompt = (prompt: string) => {

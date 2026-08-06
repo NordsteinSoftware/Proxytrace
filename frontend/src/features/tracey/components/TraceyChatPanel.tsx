@@ -1,4 +1,4 @@
-import { useThread } from '@assistant-ui/react';
+import { useAuiState } from '@assistant-ui/react';
 import { Trans, useLingui } from '@lingui/react/macro';
 import { LayoutSidebarIcon, SparklesIcon } from '../../../components/icons';
 import { IconButton } from '../../../components/ui/Button';
@@ -21,9 +21,9 @@ export function TraceyChatPanel({ chat, railCollapsed, onToggleRail }: TraceyCha
   // Empty thread → "initial view": composer floats toward the middle with starter chips. The
   // bottom spacer animates to 0 on the first message (and back when the conversation is cleared),
   // which slides the composer down to / up from the bottom.
-  const isEmpty = useThread(t => t.messages.length === 0);
+  const isEmpty = useAuiState(s => s.thread.messages.length === 0);
   // The header halo spins fast while a turn runs — the panel-level "Tracey is working" signal.
-  const isRunning = useThread(t => t.isRunning);
+  const isRunning = useAuiState(s => s.thread.isRunning);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col rounded-lg border border-border bg-surface-2">

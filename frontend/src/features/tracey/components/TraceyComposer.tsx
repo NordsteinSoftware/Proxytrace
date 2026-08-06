@@ -1,5 +1,5 @@
 import { useMemo, useState, type KeyboardEvent } from 'react';
-import { ComposerPrimitive, ThreadPrimitive, useComposer, useComposerRuntime, useThread } from '@assistant-ui/react';
+import { ComposerPrimitive, ThreadPrimitive, useAui, useAuiState } from '@assistant-ui/react';
 import { Trans, useLingui } from '@lingui/react/macro';
 import { type I18n } from '@lingui/core';
 import { QUICK_ACTIONS } from '../tracey-quick-actions';
@@ -44,11 +44,11 @@ function matches(item: SlashItem, query: string, i18n: I18n): boolean {
 
 export function TraceyComposer({ onNewConversation, showStarters }: TraceyComposerProps) {
   const { t, i18n } = useLingui();
-  const composer = useComposerRuntime();
-  const text = useComposer(c => c.text);
+  const composer = useAui().composer;
+  const text = useAuiState(s => s.composer.text);
   // While a turn streams/runs tools the composer frame carries the animated streaming ring
   // (DESIGN.md §8) so the "Tracey is working" signal lives right where the user's attention is.
-  const isRunning = useThread(thread => thread.isRunning);
+  const isRunning = useAuiState(s => s.thread.isRunning);
   // The selection is tagged with the list ("key") it belongs to. When the menu (re)opens or the
   // query changes, that key changes and the highlight derives back to the first entry — so
   // keyboard nav always starts from a known position without an effect.
