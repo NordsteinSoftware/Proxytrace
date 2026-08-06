@@ -1,4 +1,4 @@
-import { useMessage } from '@assistant-ui/react';
+import { useAuiState } from '@assistant-ui/react';
 import { Trans, useLingui } from '@lingui/react/macro';
 import { ClockIcon, CoinsIcon } from '../../../components/icons';
 import { fmtLatency, fmtTokens } from '../../../lib/format';
@@ -19,8 +19,8 @@ export function MessageStatusBar() {
   const { t } = useLingui();
   // `metadata.custom` is a stable reference on the stored message, so selecting it (rather than a
   // freshly-derived object) keeps the selector snapshot stable.
-  const custom = useMessage((m) => (m.role === 'assistant' ? m.metadata.custom : undefined));
-  const text = useMessage((m) =>
+  const custom = useAuiState(({ message: m }) => (m.role === 'assistant' ? m.metadata.custom : undefined));
+  const text = useAuiState(({ message: m }) =>
     m.role === 'assistant' ? m.content.map((p) => (p.type === 'text' ? p.text : '')).join('').trim() : '',
   );
   const { openTrace } = useOpenResponseTrace();
