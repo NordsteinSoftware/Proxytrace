@@ -241,6 +241,25 @@ fresh container per test. Do not reach for it to avoid writing a small amount of
 
 ---
 
+---
+
+## Container-backed tests (rare)
+
+Substituting the client library asserts how we *call* a driver, never how the server *replies* —
+so it cannot catch a wire-format change (see #523: a RESP2→RESP3 switch passed the mocked Redis
+suite unchanged). Where reply parsing or server-side semantics *are* the thing under test, start a
+real service in a throwaway container instead:
+`Proxytrace.Messaging.Tests/RedisIngestionStreamIntegrationTests.cs` is the reference.
+
+Rules: build the container **inside the test method** (no shared fixture — the isolation rule still
+applies), pin the image to the tag `docker-compose.yml` runs, and `Assert.Inconclusive` when no
+runtime is reachable *unless* `PROXYTRACE_REQUIRE_DOCKER_TESTS` is set — `dotnet test` must not
+require Docker locally, while CI must not skip silently. Full rationale in
+[`docs/testing.md`](../../../docs/testing.md#container-backed-tests). Default to a mock; this is a
+supplement for the cases a mock structurally cannot cover.
+
+---
+
 ## Domain tests (`Proxytrace.Domain.Tests`)
 
 Extend `DomainTest<Module>` for the convenient `GetOrCreate<T>` helper.

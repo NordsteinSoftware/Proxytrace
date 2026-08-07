@@ -142,8 +142,14 @@ jobs:
       - name: Build
         run: dotnet build Proxytrace.sln --nologo --no-restore
 
+      # PROXYTRACE_REQUIRE_DOCKER_TESTS turns the container-backed tests (currently the real-Redis
+      # ingestion transport ones) from skip-if-unavailable into hard failures. They must stay
+      # skippable locally so `dotnet test` never requires Docker, but a runner that quietly lost its
+      # container runtime would then drop exactly the coverage those tests exist to guarantee.
       - name: Test
         run: dotnet test Proxytrace.sln --nologo --verbosity minimal --no-restore
+        env:
+          PROXYTRACE_REQUIRE_DOCKER_TESTS: true
 
   # Builds the released all-in-one image and boots it, so a container that fails to come up
   # (initdb, supervisord, nginx upstream, migrations on a cold volume) is caught here rather
