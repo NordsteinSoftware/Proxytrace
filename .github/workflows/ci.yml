@@ -44,6 +44,7 @@ jobs:
       backend: ${{ steps.detect.outputs.backend }}
       frontend: ${{ steps.detect.outputs.frontend }}
       image: ${{ steps.detect.outputs.image }}
+      manual: ${{ steps.detect.outputs.manual }}
 
     steps:
       - name: Checkout (full history)
@@ -113,6 +114,35 @@ jobs:
       - name: Build
         run: npm run build
         working-directory: frontend
+
+  # The VitePress manual is a shipped deliverable (nginx serves it at /docs), but a
+  # manual-only diff skips `frontend`, `backend` and `image` and is excluded from e2e by
+  # paths-ignore — so without this job a broken sidebar entry or frontmatter block merges
+  # green and only surfaces when the release image is built. The build takes seconds.
+  manual:
+    needs: changes
+    if: ${{ inputs.full || needs.changes.outputs.manual == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: manual/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: manual
+
+      - name: Build the manual
+        run: npm run docs:build
+        working-directory: manual
 
   # Kept on master pushes as the post-merge safety net: a PR verified against a stale
   # base can still break master, and the tests are what catch that.
