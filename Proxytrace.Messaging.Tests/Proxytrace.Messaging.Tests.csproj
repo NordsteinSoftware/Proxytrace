@@ -14,6 +14,7 @@
           <PrivateAssets>all</PrivateAssets>
         </PackageReference>
         <PackageReference Include="MSTest" Version="4.3.3" />
+        <PackageReference Include="Testcontainers.Redis" Version="4.13.0" />
     </ItemGroup>
 
     <ItemGroup>

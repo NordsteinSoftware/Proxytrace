@@ -74,6 +74,39 @@ await FluentActions
     .Should().ThrowAsync<EntityNotFoundException>();
 ```
 
+## Container-backed tests
+
+A handful of backend tests talk to a **real** service in a throwaway container
+(Testcontainers) instead of a mock. Today that is
+`Proxytrace.Messaging.Tests/RedisIngestionStreamIntegrationTests.cs`, which round-trips the
+Redis Streams ingestion transport through an actual `redis:7-alpine`.
+
+Reach for one only where mocking the client library defeats the purpose of the test. A
+substituted `IDatabase` asserts how we *call* a driver and never how the server *replies*, so
+it cannot see a wire-format change: the full RESP2→RESP3 switch in StackExchange.Redis 3.x
+reshapes the `XINFO GROUPS` and `XAUTOCLAIM` replies our consumer parses, and the mocked suite
+passed identically before and after (#523). Reply parsing, protocol negotiation, and
+server-side semantics (consumer-group lag, `XAUTOCLAIM` reclaim) are the cases that earn a
+container; everything else is cheaper and more precise as a mock.
+
+**How they are gated.** They start their own container, and when no runtime is reachable they
+call `Assert.Inconclusive` and report as *skipped* — `dotnet test` must never become a hard
+Docker dependency. Setting **`PROXYTRACE_REQUIRE_DOCKER_TESTS=1|true`** inverts that: a startup
+failure is then a real failure. CI's `backend` job sets it (see [`ci.md`](ci.md)) so the coverage
+can never be lost silently, which is the same class of false-green the tests exist to close.
+
+Run them locally like any other test — with Docker up they just run:
+
+```bash
+dotnet test Proxytrace.Messaging.Tests --filter "FullyQualifiedName~RedisIngestionStreamIntegrationTests"
+PROXYTRACE_REQUIRE_DOCKER_TESTS=1 dotnet test Proxytrace.Messaging.Tests   # fail instead of skip
+```
+
+Pin the image to the tag the deployed stack runs (`docker-compose.yml`), keep each test's
+container inside the test method — no shared fixture, same isolation rule as everywhere else —
+and remember these cost seconds, not milliseconds. They are a targeted supplement to the mocked
+tests, not a replacement for them.
+
 ## End-to-end tests (Playwright)
 
 The e2e suite (repo-root `e2e/`) boots the full stack via Docker Compose (`docker-compose.e2e.yml`).
