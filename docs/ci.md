@@ -7,7 +7,7 @@ workflow, or changing a build cache — the gating rules below are not obvious f
 
 | Workflow | Trigger | What it does |
 |---|---|---|
-| `ci.yml` | PR, master push, `workflow_call` | Secret scan, frontend lint/test/build, backend build+test, all-in-one image build + boot smoke test |
+| `ci.yml` | PR, master push, `workflow_call` | Secret scan, frontend lint/test/build, VitePress manual build, backend build+test, all-in-one image build + boot smoke test |
 | `e2e.yml` | PR, master push, `workflow_call` | Boots the full Docker stack and runs the Playwright suite |
 | `codeql.yml` | PR, master push, weekly | Static analysis; findings land in the Security tab |
 | `cache-cleanup.yml` | PR closed | Deletes the closed PR's Actions caches |
@@ -23,12 +23,13 @@ Jobs are gated on which areas a diff touches, computed by the local composite ac
 |---|---|---|---|
 | `secrets` | always | skipped | always |
 | `frontend` | if `frontend/**` changed | if `frontend/**` changed | always |
+| `manual` | if `manual/**` changed | if `manual/**` changed | always |
 | `backend` | if .NET sources changed | if .NET sources changed | always |
 | `image` | if backend/frontend/`deploy/**`/Dockerfiles changed | skipped | always |
 | e2e | unless the diff is purely prose | unless the diff is purely prose | always |
 | CodeQL | only the affected languages | all languages | n/a |
 
-Three rules explain the table:
+Four rules explain the table:
 
 - **master keeps `frontend`, `backend` and e2e as a post-merge safety net.** A PR is verified
   against the base it was opened on; if master moved underneath it, the merge can still break. Tests
@@ -39,6 +40,12 @@ Three rules explain the table:
 - **e2e is barely gated on purpose.** 98% of merges touch backend or frontend, so a path filter
   would almost never skip it and skipping it wrongly is expensive. Only a diff that is entirely
   `docs/**`, `manual/**` or `**.md` misses it, via `paths-ignore`.
+- **`manual` exists because every other job skips a manual-only diff.** `frontend`, `backend` and
+  `image` are all path-gated away from `manual/**`, and e2e's `paths-ignore` excludes it outright, so
+  before this job a broken VitePress build merged green and only surfaced when the release image was
+  built (the image's `manual` stage compiles the same site). The `image` gate deliberately still does
+  **not** match `manual/**`: a prose edit is not worth a 30-minute packaging run when a ~5s
+  `vitepress build` proves the same thing.
 - **CodeQL subsets only on PRs.** A master push or the weekly run feeds the Security tab's baseline,
   where a partial scan reads as "alert resolved" for every language that did not run.
 

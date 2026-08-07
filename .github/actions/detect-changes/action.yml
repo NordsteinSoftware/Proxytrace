@@ -19,6 +19,9 @@ outputs:
   image:
     description: Something the all-in-one container image is built from changed.
     value: ${{ steps.diff.outputs.image }}
+  manual:
+    description: Anything under manual/ changed.
+    value: ${{ steps.diff.outputs.manual }}
   codeql-languages:
     description: >-
       JSON array of the CodeQL languages worth analysing for this diff, ready for
@@ -66,7 +69,11 @@ runs:
         backend_re='^Proxytrace\.|^Proxytrace\.sln$|^Directory\.Build\.props$|^coverage\.runsettings$|^dotnet-tools\.json$'
         frontend_re='^frontend/'
         # The all-in-one image bundles both halves of the app plus its own packaging.
+        # Deliberately NOT including `^manual/`: the image build does compile the manual,
+        # but a prose edit is not worth a 30-minute packaging run — the `manual` job builds
+        # the same VitePress site in seconds and is what gates a manual-only diff.
         image_re="${backend_re}|${frontend_re}|^deploy/|^docker-compose|Dockerfile"
+        manual_re='^manual/'
         # Broader than `frontend`: CodeQL analyses every JS/TS file in the repo, not just
         # the SPA, so the e2e suite, the sample client and the manual's config all count.
         # Matched by extension rather than directory on purpose — `^manual/` would put a
@@ -87,9 +94,10 @@ runs:
         check backend "$backend_re"
         check frontend "$frontend_re"
         check image "$image_re"
+        check manual "$manual_re"
         check javascript "$javascript_re"
 
-        for name in backend frontend image; do
+        for name in backend frontend image manual; do
           echo "$name=${area[$name]}" >> "$GITHUB_OUTPUT"
         done
 
