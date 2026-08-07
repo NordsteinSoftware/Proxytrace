@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Autofac;
 using Autofac.Extensions.DependencyInjection;
+using Proxytrace.Common.Hosting;
 using Proxytrace.Proxy.Controllers;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -16,6 +17,10 @@ builder.WebHost.ConfigureKestrel(options =>
 builder.Host.UseServiceProviderFactory(new AutofacServiceProviderFactory());
 builder.Host.ConfigureContainer<ContainerBuilder>(containerBuilder =>
     containerBuilder.RegisterModule<Proxytrace.Proxy.Api.Module>());
+
+// Same reasoning as the app API: a faulted BackgroundService (here the stored-license watcher)
+// must degrade that loop, not stop the forwarding host with a clean exit 0. See #522.
+builder.Services.AddResilientBackgroundServices();
 
 builder.Services.AddControllers()
     .AddJsonOptions(options =>

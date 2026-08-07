@@ -125,6 +125,14 @@ jobs:
           for service in $(compose config --services); do
             compose logs --no-color --timestamps "$service" \
               > "stack-logs/$service.log" 2>&1 || true
+            # …and a bounded tail of each into the job log, inside a collapsed group. A container
+            # that died takes its "why" with it, and the artifact is not always reachable from the
+            # environment triaging the run (#522) — the last 200 lines carry the stack trace, the
+            # failed migration or the shutdown reason, so the common cases stay diagnosable from
+            # the run page alone.
+            echo "::group::$service (last 200 log lines)"
+            tail -n 200 "stack-logs/$service.log" || true
+            echo "::endgroup::"
           done
           # Restart counts, exit codes, OOMKilled — the "did it crash or hang?" evidence.
           compose ps -aq | xargs -r docker inspect \

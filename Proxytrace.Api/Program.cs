@@ -12,6 +12,7 @@ using Proxytrace.Api;
 using Proxytrace.Api.Auth.Mcp;
 using Proxytrace.Api.Kiosk;
 using Proxytrace.Api.Middleware;
+using Proxytrace.Common.Hosting;
 using Proxytrace.Domain.Kiosk;
 using Module = Proxytrace.Api.Module;
 
@@ -31,6 +32,10 @@ builder.Services.AddCors(options =>
 });
 
 builder.Services.AddHttpContextAccessor();
+
+// A throwing BackgroundService must not take the API down (see the extension's remarks and #522):
+// .NET's default stops the host and exits 0, which no restart policy treats as a failure.
+builder.Services.AddResilientBackgroundServices();
 
 // Throttle the anonymous auth endpoints (login/signup, password reset, MFA verify) per client IP.
 // In-memory is fine — each deployment runs a single API instance. Applied via

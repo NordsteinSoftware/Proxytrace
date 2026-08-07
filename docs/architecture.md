@@ -76,6 +76,36 @@ DI is wired with Autofac. Each project ships a `Module : Autofac.Module` (`Proxy
 
 **The `registerApplicationServices` flag.** When `true` — the API/app host and the test/perf harnesses (`Storage.Tests`, `Domain.Tests`, `Application.Tests`, the perf harness) — `Storage.Module` registers Storage's own startup/initialization hosted services: the DB-initializer (`IDatabaseInitializer`) plus the secret/preview backfill services. The standalone **proxy host** (`Proxytrace.Proxy.Api`) passes `false`: it attaches to an already-migrated database read-only and runs no schema init or backfills. Since [#270](https://github.com/NordsteinSoftware/Proxytrace/issues/270), `Storage.Module` no longer references or registers `Application.Module` (the flag's name is historical) — each composition root that needs the Application graph (the API host plus the four `Storage.Tests` / `Domain.Tests` / `Application.Tests` / perf harnesses) registers `Application.Module` **and** the at-rest secret seam (`Infrastructure.Security.SecretProtectionModule`) explicitly. The API root's registrations are idempotent (the `IfNotRegistered`/`builder.Properties` guards make any double registration a no-op).
 
+## Hosted services: what may kill the host
+
+Both process hosts (`Proxytrace.Api`, `Proxytrace.Proxy.Api`) call
+`AddResilientBackgroundServices()` from
+[`Proxytrace.Common/Hosting/HostingServiceCollectionExtensions.cs`](../Proxytrace.Common/Hosting/HostingServiceCollectionExtensions.cs),
+which sets `HostOptions.BackgroundServiceExceptionBehavior` to `Ignore`. .NET's default is
+`StopHost`: **one** throwing `BackgroundService` stops the whole host and the process exits with
+code **0** — a clean shutdown no restart policy treats as a failure, so the container just stays
+down, and the Critical log line explaining it never gets persisted because the process is already
+going away. That is how a healthy e2e `api` container vanished mid-run in
+[#522](https://github.com/NordsteinSoftware/Proxytrace/issues/522).
+
+With `Ignore` the faulted loop stops and everything else — including the HTTP surface — keeps
+serving, and the framework logs the fault at `Error`, which is exactly what
+`ErrorLogChannelLoggerProvider` captures into the in-product error log.
+
+**This splits hosted services into two kinds, and the split is load-bearing:**
+
+| Kind | Base | On throw |
+|---|---|---|
+| Long-running loop (ingestion worker, schedulers, cleanups, license check, indexers, writers) | `BackgroundService` (work in `ExecuteAsync`) | Loop stops, logged at `Error`, host keeps running |
+| Startup-critical work (`DatabaseInitializationService`, the secret/preview/tool backfills, the seeders) | `IHostedService` (work in `StartAsync`) | **Startup aborts** — unaffected by the option |
+
+So: put anything the API must not serve traffic without (schema migrations above all) in
+`StartAsync` on a plain `IHostedService`; put anything whose failure should degrade one feature
+rather than take the deployment down in `ExecuteAsync` on a `BackgroundService`. A background loop
+that wants to survive its own transient failures still has to catch them itself (see
+`ErrorLogWriter` and `LicenseCheckService.SafeRunCheckAsync` for the shape) — `Ignore` keeps the
+*host* alive, it does not restart the loop.
+
 ## Multi-tenant list scoping (`IProjectAccessGuard`)
 
 Every resource belongs to an `IProject`; users belong to projects via `Project.Members`, and the

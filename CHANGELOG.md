@@ -259,6 +259,15 @@ follow [Semantic Versioning](https://semver.org). Ongoing work is collected unde
 
 ### Fixed
 
+- **One failing background job no longer takes the whole API down.** Proxytrace runs a couple of
+  dozen background loops — trace ingestion, scheduled test runs, cleanups, search indexing, the
+  license check. On .NET's default, an unexpected error in *any one* of them shut down the entire
+  API process, and it shut down reporting success: the container exited cleanly, so a restart policy
+  saw nothing to restart and the deployment simply stayed dark until someone noticed. A failing loop
+  now stops on its own while the API and every other loop keep running, and the failure is recorded
+  in the error log where it can be seen and acted on. Work that genuinely must succeed before the
+  API serves anything — above all database migrations — still stops startup exactly as before.
+
 - **The Costs page opens for everyone on the team again.** Reading spend has always been free for
   every project member, but the page also asked for the provider list behind it — something only an
   administrator may see. The refusal was treated as a page-wide failure, so anyone who is not an
