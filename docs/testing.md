@@ -118,7 +118,10 @@ unavailable, skip the e2e suite and say so rather than attempting to run it. See
 In CI (`.github/workflows/e2e.yml`) a failing run uploads two artifacts: `playwright-report`
 (always) and `e2e-stack-logs` (on failure only) — per-service Docker Compose logs, container
 states, and `docker inspect` output, captured *before* teardown so stack-side failures stay
-triageable.
+triageable. The same step also echoes `compose ps -a` plus the **last 200 lines of every service**
+into the job log (one collapsed group per service), so a container that crashed or exited can be
+diagnosed from the run page without downloading the artifact — which is not always reachable from
+wherever the triage happens ([#522](https://github.com/NordsteinSoftware/Proxytrace/issues/522)).
 
 ## Prompt behavior (prompt-lab)
 

@@ -14,6 +14,9 @@
           <PrivateAssets>all</PrivateAssets>
         </PackageReference>
         <PackageReference Include="JetBrains.Annotations" Version="2026.2.0" />
+        <!-- The full hosting package (not just Abstractions): HostingServiceCollectionExtensionsTests
+             builds a real IHost to exercise the framework's own BackgroundService fault handling. -->
+        <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.10" />
         <PackageReference Include="MSTest" Version="4.3.3" />
     </ItemGroup>
 

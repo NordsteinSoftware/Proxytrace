@@ -15,6 +15,9 @@
       <PackageReference Include="Autofac.Extensions.DependencyInjection" Version="11.0.2" />
       <PackageReference Include="JetBrains.Annotations" Version="2026.2.0" />
       <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.10" />
+      <!-- Abstractions carries IHostedService/BackgroundService; HostOptions (which
+           AddResilientBackgroundServices configures) lives in the full hosting package. -->
+      <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.10" />
       <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.10" />
     </ItemGroup>
 

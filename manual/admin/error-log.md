@@ -35,6 +35,19 @@ Errors are persisted to the database, so they survive restarts and are shared ac
 Entries from Entity Framework Core and the error-log pipeline itself are deliberately excluded
 to avoid feedback loops.
 
+::: warning A failed background service is recorded here — and stays down until a restart
+Proxytrace runs a number of background loops: trace ingestion, scheduled test runs, retention
+cleanups, search indexing, the license check. If one of them fails unexpectedly it stops **on its
+own** — the API and every other loop keep running, so the deployment stays up — and the failure is
+recorded on this page with `BackgroundService failed` and the loop's stacktrace.
+
+That is deliberate: losing one feature beats losing the whole API. But the loop does **not** come
+back by itself, so whatever it was doing (say, consuming captured traces) stays stopped until the
+API container is restarted. An entry like this is worth acting on rather than filing away: restart
+the API, then check that what the loop feeds — new traces arriving, scheduled runs firing — has
+resumed.
+:::
+
 ::: tip API responses are sanitized — the Error Log is not
 Outside development, an unexpected server error returns only a generic message to the client
 (database conflicts surface as a friendly 409). The full exception message and stacktrace are
