@@ -131,9 +131,13 @@ public sealed class RedisIngestionStreamIntegrationTests
 
     private static async Task<RedisContainer> StartRedisAsync(CancellationToken cancellationToken)
     {
-        RedisContainer container = new RedisBuilder(RedisImage).Build();
+        RedisContainer? container = null;
         try
         {
+            // Build() must stay inside the guard: it validates the builder by resolving and pinging
+            // the Docker endpoint, so on a machine without a runtime the throw happens here and
+            // never reaches StartAsync — a skip guard wrapping only the start never fires.
+            container = new RedisBuilder(RedisImage).Build();
             await container.StartAsync(cancellationToken);
         }
         // Docker unavailable surfaces as anything from a socket-level HttpRequestException to a
@@ -142,7 +146,11 @@ public sealed class RedisIngestionStreamIntegrationTests
         // runtime is guaranteed (CI), nothing is swallowed and the failure is reported as-is.
         catch (Exception ex) when (!DockerRequired)
         {
-            await container.DisposeAsync();
+            if (container is not null)
+            {
+                await container.DisposeAsync();
+            }
+
             Assert.Inconclusive(
                 $"Skipping the real-Redis transport test — no usable container runtime: {ex.Message}");
         }
