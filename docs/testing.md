@@ -95,6 +95,11 @@ Docker dependency. Setting **`PROXYTRACE_REQUIRE_DOCKER_TESTS=1|true`** inverts 
 failure is then a real failure. CI's `backend` job sets it (see [`ci.md`](ci.md)) so the coverage
 can never be lost silently, which is the same class of false-green the tests exist to close.
 
+The guard has to wrap the builder's `Build()` call, not just `StartAsync`: Testcontainers validates
+a builder by resolving and pinging the Docker endpoint, so on a machine without a runtime the throw
+happens at `Build()` and a `try` that starts one line later never sees it (#526). Construct the
+container inside the guarded block and null-check it before disposing on the skip path.
+
 Run them locally like any other test — with Docker up they just run:
 
 ```bash

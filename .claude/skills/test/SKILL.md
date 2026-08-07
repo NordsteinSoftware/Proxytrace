@@ -254,7 +254,9 @@ real service in a throwaway container instead:
 Rules: build the container **inside the test method** (no shared fixture — the isolation rule still
 applies), pin the image to the tag `docker-compose.yml` runs, and `Assert.Inconclusive` when no
 runtime is reachable *unless* `PROXYTRACE_REQUIRE_DOCKER_TESTS` is set — `dotnet test` must not
-require Docker locally, while CI must not skip silently. Full rationale in
+require Docker locally, while CI must not skip silently. The skip guard must wrap the builder's
+`Build()` too, not only `StartAsync`: `Build()` pings the Docker endpoint, so that is where a
+missing runtime actually throws. Full rationale in
 [`docs/testing.md`](../../../docs/testing.md#container-backed-tests). Default to a mock; this is a
 supplement for the cases a mock structurally cannot cover.
 
