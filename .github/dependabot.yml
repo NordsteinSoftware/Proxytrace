@@ -32,18 +32,6 @@ updates:
         update-types:
           - minor
           - patch
-    ignore:
-      # assistant-ui 0.15 removes the useThread, useMessage, useComposer and
-      # useComposerRuntime hooks that six Tracey components import, so the bump
-      # fails `tsc -b`. The two sibling packages peer-depend on
-      # @assistant-ui/react ^0.15.0 and cannot move ahead of it.
-      # Remove all three entries once #514 migrates Tracey to the 0.15 API.
-      - dependency-name: "@assistant-ui/react"
-        versions: [">=0.15.0"]
-      - dependency-name: "@assistant-ui/react-markdown"
-        versions: [">=0.14.8"]
-      - dependency-name: "@assistant-ui/react-ai-sdk"
-        versions: [">=1.4.2"]
 
   - package-ecosystem: github-actions
     directory: /
