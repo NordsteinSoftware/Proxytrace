@@ -35,6 +35,7 @@
     <ProjectReference Include="..\Proxytrace.Application\Proxytrace.Application.csproj" />
     <ProjectReference Include="..\Proxytrace.Licensing\Proxytrace.Licensing.csproj" />
     <ProjectReference Include="..\Proxytrace.Proxy\Proxytrace.Proxy.csproj" />
+    <NordsteinCoreReference Include="Nordstein.Core.Domain" />
   </ItemGroup>
 
   <ItemGroup>

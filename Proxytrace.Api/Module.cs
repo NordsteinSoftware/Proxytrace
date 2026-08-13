@@ -229,8 +229,8 @@ internal sealed class Module : Autofac.Module
         builder.RegisterModule<Application.Module>();
 
         // At-rest secret seams (ISecretProtector / ISecretHasher) + the Data Protection key ring.
-        // The seam interfaces live in Domain and the Data Protection-backed implementation + DI module
-        // in Infrastructure (#270), so the lean proxy host can register the SAME module without
+        // The product-agnostic seam interfaces live in Nordstein.Core and the Data Protection-backed
+        // implementation + DI module live in Infrastructure (#270), so the lean proxy host can register the SAME module without
         // referencing Application — both hosts therefore resolve an identical key ring. Storage no
         // longer pulls this in transitively, so the composition root registers it explicitly. See
         // docs/security.md.

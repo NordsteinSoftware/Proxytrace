@@ -4,9 +4,9 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Proxytrace.Domain;
-using Proxytrace.Domain.Events;
-using Proxytrace.Domain.Exceptions;
-using Proxytrace.Domain.Paging;
+using Nordstein.Core.Domain.Events;
+using Nordstein.Core.Domain.Exceptions;
+using Nordstein.Core.Domain.Paging;
 using Proxytrace.Storage.Internal.Entities;
 
 namespace Proxytrace.Storage.Internal;
@@ -210,7 +210,10 @@ internal abstract class AbstractRepository<TDomainEntity, TStoredEntity> : IRepo
         return new PagedResult<TDomainEntity>(mapped, total, page, pageSize);
     }
 
-    public async Task<IReadOnlyList<TDomainEntity>> GetManyAsync(IReadOnlyCollection<Guid> primaryKeys, CancellationToken cancellationToken = default, bool ignoreMissing = false)
+    public async Task<IReadOnlyList<TDomainEntity>> GetManyAsync(
+        IReadOnlyCollection<Guid> primaryKeys,
+        bool ignoreMissing = false,
+        CancellationToken cancellationToken = default)
     {
         primaryKeys = primaryKeys.Distinct().ToArray();
 

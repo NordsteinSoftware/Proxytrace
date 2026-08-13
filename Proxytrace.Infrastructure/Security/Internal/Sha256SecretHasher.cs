@@ -1,5 +1,4 @@
 using Nordstein.Core.Common.Security;
-using Proxytrace.Domain.Security;
 
 namespace Proxytrace.Infrastructure.Security.Internal;
 

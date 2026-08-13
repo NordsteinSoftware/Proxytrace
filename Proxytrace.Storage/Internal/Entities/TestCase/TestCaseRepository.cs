@@ -1,6 +1,6 @@
 using JetBrains.Annotations;
 using Proxytrace.Domain;
-using Proxytrace.Domain.Events;
+using Nordstein.Core.Domain.Events;
 using Proxytrace.Domain.TestCase;
 
 namespace Proxytrace.Storage.Internal.Entities.TestCase;

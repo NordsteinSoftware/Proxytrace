@@ -2,8 +2,8 @@ using JetBrains.Annotations;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Proxytrace.Domain;
-using Proxytrace.Domain.Events;
-using Proxytrace.Domain.Paging;
+using Nordstein.Core.Domain.Events;
+using Nordstein.Core.Domain.Paging;
 using Proxytrace.Domain.Session;
 
 namespace Proxytrace.Storage.Internal.Entities.Session;

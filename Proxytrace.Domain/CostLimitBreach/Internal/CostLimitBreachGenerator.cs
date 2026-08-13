@@ -1,6 +1,6 @@
 using Nordstein.Core.Common.Random;
 using Proxytrace.Domain.CostLimit;
-using Proxytrace.Domain.Internal;
+using Nordstein.Core.Domain;
 
 namespace Proxytrace.Domain.CostLimitBreach.Internal;
 

@@ -1,6 +1,6 @@
 using Nordstein.Core.Common.Async;
 using Nordstein.Core.Common.Random;
-using Proxytrace.Domain.Internal;
+using Nordstein.Core.Domain;
 
 namespace Proxytrace.Domain.Model.Internal;
 
@@ -29,5 +29,4 @@ internal class ModelGenerator : DomainEntityGenerator<IModel>
     public override Task<IModel> GenerateAsync(CancellationToken cancellationToken = default)
         => factory(name: $"{random.Any(ModelNames)}-{random.UniqueString()}").ToTaskResult();
 }
-
 

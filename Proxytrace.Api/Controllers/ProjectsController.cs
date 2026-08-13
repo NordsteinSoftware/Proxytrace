@@ -11,7 +11,7 @@ using Proxytrace.Domain;
 using Proxytrace.Domain.Agent;
 using Proxytrace.Domain.AuditLog;
 using Proxytrace.Domain.ModelEndpoint;
-using Proxytrace.Domain.Paging;
+using Nordstein.Core.Domain.Paging;
 using Proxytrace.Domain.Project;
 using Proxytrace.Domain.User;
 
@@ -86,7 +86,7 @@ public class ProjectsController : ControllerBase
 
         // Tolerate an id that vanished between resolving the scope and loading it (a project
         // deleted concurrently) rather than failing the whole listing.
-        var accessible = await repository.GetManyAsync(scope, cancellationToken, ignoreMissing: true);
+        var accessible = await repository.GetManyAsync(scope, ignoreMissing: true, cancellationToken: cancellationToken);
         var items = accessible
             .OrderByDescending(p => p.CreatedAt)
             .Skip(Paging.Offset(page, pageSize))
@@ -272,7 +272,7 @@ public class ProjectsController : ControllerBase
             if (!await userRepository.ContainsAsync(userId, cancellationToken))
                 return null;
         }
-        return await userRepository.GetManyAsync(distinct, cancellationToken);
+        return await userRepository.GetManyAsync(distinct, cancellationToken: cancellationToken);
     }
 
     private static ProjectDto ToDto(IProject p) => ProjectDtoMapper.ToDto(p);

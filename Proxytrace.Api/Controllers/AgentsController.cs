@@ -13,7 +13,7 @@ using Proxytrace.Domain.AgentVersion;
 using Proxytrace.Domain.AuditLog;
 using Proxytrace.Domain.Inference;
 using Proxytrace.Domain.ModelEndpoint;
-using Proxytrace.Domain.Paging;
+using Nordstein.Core.Domain.Paging;
 using Proxytrace.Domain.Project;
 using Proxytrace.Domain.Prompt;
 

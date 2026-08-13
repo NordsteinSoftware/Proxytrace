@@ -1,8 +1,8 @@
 using JetBrains.Annotations;
 using Microsoft.EntityFrameworkCore;
 using Proxytrace.Domain;
-using Proxytrace.Domain.Events;
-using Proxytrace.Domain.Exceptions;
+using Nordstein.Core.Domain.Events;
+using Nordstein.Core.Domain.Exceptions;
 using Proxytrace.Domain.TestRunSchedule;
 using Proxytrace.Storage.Internal.Entities.Agent;
 using Proxytrace.Storage.Internal.Entities.TestSuite;

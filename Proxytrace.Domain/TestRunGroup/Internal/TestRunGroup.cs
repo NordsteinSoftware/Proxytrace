@@ -1,5 +1,5 @@
 using System.ComponentModel.DataAnnotations;
-using Proxytrace.Domain.Internal;
+using Nordstein.Core.Domain;
 using Proxytrace.Domain.TestRun;
 using Proxytrace.Domain.TestSuite;
 

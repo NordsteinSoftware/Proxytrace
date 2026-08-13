@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using Nordstein.Core.Common.Validation;
-using Proxytrace.Domain.Internal;
+using Nordstein.Core.Domain;
 using Proxytrace.Domain.Model;
 using Proxytrace.Domain.ModelProvider;
 using Proxytrace.Domain.Usage;
@@ -96,4 +96,3 @@ internal record ModelEndpoint : DomainEntity<IModelEndpoint>, IModelEndpoint
             yield return Validation.LessThanOrEqual(CachedInputTokenCost.Value, InputTokenCost.Value, nameof(CachedInputTokenCost));
     }
 }
-

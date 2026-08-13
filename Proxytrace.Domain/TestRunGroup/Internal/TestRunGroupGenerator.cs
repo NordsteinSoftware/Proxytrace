@@ -1,5 +1,5 @@
 using Nordstein.Core.Common.Random;
-using Proxytrace.Domain.Internal;
+using Nordstein.Core.Domain;
 using Proxytrace.Domain.TestSuite;
 
 namespace Proxytrace.Domain.TestRunGroup.Internal;

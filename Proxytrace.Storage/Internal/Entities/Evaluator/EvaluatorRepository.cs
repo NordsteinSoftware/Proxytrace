@@ -2,7 +2,7 @@ using JetBrains.Annotations;
 using Microsoft.EntityFrameworkCore;
 using Proxytrace.Domain;
 using Proxytrace.Domain.Evaluator;
-using Proxytrace.Domain.Events;
+using Nordstein.Core.Domain.Events;
 using Proxytrace.Storage.Internal.Entities.TestSuite;
 
 namespace Proxytrace.Storage.Internal.Entities.Evaluator;

@@ -1,6 +1,6 @@
 using Nordstein.Core.Common.Random;
 using Nordstein.Core.Common.Security;
-using Proxytrace.Domain.Internal;
+using Nordstein.Core.Domain;
 using Proxytrace.Domain.ModelProvider;
 using Proxytrace.Domain.Project;
 using Proxytrace.Domain.User;

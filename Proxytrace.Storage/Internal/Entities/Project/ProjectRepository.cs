@@ -3,8 +3,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Nordstein.Core.Common.Text;
 using Proxytrace.Domain;
-using Proxytrace.Domain.Events;
-using Proxytrace.Domain.Exceptions;
+using Nordstein.Core.Domain.Events;
+using Nordstein.Core.Domain.Exceptions;
 using Proxytrace.Domain.Project;
 
 namespace Proxytrace.Storage.Internal.Entities.Project;
@@ -89,7 +89,7 @@ internal class ProjectRepository : AbstractRepository<IProject, ProjectEntity>, 
             .Select(j => j.ProjectId)
             .ToListAsync(cancellationToken);
 
-        return projectIds.Count == 0 ? [] : await GetManyAsync(projectIds, cancellationToken);
+        return projectIds.Count == 0 ? [] : await GetManyAsync(projectIds, cancellationToken: cancellationToken);
     }
 
     protected override async Task UpdateRelationsAsync(

@@ -2,7 +2,7 @@ using JetBrains.Annotations;
 using Microsoft.EntityFrameworkCore;
 using Nordstein.Core.Common.Async;
 using Proxytrace.Domain;
-using Proxytrace.Domain.Events;
+using Nordstein.Core.Domain.Events;
 using Proxytrace.Domain.Model;
 
 namespace Proxytrace.Storage.Internal.Entities.Model;
@@ -65,4 +65,3 @@ internal class ModelRepository : AbstractRepository<IModel, ModelEntity>, IModel
         }
     }
 }
-

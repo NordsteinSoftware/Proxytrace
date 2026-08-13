@@ -1,6 +1,6 @@
 using Nordstein.Core.Common.Random;
 using Nordstein.Core.Common.Security;
-using Proxytrace.Domain.Internal;
+using Nordstein.Core.Domain;
 using Proxytrace.Domain.User;
 
 namespace Proxytrace.Domain.MfaBackupCode.Internal;

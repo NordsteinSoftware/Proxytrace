@@ -15,7 +15,7 @@ using Proxytrace.Domain.AuditLog;
 using Proxytrace.Domain.Model;
 using Proxytrace.Domain.ModelEndpoint;
 using Proxytrace.Domain.ModelProvider;
-using Proxytrace.Domain.Paging;
+using Nordstein.Core.Domain.Paging;
 using Proxytrace.Domain.Project;
 using Proxytrace.Domain.User;
 using Proxytrace.Application.Auth;

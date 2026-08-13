@@ -5,7 +5,7 @@ using JetBrains.Annotations;
 using Nordstein.Core.Common.Validation;
 using Proxytrace.Domain.Agent;
 using Proxytrace.Domain.Evaluation;
-using Proxytrace.Domain.Internal;
+using Nordstein.Core.Domain;
 using Proxytrace.Domain.Message;
 using Proxytrace.Domain.ModelEndpoint;
 using Proxytrace.Domain.Project;

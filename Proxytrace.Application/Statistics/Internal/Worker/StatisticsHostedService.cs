@@ -1,7 +1,7 @@
 using System.Threading.Channels;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Proxytrace.Domain.Events;
+using Nordstein.Core.Domain.Events;
 
 namespace Proxytrace.Application.Statistics.Internal.Worker;
 

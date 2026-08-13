@@ -51,7 +51,7 @@ internal class ProjectConfig : AbstractEntityConfiguration<ProjectEntity>, IMapp
             .ToListAsync(cancellationToken);
 
         IReadOnlyCollection<IUser> members = memberIds.Count > 0
-            ? await users.GetManyAsync(memberIds, cancellationToken)
+            ? await users.GetManyAsync(memberIds, cancellationToken: cancellationToken)
             : [];
 
         return factory(stored.Name, endpoint, members, stored);

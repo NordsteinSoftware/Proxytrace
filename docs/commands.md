@@ -12,7 +12,7 @@ cd Proxytrace.Api && dotnet run        # Start API on http://localhost:5001
 
 ### Nordstein.Core
 
-The shared foundation under [`core/`](../core/) is its own solution and is **not** part of
+The shared Common, Domain, and Testing packages under [`core/`](../core/) are their own solution and are **not** part of
 `Proxytrace.sln`. Building the product builds it too (through the project references), but it must
 also keep standing alone — that is the property that keeps it extractable:
 

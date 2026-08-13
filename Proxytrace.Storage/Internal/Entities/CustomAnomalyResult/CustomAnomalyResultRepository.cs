@@ -2,7 +2,7 @@ using JetBrains.Annotations;
 using Microsoft.EntityFrameworkCore;
 using Proxytrace.Domain;
 using Proxytrace.Domain.CustomAnomaly;
-using Proxytrace.Domain.Events;
+using Nordstein.Core.Domain.Events;
 
 namespace Proxytrace.Storage.Internal.Entities.CustomAnomalyResult;
 

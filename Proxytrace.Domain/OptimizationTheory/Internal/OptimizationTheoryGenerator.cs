@@ -1,5 +1,5 @@
 using Nordstein.Core.Common.Random;
-using Proxytrace.Domain.Internal;
+using Nordstein.Core.Domain;
 using Proxytrace.Domain.OptimizationProposal;
 
 namespace Proxytrace.Domain.OptimizationTheory.Internal;

@@ -11,7 +11,7 @@ using NSubstitute;
 using Proxytrace.Api.Middleware;
 using Proxytrace.Api.Middleware.Exceptions;
 using Nordstein.Core.Common.Net;
-using Proxytrace.Domain.Exceptions;
+using Nordstein.Core.Domain.Exceptions;
 using Proxytrace.Licensing;
 using Proxytrace.Licensing.Exceptions;
 

@@ -1,7 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using Nordstein.Core.Common.Validation;
 using Proxytrace.Domain.Agent;
-using Proxytrace.Domain.Internal;
+using Nordstein.Core.Domain;
 using Proxytrace.Domain.OptimizationProposal;
 using Proxytrace.Domain.Proposal;
 using Proxytrace.Domain.TestSuite;

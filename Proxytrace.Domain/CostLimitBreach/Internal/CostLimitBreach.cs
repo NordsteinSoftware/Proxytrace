@@ -1,7 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using Nordstein.Core.Common.Validation;
 using Proxytrace.Domain.CostLimit;
-using Proxytrace.Domain.Internal;
+using Nordstein.Core.Domain;
 
 namespace Proxytrace.Domain.CostLimitBreach.Internal;
 

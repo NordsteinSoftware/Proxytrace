@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using Proxytrace.Domain.Notifications;
-using Proxytrace.Domain.Security;
+using Nordstein.Core.Common.Security;
 using Nordstein.Core.Common.DependencyInjection;
 using Proxytrace.Domain.Notification;
 using Nordstein.Core.Testing;
@@ -84,8 +84,8 @@ public sealed class EmailSettingsStoreTests : BaseTest<Module>
 
     private (IEmailSettingsStore Store, IServiceProvider Services) Resolve()
     {
-        // ISecretProtector is supplied by the loaded Application.Module; the test only needs to
-        // bridge in IDataProtectionProvider so the real DataProtectionSecretProtector can construct.
+        // ISecretProtector is supplied by the loaded Infrastructure SecretProtectionModule; the test
+        // only needs to bridge in IDataProtectionProvider so the implementation can construct.
         IServiceProvider services = GetServices(builder =>
             builder.RegisterServiceCollection(s => s.AddDataProtection()));
         return (services.GetRequiredService<IEmailSettingsStore>(), services);

@@ -3,27 +3,30 @@
 Strict layered dependency flow — each layer may only depend on layers below it:
 
 ```
-Proxytrace.Api  →  Proxytrace.Application  →  Proxytrace.Domain  →  Nordstein.Core.Common
-            →  Proxytrace.Infrastructure  →  Proxytrace.Domain + Proxytrace.Serialization  →  Nordstein.Core.Common
-            →  Proxytrace.Storage  →  Proxytrace.Domain
+Proxytrace.Api  →  Proxytrace.Application  →  Proxytrace.Domain  →  Nordstein.Core.Domain  →  Nordstein.Core.Common
+            →  Proxytrace.Infrastructure  →  Proxytrace.Domain + Proxytrace.Serialization  →  Nordstein.Core.Domain/Common
+            →  Proxytrace.Storage  →  Proxytrace.Domain + Nordstein.Core.Domain
 ```
 
-> **The bottom layer is not a Proxytrace project.** `Nordstein.Core.Common` (and its test-side
-> sibling `Nordstein.Core.Testing`) are product-agnostic and live under [`core/`](../core/) as
-> their own solution, on their way to a separate repository and NuGet packages. The dependency
+> **The bottom layers are not Proxytrace projects.** `Nordstein.Core.Domain`,
+> `Nordstein.Core.Common` (and their test-side sibling `Nordstein.Core.Testing`) are
+> product-agnostic and live under [`core/`](../core/) as
+> their own solution and separate repository, on their way to NuGet packages. The dependency
 > arrow only ever points *into* them — Core knows nothing about agents, traces or projects, and
 > a change that would teach it belongs in `Proxytrace.Domain` instead. Consuming projects
 > declare `<NordsteinCoreReference Include="…" />` rather than a direct reference; see
 > [`code-reuse.md`](code-reuse.md).
 
-> **`Proxytrace.Storage` references only `Domain`** (+ `Serialization`/`Common` transitively) — it does
-> **not** reference `Application`. The secondary-port **interfaces** that `Storage` implements live in
-> `Domain` alongside the pure DTOs they expose: `ISecretProtector`/`ISecretHasher` (`Domain.Security`),
-> the statistics/test-run readers + writer (`Domain.Statistics`, with `TestRunStats` and the result
+> **`Proxytrace.Storage` references only `Domain` and `Nordstein.Core.Domain`** (+ `Serialization`/`Common` transitively) — it does
+> **not** reference `Application`. Most secondary-port **interfaces** that `Storage` implements live in
+> `Domain` alongside the pure DTOs they expose: the statistics/test-run readers + writer
+> (`Domain.Statistics`, with `TestRunStats` and the result
 > records), the outlier readers + `OutlierSettings` (`Domain.Outliers`), `IEmailSettingsStore` +
 > `EmailSettings` (`Domain.Notifications`), the stored-license store (`Domain.Licensing`),
 > `IDatabaseInitializer` (`Domain.Demo`), `ITestDataReset` (`Domain.TestSupport`) and the audit-emit
-> seam `Audit`/`LogAudit`/`AuditState` (`Domain.AuditLog`). The **implementations** (`Internal/*`),
+> seam `Audit`/`LogAudit`/`AuditState` (`Domain.AuditLog`). The generic `ISecretProtector` and
+> `ISecretHasher` ports live lower in `Nordstein.Core.Common.Security`; only the Proxytrace-specific
+> `ISecretIndexer` and its persisted scheme remain in `Domain.Security`. The **implementations** (`Internal/*`),
 > hosted services, and the audit *capture* pipeline stay in `Application` (issue #270).
 >
 > `Proxytrace.Infrastructure` depends only on `Domain` + `Serialization` (it has **no** reference to
@@ -37,11 +40,12 @@ Proxytrace.Api  →  Proxytrace.Application  →  Proxytrace.Domain  →  Nordst
 
 - **Proxytrace.Api** — ASP.NET Core controllers, DTOs, the OpenAI-compatible proxy endpoint, composition root (`Proxytrace.Api.Module`)
 - **Proxytrace.Application** — Use-case orchestration: ingestion (`OpenAiCallParser`, `AgentCallIngestor`), test running (`TestRunnerService`), optimization, test-case synthesis (`TestCase/ITestCaseSynthesisService` — proposes cases from a captured conversation), SSE broadcasters (`TraceBroadcaster`, `TestResultBroadcaster`, `ProposalBroadcaster`), demo data seeding (`IDatabaseInitializer`)
-- **Proxytrace.Domain** — Business entities, interfaces, value objects, repository contracts. Pure C#, no I/O.
+- **Proxytrace.Domain** — Proxytrace business entities, value objects, specialized repositories, and business rules. Pure C#, no I/O.
 - **Proxytrace.Infrastructure** — External service integration. `ModelClient` wraps `Microsoft.Extensions.AI` + the OpenAI SDK to invoke LLMs.
 - **Proxytrace.Serialization** — JSON serializers and output formats (`ISerializer`, `IOutputFormat`, `ObjectToInferredTypesConverter`).
 - **Proxytrace.Storage** — EF Core entities, configurations, mappers, migrations. Provider auto-detected (SQLite / PostgreSQL / SQL Server).
-- **Nordstein.Core.Common** ([`core/`](../core/)) — Product-agnostic utilities: validation helpers, async/type extensions, DI extensions, clock and randomness seams, hosting defaults.
+- **Nordstein.Core.Common** ([`core/`](../core/)) — Product-agnostic utilities: validation helpers, async/type extensions, DI extensions, clock and randomness seams, secret-protection/hash contracts, hosting defaults.
+- **Nordstein.Core.Domain** ([`core/`](../core/)) — Product-agnostic domain foundation: entity/object contracts and bases, repositories, transactions, generators, paging, persistence exceptions, entity events, and consuming-assembly discovery.
 - **Proxytrace.Proxy** — **Shared pipeline library** (classlib) for the OpenAI-compatible proxy route. Contains the MVC controller (`OpenAiProxyController`), the API-key resolver (`IApiKeyResolver`/`ApiKeyResolver` — **deliberately uncached**, straight from storage on every request so provider-key rotation/revocation takes effect on the next request and the proxy fails closed when the database is unreachable rather than serving stale credentials — #407), the blocking-rule provider (`IBlockingRuleProvider`/`CachedBlockingRuleProvider`), and the request blocker (`IRequestBlocker`/`RequestBlocker`). Its `Module` registers only the pipeline types and their supporting services (IMemoryCache, HTTP clients). References Domain + Infrastructure + Messaging + Storage **+ Licensing** (it does **not** reference Api **or Application** — directly or transitively). The host composition root is responsible for wiring storage, messaging, infrastructure, and licensing; the host also adds the library as an MVC application part so its controller is discovered (the controller assembly is **not** auto-discovered, so a host that does not add the part has no proxy route). This design allows both the standalone `Proxytrace.Proxy.Api` host and, in kiosk mode, `Proxytrace.Api` to mount the proxy route. **In-process kiosk mount:** `Proxytrace.Api` registers `Proxytrace.Proxy.Module` and adds the controller's application part **only when `Kiosk:Enabled` AND a live `Kiosk:Endpoint` is configured** — in production or kiosk-without-endpoint the pipeline services are absent and the `openai/v1/{**path}` routes never resolve. In that single-process kiosk, the controller publishes captured calls to the same in-process `IIngestionStream` (`Messaging__Provider=InProcess`, a shared singleton) that the app's `AgentCallIngestionWorker` consumes — no Redis, no separate container. The controller's kiosk guard refuses (503) only when kiosk has **no** live endpoint; with a live endpoint it serves so a sample client's OpenAI SDK `baseURL` can point at the kiosk API. Kiosk seeding also mints a fixed, config-known demo ingestion key (`Kiosk:DemoApiKey`, default `pk-kiosk-demo`) for the "Showcase Project", attached to the live provider and stored hashed like any operator-minted key (`DemoApiKeySeedScenario`). **Upstream response handling:** both branches send with `HttpCompletionOption.ResponseHeadersRead` and copy the body through in bounded chunks (never `ReadAsStringAsync`), forwarding every byte untruncated while capturing at most `MaxCapturedResponseChars` (16 MiB) for ingestion. Because `HttpClient.Timeout` stops applying the moment the response headers arrive, the buffered branch re-arms that **same** configured timeout (5 min — `Proxytrace.Proxy/Module.cs`, passed in rather than duplicated) as a linked `CancellationTokenSource` around its copy loop, so an upstream that sends headers and then stalls is cut off with a **504** and recorded as such instead of pinning a request, a socket and a thread-pool continuation until the client gives up ([#475](https://github.com/NordsteinSoftware/Proxytrace/issues/475)); a client abort stays distinguishable from that timeout and still propagates. The streaming branch splits SSE lines itself (bounded by `MaxForwardedLineChars`, 256 KiB) on **LF, CRLF or a lone CR** — all normalized to LF on the wire, as the `ReadLineAsync` it replaced did ([#480](https://github.com/NordsteinSoftware/Proxytrace/issues/480)).
 - **Proxytrace.Proxy.Api** — **Standalone** deployable host for the proxy pipeline (own `Program`/`Dockerfile`/`Module`). Loads `Proxytrace.Proxy.Module` for the shared pipeline and adds the host-lifecycle services: it deliberately constructs `Storage.Module` with `registerApplicationServices: false` and never registers `Application.Module`, so **no Application service runs in the proxy** (test runner, optimizer, ingestion worker, search indexing, demo seeder, …). It registers `Proxytrace.Infrastructure.Security.SecretProtectionModule` directly (needed to decrypt upstream provider keys — see docs/security.md), plus small local stubs for the factory delegates the storage model-building graph expects. The licensing module is registered with `ServerCheckEnabled = false` in **both** build flavors — the main app owns the license-server heartbeat and the offline-grace cache file in the shared data dir; the proxy only *consumes* the snapshot for use-time gating and keeps the DB-stored license fresh via a polling `ProxyStoredLicenseService` (host-only, lives in `Proxytrace.Proxy.Api.Internal`).
 - **Proxytrace.Messaging** — Ingestion transport between the proxy (producer) and the app's ingestion worker (consumer), via `IIngestionStream`. Backed by **Redis Streams** in production (`StackExchange.Redis`); backed by an in-memory channel in tests and single-process/kiosk runs.
@@ -76,7 +80,7 @@ Your Agent ──► Proxytrace.Proxy.Api ──► Upstream LLM provider
 
 ## Dependency Injection (Autofac)
 
-DI is wired with Autofac. Each project ships a `Module : Autofac.Module` (`Proxytrace.Domain.Module`, `Proxytrace.Application.Module`, `Proxytrace.Storage.Module`, `Proxytrace.Infrastructure.Module`, `Proxytrace.Serialization.Module`, `Nordstein.Core.Common.Module`, `Proxytrace.Api.Module`, `Proxytrace.Proxy.Module` (pipeline lib), `Proxytrace.Proxy.Api.Module` (standalone host), `Nordstein.Core.Testing.Module`). `Proxytrace.Domain.Module` and `Proxytrace.Storage.Module` discover entities, generators, configurations, and repositories by reflection — no manual registrations for the standard entity pattern. The API serves the compiled React app from `wwwroot/` in production.
+DI is wired with Autofac. Each project ships a `Module : Autofac.Module` (`Proxytrace.Domain.Module`, `Proxytrace.Application.Module`, `Proxytrace.Storage.Module`, `Proxytrace.Infrastructure.Module`, `Proxytrace.Serialization.Module`, `Nordstein.Core.Common.Module`, `Nordstein.Core.Domain.Module`, `Proxytrace.Api.Module`, `Proxytrace.Proxy.Module` (pipeline lib), `Proxytrace.Proxy.Api.Module` (standalone host), `Nordstein.Core.Testing.Module`). `Proxytrace.Domain.Module` passes its assembly to `Nordstein.Core.Domain.Module`, which discovers entities and generators without Core assuming where product types live. `Proxytrace.Storage.Module` still discovers EF configurations and repositories in the product storage assembly. The API serves the compiled React app from `wwwroot/` in production.
 
 **Bridging to `IServiceCollection`.** Modules that need Microsoft-DI extension methods (`AddHttpClient`, `AddMemoryCache`, …) call `builder.RegisterServiceCollection(services => …)`, which fills a fresh `ServiceCollection` and `Populate`s it into Autofac. Those extension methods share their plumbing through `TryAdd`/`TryAddEnumerable`, which dedupes only **within one collection** — so every caller re-adds it and `Populate` faithfully registers each copy. Four modules calling `AddHttpClient` (Api, Application, Licensing, Proxy) therefore put four `IHttpMessageHandlerBuilderFilter`s in the container, and each one's logging handler wrapped every outgoing request: one upstream LLM call, logged four times ([#451](https://github.com/NordsteinSoftware/Proxytrace/issues/451)). `RegisterServiceCollection` now drops descriptors whose (service, implementation, lifetime) triple an earlier call already populated into the same container — an identical type-based registration can never mean two different things, while genuine multi-registrations use distinct implementation types and instance/factory descriptors are left alone.
 

@@ -20,6 +20,7 @@
 
     <ItemGroup>
       <NordsteinCoreReference Include="Nordstein.Core.Common" />
+      <NordsteinCoreReference Include="Nordstein.Core.Domain" />
     </ItemGroup>
 
     <ItemGroup>

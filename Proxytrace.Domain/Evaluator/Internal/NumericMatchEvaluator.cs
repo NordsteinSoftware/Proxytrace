@@ -5,7 +5,7 @@ using System.Text.RegularExpressions;
 using JetBrains.Annotations;
 using Nordstein.Core.Common.Validation;
 using Proxytrace.Domain.Evaluation;
-using Proxytrace.Domain.Internal;
+using Nordstein.Core.Domain;
 using Proxytrace.Domain.Project;
 using Proxytrace.Domain.TestResult;
 

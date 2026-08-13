@@ -10,7 +10,7 @@
   </PropertyGroup>
 
   <!-- ── Nordstein.Core consumption ────────────────────────────────────────────────
-       The reusable foundation (Nordstein.Core.Common, Nordstein.Core.Testing) is
+       The reusable foundation (Nordstein.Core.Common, Nordstein.Core.Domain, Nordstein.Core.Testing) is
        product-agnostic code that has its own repository and, later, its own NuGet
        packages. It lives under core/ as a git submodule of
        github.com/NordsteinSoftware/Nordstein.Core: a Core change is committed there and

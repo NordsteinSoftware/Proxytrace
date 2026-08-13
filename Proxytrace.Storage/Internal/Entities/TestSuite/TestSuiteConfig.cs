@@ -62,14 +62,14 @@ internal class TestSuiteConfig : AbstractEntityConfiguration<TestSuiteEntity>, I
             .ToListAsync(cancellationToken);
 
         var loadedEvaluators = evaluatorIds.Count > 0
-            ? await evaluators.GetManyAsync(evaluatorIds, cancellationToken)
+            ? await evaluators.GetManyAsync(evaluatorIds, cancellationToken: cancellationToken)
             : [];
 
         return factory(
             name: storedEntity.Name,
             agent: await agents.GetAsync(storedEntity.Agent, cancellationToken),
             evaluators: loadedEvaluators,
-            testCases: await testCases.GetManyAsync(storedEntity.TestCases, cancellationToken, ignoreMissing: true),
+            testCases: await testCases.GetManyAsync(storedEntity.TestCases, ignoreMissing: true, cancellationToken: cancellationToken),
             existing: storedEntity);
     }
 

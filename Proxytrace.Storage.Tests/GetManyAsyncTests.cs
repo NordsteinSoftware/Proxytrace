@@ -1,7 +1,7 @@
 using AwesomeAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Proxytrace.Domain;
-using Proxytrace.Domain.Exceptions;
+using Nordstein.Core.Domain.Exceptions;
 using Proxytrace.Domain.User;
 using Nordstein.Core.Testing;
 
@@ -17,7 +17,7 @@ public sealed class GetManyAsyncTests : BaseTest<Module>
         var repository = services.GetRequiredService<IRepository<IUser>>();
         var user = await services.GetRequiredService<IDomainEntityGenerator<IUser>>().CreateAsync(CancellationToken);
 
-        var act = () => repository.GetManyAsync([user.Id, Guid.NewGuid()], CancellationToken);
+        var act = () => repository.GetManyAsync([user.Id, Guid.NewGuid()], cancellationToken: CancellationToken);
 
         await act.Should().ThrowAsync<EntitiesNotFoundException>();
     }
@@ -31,7 +31,10 @@ public sealed class GetManyAsyncTests : BaseTest<Module>
         var repository = services.GetRequiredService<IRepository<IUser>>();
         var user = await services.GetRequiredService<IDomainEntityGenerator<IUser>>().CreateAsync(CancellationToken);
 
-        var result = await repository.GetManyAsync([user.Id, Guid.NewGuid()], CancellationToken, ignoreMissing: true);
+        var result = await repository.GetManyAsync(
+            [user.Id, Guid.NewGuid()],
+            ignoreMissing: true,
+            cancellationToken: CancellationToken);
 
         result.Should().ContainSingle(u => u.Id == user.Id);
     }

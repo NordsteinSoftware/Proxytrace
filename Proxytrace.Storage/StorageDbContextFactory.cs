@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore.Design;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Nordstein.Core.Common.Security;
 using Proxytrace.Domain.Agent;
 using Proxytrace.Domain.ModelProvider;
 using Proxytrace.Domain.Project;

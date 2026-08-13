@@ -6,9 +6,9 @@ using Proxytrace.Domain.Agent;
 using Proxytrace.Domain.AgentCall;
 using Proxytrace.Domain.AgentVersion;
 using Proxytrace.Domain.Session;
-using Proxytrace.Domain.Events;
+using Nordstein.Core.Domain.Events;
 using Proxytrace.Domain.ModelEndpoint;
-using Proxytrace.Domain.Paging;
+using Nordstein.Core.Domain.Paging;
 using Proxytrace.Domain.Project;
 using Proxytrace.Domain.Search;
 using Proxytrace.Domain.Usage;
@@ -113,13 +113,19 @@ internal class AgentCallRepository : AbstractRepository<IAgentCall, AgentCallEnt
         // Resolve the agent/endpoint metadata the list shows from the cached entity repositories
         // (batched by distinct id), rather than per-row navigation loads.
         var versionsById = (await versions.GetManyAsync(
-                rows.Select(r => r.AgentVersionId).Distinct().ToArray(), cancellationToken, ignoreMissing: true))
+                rows.Select(r => r.AgentVersionId).Distinct().ToArray(),
+                ignoreMissing: true,
+                cancellationToken: cancellationToken))
             .ToDictionary(v => v.Id);
         var agentsById = (await agents.GetManyAsync(
-                versionsById.Values.Select(v => v.AgentId).Distinct().ToArray(), cancellationToken, ignoreMissing: true))
+                versionsById.Values.Select(v => v.AgentId).Distinct().ToArray(),
+                ignoreMissing: true,
+                cancellationToken: cancellationToken))
             .ToDictionary(a => a.Id);
         var endpointsById = (await endpoints.GetManyAsync(
-                rows.Select(r => r.EndpointId).Distinct().ToArray(), cancellationToken, ignoreMissing: true))
+                rows.Select(r => r.EndpointId).Distinct().ToArray(),
+                ignoreMissing: true,
+                cancellationToken: cancellationToken))
             .ToDictionary(e => e.Id);
 
         var items = rows.Select(r =>
@@ -287,7 +293,9 @@ internal class AgentCallRepository : AbstractRepository<IAgentCall, AgentCallEnt
         }
 
         var endpointsById = (await endpoints.GetManyAsync(
-                grouped.Select(g => g.EndpointId).Distinct().ToArray(), cancellationToken, ignoreMissing: true))
+                grouped.Select(g => g.EndpointId).Distinct().ToArray(),
+                ignoreMissing: true,
+                cancellationToken: cancellationToken))
             .ToDictionary(e => e.Id);
 
         var groups = grouped.Select(g => new AgentCallSummaryGroup(

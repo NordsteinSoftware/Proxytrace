@@ -1,7 +1,7 @@
 using Nordstein.Core.Common.Random;
 using Proxytrace.Domain.Agent;
 using Proxytrace.Domain.Evaluator;
-using Proxytrace.Domain.Internal;
+using Nordstein.Core.Domain;
 using Proxytrace.Domain.TestCase;
 
 namespace Proxytrace.Domain.TestSuite.Internal;

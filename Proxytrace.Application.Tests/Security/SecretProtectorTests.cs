@@ -3,7 +3,7 @@ using AwesomeAssertions;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.DependencyInjection;
 using Nordstein.Core.Common.DependencyInjection;
-using Proxytrace.Domain.Security;
+using Nordstein.Core.Common.Security;
 using Proxytrace.Infrastructure.Security.Internal;
 using Nordstein.Core.Testing;
 

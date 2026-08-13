@@ -11,7 +11,7 @@ using Proxytrace.Domain.Agent;
 using Proxytrace.Domain.AgentCall;
 using Proxytrace.Domain.AuditLog;
 using Proxytrace.Domain.Evaluator;
-using Proxytrace.Domain.Paging;
+using Nordstein.Core.Domain.Paging;
 using Proxytrace.Domain.TestCase;
 using Proxytrace.Domain.TestSuite;
 using Proxytrace.Licensing;
@@ -250,7 +250,7 @@ public class TestSuitesController : ControllerBase
             var distinctEvalIds = request.EvaluatorIds.Distinct().ToArray();
             if (!await CanAccessEvaluatorsAsync(distinctEvalIds, cancellationToken))
                 return NotFound();
-            evaluators = await evaluatorRepository.GetManyAsync(distinctEvalIds, cancellationToken);
+            evaluators = await evaluatorRepository.GetManyAsync(distinctEvalIds, cancellationToken: cancellationToken);
         }
         else
         {
@@ -309,7 +309,7 @@ public class TestSuitesController : ControllerBase
             var distinctEvalIds = request.EvaluatorIds.Distinct().ToArray();
             if (!await CanAccessEvaluatorsAsync(distinctEvalIds, cancellationToken))
                 return NotFound();
-            evaluators = await evaluatorRepository.GetManyAsync(distinctEvalIds, cancellationToken);
+            evaluators = await evaluatorRepository.GetManyAsync(distinctEvalIds, cancellationToken: cancellationToken);
         }
 
         IReadOnlyCollection<ITestCase> testCases = existing.TestCases;
@@ -318,7 +318,7 @@ public class TestSuitesController : ControllerBase
             var distinctCaseIds = request.TestCaseIds.Distinct().ToArray();
             if (!await CanAccessTestCasesAsync(distinctCaseIds, cancellationToken))
                 return NotFound();
-            testCases = await testCaseRepository.GetManyAsync(distinctCaseIds, cancellationToken);
+            testCases = await testCaseRepository.GetManyAsync(distinctCaseIds, cancellationToken: cancellationToken);
         }
 
         var updated = createSuiteExisting(existing.Name, agent, evaluators, testCases, existing);
@@ -381,7 +381,7 @@ public class TestSuitesController : ControllerBase
             var distinctEvalIds = request.EvaluatorIds.Distinct().ToArray();
             if (!await CanAccessEvaluatorsAsync(distinctEvalIds, cancellationToken))
                 return NotFound();
-            evaluators = await evaluatorRepository.GetManyAsync(distinctEvalIds, cancellationToken);
+            evaluators = await evaluatorRepository.GetManyAsync(distinctEvalIds, cancellationToken: cancellationToken);
         }
         else
         {

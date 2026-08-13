@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 using AwesomeAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Proxytrace.Domain;
-using Proxytrace.Domain.Exceptions;
+using Nordstein.Core.Domain.Exceptions;
 using Proxytrace.Domain.Notification;
 using Proxytrace.Domain.User;
 using Nordstein.Core.Testing;

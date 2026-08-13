@@ -1,3 +1,5 @@
+using Nordstein.Core.Common.Security;
+
 namespace Proxytrace.Domain.Security;
 
 /// <summary>
@@ -6,11 +8,12 @@ namespace Proxytrace.Domain.Security;
 /// </summary>
 /// <remarks>
 /// <para>
-/// <see cref="ISecretHasher"/> is a plain unkeyed SHA-256, which is safe only because the secrets it
-/// covers are 256-bit CSPRNG values that a dump cannot reverse. The upstream provider key is not one
-/// of those: an operator types it in, and self-hosted OpenAI-compatible backends conventionally use
-/// values like <c>EMPTY</c>, <c>ollama</c>, or <c>sk-1234</c>. An unkeyed index over those falls to a
-/// wordlist in seconds, which would undo the column encryption sitting right beside it.
+/// Proxytrace's <see cref="ISecretHasher"/> implementation is a plain unkeyed SHA-256, which is safe
+/// only because the secrets it covers are 256-bit CSPRNG values that a dump cannot reverse. The
+/// upstream provider key is not one of those: an operator types it in, and self-hosted
+/// OpenAI-compatible backends conventionally use values like <c>EMPTY</c>, <c>ollama</c>, or
+/// <c>sk-1234</c>. An unkeyed index over those falls to a wordlist in seconds, which would undo the
+/// column encryption sitting right beside it.
 /// </para>
 /// <para>
 /// The index is therefore an <b>HMAC under a key that never leaves the deployment</b> (see

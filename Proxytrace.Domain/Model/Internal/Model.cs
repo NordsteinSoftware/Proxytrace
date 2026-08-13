@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using Nordstein.Core.Common.Validation;
-using Proxytrace.Domain.Internal;
+using Nordstein.Core.Domain;
 
 namespace Proxytrace.Domain.Model.Internal;
 
@@ -27,4 +27,3 @@ internal record Model : DomainEntity<IModel>, IModel
         yield return Validation.NotNullOrWhiteSpace(Name);
     }
 }
-

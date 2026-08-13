@@ -8,6 +8,7 @@
 
     <ItemGroup>
       <ProjectReference Include="..\Proxytrace.Domain\Proxytrace.Domain.csproj" />
+      <NordsteinCoreReference Include="Nordstein.Core.Domain" />
     </ItemGroup>
     
     <ItemGroup>

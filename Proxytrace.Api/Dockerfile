@@ -35,6 +35,7 @@ WORKDIR /src
 COPY ["Directory.Build.props", "Directory.Build.targets", "nuget.config", "./"]
 COPY ["core/Directory.Build.props", "core/Nordstein.Core.sln", "core/"]
 COPY ["core/Nordstein.Core.Common/Nordstein.Core.Common.csproj", "core/Nordstein.Core.Common/"]
+COPY ["core/Nordstein.Core.Domain/Nordstein.Core.Domain.csproj", "core/Nordstein.Core.Domain/"]
 COPY ["Proxytrace.Api/Proxytrace.Api.csproj", "Proxytrace.Api/"]
 COPY ["Proxytrace.Application/Proxytrace.Application.csproj", "Proxytrace.Application/"]
 COPY ["Proxytrace.Domain/Proxytrace.Domain.csproj", "Proxytrace.Domain/"]

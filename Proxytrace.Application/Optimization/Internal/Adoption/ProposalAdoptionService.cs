@@ -7,7 +7,7 @@ using Proxytrace.Domain;
 using Proxytrace.Domain.Agent;
 using Proxytrace.Domain.AgentVersion;
 using Proxytrace.Domain.AuditLog;
-using Proxytrace.Domain.Events;
+using Nordstein.Core.Domain.Events;
 using Proxytrace.Domain.OptimizationProposal;
 
 namespace Proxytrace.Application.Optimization.Internal.Adoption;

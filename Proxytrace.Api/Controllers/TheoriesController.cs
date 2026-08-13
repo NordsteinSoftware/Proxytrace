@@ -10,7 +10,7 @@ using Proxytrace.Application.Optimization;
 using Proxytrace.Domain;
 using Proxytrace.Domain.Agent;
 using Proxytrace.Domain.AuditLog;
-using Proxytrace.Domain.Exceptions;
+using Nordstein.Core.Domain.Exceptions;
 using Proxytrace.Domain.ModelEndpoint;
 using Proxytrace.Domain.OptimizationTheory;
 using Proxytrace.Domain.TestSuite;

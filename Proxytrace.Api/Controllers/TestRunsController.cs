@@ -8,7 +8,7 @@ using Proxytrace.Api.Json;
 using Proxytrace.Application.Streaming;
 using Proxytrace.Domain.Agent;
 using Proxytrace.Domain.AuditLog;
-using Proxytrace.Domain.Paging;
+using Nordstein.Core.Domain.Paging;
 using Proxytrace.Domain.TestRun;
 
 namespace Proxytrace.Api.Controllers;

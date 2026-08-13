@@ -3,7 +3,7 @@ using Nordstein.Core.Common.Random;
 using Proxytrace.Domain.Agent;
 using Proxytrace.Domain.AgentVersion;
 using Proxytrace.Domain.Completion;
-using Proxytrace.Domain.Internal;
+using Nordstein.Core.Domain;
 using Proxytrace.Domain.Message;
 using Proxytrace.Domain.ModelEndpoint;
 
