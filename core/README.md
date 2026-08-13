@@ -13,8 +13,12 @@ what Proxytrace is; nothing in here may ever learn.
 Core is destined for its own private repository, published as NuGet packages. It sits under
 `core/` in the Proxytrace repository as a **staging area** so the extraction can be validated —
 packaging, namespaces, the dependency direction, CI — before anything is split or published.
-Its history is confined to this prefix, so completing the move is a `git subtree split` on
-`core/` rather than a copy that loses the past.
+
+Completing the move keeps the history, but **not** via `git subtree split`: that filters by path
+without following renames, and everything here was `git mv`'d from `Proxytrace.Common/` and
+friends, so it would yield a single commit. `git filter-repo` with the old paths mapped onto the
+new ones carries the real history across. The verified recipe is in
+[`PUBLISHING.md`](PUBLISHING.md#completing-the-split).
 
 The staging period is not free: nothing but review discipline stops a Proxytrace type from
 being referenced in here, and the day that happens the extraction stops being possible. The two

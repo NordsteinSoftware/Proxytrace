@@ -1,14 +1,28 @@
 <Project>
-  <!-- Inherit the repository-wide settings (warnings-as-errors above all) and then override
-       what is specific to a shippable package. The explicit import is required: MSBuild stops
-       at the nearest Directory.Build.props, so without it the root file would not apply here. -->
-  <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" />
+  <!-- Inherit the repository-wide settings while Core is staged inside Proxytrace. The explicit
+       import is required there: MSBuild stops at the nearest Directory.Build.props, so without it
+       the root file would not apply.
+
+       Conditional, because Core is meant to leave. In its own repository there is no file above,
+       GetPathOfFileAbove returns empty, and an unconditional Import of "" fails the build with
+       MSB4020 before a single project compiles — the extracted repository would not build at all.
+       Everything the parent supplies that Core actually needs is defaulted below, so the two
+       layouts behave identically. -->
+  <PropertyGroup>
+    <NordsteinCoreParentProps>$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))</NordsteinCoreParentProps>
+  </PropertyGroup>
+  <Import Project="$(NordsteinCoreParentProps)" Condition="'$(NordsteinCoreParentProps)' != ''" />
 
   <PropertyGroup>
+    <!-- Defaults for the standalone case; no-ops when the parent already set them. -->
+    <TreatWarningsAsErrors Condition="'$(TreatWarningsAsErrors)' == ''">true</TreatWarningsAsErrors>
+    <IncludeSourceRevisionInInformationalVersion Condition="'$(IncludeSourceRevisionInInformationalVersion)' == ''">false</IncludeSourceRevisionInInformationalVersion>
+
     <!-- Core versions independently of the product that consumes it: its version is the
          package contract, not Proxytrace's release number. The release pipeline passes
          -p:NordsteinCoreVersion=X.Y.Z; local builds identify as a prerelease so a hand-built
          package can never be mistaken for a published one. -->
+    <NordsteinCoreVersion Condition="'$(NordsteinCoreVersion)' == ''">0.1.0-dev</NordsteinCoreVersion>
     <Version>$(NordsteinCoreVersion)</Version>
 
     <TargetFramework>net10.0</TargetFramework>

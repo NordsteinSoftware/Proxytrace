@@ -63,12 +63,61 @@ turn one bad publish into a failure in every product at once, with no diff to po
 
 ## Completing the split
 
+### Do not use `git subtree split`
+
+The obvious command is the wrong one:
+
 ```bash
-git subtree split --prefix=core -b core-extraction
-# push that branch as the initial history of the Core repository
+git subtree split --prefix=core -b core-extraction   # DON'T
 ```
 
-Then, in this repository: delete `core/`, and point `NordsteinCorePath` at a sibling checkout
-(`../Core/`) so source mode keeps working for anyone with both repositories cloned. Everything
-else — the `NordsteinCoreReference` items, the Dockerfile restore layers, CI — is already
-written against the switch and does not change.
+It filters strictly by path and **does not follow renames**. Everything now under `core/` was
+`git mv`'d there from `Proxytrace.Common/`, `Proxytrace.Common.Tests/` and `Proxytrace.Testing/`,
+so a subtree split sees only the move commit onward. Measured on this repository: **1 commit**.
+That is a copy with extra steps — every `git blame` and `git log` on the extracted code would
+dead-end at the extraction.
+
+### Use `git filter-repo`
+
+It can map the old paths onto the new ones, so the pre-move history comes along. On the same
+repository this yields **7 commits**, back through the changes that actually shaped this code
+(#371, #465, #484, #508 and the background-service hosting fix).
+
+```bash
+pip install git-filter-repo
+
+# filter-repo rewrites history in place — always run it on a throwaway clone
+git clone --no-local <this-repo> ../core-extraction
+cd ../core-extraction
+
+git filter-repo \
+  --path Proxytrace.Common.Tests --path Proxytrace.Common --path Proxytrace.Testing --path core \
+  --path-rename Proxytrace.Common.Tests/:Nordstein.Core.Common.Tests/ \
+  --path-rename Proxytrace.Common/:Nordstein.Core.Common/ \
+  --path-rename Proxytrace.Testing/:Nordstein.Core.Testing/ \
+  --path-rename core/:
+```
+
+Keep the `.Tests` rename **before** the `Proxytrace.Common/` one: renames apply in order and
+first match wins.
+
+Then verify before pushing anywhere — the extracted repository has no parent directory to inherit
+from, which is exactly the kind of thing that only shows up here:
+
+```bash
+dotnet build Nordstein.Core.sln
+dotnet test  Nordstein.Core.sln
+dotnet pack  Nordstein.Core.sln -c Release -p:NordsteinCoreVersion=1.0.0 -o ./out
+```
+
+Finally push it as the Core repository's initial history.
+
+### Then, in this repository
+
+Delete `core/` and point `NordsteinCorePath` at a sibling checkout (`../Core/`) so source mode
+keeps working for anyone with both repositories cloned. Everything else — the
+`NordsteinCoreReference` items, the Dockerfile restore layers, CI — is already written against
+the switch and does not change.
+
+Also drop the `core/` entries from the Dockerfile restore layers and from `detect-changes`'s
+`backend` path regex at that point; they exist only while Core is staged here.

@@ -79,11 +79,16 @@ bump is a one-line diff.
 
 Core is staged here rather than extracted in one move, so the mechanism could be validated —
 packaging, namespaces, dependency direction, Docker restore layers, CI — before a second
-repository exists to get any of it wrong. Its history is confined to the `core/` prefix, so
-completing the move is a `git subtree split` on that prefix, not a copy that drops the past.
+repository exists to get any of it wrong.
 
 The cost of staging is that only the two guards above keep the boundary honest. Do not weaken
 them.
+
+When the move is completed, use `git filter-repo` with the pre-move paths mapped onto the current
+ones — **not** `git subtree split`, which filters by path without following renames and would
+reduce this code's history to the single commit that moved it. The verified commands, and the
+standalone build/test/pack check to run before pushing the new repository, are in
+[`core/PUBLISHING.md`](../core/PUBLISHING.md#completing-the-split).
 
 ## What comes next
 
