@@ -5,7 +5,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using Proxytrace.Application.Licensing.Internal;
 using Proxytrace.Licensing;
-using Proxytrace.Testing;
+using Nordstein.Core.Testing;
 
 namespace Proxytrace.Application.Tests.Licensing;
 

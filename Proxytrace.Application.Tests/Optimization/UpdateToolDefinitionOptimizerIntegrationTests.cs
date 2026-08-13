@@ -25,7 +25,7 @@ using Proxytrace.Domain.TestRunGroup;
 using Proxytrace.Domain.TestSuite;
 using Proxytrace.Domain.Tools;
 using Proxytrace.Domain.Kiosk;
-using Proxytrace.Testing;
+using Nordstein.Core.Testing;
 
 namespace Proxytrace.Application.Tests.Optimization;
 

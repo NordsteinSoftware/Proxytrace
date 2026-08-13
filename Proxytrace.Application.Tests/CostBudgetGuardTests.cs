@@ -6,8 +6,8 @@ using Proxytrace.Application.CostControl;
 using Proxytrace.Application.CostControl.Internal;
 using Proxytrace.Application.Notifications;
 using Microsoft.Extensions.Logging.Abstractions;
-using Proxytrace.Common.Serialization;
-using Proxytrace.Common.Time;
+using Nordstein.Core.Common.Serialization;
+using Nordstein.Core.Common.Time;
 using Proxytrace.Domain.AuditLog;
 using Proxytrace.Domain;
 using Proxytrace.Domain.Agent;
@@ -18,7 +18,7 @@ using Proxytrace.Domain.Notification;
 using Proxytrace.Domain.Project;
 using Proxytrace.Domain.Statistics;
 using Proxytrace.Licensing;
-using Proxytrace.Testing;
+using Nordstein.Core.Testing;
 
 namespace Proxytrace.Application.Tests;
 

@@ -12,7 +12,7 @@ using Proxytrace.Domain.ModelProvider;
 using Proxytrace.Domain.Project;
 using Proxytrace.Domain.Prompt;
 using Proxytrace.Storage;
-using Proxytrace.Testing;
+using Nordstein.Core.Testing;
 
 namespace Proxytrace.Application.Tests;
 

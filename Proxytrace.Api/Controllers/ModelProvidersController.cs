@@ -1,8 +1,8 @@
 using System.Security.Cryptography;
 using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
-using Proxytrace.Common.Net;
-using Proxytrace.Common.Security;
+using Nordstein.Core.Common.Net;
+using Nordstein.Core.Common.Security;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Proxytrace.Api.Dto.ApiKeys;

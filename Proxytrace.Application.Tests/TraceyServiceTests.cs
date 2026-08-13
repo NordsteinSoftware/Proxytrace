@@ -5,7 +5,7 @@ using Proxytrace.Application.Tracey;
 using Proxytrace.Application.Tracey.Internal;
 using Proxytrace.Domain;
 using Proxytrace.Domain.Project;
-using Proxytrace.Testing;
+using Nordstein.Core.Testing;
 
 namespace Proxytrace.Application.Tests;
 

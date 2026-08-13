@@ -4,7 +4,7 @@ using Microsoft.Extensions.Logging;
 using Proxytrace.Application.ErrorLog;
 using Proxytrace.Application.ErrorLog.Internal;
 using Proxytrace.Domain.ApplicationError;
-using Proxytrace.Testing;
+using Nordstein.Core.Testing;
 
 namespace Proxytrace.Application.Tests.ErrorLog;
 

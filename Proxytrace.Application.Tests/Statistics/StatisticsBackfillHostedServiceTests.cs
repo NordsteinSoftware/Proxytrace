@@ -7,7 +7,7 @@ using Proxytrace.Application.Statistics.Internal.Worker;
 using Proxytrace.Domain.Statistics.TestRun;
 using Proxytrace.Domain;
 using Proxytrace.Domain.TestRun;
-using Proxytrace.Testing;
+using Nordstein.Core.Testing;
 
 namespace Proxytrace.Application.Tests.Statistics;
 

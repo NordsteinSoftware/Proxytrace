@@ -1,0 +1,26 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <Description>
+            Shared MSTest harness for Nordstein applications: the Autofac-backed
+            BaseTest&lt;TModule&gt; fixture, container/service-provider helpers, and the
+            AwesomeAssertions + NSubstitute baseline every test project builds on.
+        </Description>
+        <PackageTags>nordstein;testing;mstest;autofac;nsubstitute</PackageTags>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <PackageReference Include="Autofac" Version="9.3.2" />
+      <PackageReference Include="Autofac.Extensions.DependencyInjection" Version="11.0.2" />
+      <PackageReference Include="AwesomeAssertions" Version="9.5.0" />
+      <PackageReference Include="Microsoft.AspNetCore.DataProtection" Version="10.0.10" />
+      <PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.10" />
+      <PackageReference Include="MSTest.TestFramework" Version="4.3.3" />
+      <PackageReference Include="NSubstitute" Version="6.0.0" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\Nordstein.Core.Common\Nordstein.Core.Common.csproj" />
+    </ItemGroup>
+
+</Project>

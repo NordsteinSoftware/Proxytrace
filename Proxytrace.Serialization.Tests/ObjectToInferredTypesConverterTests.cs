@@ -2,7 +2,7 @@ using System.Text.Json;
 using JsonSerializer = System.Text.Json.JsonSerializer;
 using AwesomeAssertions;
 using Proxytrace.Serialization.Internal;
-using Proxytrace.Testing;
+using Nordstein.Core.Testing;
 
 namespace Proxytrace.Serialization.Tests;
 

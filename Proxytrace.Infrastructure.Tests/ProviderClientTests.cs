@@ -1,6 +1,6 @@
 using AwesomeAssertions;
 using NSubstitute;
-using Proxytrace.Testing;
+using Nordstein.Core.Testing;
 using Proxytrace.Domain.Model;
 using Proxytrace.Domain.ModelProvider;
 using Proxytrace.Infrastructure.Internal;

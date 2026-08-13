@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Proxytrace.Common.DependencyInjection;
+using Nordstein.Core.Common.DependencyInjection;
 using Proxytrace.Domain.Security;
 
 namespace Proxytrace.Infrastructure.Security;

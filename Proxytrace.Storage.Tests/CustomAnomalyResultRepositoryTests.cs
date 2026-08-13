@@ -3,7 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Proxytrace.Domain;
 using Proxytrace.Domain.AgentCall;
 using Proxytrace.Domain.CustomAnomaly;
-using Proxytrace.Testing;
+using Nordstein.Core.Testing;
 
 namespace Proxytrace.Storage.Tests;
 

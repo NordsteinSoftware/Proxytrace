@@ -1,4 +1,4 @@
-using Proxytrace.Common.Time;
+using Nordstein.Core.Common.Time;
 
 namespace Proxytrace.Licensing.Tests;
 

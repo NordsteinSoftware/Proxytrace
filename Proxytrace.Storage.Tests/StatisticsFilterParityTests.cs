@@ -1,7 +1,7 @@
 using System.Reflection;
 using AwesomeAssertions;
 using Proxytrace.Domain.Statistics;
-using Proxytrace.Testing;
+using Nordstein.Core.Testing;
 
 namespace Proxytrace.Storage.Tests;
 

@@ -14,7 +14,7 @@ using Proxytrace.Domain.Project;
 using Proxytrace.Domain.Prompt;
 using Proxytrace.Domain.Tools;
 using Proxytrace.Serialization;
-using Proxytrace.Testing;
+using Nordstein.Core.Testing;
 
 namespace Proxytrace.Application.Tests.TestCase;
 

@@ -11,7 +11,7 @@ using Proxytrace.Storage.Internal.Entities.AgentCall;
 using Proxytrace.Storage.Internal.Entities.AgentVersion;
 using Proxytrace.Storage.Internal.Entities.Session;
 using Proxytrace.Storage.Internal.Entities.Statistics;
-using Proxytrace.Testing;
+using Nordstein.Core.Testing;
 
 namespace Proxytrace.Storage.Tests;
 

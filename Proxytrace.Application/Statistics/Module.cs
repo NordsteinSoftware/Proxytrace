@@ -3,7 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Proxytrace.Application.Statistics.Internal;
 using Proxytrace.Application.Statistics.Internal.Worker;
 using Proxytrace.Application.Statistics.TestRun.Internal;
-using Proxytrace.Common.DependencyInjection;
+using Nordstein.Core.Common.DependencyInjection;
 
 namespace Proxytrace.Application.Statistics;
 

@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Proxytrace.Domain;
 using Proxytrace.Domain.ModelProvider;
-using Proxytrace.Testing;
+using Nordstein.Core.Testing;
 using ModelProviderEntity = Proxytrace.Storage.Internal.Entities.ModelProvider.ModelProviderEntity;
 
 namespace Proxytrace.Storage.Tests;

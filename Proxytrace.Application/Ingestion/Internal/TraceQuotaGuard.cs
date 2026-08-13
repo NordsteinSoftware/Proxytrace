@@ -2,7 +2,7 @@ using System.Collections.Concurrent;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Proxytrace.Application.Notifications;
-using Proxytrace.Common.Time;
+using Nordstein.Core.Common.Time;
 using Proxytrace.Domain.AgentCall;
 using Proxytrace.Domain.Notification;
 using Proxytrace.Domain.Project;

@@ -5,7 +5,7 @@ using Microsoft.Extensions.Logging;
 using Proxytrace.Application.Auth;
 using Proxytrace.Domain.AuditLog;
 using Proxytrace.Domain.User;
-using Proxytrace.Testing;
+using Nordstein.Core.Testing;
 
 namespace Proxytrace.Application.Tests.Auth;
 

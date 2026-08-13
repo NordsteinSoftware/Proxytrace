@@ -34,7 +34,7 @@ using Proxytrace.Api.Dto.Tools;
 using Proxytrace.Api.Evaluators;
 using Proxytrace.Application.TestRun;
 using Proxytrace.Application.Updates;
-using Proxytrace.Common.DependencyInjection;
+using Nordstein.Core.Common.DependencyInjection;
 using Proxytrace.Storage;
 
 namespace Proxytrace.Api;

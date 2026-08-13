@@ -1,8 +1,8 @@
 using System.Net;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using Proxytrace.Common.Async;
-using Proxytrace.Common.Serialization;
+using Nordstein.Core.Common.Async;
+using Nordstein.Core.Common.Serialization;
 using Proxytrace.Domain;
 using Proxytrace.Domain.Agent;
 using Proxytrace.Domain.AgentCall;

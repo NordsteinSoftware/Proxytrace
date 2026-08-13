@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Proxytrace.Common.DependencyInjection;
+using Nordstein.Core.Common.DependencyInjection;
 using Proxytrace.Domain;
 using Proxytrace.Domain.Demo;
 using Proxytrace.Domain.Outliers;

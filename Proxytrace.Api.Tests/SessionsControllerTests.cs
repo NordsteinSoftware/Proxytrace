@@ -5,7 +5,7 @@ using NSubstitute;
 using Proxytrace.Api.Auth;
 using Proxytrace.Api.Controllers;
 using Proxytrace.Domain.Session;
-using Proxytrace.Testing;
+using Nordstein.Core.Testing;
 
 namespace Proxytrace.Api.Tests;
 

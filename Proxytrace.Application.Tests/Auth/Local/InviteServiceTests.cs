@@ -7,7 +7,7 @@ using Proxytrace.Domain;
 using Proxytrace.Domain.User;
 using Proxytrace.Licensing;
 using Proxytrace.Licensing.Exceptions;
-using Proxytrace.Testing;
+using Nordstein.Core.Testing;
 
 namespace Proxytrace.Application.Tests.Auth.Local;
 

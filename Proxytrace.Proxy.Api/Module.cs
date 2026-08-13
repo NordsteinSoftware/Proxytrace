@@ -1,6 +1,6 @@
 using Autofac;
 using Microsoft.Extensions.DependencyInjection;
-using Proxytrace.Common.DependencyInjection;
+using Nordstein.Core.Common.DependencyInjection;
 using Proxytrace.Domain.Kiosk;
 using Proxytrace.Domain.Agent;
 using Proxytrace.Domain.ModelProvider;

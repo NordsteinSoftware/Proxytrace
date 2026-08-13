@@ -13,7 +13,7 @@ using Proxytrace.Domain;
 using Proxytrace.Domain.Project;
 using Proxytrace.Domain.User;
 using Proxytrace.Messaging;
-using Proxytrace.Testing;
+using Nordstein.Core.Testing;
 
 namespace Proxytrace.Api.Tests;
 

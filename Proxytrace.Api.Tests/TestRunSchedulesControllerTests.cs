@@ -20,7 +20,7 @@ using Proxytrace.Domain.TestRunGroup;
 using Proxytrace.Domain.TestRunSchedule;
 using Proxytrace.Domain.TestSuite;
 using Proxytrace.Licensing;
-using Proxytrace.Testing;
+using Nordstein.Core.Testing;
 
 namespace Proxytrace.Api.Tests;
 

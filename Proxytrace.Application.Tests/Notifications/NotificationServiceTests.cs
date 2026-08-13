@@ -7,7 +7,7 @@ using NSubstitute;
 using Proxytrace.Application.Notifications;
 using Proxytrace.Application.Notifications.Internal;
 using Proxytrace.Domain.Notification;
-using Proxytrace.Testing;
+using Nordstein.Core.Testing;
 
 namespace Proxytrace.Application.Tests.Notifications;
 

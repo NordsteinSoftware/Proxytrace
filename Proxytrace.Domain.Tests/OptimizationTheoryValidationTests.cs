@@ -6,7 +6,7 @@ using Proxytrace.Domain.OptimizationTheory;
 using Proxytrace.Domain.Proposal;
 using Proxytrace.Domain.TestRun;
 using Proxytrace.Domain.TestSuite;
-using Proxytrace.Testing;
+using Nordstein.Core.Testing;
 
 namespace Proxytrace.Domain.Tests;
 

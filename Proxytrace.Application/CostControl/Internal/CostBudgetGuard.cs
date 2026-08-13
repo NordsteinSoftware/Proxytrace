@@ -1,8 +1,8 @@
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Proxytrace.Application.Notifications;
-using Proxytrace.Common.Serialization;
-using Proxytrace.Common.Time;
+using Nordstein.Core.Common.Serialization;
+using Nordstein.Core.Common.Time;
 using Proxytrace.Domain.AuditLog;
 using Proxytrace.Domain.CostLimit;
 using Proxytrace.Domain.CostLimitBreach;

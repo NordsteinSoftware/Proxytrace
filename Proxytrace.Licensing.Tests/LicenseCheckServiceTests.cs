@@ -3,9 +3,9 @@ using AwesomeAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
-using Proxytrace.Common.Time;
+using Nordstein.Core.Common.Time;
 using Proxytrace.Licensing.Internal;
-using Proxytrace.Testing;
+using Nordstein.Core.Testing;
 
 namespace Proxytrace.Licensing.Tests;
 

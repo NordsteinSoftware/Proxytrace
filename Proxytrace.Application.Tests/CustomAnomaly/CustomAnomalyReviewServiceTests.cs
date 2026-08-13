@@ -16,7 +16,7 @@ using Proxytrace.Domain.ModelEndpoint;
 using Proxytrace.Domain.Notification;
 using Proxytrace.Licensing;
 using Proxytrace.Serialization;
-using Proxytrace.Testing;
+using Nordstein.Core.Testing;
 
 namespace Proxytrace.Application.Tests.CustomAnomaly;
 

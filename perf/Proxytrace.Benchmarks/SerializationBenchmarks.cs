@@ -1,6 +1,6 @@
 using Autofac;
 using BenchmarkDotNet.Attributes;
-using Proxytrace.Common.Serialization;
+using Nordstein.Core.Common.Serialization;
 using Proxytrace.Domain.Message;
 
 namespace Proxytrace.Benchmarks;

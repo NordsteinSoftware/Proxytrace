@@ -1,0 +1,55 @@
+<Project>
+  <!-- Inherit the repository-wide settings (warnings-as-errors above all) and then override
+       what is specific to a shippable package. The explicit import is required: MSBuild stops
+       at the nearest Directory.Build.props, so without it the root file would not apply here. -->
+  <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" />
+
+  <PropertyGroup>
+    <!-- Core versions independently of the product that consumes it: its version is the
+         package contract, not Proxytrace's release number. The release pipeline passes
+         -p:NordsteinCoreVersion=X.Y.Z; local builds identify as a prerelease so a hand-built
+         package can never be mistaken for a published one. -->
+    <Version>$(NordsteinCoreVersion)</Version>
+
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <Authors>Nordstein Software</Authors>
+    <Company>Nordstein Software</Company>
+    <Product>Nordstein.Core</Product>
+    <Copyright>Copyright © Nordstein Software</Copyright>
+    <PackageProjectUrl>https://github.com/NordsteinSoftware/Core</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/NordsteinSoftware/Core</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <!-- Placeholder: Core inherits Proxytrace's licence until the terms for a shared,
+         separately distributed library are settled. See PUBLISHING.md — this must be
+         confirmed before the first publish, because a package licence cannot be recalled
+         from consumers who already restored it. -->
+    <PackageLicenseFile>LICENSE</PackageLicenseFile>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+
+    <!-- A consumer of a binary package has no source to read, so the XML docs are the API
+         documentation. CS1591 (missing doc on a public member) is not worth failing a build
+         over while the surface is still being shaped. -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+
+    <!-- Debugging into a binary dependency is the single biggest cost of the package split.
+         Symbols plus SourceLink (built into the SDK since .NET 8, no extra package) keep
+         step-into working from the consuming product. -->
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <ContinuousIntegrationBuild Condition="'$(CI)' == 'true'">true</ContinuousIntegrationBuild>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(IsPackable)' != 'false'">
+    <None Include="$(MSBuildThisFileDirectory)LICENSE" Pack="true" PackagePath="" Visible="false" />
+    <None Include="README.md" Pack="true" PackagePath="" Visible="false" Condition="Exists('README.md')" />
+  </ItemGroup>
+</Project>

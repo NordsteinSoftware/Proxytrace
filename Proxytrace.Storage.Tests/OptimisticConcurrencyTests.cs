@@ -5,7 +5,7 @@ using Proxytrace.Domain;
 using Proxytrace.Domain.Exceptions;
 using Proxytrace.Domain.Notification;
 using Proxytrace.Domain.User;
-using Proxytrace.Testing;
+using Nordstein.Core.Testing;
 
 // ReSharper disable UnusedMember.Local
 

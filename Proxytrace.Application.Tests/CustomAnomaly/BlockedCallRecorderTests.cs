@@ -12,7 +12,7 @@ using Proxytrace.Domain.AgentCall;
 using Proxytrace.Domain.CustomAnomaly;
 using Proxytrace.Domain.Notification;
 using Proxytrace.Domain.Project;
-using Proxytrace.Testing;
+using Nordstein.Core.Testing;
 
 namespace Proxytrace.Application.Tests.CustomAnomaly;
 

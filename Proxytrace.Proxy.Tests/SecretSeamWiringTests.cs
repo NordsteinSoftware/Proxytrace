@@ -3,7 +3,7 @@ using Autofac.Core;
 using AwesomeAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
-using Proxytrace.Common.DependencyInjection;
+using Nordstein.Core.Common.DependencyInjection;
 using Proxytrace.Infrastructure.Security;
 using Proxytrace.Domain.Agent;
 using Proxytrace.Domain.ApiKey;

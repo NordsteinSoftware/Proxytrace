@@ -4,7 +4,7 @@ using Proxytrace.Application.Optimization.Internal;
 using Proxytrace.Application.Optimization.Internal.Adoption;
 using Proxytrace.Application.Optimization.Internal.Evidence;
 using Proxytrace.Application.Optimization.Internal.Validation;
-using Proxytrace.Common.DependencyInjection;
+using Nordstein.Core.Common.DependencyInjection;
 
 namespace Proxytrace.Application.Optimization;
 

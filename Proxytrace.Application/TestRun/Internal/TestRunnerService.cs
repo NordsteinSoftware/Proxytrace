@@ -6,7 +6,7 @@ using Microsoft.Extensions.Logging;
 using Proxytrace.Application.Anomaly;
 using Proxytrace.Application.Optimization;
 using Proxytrace.Application.Streaming;
-using Proxytrace.Common.Async;
+using Nordstein.Core.Common.Async;
 using Proxytrace.Domain;
 using Proxytrace.Domain.Agent;
 using Proxytrace.Domain.Completion;

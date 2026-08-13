@@ -1,7 +1,7 @@
 using System.Collections.Concurrent;
 using Proxytrace.Domain.Statistics;
 using Proxytrace.Domain.Statistics.TestRun;
-using Proxytrace.Common.Time;
+using Nordstein.Core.Common.Time;
 using Proxytrace.Domain;
 using Proxytrace.Domain.Agent;
 using Proxytrace.Domain.AgentCall;

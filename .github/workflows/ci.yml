@@ -166,20 +166,77 @@ jobs:
           cache-dependency-path: |
             **/*.csproj
 
+      # Two solutions: Nordstein.Core is a separate, product-agnostic solution that Proxytrace
+      # consumes (see docs/code-reuse.md). It is built and tested first because the product
+      # depends on it, and separately because it must keep standing on its own — the moment it
+      # only compiles as part of Proxytrace.sln, it is no longer extractable.
       - name: Restore
-        run: dotnet restore Proxytrace.sln --nologo
+        run: |
+          dotnet restore core/Nordstein.Core.sln --nologo
+          dotnet restore Proxytrace.sln --nologo
 
       - name: Build
-        run: dotnet build Proxytrace.sln --nologo --no-restore
+        run: |
+          dotnet build core/Nordstein.Core.sln --nologo --no-restore
+          dotnet build Proxytrace.sln --nologo --no-restore
 
       # PROXYTRACE_REQUIRE_DOCKER_TESTS turns the container-backed tests (currently the real-Redis
       # ingestion transport ones) from skip-if-unavailable into hard failures. They must stay
       # skippable locally so `dotnet test` never requires Docker, but a runner that quietly lost its
       # container runtime would then drop exactly the coverage those tests exist to guarantee.
       - name: Test
-        run: dotnet test Proxytrace.sln --nologo --verbosity minimal --no-restore
+        run: |
+          dotnet test core/Nordstein.Core.sln --nologo --verbosity minimal --no-restore
+          dotnet test Proxytrace.sln --nologo --verbosity minimal --no-restore
         env:
           PROXYTRACE_REQUIRE_DOCKER_TESTS: true
+
+  # Packs Nordstein.Core and rebuilds the product against the resulting .nupkg files instead of
+  # the sources. Everyday builds use the project references, which hide two things a consumer
+  # would hit: a type that is public in source but never made it into the package's surface, and
+  # a dependency Core forgot to declare (source mode resolves it through the product's own
+  # graph). Catching that here is the difference between finding it now and finding it in the
+  # first repository that has no Proxytrace sources to fall back on.
+  core-package:
+    needs: changes
+    if: ${{ inputs.full || needs.changes.outputs.backend == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup .NET 10 SDK
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+          cache: true
+          cache-dependency-path: |
+            **/*.csproj
+
+      - name: Pack Nordstein.Core
+        run: >-
+          dotnet pack core/Nordstein.Core.sln --nologo -c Release
+          -p:NordsteinCoreVersion=0.1.0-ci.${{ github.run_number }}
+          -o core/artifacts
+
+      - name: Build the product against the packages
+        run: >-
+          dotnet build Proxytrace.sln --nologo
+          -p:UseLocalCore=false
+          -p:NordsteinCoreVersion=0.1.0-ci.${{ github.run_number }}
+          -p:RestoreAdditionalProjectSources=core/artifacts
+
+      - name: Upload packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: nordstein-core-packages
+          path: |
+            core/artifacts/*.nupkg
+            core/artifacts/*.snupkg
+          if-no-files-found: error
+          retention-days: 7
 
   # Builds the released all-in-one image and boots it, so a container that fails to come up
   # (initdb, supervisord, nginx upstream, migrations on a cold volume) is caught here rather

@@ -7,6 +7,7 @@ Detailed guidance lives in [`docs/`](docs/). Read the relevant page **before** w
 | Doc | Read before… |
 |-----|--------------|
 | [`docs/architecture.md`](docs/architecture.md) | Touching project structure, layering, or Autofac DI/modules |
+| [`docs/code-reuse.md`](docs/code-reuse.md) | Touching anything under `core/` (Nordstein.Core), or deciding whether new code is product-agnostic |
 | [`docs/code-style.md`](docs/code-style.md) | Writing any backend C# — style rules + key conventions |
 | [`docs/domain-entities.md`](docs/domain-entities.md) | Adding/changing a domain entity (the five-file pattern, FK conventions, factory delegates) |
 | [`docs/validation.md`](docs/validation.md) | Adding domain validation rules |
@@ -61,7 +62,7 @@ Detailed guidance lives in [`docs/`](docs/). Read the relevant page **before** w
   - **e2e / perf** — never as a routine check. Run them only when the change is in that flow or the
     user asks; both boot Docker stacks and take many minutes.
   - **Run the full suite** (`dotnet test Proxytrace.sln`) only when the change is genuinely
-    cross-cutting — `Proxytrace.Common`, `Proxytrace.Testing`, DI/module wiring, a shared interface
+    cross-cutting — `Nordstein.Core.Common`, `Nordstein.Core.Testing`, DI/module wiring, a shared interface
     signature, a package bump — or when cutting a release. Say which scope you ran and why, so a
     narrow run is never mistaken for a full one.
 - **Internationalization** — the UI is multilingual (English is the source). Every user-facing
@@ -75,7 +76,7 @@ Detailed guidance lives in [`docs/`](docs/). Read the relevant page **before** w
   dedup, title/body quality, and labels — then carry on with your task.
 - **Nullable suppression** — suppressing nullable warnings with `!` is strictly forbidden everywhere.
   There is exactly **one** sanctioned exception, and it is not extensible: `Validation.Success` in
-  [`Proxytrace.Common/Validation/Validation.cs`](Proxytrace.Common/Validation/Validation.cs). The BCL
+  [`core/Nordstein.Core.Common/Validation/Validation.cs`](core/Nordstein.Core.Common/Validation/Validation.cs). The BCL
   defines validation success as a `null` `ValidationResult` while declaring
   `IValidatableObject.Validate` to return a **non-nullable** element type, so the framework demands a
   value it defines as null through a signature we cannot change. That single line is documented in

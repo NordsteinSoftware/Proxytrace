@@ -7,7 +7,7 @@ using Proxytrace.Api.Controllers;
 using Proxytrace.Api.Dto.Notifications;
 using Proxytrace.Application.Streaming;
 using Proxytrace.Domain.Notification;
-using Proxytrace.Testing;
+using Nordstein.Core.Testing;
 
 namespace Proxytrace.Api.Tests;
 

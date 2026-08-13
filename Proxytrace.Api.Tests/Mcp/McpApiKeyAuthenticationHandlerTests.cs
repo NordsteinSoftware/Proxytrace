@@ -14,8 +14,8 @@ using Proxytrace.Domain.ApiKey;
 using Proxytrace.Domain.ModelProvider;
 using Proxytrace.Domain.Project;
 using Proxytrace.Domain.User;
-using Proxytrace.Common.Security;
-using Proxytrace.Testing;
+using Nordstein.Core.Common.Security;
+using Nordstein.Core.Testing;
 
 namespace Proxytrace.Api.Tests.Mcp;
 

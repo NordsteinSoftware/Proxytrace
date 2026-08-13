@@ -3,7 +3,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Text.RegularExpressions;
 using JetBrains.Annotations;
-using Proxytrace.Common.Validation;
+using Nordstein.Core.Common.Validation;
 using Proxytrace.Domain.Evaluation;
 using Proxytrace.Domain.Internal;
 using Proxytrace.Domain.Project;

@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Proxytrace.Domain.Kiosk;
-using Proxytrace.Common.Hosting;
+using Nordstein.Core.Common.Hosting;
 
 namespace Proxytrace.Api.Controllers;
 

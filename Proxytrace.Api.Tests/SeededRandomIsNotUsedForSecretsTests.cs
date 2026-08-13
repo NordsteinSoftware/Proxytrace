@@ -1,8 +1,8 @@
 using System.Reflection;
 using AwesomeAssertions;
-using Proxytrace.Common.Random;
+using Nordstein.Core.Common.Random;
 using Proxytrace.Domain;
-using Proxytrace.Testing;
+using Nordstein.Core.Testing;
 
 namespace Proxytrace.Api.Tests;
 
@@ -81,7 +81,7 @@ public sealed class SeededRandomIsNotUsedForSecretsTests : BaseTest<Module>
                         && name.StartsWith("Proxytrace.", StringComparison.Ordinal)
                         && !name.EndsWith(".Tests", StringComparison.Ordinal)
                         // The testing harness exists to build fixtures; it is not production code.
-                        && name != "Proxytrace.Testing");
+                        && name != "Nordstein.Core.Testing");
 
     private static bool TakesRandomDependency(Type type)
         => type.GetConstructors(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)

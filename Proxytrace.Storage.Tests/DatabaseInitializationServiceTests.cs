@@ -5,7 +5,7 @@ using Proxytrace.Domain.Demo;
 using Proxytrace.Domain;
 using Proxytrace.Domain.User;
 using Proxytrace.Storage.Internal;
-using Proxytrace.Testing;
+using Nordstein.Core.Testing;
 
 namespace Proxytrace.Storage.Tests;
 

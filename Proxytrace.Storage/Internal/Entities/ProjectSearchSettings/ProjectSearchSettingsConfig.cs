@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using Proxytrace.Common.Async;
+using Nordstein.Core.Common.Async;
 using Proxytrace.Domain;
 using Proxytrace.Domain.Project;
 using Proxytrace.Domain.ProjectSearchSettings;

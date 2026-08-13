@@ -1,5 +1,5 @@
 using System.ComponentModel.DataAnnotations;
-using Proxytrace.Common.Validation;
+using Nordstein.Core.Common.Validation;
 using Proxytrace.Domain.Evaluator;
 using Proxytrace.Domain.Usage;
 

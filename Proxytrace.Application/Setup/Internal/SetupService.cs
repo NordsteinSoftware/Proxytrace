@@ -1,4 +1,4 @@
-using Proxytrace.Common.Async;
+using Nordstein.Core.Common.Async;
 using Proxytrace.Application.Auth;
 using Proxytrace.Application.Auth.Local;
 using Proxytrace.Application.Pricing;

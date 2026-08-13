@@ -1,4 +1,4 @@
-using Proxytrace.Common.Async;
+using Nordstein.Core.Common.Async;
 using System.Security.Cryptography;
 using Proxytrace.Domain.Security;
 using Proxytrace.Domain;

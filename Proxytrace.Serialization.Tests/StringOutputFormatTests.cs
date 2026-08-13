@@ -1,7 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using AwesomeAssertions;
 using Proxytrace.Serialization.Internal;
-using Proxytrace.Testing;
+using Nordstein.Core.Testing;
 
 namespace Proxytrace.Serialization.Tests;
 

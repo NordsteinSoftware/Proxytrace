@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.Diagnostics.Contracts;
-using Proxytrace.Common.Validation;
+using Nordstein.Core.Common.Validation;
 
 namespace Proxytrace.Domain.Prompt.Internal;
 

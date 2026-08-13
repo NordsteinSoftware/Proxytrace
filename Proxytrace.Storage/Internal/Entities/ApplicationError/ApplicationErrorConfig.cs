@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using Proxytrace.Common.Async;
+using Nordstein.Core.Common.Async;
 using Proxytrace.Domain.ApplicationError;
 
 namespace Proxytrace.Storage.Internal.Entities.ApplicationError;

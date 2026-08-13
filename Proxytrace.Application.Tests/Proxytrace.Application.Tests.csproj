@@ -36,7 +36,7 @@
       <ProjectReference Include="..\Proxytrace.Infrastructure\Proxytrace.Infrastructure.csproj" />
       <ProjectReference Include="..\Proxytrace.Serialization\Proxytrace.Serialization.csproj" />
       <ProjectReference Include="..\Proxytrace.Storage\Proxytrace.Storage.csproj" />
-      <ProjectReference Include="..\Proxytrace.Testing\Proxytrace.Testing.csproj" />
+      <NordsteinCoreReference Include="Nordstein.Core.Testing" />
     </ItemGroup>
 
 </Project>

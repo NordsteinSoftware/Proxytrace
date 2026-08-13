@@ -9,7 +9,7 @@ using Proxytrace.Api.Dto.ApiKeys;
 using Proxytrace.Api.Dto.ModelProviders;
 using Proxytrace.Application.Auth;
 using Proxytrace.Application.Pricing;
-using Proxytrace.Common.Net;
+using Nordstein.Core.Common.Net;
 using Proxytrace.Domain;
 using Proxytrace.Domain.ApiKey;
 using Proxytrace.Domain.User;
@@ -17,7 +17,7 @@ using Proxytrace.Domain.Model;
 using Proxytrace.Domain.ModelEndpoint;
 using Proxytrace.Domain.ModelProvider;
 using Proxytrace.Domain.Project;
-using Proxytrace.Testing;
+using Nordstein.Core.Testing;
 
 namespace Proxytrace.Api.Tests;
 

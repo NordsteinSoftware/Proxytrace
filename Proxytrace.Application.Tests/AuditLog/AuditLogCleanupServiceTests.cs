@@ -7,7 +7,7 @@ using NSubstitute.ExceptionExtensions;
 using Proxytrace.Application.AuditLog;
 using Proxytrace.Application.AuditLog.Internal;
 using Proxytrace.Domain.AuditLog;
-using Proxytrace.Testing;
+using Nordstein.Core.Testing;
 
 namespace Proxytrace.Application.Tests.AuditLog;
 

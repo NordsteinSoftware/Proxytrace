@@ -4,7 +4,7 @@ using Autofac.Features.OwnedInstances;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Proxytrace.Common.Security;
+using Nordstein.Core.Common.Security;
 using Proxytrace.Domain.AuditLog;
 using Proxytrace.Domain.Security;
 using Proxytrace.Storage.Internal.Entities.ApiKey;

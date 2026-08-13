@@ -3,7 +3,7 @@ using JetBrains.Annotations;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Proxytrace.Domain.Security;
-using Proxytrace.Common.Time;
+using Nordstein.Core.Common.Time;
 using AppEmailSettings = Proxytrace.Domain.Notifications.EmailSettings;
 using IEmailSettingsStore = Proxytrace.Domain.Notifications.IEmailSettingsStore;
 

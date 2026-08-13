@@ -4,12 +4,12 @@ using NSubstitute;
 using Proxytrace.Application.Statistics;
 using Proxytrace.Application.Statistics.Internal;
 using Proxytrace.Domain.Statistics.TestRun;
-using Proxytrace.Common.Time;
+using Nordstein.Core.Common.Time;
 using Proxytrace.Domain;
 using Proxytrace.Domain.Agent;
 using Proxytrace.Domain.AgentCall;
 using Proxytrace.Messaging;
-using Proxytrace.Testing;
+using Nordstein.Core.Testing;
 
 namespace Proxytrace.Application.Tests.Statistics;
 

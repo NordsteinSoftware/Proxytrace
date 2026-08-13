@@ -10,6 +10,28 @@ dotnet test Proxytrace.sln             # Run all tests (cross-cutting changes / 
 cd Proxytrace.Api && dotnet run        # Start API on http://localhost:5001
 ```
 
+### Nordstein.Core
+
+The shared foundation under [`core/`](../core/) is its own solution and is **not** part of
+`Proxytrace.sln`. Building the product builds it too (through the project references), but it must
+also keep standing alone — that is the property that keeps it extractable:
+
+```bash
+dotnet build core/Nordstein.Core.sln    # Core on its own
+dotnet test  core/Nordstein.Core.sln    # Core's tests (not included in the Proxytrace.sln run)
+```
+
+To check the product against the packed packages instead of the sources — what a consumer that has
+no Proxytrace checkout sees:
+
+```bash
+dotnet pack core/Nordstein.Core.sln -c Release -p:NordsteinCoreVersion=0.1.0-dev -o core/artifacts
+dotnet build Proxytrace.sln -p:UseLocalCore=false -p:NordsteinCoreVersion=0.1.0-dev \
+    -p:RestoreAdditionalProjectSources=core/artifacts
+```
+
+CI does both (`backend` and `core-package`). See [`code-reuse.md`](code-reuse.md).
+
 **Scope your test runs.** The full solution run is ~2,200 tests across 10 projects and CI runs it on
 every push — locally, run only the projects (or classes) affected by your change. See
 [`testing.md`](testing.md#which-tests-to-run) for the mapping from changed code to test project.

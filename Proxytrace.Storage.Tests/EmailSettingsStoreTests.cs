@@ -7,9 +7,9 @@ using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using Proxytrace.Domain.Notifications;
 using Proxytrace.Domain.Security;
-using Proxytrace.Common.DependencyInjection;
+using Nordstein.Core.Common.DependencyInjection;
 using Proxytrace.Domain.Notification;
-using Proxytrace.Testing;
+using Nordstein.Core.Testing;
 using EmailSettingsEntity = Proxytrace.Storage.Internal.Entities.EmailSettings.EmailSettingsEntity;
 
 namespace Proxytrace.Storage.Tests;

@@ -25,6 +25,7 @@ Jobs are gated on which areas a diff touches, computed by the local composite ac
 | `frontend` | if `frontend/**` changed | if `frontend/**` changed | always |
 | `manual` | if `manual/**` changed | if `manual/**` changed | always |
 | `backend` | if .NET sources changed | if .NET sources changed | always |
+| `core-package` | if .NET sources changed | if .NET sources changed | always |
 | `image` | if backend/frontend/`deploy/**`/Dockerfiles changed | skipped | always |
 | e2e | unless the diff is purely prose | unless the diff is purely prose | always |
 | CodeQL | only the affected languages | all languages | n/a |
@@ -62,6 +63,20 @@ ingestion transport. Those tests **skip themselves** when no container runtime i
 into a hard failure. GitHub-hosted runners always have Docker, so the only thing it can catch is a
 runner that lost it — which would otherwise silently drop the coverage rather than report it. See
 [`testing.md`](testing.md#container-backed-tests).
+
+### The backend builds two solutions, `core-package` builds the second one twice
+
+`backend` restores, builds and tests `core/Nordstein.Core.sln` **before** `Proxytrace.sln`, and does
+it as a separate solution rather than folding Core's projects into the product's. Core is on its way
+to its own repository; the moment it only compiles as part of `Proxytrace.sln`, it is no longer
+extractable and nobody finds out until the split is attempted. Note that Core's tests are **not**
+covered by `dotnet test Proxytrace.sln` — a cross-cutting local run needs both solutions.
+
+`core-package` then packs Core and rebuilds the whole product against the resulting `.nupkg` files
+with `-p:UseLocalCore=false`. Everyday project references hide two consumer-only failures: a type
+that is public in source but never made it into the package surface, and a dependency Core forgot to
+declare because source mode resolved it through the product's own graph. The packages are uploaded
+as a build artifact but not pushed anywhere. See [`code-reuse.md`](code-reuse.md).
 
 ### Adding a job to `ci.yml`
 

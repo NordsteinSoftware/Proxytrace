@@ -25,9 +25,14 @@ ARG APP_VERSION=0.0.0-dev
 # production key. The dev/e2e/perf composes pass the test key; official images pass nothing.
 ARG LICENSE_PUBLIC_KEY=
 WORKDIR /src
+# The Nordstein.Core reference expansion lives in these files, so restore needs them
+# before the project files. Nordstein.Core.sln is what selects source mode (see
+# Directory.Build.props); without it the image would silently restore package mode.
+COPY ["Directory.Build.props", "Directory.Build.targets", "nuget.config", "./"]
+COPY ["core/Directory.Build.props", "core/Nordstein.Core.sln", "core/"]
+COPY ["core/Nordstein.Core.Common/Nordstein.Core.Common.csproj", "core/Nordstein.Core.Common/"]
 COPY ["Proxytrace.Proxy.Api/Proxytrace.Proxy.Api.csproj", "Proxytrace.Proxy.Api/"]
 COPY ["Proxytrace.Proxy/Proxytrace.Proxy.csproj", "Proxytrace.Proxy/"]
-COPY ["Proxytrace.Common/Proxytrace.Common.csproj", "Proxytrace.Common/"]
 COPY ["Proxytrace.Domain/Proxytrace.Domain.csproj", "Proxytrace.Domain/"]
 COPY ["Proxytrace.Infrastructure/Proxytrace.Infrastructure.csproj", "Proxytrace.Infrastructure/"]
 COPY ["Proxytrace.Licensing/Proxytrace.Licensing.csproj", "Proxytrace.Licensing/"]

@@ -10,7 +10,7 @@ using Proxytrace.Api.Dto.Agents;
 using Proxytrace.Api.Dto.Tools;
 using Proxytrace.Application.Statistics;
 using Proxytrace.Domain.Agent;
-using Proxytrace.Testing;
+using Nordstein.Core.Testing;
 
 namespace Proxytrace.Api.Tests;
 

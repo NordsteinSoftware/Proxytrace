@@ -1,7 +1,7 @@
 using System.Text.Json;
 using Proxytrace.Api.Middleware.Exceptions;
 using Proxytrace.Application.ErrorLog;
-using Proxytrace.Common.Text;
+using Nordstein.Core.Common.Text;
 
 namespace Proxytrace.Api.Middleware;
 

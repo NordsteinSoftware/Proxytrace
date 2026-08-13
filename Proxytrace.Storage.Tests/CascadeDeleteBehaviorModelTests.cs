@@ -6,7 +6,7 @@ using Proxytrace.Storage.Internal.Entities.ApiKey;
 using Proxytrace.Storage.Internal.Entities.ModelEndpoint;
 using Proxytrace.Storage.Internal.Entities.ModelProvider;
 using Proxytrace.Storage.Internal.Entities.TestRun;
-using Proxytrace.Testing;
+using Nordstein.Core.Testing;
 
 namespace Proxytrace.Storage.Tests;
 

@@ -2,7 +2,7 @@ using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.Diagnostics;
 using JetBrains.Annotations;
-using Proxytrace.Common.Validation;
+using Nordstein.Core.Common.Validation;
 using Proxytrace.Domain.Agent;
 using Proxytrace.Domain.Evaluation;
 using Proxytrace.Domain.Internal;

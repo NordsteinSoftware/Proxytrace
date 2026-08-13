@@ -9,7 +9,7 @@ using Proxytrace.Api.Controllers;
 using Proxytrace.Api.Dto.OutlierSettings;
 using Proxytrace.Domain.Outliers;
 using Proxytrace.Domain.User;
-using Proxytrace.Testing;
+using Nordstein.Core.Testing;
 
 namespace Proxytrace.Api.Tests;
 

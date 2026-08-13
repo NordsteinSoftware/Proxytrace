@@ -1,6 +1,6 @@
 using System.Net;
 using JetBrains.Annotations;
-using Proxytrace.Common.Random;
+using Nordstein.Core.Common.Random;
 using Proxytrace.Domain;
 using Proxytrace.Domain.Agent;
 using Proxytrace.Domain.AgentCall;

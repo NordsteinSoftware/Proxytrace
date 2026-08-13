@@ -1,7 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
 using Autofac;
-using Proxytrace.Common.DependencyInjection;
+using Nordstein.Core.Common.DependencyInjection;
 using Proxytrace.Domain.Agent;
 using Proxytrace.Domain.AgentVersion;
 using Proxytrace.Domain.AgentVersion.Internal;
@@ -28,7 +28,7 @@ public sealed class Module : Autofac.Module
     {
         base.Load(builder);
 
-        builder.RegisterModule<Common.Module>();
+        builder.RegisterModule<Nordstein.Core.Common.Module>();
 
         // discover top-level domain entity/object interfaces — those that directly extend
         // IDomainEntity or IDomainObject, with no intermediate domain interface in between.

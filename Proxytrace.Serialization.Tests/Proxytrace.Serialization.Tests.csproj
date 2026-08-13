@@ -17,7 +17,7 @@
 
     <ItemGroup>
       <ProjectReference Include="..\Proxytrace.Serialization\Proxytrace.Serialization.csproj" />
-      <ProjectReference Include="..\Proxytrace.Testing\Proxytrace.Testing.csproj" />
+      <NordsteinCoreReference Include="Nordstein.Core.Testing" />
     </ItemGroup>
 
 </Project>

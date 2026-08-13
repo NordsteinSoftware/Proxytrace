@@ -1,7 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using JetBrains.Annotations;
-using Proxytrace.Common.Serialization;
-using Proxytrace.Common.Validation;
+using Nordstein.Core.Common.Serialization;
+using Nordstein.Core.Common.Validation;
 using Proxytrace.Domain.Agent;
 using Proxytrace.Domain.OptimizationProposal;
 using Proxytrace.Domain.Proposal;

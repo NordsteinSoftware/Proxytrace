@@ -1,6 +1,6 @@
 using Autofac;
 using NSubstitute;
-using Proxytrace.Common;
+using Nordstein.Core.Common;
 using Proxytrace.Licensing.Internal;
 
 namespace Proxytrace.Licensing.Tests;
@@ -18,7 +18,7 @@ public sealed class Module : Autofac.Module
     {
         base.Load(builder);
 
-        builder.RegisterModule<Common.Module>();
+        builder.RegisterModule<Nordstein.Core.Common.Module>();
         builder.RegisterModule(new Proxytrace.Licensing.Module(Factory.Configuration()));
 
         // Replace the real LicenseCacheStore with a stub so tests don't touch the filesystem.

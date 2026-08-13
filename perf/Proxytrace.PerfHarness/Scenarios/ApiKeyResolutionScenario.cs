@@ -1,6 +1,6 @@
 using Autofac;
-using Proxytrace.Common.Security;
-using Proxytrace.Common.Text;
+using Nordstein.Core.Common.Security;
+using Nordstein.Core.Common.Text;
 using Proxytrace.Domain;
 using Proxytrace.Domain.ApiKey;
 using Proxytrace.Domain.ModelProvider;

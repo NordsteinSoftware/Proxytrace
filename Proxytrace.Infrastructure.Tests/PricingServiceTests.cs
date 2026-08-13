@@ -2,7 +2,7 @@ using System.Net;
 using System.Text;
 using AwesomeAssertions;
 using NSubstitute;
-using Proxytrace.Common.Async;
+using Nordstein.Core.Common.Async;
 using Proxytrace.Domain.ModelProvider;
 using Proxytrace.Infrastructure.Internal;
 

@@ -8,7 +8,7 @@ using Proxytrace.Domain.Completion;
 using Proxytrace.Domain.Message;
 using Proxytrace.Domain.Session;
 using Proxytrace.Domain.Usage;
-using Proxytrace.Testing;
+using Nordstein.Core.Testing;
 
 namespace Proxytrace.Storage.Tests;
 

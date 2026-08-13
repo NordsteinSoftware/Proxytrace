@@ -1,5 +1,5 @@
 using AwesomeAssertions;
-using Proxytrace.Testing;
+using Nordstein.Core.Testing;
 
 namespace Proxytrace.Storage.Tests;
 

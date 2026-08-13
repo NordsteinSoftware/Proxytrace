@@ -2,7 +2,7 @@ using Microsoft.Extensions.Logging;
 using Proxytrace.Domain.Statistics;
 using Proxytrace.Domain.Statistics.TestRun;
 using Proxytrace.Application.TestRun;
-using Proxytrace.Common.Async;
+using Nordstein.Core.Common.Async;
 using Proxytrace.Domain.OptimizationTheory;
 using Proxytrace.Domain.TestRun;
 using Proxytrace.Domain.TestRunGroup;

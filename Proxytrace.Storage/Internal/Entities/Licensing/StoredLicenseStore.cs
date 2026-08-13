@@ -1,7 +1,7 @@
 using JetBrains.Annotations;
 using Microsoft.EntityFrameworkCore;
 using Proxytrace.Domain.Licensing;
-using Proxytrace.Common.Time;
+using Nordstein.Core.Common.Time;
 
 namespace Proxytrace.Storage.Internal.Entities.Licensing;
 

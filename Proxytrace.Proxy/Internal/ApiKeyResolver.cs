@@ -1,4 +1,4 @@
-using Proxytrace.Common.Text;
+using Nordstein.Core.Common.Text;
 using Proxytrace.Domain.ApiKey;
 using Proxytrace.Domain.ModelProvider;
 using Proxytrace.Domain.Project;

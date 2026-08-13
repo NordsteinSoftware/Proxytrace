@@ -9,7 +9,7 @@ using Proxytrace.Domain.TestCase;
 using Proxytrace.Domain.TestResult;
 using Proxytrace.Storage.Internal;
 using Proxytrace.Storage.Internal.Entities.TestResult;
-using Proxytrace.Testing;
+using Nordstein.Core.Testing;
 
 namespace Proxytrace.Storage.Tests;
 

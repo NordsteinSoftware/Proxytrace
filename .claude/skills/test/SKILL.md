@@ -43,7 +43,7 @@ substitute in the container instead (see *Injecting fakes* below).
 | `Proxytrace.Application.Tests` | Application services end-to-end (e.g. `TestRunnerService`) with faked infrastructure | `BaseTest<Module>` |
 | `Proxytrace.Api.Tests` | HTTP controllers / routing | `BaseTest<Module>` |
 | `Proxytrace.Infrastructure.Tests` | `ModelClient` and external integration wrappers | `BaseTest<Module>` |
-| `Proxytrace.Serialization.Tests`, `Proxytrace.Common.Tests`, `Proxytrace.Proxy.Tests`, `Proxytrace.Messaging.Tests`, `Proxytrace.Licensing.Tests` | Their respective layers | `BaseTest<Module>` |
+| `Proxytrace.Serialization.Tests`, `Nordstein.Core.Common.Tests`, `Proxytrace.Proxy.Tests`, `Proxytrace.Messaging.Tests`, `Proxytrace.Licensing.Tests` | Their respective layers | `BaseTest<Module>` |
 
 Each test project ships **one `Module : Autofac.Module`** that wires the layer under test
 plus in-memory storage and the standard infrastructure stubs. This per-project module *is*
@@ -53,7 +53,7 @@ the shared baseline — there are no other shared fixtures. See *The per-project
 
 ## The base test harness
 
-All tests extend `BaseTest<TModule>` from `Proxytrace.Testing`:
+All tests extend `BaseTest<TModule>` from `Nordstein.Core.Testing`:
 
 ```csharp
 [TestClass]
@@ -84,7 +84,7 @@ public sealed class MyTests : BaseTest<Module>   // or DomainTest<Module>
 ### How the harness works (and why it's stateless)
 
 - `GetServices(action)` builds a **brand-new Autofac container every call**: it registers
-  `Proxytrace.Testing.Module`, then your `TModule`, then runs `ConfigureContainer`, then
+  `Nordstein.Core.Testing.Module`, then your `TModule`, then runs `ConfigureContainer`, then
   your per-call `action`. Each container has its **own isolated in-memory database**.
 - The container is recorded in `TestContext.Properties["Containers"]` and disposed in
   `[TestCleanup]`. You never manage container lifetime yourself.

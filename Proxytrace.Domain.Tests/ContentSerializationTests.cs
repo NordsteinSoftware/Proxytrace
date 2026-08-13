@@ -1,6 +1,6 @@
 using AwesomeAssertions;
 using Microsoft.Extensions.DependencyInjection;
-using Proxytrace.Common.Serialization;
+using Nordstein.Core.Common.Serialization;
 using Proxytrace.Domain.Message;
 
 namespace Proxytrace.Domain.Tests;

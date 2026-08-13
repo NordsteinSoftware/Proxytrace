@@ -9,13 +9,13 @@ using NSubstitute;
 using Proxytrace.Api.Auth;
 using Proxytrace.Api.Auth.Mcp;
 using Proxytrace.Api.Auth.Rest;
-using Proxytrace.Common.Security;
+using Nordstein.Core.Common.Security;
 using Proxytrace.Domain;
 using Proxytrace.Domain.ApiKey;
 using Proxytrace.Domain.ModelProvider;
 using Proxytrace.Domain.Project;
 using Proxytrace.Domain.User;
-using Proxytrace.Testing;
+using Nordstein.Core.Testing;
 
 namespace Proxytrace.Api.Tests.Auth;
 

@@ -4,7 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Proxytrace.Domain.Project;
 using Proxytrace.Domain.User;
 using Proxytrace.Storage;
-using Proxytrace.Testing;
+using Nordstein.Core.Testing;
 
 namespace Proxytrace.Domain.Tests;
 

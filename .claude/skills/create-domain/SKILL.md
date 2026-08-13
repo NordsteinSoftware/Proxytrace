@@ -134,7 +134,7 @@ internal record TestRunGroup : DomainEntity<ITestRunGroup>, ITestRunGroup
 }
 ```
 
-### Validation helpers (from `Proxytrace.Common.Validation`)
+### Validation helpers (from `Nordstein.Core.Common.Validation`)
 
 ```csharp
 yield return Validation.NotNullOrWhiteSpace(Name);  // note capital S

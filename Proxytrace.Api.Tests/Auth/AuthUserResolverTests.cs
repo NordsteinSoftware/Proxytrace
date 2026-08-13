@@ -9,7 +9,7 @@ using Proxytrace.Api.Auth;
 using Proxytrace.Application.Auth;
 using Proxytrace.Domain;
 using Proxytrace.Domain.User;
-using Proxytrace.Testing;
+using Nordstein.Core.Testing;
 
 namespace Proxytrace.Api.Tests.Auth;
 
