@@ -15,7 +15,7 @@ using Proxytrace.Domain.Agent;
 using Proxytrace.Domain.AgentCall;
 using Proxytrace.Domain.AgentVersion;
 using Proxytrace.Domain.CustomAnomaly;
-using Proxytrace.Domain.Exceptions;
+using Nordstein.Core.Domain.Exceptions;
 using Proxytrace.Domain.Inference;
 using Proxytrace.Domain.ModelEndpoint;
 using Proxytrace.Domain.ModelProvider;

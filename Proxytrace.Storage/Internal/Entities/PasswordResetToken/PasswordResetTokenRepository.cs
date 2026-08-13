@@ -1,8 +1,8 @@
 using JetBrains.Annotations;
 using Microsoft.EntityFrameworkCore;
-using Proxytrace.Domain.Security;
+using Nordstein.Core.Common.Security;
 using Proxytrace.Domain;
-using Proxytrace.Domain.Events;
+using Nordstein.Core.Domain.Events;
 using Proxytrace.Domain.PasswordResetToken;
 
 namespace Proxytrace.Storage.Internal.Entities.PasswordResetToken;

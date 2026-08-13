@@ -4,7 +4,7 @@ using System.Security.Cryptography;
 using Microsoft.Extensions.Logging;
 using Proxytrace.Application.Auth;
 using Proxytrace.Application.Notifications;
-using Proxytrace.Domain.Security;
+using Nordstein.Core.Common.Security;
 using Proxytrace.Domain;
 using Proxytrace.Domain.PasswordResetToken;
 using Proxytrace.Domain.User;

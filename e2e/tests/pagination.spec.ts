@@ -3,7 +3,7 @@ import { ProxytraceApiClient } from '../helpers/api-client';
 
 // Pagination + filtering, asserted at the API level (robust, no fragile UI paging). Each paged
 // list endpoint returns the standard PagedResult envelope `{ items, total, page, pageSize }`
-// (Proxytrace.Domain.Paging.PagedResult, serialized camelCase). Paging.Clamp enforces page >= 1
+// (Nordstein.Core.Domain.Paging.PagedResult, serialized camelCase). Paging.Clamp enforces page >= 1
 // and 1 <= pageSize <= 100, so a pageSize of 5 is honoured verbatim.
 //
 //   • /api/agents          — AgentsController.GetAll (page/pageSize, optional projectId filter)

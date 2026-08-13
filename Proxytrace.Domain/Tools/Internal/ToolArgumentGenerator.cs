@@ -1,7 +1,7 @@
 using System.Text.Json;
 using Nordstein.Core.Common.Async;
 using Nordstein.Core.Common.Random;
-using Proxytrace.Domain.Internal;
+using Nordstein.Core.Domain;
 
 namespace Proxytrace.Domain.Tools.Internal;
 

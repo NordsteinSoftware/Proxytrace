@@ -189,7 +189,7 @@ Fields: `Enabled`, `SmtpHost`, `SmtpPort`, `Security` (`SmtpSecurity` enum — m
 
 ### `IEmailSettingsStore`
 
-`Proxytrace.Application/Notifications/IEmailSettingsStore.cs`
+`Proxytrace.Domain/Notifications/IEmailSettingsStore.cs`
 
 ```csharp
 Task<EmailSettings?> GetAsync(CancellationToken cancellationToken = default);
@@ -201,9 +201,9 @@ Implemented by `Proxytrace.Storage/Internal/Entities/EmailSettings/EmailSettings
 
 ### `ISecretProtector` — at-rest encryption
 
-`Proxytrace.Domain/Security/ISecretProtector.cs`
+`core/Nordstein.Core.Common/Security/ISecretProtector.cs`
 
-A reusable seam for reversible at-rest encryption, backed by ASP.NET Data Protection:
+A reusable seam for reversible at-rest protection:
 
 ```csharp
 public interface ISecretProtector
@@ -213,14 +213,13 @@ public interface ISecretProtector
 }
 ```
 
-`DataProtectionSecretProtector` (`Proxytrace.Infrastructure/Security/Internal/`) creates a
+Proxytrace's `DataProtectionSecretProtector` (`Proxytrace.Infrastructure/Security/Internal/`) creates a
 protector with purpose `"Proxytrace.Secrets.v1"`. The key ring is stored under
 `PROXYTRACE_DATA_DIR` in container deployments — without a persistent volume the keys are
 ephemeral and a restart invalidates any stored ciphertext.
 
-`ISecretProtector` is a general seam. The email SMTP password is the first secret encrypted
-through it. Retrofitting at-rest encryption to **other existing secrets** is tracked as
-[GitHub issue #181](https://github.com/NordsteinSoftware/Proxytrace/issues/181).
+`ISecretProtector` is a product-agnostic Core seam. Proxytrace supplies the Data Protection-backed
+implementation and uses it for the SMTP password, provider credentials, and TOTP enrollment secrets.
 
 ## SMTP sender
 

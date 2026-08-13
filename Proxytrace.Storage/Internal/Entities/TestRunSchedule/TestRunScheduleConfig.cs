@@ -49,7 +49,7 @@ internal class TestRunScheduleConfig : AbstractEntityConfiguration<TestRunSchedu
             .ToListAsync(cancellationToken);
 
         var loadedEndpoints = endpointIds.Count > 0
-            ? await endpoints.GetManyAsync(endpointIds, cancellationToken, ignoreMissing: true)
+            ? await endpoints.GetManyAsync(endpointIds, ignoreMissing: true, cancellationToken: cancellationToken)
             : [];
 
         return factory(

@@ -517,9 +517,9 @@ public sealed class Module : Autofac.Module
             .As<IPasswordService>()
             .SingleInstance();
 
-        // Secret seams (ISecretProtector / ISecretHasher) + the Data Protection key ring now live in
-        // Infrastructure (Infrastructure.Security.SecretProtectionModule) so the lean proxy — which must
-        // not load Application — can register them too. The composition roots (API host, proxy host and
+        // The secret contracts live in Nordstein.Core; their Proxytrace implementations and the Data
+        // Protection key ring live in Infrastructure.Security.SecretProtectionModule so the lean proxy
+        // can register them without loading Application. The composition roots (API host, proxy host and
         // the test/perf harnesses) register that module directly, not Application.Module. See
         // docs/security.md (#270).
 

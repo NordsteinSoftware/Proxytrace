@@ -1,7 +1,7 @@
 using Proxytrace.Domain.Statistics;
 using Proxytrace.Domain.Statistics.TestRun;
 using Proxytrace.Domain;
-using Proxytrace.Domain.Exceptions;
+using Nordstein.Core.Domain.Exceptions;
 using Proxytrace.Domain.OptimizationProposal;
 using Proxytrace.Domain.TestSuite;
 
@@ -87,7 +87,7 @@ internal class AgentStatistics : IAgentStatistics
         IReadOnlyList<ITestSuite> suites;
         try
         {
-            suites = await testSuites.GetManyAsync(suiteIds, cancellationToken);
+            suites = await testSuites.GetManyAsync(suiteIds, cancellationToken: cancellationToken);
         }
         catch (EntitiesNotFoundException)
         {

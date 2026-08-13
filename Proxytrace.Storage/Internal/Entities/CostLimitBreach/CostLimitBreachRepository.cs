@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Proxytrace.Domain;
 using Proxytrace.Domain.CostLimit;
 using Proxytrace.Domain.CostLimitBreach;
-using Proxytrace.Domain.Events;
+using Nordstein.Core.Domain.Events;
 using Proxytrace.Storage.Internal.Entities.Agent;
 
 namespace Proxytrace.Storage.Internal.Entities.CostLimitBreach;

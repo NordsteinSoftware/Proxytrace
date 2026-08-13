@@ -454,7 +454,7 @@ public sealed class TheoryValidationServiceTests : BaseTest<Module>
             .Returns(Task.FromResult(0));
 
         // Run the transactional body inline so reset writes actually execute.
-        var transaction = Substitute.For<Domain.ITransaction>();
+        var transaction = Substitute.For<ITransaction>();
         transaction.InvokeAsync(Arg.Any<Func<Task<IOptimizationTheory>>>())
             .Returns(ci =>
             {

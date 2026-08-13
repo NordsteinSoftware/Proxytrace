@@ -30,6 +30,7 @@
       <ProjectReference Include="..\Proxytrace.Application\Proxytrace.Application.csproj" />
       <ProjectReference Include="..\Proxytrace.Infrastructure\Proxytrace.Infrastructure.csproj" />
       <ProjectReference Include="..\Proxytrace.Storage\Proxytrace.Storage.csproj" />
+      <NordsteinCoreReference Include="Nordstein.Core.Domain" />
       <NordsteinCoreReference Include="Nordstein.Core.Testing" />
     </ItemGroup>
 

@@ -22,7 +22,7 @@ once a scoped run is green, do not re-run the full suite to "make sure".
 | A service, optimizer, or the run loop | `dotnet test Proxytrace.Application.Tests` |
 | One class/area inside a project | `dotnet test <Project> --filter "FullyQualifiedName~<Name>"` |
 | Frontend components/hooks | `npm test -- <path-or-pattern>` (from `frontend/`) |
-| `Nordstein.Core.Common`, `Nordstein.Core.Testing` (under `core/`) | `dotnet test core/Nordstein.Core.sln` **and** `dotnet test Proxytrace.sln` — Core's tests are not in the product solution |
+| `Nordstein.Core.Common`, `Nordstein.Core.Domain`, `Nordstein.Core.Testing` (under `core/`) | `dotnet test core/Nordstein.Core.sln` **and** `dotnet test Proxytrace.sln` — Core's tests are not in the product solution |
 | DI/module wiring, a shared interface signature, a package bump, a release | `dotnet test Proxytrace.sln` |
 
 Add `--no-restore` (and `--no-build` when nothing changed since the last build) to skip repeat work.

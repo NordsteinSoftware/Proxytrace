@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
 using OtpNet;
+using Nordstein.Core.Common.Security;
 using Proxytrace.Application.Auth;
 using Proxytrace.Application.Auth.Local;
 using Proxytrace.Domain;
@@ -175,7 +176,7 @@ public sealed class MfaServiceTests : BaseTest<Module>
             .ListByUserAsync(user.Id, CancellationToken);
         var raw = new string(codes[0].Where(char.IsLetterOrDigit).ToArray()).ToUpperInvariant();
 
-        var plainHash = services.GetRequiredService<Domain.Security.ISecretHasher>().Hash(raw);
+        var plainHash = services.GetRequiredService<ISecretHasher>().Hash(raw);
         stored.Should().NotContain(c => c.CodeHash == plainHash,
             "storing the bare hash makes one dump crackable against every user at once");
 
@@ -197,7 +198,7 @@ public sealed class MfaServiceTests : BaseTest<Module>
         var (_, codes) = await EnableMfa(services, user);
 
         var raw = new string(codes[0].Where(char.IsLetterOrDigit).ToArray()).ToUpperInvariant();
-        var legacyHash = services.GetRequiredService<Domain.Security.ISecretHasher>().Hash(raw);
+        var legacyHash = services.GetRequiredService<ISecretHasher>().Hash(raw);
 
         // Rewrite that one row to the pre-change representation.
         var repository = services.GetRequiredService<IMfaBackupCodeRepository>();

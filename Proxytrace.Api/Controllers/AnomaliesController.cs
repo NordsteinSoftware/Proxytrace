@@ -6,7 +6,7 @@ using Proxytrace.Api.Dto.Anomalies;
 using Proxytrace.Domain.Agent;
 using Proxytrace.Domain.AgentCall;
 using Proxytrace.Domain.CustomAnomaly;
-using Proxytrace.Domain.Paging;
+using Nordstein.Core.Domain.Paging;
 
 namespace Proxytrace.Api.Controllers;
 

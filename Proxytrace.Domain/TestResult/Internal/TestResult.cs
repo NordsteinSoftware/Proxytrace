@@ -1,7 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using Proxytrace.Domain.Completion;
 using Proxytrace.Domain.Evaluation;
-using Proxytrace.Domain.Internal;
+using Nordstein.Core.Domain;
 using Proxytrace.Domain.Message;
 using Proxytrace.Domain.TestCase;
 using Proxytrace.Domain.Usage;

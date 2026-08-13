@@ -1,5 +1,5 @@
 using Nordstein.Core.Common.Random;
-using Proxytrace.Domain.Internal;
+using Nordstein.Core.Domain;
 using Proxytrace.Domain.Model;
 using Proxytrace.Domain.ModelProvider;
 
@@ -37,5 +37,4 @@ internal class ModelEndpointGenerator : DomainEntityGenerator<IModelEndpoint>
             cachedInputTokenCost: inputTokenCost * random.Decimal(0, 1));
     }
 }
-
 

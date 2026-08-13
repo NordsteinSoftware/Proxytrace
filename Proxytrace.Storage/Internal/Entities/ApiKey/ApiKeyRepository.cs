@@ -1,9 +1,9 @@
 using JetBrains.Annotations;
 using Microsoft.EntityFrameworkCore;
-using Proxytrace.Domain.Security;
+using Nordstein.Core.Common.Security;
 using Proxytrace.Domain;
 using Proxytrace.Domain.ApiKey;
-using Proxytrace.Domain.Events;
+using Nordstein.Core.Domain.Events;
 
 namespace Proxytrace.Storage.Internal.Entities.ApiKey;
 

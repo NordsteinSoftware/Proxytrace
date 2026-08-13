@@ -20,7 +20,7 @@ using Proxytrace.Domain.AgentCall;
 using Proxytrace.Domain.AuditLog;
 using Proxytrace.Domain.Completion;
 using Proxytrace.Domain.Message;
-using Proxytrace.Domain.Paging;
+using Nordstein.Core.Domain.Paging;
 using Proxytrace.Domain.Session;
 using Proxytrace.Domain.Usage;
 

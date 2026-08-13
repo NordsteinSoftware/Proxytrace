@@ -5,7 +5,7 @@ using NSubstitute;
 using Proxytrace.Application.Search.Internal;
 using Proxytrace.Application.Search.Internal.Mappers;
 using Proxytrace.Domain.AgentCall;
-using Proxytrace.Domain.Events;
+using Nordstein.Core.Domain.Events;
 using Proxytrace.Domain.Search;
 
 namespace Proxytrace.Application.Tests.Search;

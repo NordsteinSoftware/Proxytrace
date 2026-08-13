@@ -9,7 +9,7 @@ internal interface IDocumentMapper
 
     /// <summary>
     /// The domain entity interface type this mapper indexes (e.g. <c>IAgentCall</c>). Used to
-    /// route <see cref="Proxytrace.Domain.Events.EntityChangedEvent"/>s (keyed by entity type)
+    /// route <see cref="Nordstein.Core.Domain.Events.EntityChangedEvent"/>s (keyed by entity type)
     /// to the right <see cref="SearchKind"/>.
     /// </summary>
     Type EntityType { get; }

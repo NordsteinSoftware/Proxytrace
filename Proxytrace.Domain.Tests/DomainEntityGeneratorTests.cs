@@ -1,6 +1,7 @@
 using Autofac;
 using AwesomeAssertions;
 using Microsoft.Extensions.DependencyInjection;
+using Nordstein.Core.Domain.Events;
 using Proxytrace.Domain.Project;
 using Proxytrace.Domain.User;
 using Proxytrace.Storage;
@@ -11,6 +12,14 @@ namespace Proxytrace.Domain.Tests;
 [TestClass]
 public sealed class DomainEntityGeneratorTests : BaseTest<Module>
 {
+    [TestMethod]
+    public void Module_ThroughFullProductGraph_RegistersEntityEventsOnce()
+    {
+        IServiceProvider services = GetServices();
+
+        services.GetServices<IEntityEventService>().Should().ContainSingle();
+    }
+
     protected override void ConfigureContainer(ContainerBuilder builder)
     {
         base.ConfigureContainer(builder);

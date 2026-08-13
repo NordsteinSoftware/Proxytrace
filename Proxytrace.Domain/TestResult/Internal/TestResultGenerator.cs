@@ -2,7 +2,7 @@ using Nordstein.Core.Common.Async;
 using Nordstein.Core.Common.Random;
 using Proxytrace.Domain.Completion;
 using Proxytrace.Domain.Evaluation;
-using Proxytrace.Domain.Internal;
+using Nordstein.Core.Domain;
 using Proxytrace.Domain.TestCase;
 
 namespace Proxytrace.Domain.TestResult.Internal;

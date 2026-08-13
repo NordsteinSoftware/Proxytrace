@@ -15,13 +15,15 @@ decisions still open before anything is published.
 
 | Package | Contents |
 |---------|----------|
-| `Nordstein.Core.Common` | `IClock`, `IRandom`, `IAsyncLock`, validation helpers, `ITypeConverter`, Autofac registration helpers, `AddResilientBackgroundServices`, `IAppVersion`, `Sha256`, slug/log-safe text helpers |
+| `Nordstein.Core.Common` | `IClock`, `IRandom`, `IAsyncLock`, validation helpers, `ITypeConverter`, `ISecretProtector`, `ISecretHasher`, Autofac registration helpers, `AddResilientBackgroundServices`, `IAppVersion`, `Sha256`, slug/log-safe text helpers |
+| `Nordstein.Core.Domain` | `IDomainObject`, `IDomainEntity`, `IRepository`, `ITransaction`, archive contracts, entity/generator bases, paging, persistence exceptions, entity events, consuming-assembly Autofac discovery |
 | `Nordstein.Core.Testing` | `BaseTest<TModule>` and the MSTest + AwesomeAssertions + NSubstitute baseline |
 
-This is deliberately the least entangled slice. The bigger prizes — the domain-entity and
-repository foundation (`AbstractRepository`, `AbstractEntityConfiguration`, `IRepository`,
-`IDomainEntity`), and whole subsystems like licensing, audit logging, the secret-protection seam
-and user/auth/MFA — are **not** extracted yet. See [What comes next](#what-comes-next).
+The reusable domain contracts and bases are now extracted; the EF implementation remains in the
+product. The bigger prizes — the storage foundation (`AbstractRepository`,
+`AbstractEntityConfiguration`, `Entity`, `EntityCache`, `AmbientDbContext`,
+`StorageConfiguration`) and whole subsystems like licensing, audit logging, product-specific secret
+protection, and user/auth/MFA — are **not** extracted yet. See [What comes next](#what-comes-next).
 
 ## The one rule
 
@@ -97,28 +99,29 @@ Because Core is genuinely a separate repository that builds and tests on its own
 job runs `core/Nordstein.Core.sln` standalone) and the `core-package` job rebuilds the product
 against its packages, [the one rule](#the-one-rule) is enforced mechanically, not by review.
 
-Core was extracted from this repository with `git filter-repo` — **not** `git subtree split`,
-which filters by path without following renames and would have reduced this code's history to the
-single commit that moved it. The verified recipe is in
+Core's original Common and Testing packages were extracted from this repository with
+`git filter-repo` — **not** `git subtree split`, which filters by path without following renames and
+would have reduced that code's history to the single commit that moved it. Domain was added in a
+later extraction tranche. The verified original recipe is in
 [`core/PUBLISHING.md`](../core/PUBLISHING.md#how-this-repository-was-extracted).
 
 ## What comes next
 
 Roughly in order of value per unit of pain:
 
-1. **The domain/storage foundation** — `IDomainEntity`, `IRepository`, `AbstractRepository`,
-   `AbstractEntityConfiguration`, `Entity`, `EntityCache`, `AmbientDbContext`,
-   `StorageConfiguration`. Three things block it: `Domain.Module`/`Storage.Module` discover
-   types by reflecting over `typeof(Module).Assembly`, so the scan must take the consuming
-   product's assemblies as a parameter; almost all of the Storage foundation is `internal` and
-   reachable only through `InternalsVisibleTo`, so the seams must become public API; and
-   `MigrationsAssembly` currently pins migrations to `Proxytrace.Storage`, so Core must ship
-   none and each product must own its own migrations assembly.
-2. **Licensing** — `Proxytrace.Licensing` is already product-agnostic (tiers, features, limits,
-   JWT verification, offline grace). Mostly a move.
-3. **Cross-cutting subsystems** — the secret-protection seam, the audit-log pipeline,
-   user/auth/MFA/invites/API keys, the application-error log, notifications, the SSE broadcaster
-   infrastructure.
+1. **The storage foundation** — `AbstractRepository`, `AbstractEntityConfiguration`, `Entity`,
+   `EntityCache`, `AmbientDbContext`, and `StorageConfiguration`. Domain discovery already takes the
+   consuming product assembly; storage discovery must do the same. Almost all storage foundations
+   are still `internal`, and Core must provide a reusable DbContext base while each product keeps its
+   concrete context and migrations assembly.
+2. **Licensing** — split the reusable JWT verification, activation, caching, server-check and
+   offline-grace engine from Proxytrace's feature/limit enums, issuer, audience, trust root and tier
+   policy before moving it. See [#539](https://github.com/NordsteinSoftware/Proxytrace/issues/539).
+3. **Cross-cutting subsystems** — the audit-log pipeline, product-specific secret-protection
+   implementations and blind indexes, user/auth/MFA/invites/API
+   keys, the application-error log, notifications, and the SSE broadcaster infrastructure. The
+   generic `ISecretProtector` and `ISecretHasher` contracts are already in Core; Proxytrace keeps the
+   Data Protection purpose, key-ring path, hash implementation, and persisted blind-index scheme.
 4. **Frontend** — the `frontend/src/components/ui/` primitives, the Lingui setup and the SSE
    hooks, as an `@nordstein/ui` npm package. Same question, different registry; do it after the
    backend split rather than alongside it.

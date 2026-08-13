@@ -24,13 +24,15 @@ A secret's treatment is decided by **how it is used**, not by what it is:
 Never hash a replayable secret (you could not replay it) and never reversibly encrypt a verify-only
 credential (a database dump would then yield usable credentials).
 
-## The two seams (interfaces in `Proxytrace.Domain.Security`; implementation in `Proxytrace.Infrastructure.Security`)
+## The reusable seams
 
-The seam **interfaces** (`ISecretProtector`, `ISecretHasher`) live in `Proxytrace.Domain.Security`, so the
-storage layer can consume them without referencing `Application` (issue #270). Their Data Protection-backed
+The product-agnostic **interfaces** (`ISecretProtector`, `ISecretHasher`) live in
+`Nordstein.Core.Common.Security`, so other Nordstein products can implement the same ports and the
+storage layer can consume them without referencing `Application` (issue #270). Their Proxytrace
 **implementations** (`DataProtectionSecretProtector`, `Sha256SecretHasher`) and the DI module
-(`SecretProtectionModule`) live in `Proxytrace.Infrastructure.Security` — the lowest layer both the API host
-and the lean ingestion proxy can reach without loading `Application`.
+(`SecretProtectionModule`) stay in `Proxytrace.Infrastructure.Security` — they own the product-specific
+Data Protection purpose, application name, key-ring location, and operational diagnostics. This is the
+lowest product layer both the API host and the lean ingestion proxy can reach without loading `Application`.
 
 - **`ISecretProtector`** — `Protect`/`Unprotect`, backed by ASP.NET Core Data Protection
   (`DataProtectionSecretProtector`, purpose `"Proxytrace.Secrets.v1"`). The seam and its key ring are
@@ -58,8 +60,8 @@ and the lean ingestion proxy can reach without loading `Application`.
   wordlist in seconds, undoing the column encryption sitting right beside them. The HMAC key is not
   in the database, so the dump alone is no longer enough.
 
-`Sha256` lives in `Nordstein.Core.Common` so the `Domain` layer (entity generators) can hash without
-referencing `Application`.
+The contracts and `Sha256` primitive live in `Nordstein.Core.Common`; Proxytrace chooses where each
+contract is appropriate and supplies the implementations.
 
 ### A missing `PROXYTRACE_DATA_DIR` must be loud
 

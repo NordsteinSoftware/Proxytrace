@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Microsoft.Extensions.Logging;
+using Nordstein.Core.Common.Security;
 using Proxytrace.Domain.Security;
 using Nordstein.Core.Common.Async;
 using Proxytrace.Domain.ModelProvider;

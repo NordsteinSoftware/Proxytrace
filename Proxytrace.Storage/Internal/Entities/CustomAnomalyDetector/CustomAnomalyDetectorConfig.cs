@@ -60,7 +60,7 @@ internal class CustomAnomalyDetectorConfig
             .ToListAsync(cancellationToken);
 
         var scopedAgents = scopedAgentIds.Count > 0
-            ? await agents.GetManyAsync(scopedAgentIds, cancellationToken, ignoreMissing: true)
+            ? await agents.GetManyAsync(scopedAgentIds, ignoreMissing: true, cancellationToken: cancellationToken)
             : [];
 
         return factory(

@@ -1,7 +1,7 @@
 using System.Data.Common;
 using System.Security.Cryptography;
 using System.Text;
-using Proxytrace.Domain.Security;
+using Nordstein.Core.Common.Security;
 using Proxytrace.Domain;
 using Proxytrace.Domain.MfaBackupCode;
 using Proxytrace.Domain.User;

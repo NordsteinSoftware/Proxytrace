@@ -1,6 +1,6 @@
 using Nordstein.Core.Common.Async;
 using System.Security.Cryptography;
-using Proxytrace.Domain.Security;
+using Nordstein.Core.Common.Security;
 using Proxytrace.Domain;
 using Proxytrace.Domain.Invite;
 using Proxytrace.Domain.User;

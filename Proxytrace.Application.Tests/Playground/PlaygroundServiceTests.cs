@@ -5,7 +5,7 @@ using NSubstitute;
 using Proxytrace.Application.Playground.Internal;
 using Proxytrace.Domain;
 using Proxytrace.Domain.Agent;
-using Proxytrace.Domain.Exceptions;
+using Nordstein.Core.Domain.Exceptions;
 using Proxytrace.Domain.Message;
 using Proxytrace.Domain.Model;
 using Proxytrace.Domain.ModelEndpoint;

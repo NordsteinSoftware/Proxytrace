@@ -1,4 +1,4 @@
-using Proxytrace.Domain.Paging;
+using Nordstein.Core.Domain.Paging;
 using Proxytrace.Domain.TestRun;
 
 namespace Proxytrace.Domain.TestRunGroup;

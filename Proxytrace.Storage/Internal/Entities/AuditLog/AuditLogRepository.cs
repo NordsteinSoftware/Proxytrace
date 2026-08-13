@@ -2,8 +2,8 @@ using JetBrains.Annotations;
 using Microsoft.EntityFrameworkCore;
 using Proxytrace.Domain;
 using Proxytrace.Domain.AuditLog;
-using Proxytrace.Domain.Events;
-using Proxytrace.Domain.Paging;
+using Nordstein.Core.Domain.Events;
+using Nordstein.Core.Domain.Paging;
 
 namespace Proxytrace.Storage.Internal.Entities.AuditLog;
 

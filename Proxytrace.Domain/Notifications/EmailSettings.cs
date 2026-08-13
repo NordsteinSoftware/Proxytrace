@@ -15,7 +15,7 @@ public enum SmtpSecurity
 /// <summary>
 /// Operator-configured outgoing-email settings. A single instance per installation. <see cref="Password"/>
 /// is the plaintext SMTP password in memory; it is encrypted at rest by the store via
-/// <see cref="Proxytrace.Domain.Security.ISecretProtector"/>.
+/// <see cref="Nordstein.Core.Common.Security.ISecretProtector"/>.
 /// </summary>
 public sealed record EmailSettings(
     bool Enabled,

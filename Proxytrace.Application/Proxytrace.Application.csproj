@@ -27,6 +27,7 @@
     <ProjectReference Include="..\Proxytrace.Domain\Proxytrace.Domain.csproj" />
     <ProjectReference Include="..\Proxytrace.Messaging\Proxytrace.Messaging.csproj" />
     <ProjectReference Include="..\Proxytrace.Licensing\Proxytrace.Licensing.csproj" />
+    <NordsteinCoreReference Include="Nordstein.Core.Domain" />
   </ItemGroup>
 
   <ItemGroup>

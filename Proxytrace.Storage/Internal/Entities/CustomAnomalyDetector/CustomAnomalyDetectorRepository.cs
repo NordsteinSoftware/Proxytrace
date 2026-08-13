@@ -3,8 +3,8 @@ using Microsoft.EntityFrameworkCore;
 using Nordstein.Core.Common.Serialization;
 using Proxytrace.Domain;
 using Proxytrace.Domain.CustomAnomaly;
-using Proxytrace.Domain.Events;
-using Proxytrace.Domain.Exceptions;
+using Nordstein.Core.Domain.Events;
+using Nordstein.Core.Domain.Exceptions;
 using Proxytrace.Storage.Internal.Entities.Agent;
 
 namespace Proxytrace.Storage.Internal.Entities.CustomAnomalyDetector;

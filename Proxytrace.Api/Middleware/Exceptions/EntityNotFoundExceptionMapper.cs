@@ -1,4 +1,4 @@
-using Proxytrace.Domain.Exceptions;
+using Nordstein.Core.Domain.Exceptions;
 
 namespace Proxytrace.Api.Middleware.Exceptions;
 

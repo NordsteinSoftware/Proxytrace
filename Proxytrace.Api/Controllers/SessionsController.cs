@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Proxytrace.Api.Auth;
 using Proxytrace.Api.Dto.Sessions;
-using Proxytrace.Domain.Paging;
+using Nordstein.Core.Domain.Paging;
 using Proxytrace.Domain.Session;
 using ISession = Proxytrace.Domain.Session.ISession;
 

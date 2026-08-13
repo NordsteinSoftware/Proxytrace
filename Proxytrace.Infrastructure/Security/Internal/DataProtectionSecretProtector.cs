@@ -1,5 +1,5 @@
 using Microsoft.AspNetCore.DataProtection;
-using Proxytrace.Domain.Security;
+using Nordstein.Core.Common.Security;
 
 namespace Proxytrace.Infrastructure.Security.Internal;
 

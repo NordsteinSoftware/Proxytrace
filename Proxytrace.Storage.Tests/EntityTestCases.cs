@@ -1,6 +1,6 @@
 ﻿using AwesomeAssertions;
 using Proxytrace.Domain;
-using Proxytrace.Domain.Exceptions;
+using Nordstein.Core.Domain.Exceptions;
 using Proxytrace.Storage.Internal;
 using Proxytrace.Storage.Internal.Entities;
 

@@ -4,7 +4,7 @@ using NSubstitute;
 using Proxytrace.Application.Statistics.Internal;
 using Proxytrace.Domain.Statistics.TestRun;
 using Proxytrace.Domain;
-using Proxytrace.Domain.Exceptions;
+using Nordstein.Core.Domain.Exceptions;
 using Proxytrace.Domain.OptimizationProposal;
 using Proxytrace.Domain.TestSuite;
 using Nordstein.Core.Testing;
@@ -57,7 +57,7 @@ public sealed class AgentStatisticsTests : BaseTest<Module>
             .Returns([Stat(Guid.NewGuid(), 3, 2, to)]);
 
         testSuites.GetByAgentAsync(agentId, Arg.Any<CancellationToken>()).Returns([]);
-        testSuites.GetManyAsync(Arg.Any<IReadOnlyCollection<Guid>>(), Arg.Any<CancellationToken>())
+        testSuites.GetManyAsync(Arg.Any<IReadOnlyCollection<Guid>>(), Arg.Any<bool>(), Arg.Any<CancellationToken>())
             .Returns([]);
         proposals.GetByAgentAsync(agentId, Arg.Any<CancellationToken>()).Returns([]);
 
@@ -118,7 +118,7 @@ public sealed class AgentStatisticsTests : BaseTest<Module>
         var suite = Substitute.For<ITestSuite>();
         suite.Id.Returns(suiteId);
         suite.Name.Returns("My Suite");
-        testSuites.GetManyAsync(Arg.Any<IReadOnlyCollection<Guid>>(), Arg.Any<CancellationToken>())
+        testSuites.GetManyAsync(Arg.Any<IReadOnlyCollection<Guid>>(), Arg.Any<bool>(), Arg.Any<CancellationToken>())
             .Returns([suite]);
 
         var result = await svc.GetAgentLatestSuitePassRatesAsync(Guid.NewGuid(), CancellationToken);
@@ -145,7 +145,7 @@ public sealed class AgentStatisticsTests : BaseTest<Module>
         liveSuite.Id.Returns(liveSuiteId);
         liveSuite.Name.Returns("Live");
 
-        testSuites.GetManyAsync(Arg.Any<IReadOnlyCollection<Guid>>(), Arg.Any<CancellationToken>())
+        testSuites.GetManyAsync(Arg.Any<IReadOnlyCollection<Guid>>(), Arg.Any<bool>(), Arg.Any<CancellationToken>())
             .Returns(Task.FromException<IReadOnlyList<ITestSuite>>(new EntitiesNotFoundException([deletedSuiteId], typeof(ITestSuite))));
         testSuites.FindAsync(liveSuiteId, Arg.Any<CancellationToken>()).Returns(liveSuite);
         testSuites.FindAsync(deletedSuiteId, Arg.Any<CancellationToken>()).Returns((ITestSuite?)null);

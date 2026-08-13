@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using Proxytrace.Domain.AgentCall;
-using Proxytrace.Domain.Internal;
+using Nordstein.Core.Domain;
 using Proxytrace.Domain.Message;
 
 namespace Proxytrace.Domain.TestCase.Internal;

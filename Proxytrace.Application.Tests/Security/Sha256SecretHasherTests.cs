@@ -1,5 +1,5 @@
 using AwesomeAssertions;
-using Proxytrace.Domain.Security;
+using Nordstein.Core.Common.Security;
 using Proxytrace.Infrastructure.Security.Internal;
 
 namespace Proxytrace.Application.Tests.Security;

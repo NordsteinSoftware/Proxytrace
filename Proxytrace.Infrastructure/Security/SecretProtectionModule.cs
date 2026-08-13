@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Nordstein.Core.Common.DependencyInjection;
+using Nordstein.Core.Common.Security;
 using Proxytrace.Domain.Security;
 
 namespace Proxytrace.Infrastructure.Security;
