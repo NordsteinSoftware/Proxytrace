@@ -11,10 +11,10 @@
 
   <!-- ── Nordstein.Core consumption ────────────────────────────────────────────────
        The reusable foundation (Nordstein.Core.Common, Nordstein.Core.Testing) is
-       product-agnostic code that is destined for its own repository and its own NuGet
-       packages. It currently lives under core/ in this repository as a staging area, so
-       the split can be completed with a `git subtree split` on the core/ prefix without
-       losing history.
+       product-agnostic code that has its own repository and, later, its own NuGet
+       packages. It lives under core/ as a git submodule of
+       github.com/NordsteinSoftware/Nordstein.Core: a Core change is committed there and
+       consumed here by bumping the submodule pointer.
 
        A project consumes it by declaring an item rather than a reference:
 
@@ -33,8 +33,8 @@
 
            dotnet build -p:UseLocalCore=false -p:NordsteinCoreVersion=0.1.0-dev
 
-       Once Core moves out, point NordsteinCorePath at the sibling checkout
-       (../Core/) — nothing else changes. -->
+       NordsteinCorePath defaults to the core/ submodule mount; point it elsewhere with
+       -p:NordsteinCorePath=../Core/ to build against a Core checkout kept outside the tree. -->
   <PropertyGroup>
     <NordsteinCorePath Condition="'$(NordsteinCorePath)' == ''">$(MSBuildThisFileDirectory)core/</NordsteinCorePath>
     <UseLocalCore Condition="'$(UseLocalCore)' == '' AND Exists('$(NordsteinCorePath)Nordstein.Core.sln')">true</UseLocalCore>

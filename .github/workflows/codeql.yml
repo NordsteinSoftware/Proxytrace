@@ -78,6 +78,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          # C# is analysed source-only (build-mode: none); the submodule carries Core's .cs
+          # files, so without it Core would silently drop out of Proxytrace's scan.
+          submodules: recursive
 
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v4

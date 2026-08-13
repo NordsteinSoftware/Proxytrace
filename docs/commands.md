@@ -21,6 +21,16 @@ dotnet build core/Nordstein.Core.sln    # Core on its own
 dotnet test  core/Nordstein.Core.sln    # Core's tests (not included in the Proxytrace.sln run)
 ```
 
+`core/` is a **git submodule** of
+[Nordstein.Core](https://github.com/NordsteinSoftware/Nordstein.Core). Clone with
+`--recurse-submodules`, or the directory is empty and the build silently falls back to package
+mode:
+
+```bash
+git clone --recurse-submodules <proxytrace-repo>
+git submodule update --init        # if you already cloned without it
+```
+
 To check the product against the packed packages instead of the sources — what a consumer that has
 no Proxytrace checkout sees:
 

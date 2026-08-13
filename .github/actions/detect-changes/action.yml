@@ -66,9 +66,10 @@ runs:
           all=true
         fi
 
-        # `^core/` is the Nordstein.Core staging area: the product consumes it as a project or
-        # package reference, so a change there is a backend change like any other.
-        backend_re='^Proxytrace\.|^Proxytrace\.sln$|^core/|^Directory\.Build\.props$|^Directory\.Build\.targets$|^nuget\.config$|^coverage\.runsettings$|^dotnet-tools\.json$'
+        # `^core(/|$)` and `.gitmodules`: Nordstein.Core is a git submodule at core/. A pointer
+        # bump shows in the diff as the bare path `core` (no trailing slash), and the product
+        # compiles against whatever it points at, so it is a backend change like any other.
+        backend_re='^Proxytrace\.|^Proxytrace\.sln$|^core(/|$)|^\.gitmodules$|^Directory\.Build\.props$|^Directory\.Build\.targets$|^nuget\.config$|^coverage\.runsettings$|^dotnet-tools\.json$'
         frontend_re='^frontend/'
         # The all-in-one image bundles both halves of the app plus its own packaging.
         # Deliberately NOT including `^manual/`: the image build does compile the manual,

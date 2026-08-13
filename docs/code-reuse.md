@@ -3,8 +3,10 @@
 Proxytrace is the first Nordstein product, not the only one. The parts of it that are not about
 LLM tracing — the clock and randomness seams, validation helpers, Autofac wiring, hosting
 defaults, the test harness — are the parts a second product would otherwise reimplement badly.
-Those parts live in [`core/`](../core/) as **Nordstein.Core**, on their way to a separate private
-repository and NuGet packages.
+Those parts live in **Nordstein.Core** — its own public repository at
+[NordsteinSoftware/Nordstein.Core](https://github.com/NordsteinSoftware/Nordstein.Core), mounted
+here as a git submodule at [`core/`](../core/). Publishing it as NuGet packages is a later,
+separate step.
 
 This page is about the mechanism. [`core/PUBLISHING.md`](../core/PUBLISHING.md) covers the
 decisions still open before anything is published.
@@ -68,27 +70,37 @@ Both modes are exercised on every backend CI run, so neither can rot.
 # resolves it per project directory)
 dotnet build Proxytrace.sln -p:UseLocalCore=false -p:NordsteinCoreVersion=0.1.0-dev
 
-# point at a sibling Core checkout (what this becomes once Core is its own repository)
+# point at a Core checkout elsewhere instead of the core/ submodule (e.g. a shared working copy)
 dotnet build Proxytrace.sln -p:NordsteinCorePath=../Core/
 ```
 
 The version lives in one place, [`Directory.Build.props`](../Directory.Build.props), so a Core
 bump is a one-line diff.
 
-## Why `core/` is still inside this repository
+## How `core/` is wired
 
-Core is staged here rather than extracted in one move, so the mechanism could be validated —
-packaging, namespaces, dependency direction, Docker restore layers, CI — before a second
-repository exists to get any of it wrong.
+`core/` is a **git submodule** of the Nordstein.Core repository, pinned to a specific commit.
+Source mode compiles that checkout directly, so a Core change stays a one-build edit and the
+Dockerfiles, CI and `detect-changes` see the same `core/` paths they always have. Making a Core
+change means committing it in the Nordstein.Core repository, then bumping the submodule pointer
+here.
 
-The cost of staging is that only the two guards above keep the boundary honest. Do not weaken
-them.
+Clone the product with its submodule, or `core/` is empty and the build silently drops to package
+mode:
 
-When the move is completed, use `git filter-repo` with the pre-move paths mapped onto the current
-ones — **not** `git subtree split`, which filters by path without following renames and would
-reduce this code's history to the single commit that moved it. The verified commands, and the
-standalone build/test/pack check to run before pushing the new repository, are in
-[`core/PUBLISHING.md`](../core/PUBLISHING.md#completing-the-split).
+```bash
+git clone --recurse-submodules <proxytrace-repo>
+git submodule update --init        # if you already cloned without it
+```
+
+Because Core is genuinely a separate repository that builds and tests on its own (the `backend` CI
+job runs `core/Nordstein.Core.sln` standalone) and the `core-package` job rebuilds the product
+against its packages, [the one rule](#the-one-rule) is enforced mechanically, not by review.
+
+Core was extracted from this repository with `git filter-repo` — **not** `git subtree split`,
+which filters by path without following renames and would have reduced this code's history to the
+single commit that moved it. The verified recipe is in
+[`core/PUBLISHING.md`](../core/PUBLISHING.md#how-this-repository-was-extracted).
 
 ## What comes next
 
