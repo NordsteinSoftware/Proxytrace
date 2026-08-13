@@ -221,12 +221,14 @@ jobs:
           -p:NordsteinCoreVersion=0.1.0-ci.${{ github.run_number }}
           -o core/artifacts
 
+      # The local feed is picked up from core/artifacts by Directory.Build.props; it is not
+      # passed here, because a relative source path resolves per project directory and silently
+      # only fails once the packages are absent from the global cache.
       - name: Build the product against the packages
         run: >-
           dotnet build Proxytrace.sln --nologo
           -p:UseLocalCore=false
           -p:NordsteinCoreVersion=0.1.0-ci.${{ github.run_number }}
-          -p:RestoreAdditionalProjectSources=core/artifacts
 
       - name: Upload packages
         uses: actions/upload-artifact@v4

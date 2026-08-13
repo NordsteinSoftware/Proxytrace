@@ -26,8 +26,7 @@ no Proxytrace checkout sees:
 
 ```bash
 dotnet pack core/Nordstein.Core.sln -c Release -p:NordsteinCoreVersion=0.1.0-dev -o core/artifacts
-dotnet build Proxytrace.sln -p:UseLocalCore=false -p:NordsteinCoreVersion=0.1.0-dev \
-    -p:RestoreAdditionalProjectSources=core/artifacts
+dotnet build Proxytrace.sln -p:UseLocalCore=false -p:NordsteinCoreVersion=0.1.0-dev
 ```
 
 CI does both (`backend` and `core-package`). See [`code-reuse.md`](code-reuse.md).

@@ -63,9 +63,10 @@ Both modes are exercised on every backend CI run, so neither can rot.
 ### Overrides
 
 ```bash
-# force package mode against a locally packed feed
-dotnet build Proxytrace.sln -p:UseLocalCore=false -p:NordsteinCoreVersion=0.1.0-dev \
-    -p:RestoreAdditionalProjectSources=core/artifacts
+# force package mode against a locally packed feed (Directory.Build.props adds core/artifacts
+# as a restore source by absolute path whenever it exists — do not pass a relative source, NuGet
+# resolves it per project directory)
+dotnet build Proxytrace.sln -p:UseLocalCore=false -p:NordsteinCoreVersion=0.1.0-dev
 
 # point at a sibling Core checkout (what this becomes once Core is its own repository)
 dotnet build Proxytrace.sln -p:NordsteinCorePath=../Core/

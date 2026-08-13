@@ -42,4 +42,17 @@
     <!-- Only consulted in package mode. Kept in one place so a Core bump is a one-line diff. -->
     <NordsteinCoreVersion Condition="'$(NordsteinCoreVersion)' == ''">0.1.0-dev</NordsteinCoreVersion>
   </PropertyGroup>
+
+  <!-- Package mode before Core is published anywhere restores from a locally packed feed. The
+       path is built from $(MSBuildThisFileDirectory) so it is absolute: NuGet resolves a
+       relative RestoreAdditionalProjectSources against each *project* directory, not the
+       repository root, so passing `core/artifacts` on the command line asks for
+       `Proxytrace.Domain/core/artifacts` and fails with NU1301 — and only once the packages are
+       missing from the global cache, which makes it look like it works right up until CI.
+
+       Gated on the directory existing so a real package-mode build against a published feed is
+       unaffected. -->
+  <PropertyGroup Condition="'$(UseLocalCore)' != 'true' AND Exists('$(MSBuildThisFileDirectory)core/artifacts')">
+    <RestoreAdditionalProjectSources>$(RestoreAdditionalProjectSources);$(MSBuildThisFileDirectory)core/artifacts</RestoreAdditionalProjectSources>
+  </PropertyGroup>
 </Project>
