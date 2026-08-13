@@ -1,5 +1,5 @@
 ﻿using System.Resources;
-using Proxytrace.Common.Validation;
+using Nordstein.Core.Common.Validation;
 
 namespace Proxytrace.Domain.Prompt.Internal;
 

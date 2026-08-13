@@ -4,14 +4,14 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using NSubstitute;
 using Proxytrace.Application.TestRun;
-using Proxytrace.Common.DependencyInjection;
+using Nordstein.Core.Common.DependencyInjection;
 using Proxytrace.Domain.Agent;
 using Proxytrace.Domain.ModelEndpoint;
 using Proxytrace.Domain.ModelProvider;
 using Proxytrace.Domain.Project;
 using Proxytrace.Domain.Prompt;
 using Proxytrace.Storage;
-using Proxytrace.Testing;
+using Nordstein.Core.Testing;
 
 namespace Proxytrace.PerfHarness.Bootstrap;
 
@@ -23,7 +23,7 @@ namespace Proxytrace.PerfHarness.Bootstrap;
 /// <para>
 /// It mirrors <c>Proxytrace.Application.Tests.Module</c> (the proven graph that resolves the whole
 /// ingestion + statistics + repository stack) but points storage at Postgres and inlines the few
-/// base registrations from the internal <c>Proxytrace.Testing.Module</c> (service provider, host
+/// base registrations from the internal <c>Nordstein.Core.Testing.Module</c> (service provider, host
 /// environment, logging, data protection). Infrastructure interfaces that would otherwise reach out
 /// to a real LLM / SMTP / search backend are substituted: ingestion only parses already-captured
 /// request/response bodies and persists them, so it never calls the model client.
@@ -42,7 +42,7 @@ internal sealed class PerfModule : Autofac.Module
     {
         base.Load(builder);
 
-        // --- base registrations mirrored from the internal Proxytrace.Testing.Module ---
+        // --- base registrations mirrored from the internal Nordstein.Core.Testing.Module ---
         builder
             .Register(sp => new AutofacServiceProvider(sp.Resolve<ILifetimeScope>()))
             .As<IServiceProvider>();

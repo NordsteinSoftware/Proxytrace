@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Proxytrace.Domain.TestSupport;
-using Proxytrace.Common.Text;
+using Nordstein.Core.Common.Text;
 
 namespace Proxytrace.Api.Controllers;
 

@@ -23,7 +23,7 @@ using Proxytrace.Domain.Prompt;
 using Proxytrace.Domain.Project;
 using Proxytrace.Domain.Session;
 using Proxytrace.Licensing;
-using Proxytrace.Testing;
+using Nordstein.Core.Testing;
 
 namespace Proxytrace.Application.Tests;
 

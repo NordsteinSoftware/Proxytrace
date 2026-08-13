@@ -1,7 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using AwesomeAssertions;
 using Microsoft.Testing.Platform.Services;
-using Proxytrace.Common.Validation;
+using Nordstein.Core.Common.Validation;
 using Proxytrace.Domain.Prompt;
 using Proxytrace.Domain.Prompt.Internal;
 

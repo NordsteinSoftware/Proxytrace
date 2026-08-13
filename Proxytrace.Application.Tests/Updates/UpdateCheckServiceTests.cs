@@ -7,8 +7,8 @@ using NSubstitute;
 using Proxytrace.Domain.Kiosk;
 using Proxytrace.Application.Updates;
 using Proxytrace.Application.Updates.Internal;
-using Proxytrace.Common.Hosting;
-using Proxytrace.Testing;
+using Nordstein.Core.Common.Hosting;
+using Nordstein.Core.Testing;
 
 namespace Proxytrace.Application.Tests.Updates;
 

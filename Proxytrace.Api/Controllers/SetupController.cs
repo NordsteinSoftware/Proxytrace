@@ -5,7 +5,7 @@ using Proxytrace.Api.Dto.Setup;
 using Proxytrace.Application.Cleanup;
 using Proxytrace.Application.ErrorLog;
 using Proxytrace.Application.Setup;
-using Proxytrace.Common.Net;
+using Nordstein.Core.Common.Net;
 using Proxytrace.Domain;
 using Proxytrace.Domain.AuditLog;
 using Proxytrace.Domain.ModelEndpoint;

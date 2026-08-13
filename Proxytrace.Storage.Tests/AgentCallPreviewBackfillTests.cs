@@ -8,7 +8,7 @@ using Proxytrace.Domain.AgentCall;
 using Proxytrace.Domain.Message;
 using Proxytrace.Storage.Internal;
 using Proxytrace.Storage.Internal.Entities.AgentCall;
-using Proxytrace.Testing;
+using Nordstein.Core.Testing;
 
 namespace Proxytrace.Storage.Tests;
 

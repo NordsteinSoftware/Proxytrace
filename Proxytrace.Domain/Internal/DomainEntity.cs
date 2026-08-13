@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
-using Proxytrace.Common.Conversion;
-using Proxytrace.Common.Validation;
+using Nordstein.Core.Common.Conversion;
+using Nordstein.Core.Common.Validation;
 
 namespace Proxytrace.Domain.Internal;
 

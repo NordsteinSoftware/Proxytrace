@@ -3,7 +3,7 @@ using System.Diagnostics;
 using System.Text.Json;
 using JetBrains.Annotations;
 using Json.Schema;
-using Proxytrace.Common.Validation;
+using Nordstein.Core.Common.Validation;
 using Proxytrace.Domain.Evaluation;
 using Proxytrace.Domain.Internal;
 using Proxytrace.Domain.Project;

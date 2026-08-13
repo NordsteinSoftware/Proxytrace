@@ -1,7 +1,7 @@
 using System.Collections.ObjectModel;
 using System.Text.Json;
-using Proxytrace.Common.Async;
-using Proxytrace.Common.Time;
+using Nordstein.Core.Common.Async;
+using Nordstein.Core.Common.Time;
 using Proxytrace.Domain.ModelProvider;
 
 namespace Proxytrace.Infrastructure.Internal;

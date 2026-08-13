@@ -11,7 +11,7 @@ using Proxytrace.Api.Auth.Licensing;
 using Proxytrace.Application.Auth;
 using Proxytrace.Application.Ingestion;
 using Proxytrace.Application.Tracey;
-using Proxytrace.Common.Text;
+using Nordstein.Core.Common.Text;
 using Proxytrace.Domain;
 using Proxytrace.Domain.Project;
 using Proxytrace.Domain.User;

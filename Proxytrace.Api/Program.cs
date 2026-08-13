@@ -12,7 +12,7 @@ using Proxytrace.Api;
 using Proxytrace.Api.Auth.Mcp;
 using Proxytrace.Api.Kiosk;
 using Proxytrace.Api.Middleware;
-using Proxytrace.Common.Hosting;
+using Nordstein.Core.Common.Hosting;
 using Proxytrace.Domain.Kiosk;
 using Module = Proxytrace.Api.Module;
 

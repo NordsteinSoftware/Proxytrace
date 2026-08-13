@@ -3,8 +3,8 @@ using System.Text.Json.Serialization;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Proxytrace.Domain.Kiosk;
-using Proxytrace.Common.Hosting;
-using Proxytrace.Common.Time;
+using Nordstein.Core.Common.Hosting;
+using Nordstein.Core.Common.Time;
 
 namespace Proxytrace.Application.Updates.Internal;
 

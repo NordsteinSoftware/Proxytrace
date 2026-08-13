@@ -7,7 +7,7 @@ using Proxytrace.Domain;
 using Proxytrace.Domain.Exceptions;
 using Proxytrace.Domain.OptimizationProposal;
 using Proxytrace.Domain.TestSuite;
-using Proxytrace.Testing;
+using Nordstein.Core.Testing;
 
 namespace Proxytrace.Application.Tests.Statistics;
 

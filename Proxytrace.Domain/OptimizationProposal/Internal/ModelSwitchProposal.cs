@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using JetBrains.Annotations;
-using Proxytrace.Common.Serialization;
+using Nordstein.Core.Common.Serialization;
 using Proxytrace.Domain.Agent;
 using Proxytrace.Domain.ModelEndpoint;
 using Proxytrace.Domain.Proposal;

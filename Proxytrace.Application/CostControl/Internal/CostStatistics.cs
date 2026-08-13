@@ -1,4 +1,4 @@
-using Proxytrace.Common.Time;
+using Nordstein.Core.Common.Time;
 using Proxytrace.Domain.Agent;
 using Proxytrace.Domain.ApiKey;
 using Proxytrace.Domain.CostLimit;

@@ -19,7 +19,7 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\Proxytrace.Common\Proxytrace.Common.csproj" />
+      <NordsteinCoreReference Include="Nordstein.Core.Common" />
     </ItemGroup>
 
     <ItemGroup>

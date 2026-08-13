@@ -6,7 +6,7 @@ using Proxytrace.Api.Mcp;
 using Proxytrace.Domain;
 using Proxytrace.Domain.ApiKey;
 using Proxytrace.Domain.Project;
-using Proxytrace.Testing;
+using Nordstein.Core.Testing;
 
 namespace Proxytrace.Api.Tests.Mcp;
 

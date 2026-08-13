@@ -3,8 +3,8 @@ using Autofac.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using NSubstitute;
-using Proxytrace.Common.DependencyInjection;
-using Proxytrace.Common.Serialization;
+using Nordstein.Core.Common.DependencyInjection;
+using Nordstein.Core.Common.Serialization;
 using Proxytrace.Domain;
 using Proxytrace.Domain.Completion;
 using Proxytrace.Domain.Inference;
@@ -12,7 +12,7 @@ using Proxytrace.Domain.Message;
 using Proxytrace.Domain.ModelEndpoint;
 using Proxytrace.Domain.ModelProvider;
 using Proxytrace.Storage;
-using Proxytrace.Testing;
+using Nordstein.Core.Testing;
 
 namespace Proxytrace.Benchmarks;
 

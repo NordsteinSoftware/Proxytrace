@@ -40,7 +40,7 @@
 ## Concurrency
 
 - **Always use `IAsyncLock` for in-process concurrency control.** Inject it via DI
-  (`IAsyncLock` from `Proxytrace.Common.Async`, registered in `Proxytrace.Common.Module`).
+  (`IAsyncLock` from `Nordstein.Core.Common.Async`, registered in `Nordstein.Core.Common.Module`).
   Never use `lock`/`Monitor`, `SemaphoreSlim`, `Mutex`, or other raw synchronization primitives
   directly in feature code — they are not safe to hold across `await`, and a hand-rolled lock
   bypasses the shared, keyed implementation.

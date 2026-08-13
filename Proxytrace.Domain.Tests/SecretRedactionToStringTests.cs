@@ -6,7 +6,7 @@ using Proxytrace.Domain.Notification;
 using Proxytrace.Domain.Notifications;
 using Proxytrace.Domain.User;
 using Proxytrace.Domain.UserTotpEnrollment;
-using Proxytrace.Testing;
+using Nordstein.Core.Testing;
 
 namespace Proxytrace.Domain.Tests;
 

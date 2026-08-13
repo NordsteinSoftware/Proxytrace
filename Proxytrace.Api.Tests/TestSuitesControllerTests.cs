@@ -15,7 +15,7 @@ using Proxytrace.Domain.TestCase;
 using Proxytrace.Domain.TestSuite;
 using Proxytrace.Licensing;
 using Proxytrace.Licensing.Exceptions;
-using Proxytrace.Testing;
+using Nordstein.Core.Testing;
 // ReSharper disable NullableWarningSuppressionIsUsed
 
 namespace Proxytrace.Api.Tests;
@@ -638,7 +638,7 @@ public sealed class TestSuitesControllerTests : BaseTest<Module>
             services.GetRequiredService<IStatsReader<TestRunStats, TestRunStats.Filter>>(),
             license ?? UnlimitedLicense(),
             accessGuard ?? services.GetRequiredService<Proxytrace.Api.Auth.IProjectAccessGuard>(),
-            services.GetRequiredService<Proxytrace.Common.Async.IAsyncLock>(),
+            services.GetRequiredService<Nordstein.Core.Common.Async.IAsyncLock>(),
             Microsoft.Extensions.Logging.Abstractions.NullLogger<Proxytrace.Domain.AuditLog.Audit>.Instance);
 
     [TestMethod]

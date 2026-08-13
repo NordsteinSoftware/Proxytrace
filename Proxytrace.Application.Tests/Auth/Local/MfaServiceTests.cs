@@ -11,7 +11,7 @@ using Proxytrace.Domain;
 using Proxytrace.Domain.MfaBackupCode;
 using Proxytrace.Domain.User;
 using Proxytrace.Domain.UserTotpEnrollment;
-using Proxytrace.Testing;
+using Nordstein.Core.Testing;
 
 namespace Proxytrace.Application.Tests.Auth.Local;
 

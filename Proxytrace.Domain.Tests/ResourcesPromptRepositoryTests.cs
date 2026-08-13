@@ -2,7 +2,7 @@
 using Autofac;
 using Microsoft.Testing.Platform.Services;
 using Proxytrace.Domain.Prompt;
-using Proxytrace.Testing;
+using Nordstein.Core.Testing;
 
 namespace Proxytrace.Domain.Tests;
 

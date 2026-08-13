@@ -1,6 +1,6 @@
 using JetBrains.Annotations;
 using Microsoft.Extensions.Logging;
-using Proxytrace.Common.Security;
+using Nordstein.Core.Common.Security;
 using Proxytrace.Domain.ApiKey;
 using Proxytrace.Domain.Kiosk;
 

@@ -10,7 +10,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using Proxytrace.Api.Middleware;
 using Proxytrace.Api.Middleware.Exceptions;
-using Proxytrace.Common.Net;
+using Nordstein.Core.Common.Net;
 using Proxytrace.Domain.Exceptions;
 using Proxytrace.Licensing;
 using Proxytrace.Licensing.Exceptions;

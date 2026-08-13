@@ -9,7 +9,7 @@ using Proxytrace.Domain;
 using Proxytrace.Domain.Notification;
 using Proxytrace.Domain.PasswordResetToken;
 using Proxytrace.Domain.User;
-using Proxytrace.Testing;
+using Nordstein.Core.Testing;
 
 namespace Proxytrace.Application.Tests.Auth.Local;
 

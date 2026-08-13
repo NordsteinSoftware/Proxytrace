@@ -6,7 +6,7 @@ using Proxytrace.Domain;
 using Proxytrace.Domain.ModelEndpoint;
 using Proxytrace.Domain.TestRun;
 using Proxytrace.Domain.TestRunGroup;
-using Proxytrace.Testing;
+using Nordstein.Core.Testing;
 
 namespace Proxytrace.Application.Tests;
 

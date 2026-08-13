@@ -1,7 +1,7 @@
 using System.Net;
 using System.Text;
 using AwesomeAssertions;
-using Proxytrace.Common.Async;
+using Nordstein.Core.Common.Async;
 using Proxytrace.Infrastructure.Internal;
 
 namespace Proxytrace.Infrastructure.Tests;

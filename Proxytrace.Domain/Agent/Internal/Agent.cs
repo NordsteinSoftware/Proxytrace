@@ -1,8 +1,8 @@
 using System.ComponentModel.DataAnnotations;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
-using Proxytrace.Common.Async;
-using Proxytrace.Common.Validation;
+using Nordstein.Core.Common.Async;
+using Nordstein.Core.Common.Validation;
 using Proxytrace.Domain.AgentVersion;
 using Proxytrace.Domain.Inference;
 using Proxytrace.Domain.Internal;

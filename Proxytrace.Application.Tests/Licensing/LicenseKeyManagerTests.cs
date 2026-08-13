@@ -6,7 +6,7 @@ using NSubstitute;
 using Proxytrace.Application.Licensing;
 using Proxytrace.Licensing;
 using Proxytrace.Licensing.Exceptions;
-using Proxytrace.Testing;
+using Nordstein.Core.Testing;
 
 namespace Proxytrace.Application.Tests.Licensing;
 

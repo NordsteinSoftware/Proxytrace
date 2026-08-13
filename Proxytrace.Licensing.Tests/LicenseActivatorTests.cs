@@ -4,7 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using Proxytrace.Licensing.Exceptions;
 using Proxytrace.Licensing.Internal;
-using Proxytrace.Testing;
+using Nordstein.Core.Testing;
 
 namespace Proxytrace.Licensing.Tests;
 

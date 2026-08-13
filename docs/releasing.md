@@ -17,7 +17,7 @@ Propagation:
   full SemVer incl. prerelease suffix) from it. `IncludeSourceRevisionInInformationalVersion`
   is disabled so no `+<sha>` suffix leaks into UI strings.
 - Backend code reads the version **only** through `IAppVersion`
-  (`Proxytrace.Common/Hosting/IAppVersion.cs`, registered in `Common.Module`), which reads the
+  (`core/Nordstein.Core.Common/Hosting/IAppVersion.cs`, registered in `Nordstein.Core.Common.Module`), which reads the
   `AssemblyInformationalVersionAttribute`. Never read `Assembly.GetName().Version` (it loses
   the prerelease suffix). Consumers: dashboard telemetry, the license-server check payload,
   `GET /api/config` (`version` field), and the update check.

@@ -1,7 +1,7 @@
 using AwesomeAssertions;
 using Proxytrace.Domain.Kiosk;
 using Proxytrace.Domain.ModelProvider;
-using Proxytrace.Testing;
+using Nordstein.Core.Testing;
 
 namespace Proxytrace.Application.Tests.Demo;
 

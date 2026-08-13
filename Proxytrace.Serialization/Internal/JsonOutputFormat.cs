@@ -5,7 +5,7 @@ using System.Text.Json.Nodes;
 using System.Text.Json.Schema;
 using System.Text.Json.Serialization;
 using System.Text.Json.Serialization.Metadata;
-using Proxytrace.Common.Validation;
+using Nordstein.Core.Common.Validation;
 
 namespace Proxytrace.Serialization.Internal;
 

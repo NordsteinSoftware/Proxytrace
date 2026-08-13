@@ -6,7 +6,7 @@ using Proxytrace.Domain.AgentVersion;
 using Proxytrace.Domain.OptimizationProposal;
 using Proxytrace.Domain.Proposal;
 using Proxytrace.Domain.TestRun;
-using Proxytrace.Testing;
+using Nordstein.Core.Testing;
 
 namespace Proxytrace.Storage.Tests;
 

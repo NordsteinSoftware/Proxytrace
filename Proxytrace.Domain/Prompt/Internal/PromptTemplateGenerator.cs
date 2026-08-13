@@ -1,5 +1,5 @@
-using Proxytrace.Common.Async;
-using Proxytrace.Common.Random;
+using Nordstein.Core.Common.Async;
+using Nordstein.Core.Common.Random;
 using Proxytrace.Domain.Internal;
 
 namespace Proxytrace.Domain.Prompt.Internal;

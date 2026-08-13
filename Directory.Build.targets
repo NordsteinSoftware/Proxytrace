@@ -1,0 +1,28 @@
+<Project>
+  <!-- Expands every <NordsteinCoreReference Include="Nordstein.Core.X" /> into the reference
+       kind the current mode calls for. See the comment in Directory.Build.props for why the
+       indirection exists.
+
+       This lives in Directory.Build.targets rather than .props because the item is declared in
+       the project body, which MSBuild evaluates after .props and before .targets.
+
+       Core's own projects reference each other with plain ProjectReferences and never declare
+       the item, so this is a no-op inside core/. -->
+
+  <ItemGroup Condition="'$(UseLocalCore)' == 'true'">
+    <ProjectReference Include="@(NordsteinCoreReference->'$(NordsteinCorePath)%(Identity)/%(Identity).csproj')" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(UseLocalCore)' != 'true'">
+    <PackageReference Include="@(NordsteinCoreReference)" Version="$(NordsteinCoreVersion)" />
+  </ItemGroup>
+
+  <!-- Package mode against a version that was never restored fails deep inside NuGet with a
+       message that does not mention Core at all. Fail here instead, where the fix is obvious. -->
+  <Target Name="ValidateNordsteinCoreMode"
+          BeforeTargets="CollectPackageReferences"
+          Condition="'$(UseLocalCore)' != 'true' AND '@(NordsteinCoreReference)' != ''">
+    <Error Condition="'$(NordsteinCoreVersion)' == ''"
+           Text="NordsteinCoreVersion must be set when building in package mode (UseLocalCore=false)." />
+  </Target>
+</Project>

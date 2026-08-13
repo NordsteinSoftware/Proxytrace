@@ -18,7 +18,7 @@ using Proxytrace.Domain.AgentCall;
 using Proxytrace.Domain.AuditLog;
 using Proxytrace.Domain.TestSuite;
 using Proxytrace.Licensing;
-using Proxytrace.Testing;
+using Nordstein.Core.Testing;
 
 namespace Proxytrace.Api.Tests;
 

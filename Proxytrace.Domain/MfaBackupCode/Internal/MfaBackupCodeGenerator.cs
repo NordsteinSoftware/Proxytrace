@@ -1,5 +1,5 @@
-using Proxytrace.Common.Random;
-using Proxytrace.Common.Security;
+using Nordstein.Core.Common.Random;
+using Nordstein.Core.Common.Security;
 using Proxytrace.Domain.Internal;
 using Proxytrace.Domain.User;
 

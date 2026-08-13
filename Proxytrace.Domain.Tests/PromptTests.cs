@@ -1,7 +1,7 @@
 using AwesomeAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Proxytrace.Domain.Prompt;
-using Proxytrace.Testing;
+using Nordstein.Core.Testing;
 
 // ReSharper disable NullableWarningSuppressionIsUsed
 

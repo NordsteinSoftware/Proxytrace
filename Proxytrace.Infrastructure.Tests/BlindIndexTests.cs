@@ -1,10 +1,10 @@
 using Autofac;
 using AwesomeAssertions;
 using Microsoft.Extensions.DependencyInjection;
-using Proxytrace.Common.Security;
+using Nordstein.Core.Common.Security;
 using Proxytrace.Domain.Security;
 using Proxytrace.Infrastructure.Security;
-using Proxytrace.Testing;
+using Nordstein.Core.Testing;
 
 namespace Proxytrace.Infrastructure.Tests;
 

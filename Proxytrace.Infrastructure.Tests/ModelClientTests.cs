@@ -21,7 +21,7 @@ using Proxytrace.Domain.ModelProvider;
 using Proxytrace.Domain.Tools;
 using Proxytrace.Infrastructure.Internal;
 using Proxytrace.Serialization;
-using Proxytrace.Testing;
+using Nordstein.Core.Testing;
 
 namespace Proxytrace.Infrastructure.Tests;
 

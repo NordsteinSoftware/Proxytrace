@@ -2,7 +2,7 @@ using AwesomeAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Proxytrace.Domain.Outliers;
-using Proxytrace.Testing;
+using Nordstein.Core.Testing;
 using OutlierSettingsEntity = Proxytrace.Storage.Internal.Entities.OutlierSettings.OutlierSettingsEntity;
 
 namespace Proxytrace.Storage.Tests;

@@ -1,7 +1,7 @@
 ﻿using System.Collections;
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
-using Proxytrace.Common.Validation;
+using Nordstein.Core.Common.Validation;
 
 namespace Proxytrace.Domain.Tools
 {

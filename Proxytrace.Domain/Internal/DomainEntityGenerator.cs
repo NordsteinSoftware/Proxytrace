@@ -1,4 +1,4 @@
-﻿using Proxytrace.Common.Random;
+﻿using Nordstein.Core.Common.Random;
 
 namespace Proxytrace.Domain.Internal;
 

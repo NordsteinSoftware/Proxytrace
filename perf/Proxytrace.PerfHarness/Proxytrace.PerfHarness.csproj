@@ -25,7 +25,7 @@
              registers Infrastructure's SecretProtectionModule directly (see PerfModule). -->
         <ProjectReference Include="..\..\Proxytrace.Infrastructure\Proxytrace.Infrastructure.csproj" />
         <ProjectReference Include="..\..\Proxytrace.Messaging\Proxytrace.Messaging.csproj" />
-        <ProjectReference Include="..\..\Proxytrace.Testing\Proxytrace.Testing.csproj" />
+      <NordsteinCoreReference Include="Nordstein.Core.Testing" />
     </ItemGroup>
 
 </Project>

@@ -1,6 +1,6 @@
 using JetBrains.Annotations;
 using Microsoft.EntityFrameworkCore;
-using Proxytrace.Common.Serialization;
+using Nordstein.Core.Common.Serialization;
 using Proxytrace.Domain;
 using Proxytrace.Domain.CustomAnomaly;
 using Proxytrace.Domain.Events;

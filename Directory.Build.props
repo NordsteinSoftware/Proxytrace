@@ -8,4 +8,51 @@
          displayed verbatim in the UI and sent to the license server. -->
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
   </PropertyGroup>
+
+  <!-- ── Nordstein.Core consumption ────────────────────────────────────────────────
+       The reusable foundation (Nordstein.Core.Common, Nordstein.Core.Testing) is
+       product-agnostic code that is destined for its own repository and its own NuGet
+       packages. It currently lives under core/ in this repository as a staging area, so
+       the split can be completed with a `git subtree split` on the core/ prefix without
+       losing history.
+
+       A project consumes it by declaring an item rather than a reference:
+
+           <ItemGroup>
+             <NordsteinCoreReference Include="Nordstein.Core.Common" />
+           </ItemGroup>
+
+       Directory.Build.targets turns that into either a ProjectReference (source mode) or a
+       PackageReference (package mode). Source mode is what you want while developing: F12
+       navigates into Core, one build covers both halves, and a Core edit is picked up
+       without a pack/restore round trip. Without it, a cross-repository change becomes
+       "edit, pack, bump, restore, retest" and nobody makes small Core improvements any more.
+
+       Mode is chosen automatically by whether the Core sources are present, and can be
+       forced either way:
+
+           dotnet build -p:UseLocalCore=false -p:NordsteinCoreVersion=0.1.0-dev
+
+       Once Core moves out, point NordsteinCorePath at the sibling checkout
+       (../Core/) — nothing else changes. -->
+  <PropertyGroup>
+    <NordsteinCorePath Condition="'$(NordsteinCorePath)' == ''">$(MSBuildThisFileDirectory)core/</NordsteinCorePath>
+    <UseLocalCore Condition="'$(UseLocalCore)' == '' AND Exists('$(NordsteinCorePath)Nordstein.Core.sln')">true</UseLocalCore>
+    <UseLocalCore Condition="'$(UseLocalCore)' == ''">false</UseLocalCore>
+    <!-- Only consulted in package mode. Kept in one place so a Core bump is a one-line diff. -->
+    <NordsteinCoreVersion Condition="'$(NordsteinCoreVersion)' == ''">0.1.0-dev</NordsteinCoreVersion>
+  </PropertyGroup>
+
+  <!-- Package mode before Core is published anywhere restores from a locally packed feed. The
+       path is built from $(MSBuildThisFileDirectory) so it is absolute: NuGet resolves a
+       relative RestoreAdditionalProjectSources against each *project* directory, not the
+       repository root, so passing `core/artifacts` on the command line asks for
+       `Proxytrace.Domain/core/artifacts` and fails with NU1301 — and only once the packages are
+       missing from the global cache, which makes it look like it works right up until CI.
+
+       Gated on the directory existing so a real package-mode build against a published feed is
+       unaffected. -->
+  <PropertyGroup Condition="'$(UseLocalCore)' != 'true' AND Exists('$(MSBuildThisFileDirectory)core/artifacts')">
+    <RestoreAdditionalProjectSources>$(RestoreAdditionalProjectSources);$(MSBuildThisFileDirectory)core/artifacts</RestoreAdditionalProjectSources>
+  </PropertyGroup>
 </Project>

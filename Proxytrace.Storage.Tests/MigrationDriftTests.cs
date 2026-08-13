@@ -1,7 +1,7 @@
 using Autofac;
 using AwesomeAssertions;
 using Microsoft.EntityFrameworkCore;
-using Proxytrace.Testing;
+using Nordstein.Core.Testing;
 
 namespace Proxytrace.Storage.Tests;
 

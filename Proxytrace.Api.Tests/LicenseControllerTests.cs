@@ -13,7 +13,7 @@ using Proxytrace.Application.Setup;
 using Proxytrace.Domain.User;
 using Proxytrace.Licensing;
 using Proxytrace.Licensing.Exceptions;
-using Proxytrace.Testing;
+using Nordstein.Core.Testing;
 
 namespace Proxytrace.Api.Tests;
 

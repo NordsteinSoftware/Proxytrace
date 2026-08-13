@@ -1,6 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
-using Proxytrace.Common.Serialization;
+using Nordstein.Core.Common.Serialization;
 using Proxytrace.Domain.OptimizationProposal;
 using Proxytrace.Domain.Tools;
 

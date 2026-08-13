@@ -4,8 +4,8 @@ using System.Text.Json;
 using AwesomeAssertions;
 using JetBrains.Annotations;
 using Microsoft.Testing.Platform.Services;
-using Proxytrace.Common.Validation;
-using Proxytrace.Testing;
+using Nordstein.Core.Common.Validation;
+using Nordstein.Core.Testing;
 using JsonSerializer = System.Text.Json.JsonSerializer;
 using Proxytrace.Serialization.Internal;
 

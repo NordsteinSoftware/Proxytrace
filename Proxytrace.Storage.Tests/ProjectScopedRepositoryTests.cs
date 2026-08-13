@@ -11,7 +11,7 @@ using Proxytrace.Domain.Proposal;
 using Proxytrace.Domain.TestCase;
 using Proxytrace.Domain.TestRunGroup;
 using Proxytrace.Domain.TestSuite;
-using Proxytrace.Testing;
+using Nordstein.Core.Testing;
 
 namespace Proxytrace.Storage.Tests;
 

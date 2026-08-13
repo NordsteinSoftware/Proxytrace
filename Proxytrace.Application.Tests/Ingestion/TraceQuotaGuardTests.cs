@@ -8,7 +8,7 @@ using Proxytrace.Domain.AgentCall;
 using Proxytrace.Domain.Notification;
 using Proxytrace.Domain.Project;
 using Proxytrace.Licensing;
-using Proxytrace.Testing;
+using Nordstein.Core.Testing;
 
 namespace Proxytrace.Application.Tests.Ingestion;
 

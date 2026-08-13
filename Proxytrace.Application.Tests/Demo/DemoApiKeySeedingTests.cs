@@ -4,7 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Proxytrace.Application.Demo.Scenarios;
 using Proxytrace.Domain.ApiKey;
 using Proxytrace.Domain.Kiosk;
-using Proxytrace.Testing;
+using Nordstein.Core.Testing;
 
 namespace Proxytrace.Application.Tests.Demo;
 

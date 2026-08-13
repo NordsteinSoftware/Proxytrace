@@ -2,7 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Autofac;
 using Autofac.Extensions.DependencyInjection;
-using Proxytrace.Common.Hosting;
+using Nordstein.Core.Common.Hosting;
 using Proxytrace.Proxy.Controllers;
 
 var builder = WebApplication.CreateBuilder(args);

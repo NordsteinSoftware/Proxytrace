@@ -28,8 +28,8 @@
 
     <ItemGroup>
         <ProjectReference Include="..\Proxytrace.Licensing\Proxytrace.Licensing.csproj" />
-        <ProjectReference Include="..\Proxytrace.Common\Proxytrace.Common.csproj" />
-        <ProjectReference Include="..\Proxytrace.Testing\Proxytrace.Testing.csproj" />
+      <NordsteinCoreReference Include="Nordstein.Core.Common" />
+      <NordsteinCoreReference Include="Nordstein.Core.Testing" />
         <ProjectReference Include="..\Proxytrace.Storage\Proxytrace.Storage.csproj" />
     </ItemGroup>
 

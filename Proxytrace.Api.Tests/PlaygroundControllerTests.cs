@@ -11,7 +11,7 @@ using Proxytrace.Api.Dto.Playground;
 using Proxytrace.Application.Playground;
 using Proxytrace.Application.Playground.Internal;
 using Proxytrace.Domain.Agent;
-using Proxytrace.Testing;
+using Nordstein.Core.Testing;
 
 namespace Proxytrace.Api.Tests;
 

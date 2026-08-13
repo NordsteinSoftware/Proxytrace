@@ -8,7 +8,7 @@ using Proxytrace.Api.Controllers;
 using Proxytrace.Api.Dto.Search;
 using Proxytrace.Domain.ProjectSearchSettings;
 using Proxytrace.Domain.Search;
-using Proxytrace.Testing;
+using Nordstein.Core.Testing;
 
 namespace Proxytrace.Api.Tests;
 

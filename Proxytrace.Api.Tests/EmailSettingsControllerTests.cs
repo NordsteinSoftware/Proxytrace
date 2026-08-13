@@ -12,7 +12,7 @@ using Proxytrace.Application.Auth;
 using Proxytrace.Application.Notifications;
 using Proxytrace.Domain.Notification;
 using Proxytrace.Domain.User;
-using Proxytrace.Testing;
+using Nordstein.Core.Testing;
 
 namespace Proxytrace.Api.Tests;
 

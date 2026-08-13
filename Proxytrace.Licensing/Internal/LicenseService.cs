@@ -1,5 +1,5 @@
 using Microsoft.Extensions.Logging;
-using Proxytrace.Common.Async;
+using Nordstein.Core.Common.Async;
 
 namespace Proxytrace.Licensing.Internal;
 

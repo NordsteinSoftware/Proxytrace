@@ -2,7 +2,7 @@ using AwesomeAssertions;
 using NSubstitute;
 using Proxytrace.Api.Controllers;
 using Proxytrace.Domain.Kiosk;
-using Proxytrace.Common.Hosting;
+using Nordstein.Core.Common.Hosting;
 
 namespace Proxytrace.Api.Tests.Config;
 

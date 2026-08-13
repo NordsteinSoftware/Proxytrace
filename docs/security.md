@@ -44,7 +44,7 @@ and the lean ingestion proxy can reach without loading `Application`.
   + log) rather than crashing a hot path — see `ModelProviderConfig.Decrypt` and
   `EmailSettingsStore.DecryptPassword`.
 - **`ISecretHasher`** — `Hash(value)` → hex SHA-256 (`Sha256SecretHasher`, delegating to the shared
-  `Proxytrace.Common.Security.Sha256.HexHash`). Deterministic and **key-ring-independent**, so the
+  `Nordstein.Core.Common.Security.Sha256.HexHash`). Deterministic and **key-ring-independent**, so the
   verify paths keep working even if `PROXYTRACE_DATA_DIR` is lost. Unkeyed SHA-256 is safe **only**
   because every secret it covers is a 256-bit CSPRNG value Proxytrace generated itself (inbound API
   keys, invite tokens, password-reset tokens) — a dump cannot reverse or forge them. **Not for
@@ -58,7 +58,7 @@ and the lean ingestion proxy can reach without loading `Application`.
   wordlist in seconds, undoing the column encryption sitting right beside them. The HMAC key is not
   in the database, so the dump alone is no longer enough.
 
-`Sha256` lives in `Proxytrace.Common` so the `Domain` layer (entity generators) can hash without
+`Sha256` lives in `Nordstein.Core.Common` so the `Domain` layer (entity generators) can hash without
 referencing `Application`.
 
 ### A missing `PROXYTRACE_DATA_DIR` must be loud
