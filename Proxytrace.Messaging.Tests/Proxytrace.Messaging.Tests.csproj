@@ -15,6 +15,23 @@
         </PackageReference>
         <PackageReference Include="MSTest" Version="4.3.3" />
         <PackageReference Include="Testcontainers.Redis" Version="4.13.0" />
+        <!-- Transitive-only, pinned to override the version Testcontainers.Redis resolves through
+             Docker.DotNet. SSH.NET <= 2025.1.0 carries CVE-2026-48798 (GHSA-q939-rpr3-3284, high):
+             ScpClient.Download() does not validate server-supplied filenames on a recursive
+             download, so a malicious server can traverse out of the target directory. NuGet's
+             audit reports it as NU1903, which TreatWarningsAsErrors turns into a build error —
+             failing not just this project but the whole solution build, and every open PR with it
+             (#534).
+
+             Testcontainers.Redis 4.13.0 is the newest release, so there is no upstream bump to
+             take. Remove this pin once one of its releases resolves SSH.NET >= 2026.0.0 on its
+             own: check the transitive graph with `dotnet list package` (including transitives),
+             delete the line, and confirm `dotnet restore` stays clean without it.
+
+             Nothing here calls SSH.NET. It reaches us because Docker.DotNet supports connecting
+             to a Docker daemon over SSH, which the Testcontainers usage in this project does not
+             do — and it is a test-only dependency that never ships in a runtime image. -->
+        <PackageReference Include="SSH.NET" Version="2026.0.0" />
     </ItemGroup>
 
     <ItemGroup>

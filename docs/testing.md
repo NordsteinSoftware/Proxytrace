@@ -113,6 +113,29 @@ container inside the test method — no shared fixture, same isolation rule as e
 and remember these cost seconds, not milliseconds. They are a targeted supplement to the mocked
 tests, not a replacement for them.
 
+### The SSH.NET pin
+
+`Proxytrace.Messaging.Tests` carries a direct `PackageReference` to **SSH.NET 2026.0.0** for a
+package no code here calls. It arrives transitively — `Testcontainers.Redis` → `Docker.DotNet` →
+`SSH.NET`, because Docker.DotNet can reach a daemon over SSH — and every version at or below
+**2025.1.0** carries [CVE-2026-48798](https://github.com/advisories/GHSA-q939-rpr3-3284) (high,
+CVSS 7.1): `ScpClient.Download()` does not validate server-supplied filenames on a recursive
+download, so a malicious server can traverse out of the target directory.
+
+The exposure is nil — it is a test-only dependency that never ships in a runtime image, and
+nothing in this repository downloads over SCP. The *build* breakage was total: NuGet's audit
+raises it as `NU1903`, `TreatWarningsAsErrors` promotes it to an error, and the whole solution
+build fails, on every branch at once ([#534](https://github.com/NordsteinSoftware/Proxytrace/issues/534)).
+
+`Testcontainers.Redis` 4.13.0 is the newest release, so there was no upstream bump to take. Drop
+the pin once one of its releases resolves SSH.NET ≥ 2026.0.0 on its own — check the transitive
+graph with `dotnet list package` (including transitives), delete the line, and confirm
+`dotnet restore` stays clean without it.
+
+This is the same shape as the manual's Vite override (see
+[`commands.md`](commands.md#manual-toolchain-vitepress--the-vite-override)): a pin that exists
+only to get ahead of a transitive advisory, and that should be deleted rather than maintained.
+
 ## End-to-end tests (Playwright)
 
 The e2e suite (repo-root `e2e/`) boots the full stack via Docker Compose (`docker-compose.e2e.yml`).
