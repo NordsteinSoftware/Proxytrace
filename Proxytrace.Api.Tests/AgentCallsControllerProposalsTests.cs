@@ -162,7 +162,7 @@ public sealed class AgentCallsControllerProposalsTests : BaseTest<Module>
         services.GetRequiredService<AgentCallDtoMapper>(),
         services.GetRequiredService<AgentDtoMapper>(),
         services.GetRequiredService<Proxytrace.Domain.AgentCall.IAgentCall.CreateNew>(),
-        services.GetRequiredService<Proxytrace.Domain.Completion.ICompletion.Create>(),
+        services.GetRequiredService<Nordstein.Core.AI.Completions.ICompletion.Create>(),
         guard,
         NullLogger<Audit>.Instance,
         services.GetRequiredService<ITestSuiteRepository>(),

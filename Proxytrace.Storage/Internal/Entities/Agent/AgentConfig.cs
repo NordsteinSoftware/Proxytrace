@@ -5,7 +5,7 @@ using Nordstein.Core.Common.Serialization;
 using Proxytrace.Domain;
 using Proxytrace.Domain.Agent;
 using Proxytrace.Domain.AgentVersion;
-using Proxytrace.Domain.Inference;
+using Nordstein.Core.AI.Completions;
 using Proxytrace.Domain.ModelEndpoint;
 using Proxytrace.Domain.Project;
 using Proxytrace.Storage.Internal.Entities.Inference;

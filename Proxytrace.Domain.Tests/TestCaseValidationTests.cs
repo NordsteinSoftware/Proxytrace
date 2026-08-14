@@ -1,7 +1,7 @@
 using AwesomeAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Proxytrace.Domain.AgentCall;
-using Proxytrace.Domain.Message;
+using Nordstein.Core.AI.Messages;
 using Proxytrace.Domain.TestCase;
 using Nordstein.Core.Testing;
 

@@ -8,7 +8,6 @@
 
     <ItemGroup>
       <ProjectReference Include="..\Proxytrace.Domain\Proxytrace.Domain.csproj" />
-      <ProjectReference Include="..\Proxytrace.Serialization\Proxytrace.Serialization.csproj" />
     </ItemGroup>
     
     <ItemGroup>

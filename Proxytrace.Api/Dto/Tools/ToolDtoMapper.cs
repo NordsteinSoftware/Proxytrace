@@ -1,6 +1,6 @@
 using System.Text.Json;
 using Proxytrace.Api.Dto.Agents;
-using Proxytrace.Domain.Tools;
+using Nordstein.Core.AI.Tools;
 
 namespace Proxytrace.Api.Dto.Tools;
 

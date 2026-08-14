@@ -1,11 +1,12 @@
 using AwesomeAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Proxytrace.Domain.Agent;
-using Proxytrace.Domain.Inference;
+using Nordstein.Core.AI.Completions;
 using Proxytrace.Domain.ModelEndpoint;
 using Proxytrace.Domain.Project;
+using Nordstein.Core.AI.Prompts;
 using Proxytrace.Domain.Prompt;
-using Proxytrace.Domain.Tools;
+using Nordstein.Core.AI.Tools;
 
 namespace Proxytrace.Domain.Tests;
 

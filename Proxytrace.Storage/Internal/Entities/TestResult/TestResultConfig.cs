@@ -6,10 +6,10 @@ using Proxytrace.Domain;
 using Proxytrace.Domain.Evaluation;
 using Proxytrace.Domain.Evaluation.Internal;
 using Proxytrace.Domain.Evaluator;
-using Proxytrace.Domain.Message;
+using Nordstein.Core.AI.Messages;
 using Proxytrace.Domain.TestCase;
 using Proxytrace.Domain.TestResult;
-using Proxytrace.Domain.Usage;
+using Nordstein.Core.AI.Completions;
 using Proxytrace.Storage.Internal.Entities.TestCase;
 
 namespace Proxytrace.Storage.Internal.Entities.TestResult;

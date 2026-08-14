@@ -1,3 +1,4 @@
+using Nordstein.Core.AI.Clients;
 using Autofac;
 using Autofac.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection;
@@ -6,9 +7,8 @@ using NSubstitute;
 using Nordstein.Core.Common.DependencyInjection;
 using Nordstein.Core.Common.Serialization;
 using Proxytrace.Domain;
-using Proxytrace.Domain.Completion;
-using Proxytrace.Domain.Inference;
-using Proxytrace.Domain.Message;
+using Nordstein.Core.AI.Completions;
+using Nordstein.Core.AI.Messages;
 using Proxytrace.Domain.ModelEndpoint;
 using Proxytrace.Domain.ModelProvider;
 using Proxytrace.Storage;
@@ -45,7 +45,6 @@ internal static class BenchFixture
             // Domain generators + the serializer come from Storage.Module's transitive Domain/Common
             // modules; Application services aren't needed to mint value objects, so skip them.
             builder.RegisterModule(new Storage.Module(_ => StorageConfiguration.InMemory(), registerApplicationServices: false));
-            builder.RegisterModule<Proxytrace.Serialization.Module>();
             builder.RegisterStub<IModelClient>();
             builder.RegisterStub<IProviderClient>();
         }

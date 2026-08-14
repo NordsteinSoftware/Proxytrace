@@ -1,4 +1,4 @@
-using Proxytrace.Domain.Usage;
+using Nordstein.Core.AI.Completions;
 
 namespace Proxytrace.Domain.Statistics.TestRun;
 

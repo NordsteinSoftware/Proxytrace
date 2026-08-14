@@ -1,8 +1,9 @@
 using Proxytrace.Domain.AgentCall;
 using Proxytrace.Domain.AgentVersion;
 using Proxytrace.Domain.Project;
+using Nordstein.Core.AI.Prompts;
 using Proxytrace.Domain.Prompt;
-using Proxytrace.Domain.Tools;
+using Nordstein.Core.AI.Tools;
 using Quickenshtein;
 
 namespace Proxytrace.Application.Ingestion.Internal;

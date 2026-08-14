@@ -8,11 +8,12 @@ using Proxytrace.Application.TestRun;
 using Proxytrace.Domain.Agent;
 using Proxytrace.Domain.Evaluation;
 using Proxytrace.Domain.Evaluator;
-using Proxytrace.Domain.Message;
+using Nordstein.Core.AI.Messages;
 using Proxytrace.Domain.ModelEndpoint;
 using Proxytrace.Domain.OptimizationProposal;
 using Proxytrace.Domain.OptimizationTheory;
 using Proxytrace.Domain.Project;
+using Nordstein.Core.AI.Prompts;
 using Proxytrace.Domain.Prompt;
 using Proxytrace.Domain.Proposal;
 using Proxytrace.Domain.TestCase;
@@ -20,8 +21,8 @@ using Proxytrace.Domain.TestResult;
 using Proxytrace.Domain.TestRun;
 using Proxytrace.Domain.TestRunGroup;
 using Proxytrace.Domain.TestSuite;
-using Proxytrace.Domain.Tools;
-using Proxytrace.Serialization;
+using Nordstein.Core.AI.Tools;
+using Nordstein.Core.AI.Serialization;
 using Nordstein.Core.Testing;
 
 namespace Proxytrace.Application.Tests;
@@ -259,7 +260,7 @@ public sealed class UpdateSystemPromptOptimizerTests : BaseTest<Module>
             agent.Project.Returns(project);
             agent.SystemPrompt.Returns(systemPrompt);
             agent.Tools.Returns(new List<ToolSpecification>());
-            agent.ModelParameters.Returns(Substitute.For<Domain.Inference.IModelParameters>());
+            agent.ModelParameters.Returns(Substitute.For<Nordstein.Core.AI.Completions.IModelParameters>());
 
             var suite = Substitute.For<ITestSuite>();
             suite.Agent.Returns(agent);
@@ -282,7 +283,7 @@ public sealed class UpdateSystemPromptOptimizerTests : BaseTest<Module>
                     Arg.Any<IModelEndpoint>(),
                     Arg.Any<string?>(),
                     Arg.Any<bool>(),
-                    Arg.Any<Domain.Inference.IModelParameters?>(),
+                    Arg.Any<Nordstein.Core.AI.Completions.IModelParameters?>(),
                     Arg.Any<bool>(),
                     Arg.Any<CancellationToken>())
                 .Returns(Task.FromResult<IAgent>(systemAgent));

@@ -2,7 +2,7 @@ using System.Security.Cryptography;
 using System.Text;
 using Nordstein.Core.Common.Serialization;
 using Proxytrace.Domain.OptimizationProposal;
-using Proxytrace.Domain.Tools;
+using Nordstein.Core.AI.Tools;
 
 namespace Proxytrace.Domain.Proposal;
 

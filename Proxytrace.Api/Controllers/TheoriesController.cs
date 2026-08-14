@@ -14,7 +14,7 @@ using Nordstein.Core.Domain.Exceptions;
 using Proxytrace.Domain.ModelEndpoint;
 using Proxytrace.Domain.OptimizationTheory;
 using Proxytrace.Domain.TestSuite;
-using Proxytrace.Domain.Tools;
+using Nordstein.Core.AI.Tools;
 using Proxytrace.Licensing;
 
 namespace Proxytrace.Api.Controllers;

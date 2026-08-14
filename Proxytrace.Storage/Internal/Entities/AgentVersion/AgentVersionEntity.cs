@@ -1,5 +1,5 @@
 using Proxytrace.Domain.AgentVersion;
-using Proxytrace.Domain.Tools;
+using Nordstein.Core.AI.Tools;
 using Proxytrace.Storage.Internal.Entities.Agent;
 
 namespace Proxytrace.Storage.Internal.Entities.AgentVersion;

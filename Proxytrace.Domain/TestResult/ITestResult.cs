@@ -1,8 +1,7 @@
-using Proxytrace.Domain.Completion;
+using Nordstein.Core.AI.Completions;
 using Proxytrace.Domain.Evaluation;
-using Proxytrace.Domain.Message;
+using Nordstein.Core.AI.Messages;
 using Proxytrace.Domain.TestCase;
-using Proxytrace.Domain.Usage;
 
 namespace Proxytrace.Domain.TestResult;
 

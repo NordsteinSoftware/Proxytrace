@@ -4,10 +4,9 @@ using Microsoft.Extensions.DependencyInjection;
 using Proxytrace.Domain;
 using Proxytrace.Domain.Agent;
 using Proxytrace.Domain.AgentCall;
-using Proxytrace.Domain.Completion;
-using Proxytrace.Domain.Message;
+using Nordstein.Core.AI.Completions;
+using Nordstein.Core.AI.Messages;
 using Proxytrace.Domain.ModelEndpoint;
-using Proxytrace.Domain.Usage;
 using Nordstein.Core.Testing;
 
 namespace Proxytrace.Storage.Tests;
@@ -57,7 +56,7 @@ public sealed class AgentCallListQueryTests : BaseTest<Module>
         var call = await gen.CreateAsync(CancellationToken);
 
         var expectedPreview = call.Request.Messages
-            .OfType<Proxytrace.Domain.Message.UserMessage>()
+            .OfType<Nordstein.Core.AI.Messages.UserMessage>()
             .FirstOrDefault()?.GetText();
 
         var (items, _) = await repo.GetFilteredListAsync(new AgentCallFilter(), 1, 50, CancellationToken);

@@ -3,8 +3,8 @@
 Strict layered dependency flow — each layer may only depend on layers below it:
 
 ```
-Proxytrace.Api  →  Proxytrace.Application  →  Proxytrace.Domain  →  Nordstein.Core.Domain  →  Nordstein.Core.Common
-            →  Proxytrace.Infrastructure  →  Proxytrace.Domain + Proxytrace.Serialization  →  Nordstein.Core.Domain/Common
+Proxytrace.Api  →  Proxytrace.Application  →  Proxytrace.Domain  →  Nordstein.Core.AI/Domain  →  Nordstein.Core.Common
+            →  Proxytrace.Infrastructure  →  Proxytrace.Domain  →  Nordstein.Core.AI/Domain/Common
             →  Proxytrace.Storage  →  Proxytrace.Domain + Nordstein.Core.Domain
 ```
 
@@ -12,7 +12,7 @@ Proxytrace.Api  →  Proxytrace.Application  →  Proxytrace.Domain  →  Nordst
 > `Nordstein.Core.Common` (and their test-side sibling `Nordstein.Core.Testing`) are
 > product-agnostic and live under [`core/`](../core/) as
 > their own solution and separate repository, on their way to NuGet packages. The dependency
-> arrow only ever points *into* them — Core knows nothing about agents, traces or projects, and
+> arrow only ever points *into* them — Core knows nothing about traces or projects (the *generic* agent vocabulary lives in `Nordstein.Core.AI`), and
 > a change that would teach it belongs in `Proxytrace.Domain` instead. Consuming projects
 > declare `<NordsteinCoreReference Include="…" />` rather than a direct reference; see
 > [`code-reuse.md`](code-reuse.md). Core's own internals — package layering, the Autofac
@@ -21,7 +21,7 @@ Proxytrace.Api  →  Proxytrace.Application  →  Proxytrace.Domain  →  Nordst
 > [`core/docs/domain.md`](../core/docs/domain.md); any change under `core/` follows
 > [`core/CLAUDE.md`](../core/CLAUDE.md) and updates those docs, not this page.
 
-> **`Proxytrace.Storage` references only `Domain` and `Nordstein.Core.Domain`** (+ `Serialization`/`Common` transitively) — it does
+> **`Proxytrace.Storage` references only `Domain` and `Nordstein.Core.Domain`** (+ `Nordstein.Core.AI`/`Common` transitively) — it does
 > **not** reference `Application`. Most secondary-port **interfaces** that `Storage` implements live in
 > `Domain` alongside the pure DTOs they expose: the statistics/test-run readers + writer
 > (`Domain.Statistics`, with `TestRunStats` and the result
@@ -33,7 +33,7 @@ Proxytrace.Api  →  Proxytrace.Application  →  Proxytrace.Domain  →  Nordst
 > `ISecretIndexer` and its persisted scheme remain in `Domain.Security`. The **implementations** (`Internal/*`),
 > hosted services, and the audit *capture* pipeline stay in `Application` (issue #270).
 >
-> `Proxytrace.Infrastructure` depends only on `Domain` + `Serialization` (it has **no** reference to
+> `Proxytrace.Infrastructure` depends only on `Domain` (+ `Nordstein.Core.AI` transitively; it has **no** reference to
 > `Application`): the kiosk option records it needs (`KioskOptions`, `KioskEndpointOptions`) live in
 > `Proxytrace.Domain.Kiosk`, and it now also hosts the at-rest secret seam's Data Protection-backed
 > **implementation** + DI module (`Proxytrace.Infrastructure.Security.SecretProtectionModule`) — the
@@ -46,7 +46,7 @@ Proxytrace.Api  →  Proxytrace.Application  →  Proxytrace.Domain  →  Nordst
 - **Proxytrace.Application** — Use-case orchestration: ingestion (`OpenAiCallParser`, `AgentCallIngestor`), test running (`TestRunnerService`), optimization, test-case synthesis (`TestCase/ITestCaseSynthesisService` — proposes cases from a captured conversation), SSE broadcasters (`TraceBroadcaster`, `TestResultBroadcaster`, `ProposalBroadcaster`), demo data seeding (`IDatabaseInitializer`)
 - **Proxytrace.Domain** — Proxytrace business entities, value objects, specialized repositories, and business rules. Pure C#, no I/O.
 - **Proxytrace.Infrastructure** — External service integration. `ModelClient` wraps `Microsoft.Extensions.AI` + the OpenAI SDK to invoke LLMs.
-- **Proxytrace.Serialization** — JSON serializers and output formats (`ISerializer`, `IOutputFormat`, `ObjectToInferredTypesConverter`).
+- **Nordstein.Core.AI** ([`core/`](../core/)) — Product-agnostic AI foundation: message/conversation types, tool specifications, prompt templates, completions, the versionless `IAgent`/`IModelClient` contracts, and structured output parsing (`IOutputFormat`, `ITextSerializer`). See [`core/docs/ai.md`](../core/docs/ai.md).
 - **Proxytrace.Storage** — EF Core entities, configurations, mappers, migrations. Provider auto-detected (SQLite / PostgreSQL / SQL Server).
 - **Nordstein.Core.Common** ([`core/`](../core/)) — Product-agnostic utilities: validation helpers, async/type extensions, DI extensions, clock and randomness seams, secret-protection/hash contracts, hosting defaults.
 - **Nordstein.Core.Domain** ([`core/`](../core/)) — Product-agnostic domain foundation: entity/object contracts and bases, repositories, transactions, generators, paging, persistence exceptions, entity events, and consuming-assembly discovery.
@@ -84,7 +84,7 @@ Your Agent ──► Proxytrace.Proxy.Api ──► Upstream LLM provider
 
 ## Dependency Injection (Autofac)
 
-DI is wired with Autofac. Each project ships a `Module : Autofac.Module` (`Proxytrace.Domain.Module`, `Proxytrace.Application.Module`, `Proxytrace.Storage.Module`, `Proxytrace.Infrastructure.Module`, `Proxytrace.Serialization.Module`, `Nordstein.Core.Common.Module`, `Nordstein.Core.Domain.Module`, `Proxytrace.Api.Module`, `Proxytrace.Proxy.Module` (pipeline lib), `Proxytrace.Proxy.Api.Module` (standalone host), `Nordstein.Core.Testing.Module`). `Proxytrace.Domain.Module` passes its assembly to `Nordstein.Core.Domain.Module`, which discovers entities and generators without Core assuming where product types live. `Proxytrace.Storage.Module` still discovers EF configurations and repositories in the product storage assembly. The API serves the compiled React app from `wwwroot/` in production.
+DI is wired with Autofac. Each project ships a `Module : Autofac.Module` (`Proxytrace.Domain.Module`, `Proxytrace.Application.Module`, `Proxytrace.Storage.Module`, `Proxytrace.Infrastructure.Module`, `Nordstein.Core.AI.Module`, `Nordstein.Core.Common.Module`, `Nordstein.Core.Domain.Module`, `Proxytrace.Api.Module`, `Proxytrace.Proxy.Module` (pipeline lib), `Proxytrace.Proxy.Api.Module` (standalone host), `Nordstein.Core.Testing.Module`). `Proxytrace.Domain.Module` passes its assembly to `Nordstein.Core.Domain.Module`, which discovers entities and generators without Core assuming where product types live. `Proxytrace.Storage.Module` still discovers EF configurations and repositories in the product storage assembly. The API serves the compiled React app from `wwwroot/` in production.
 
 **Bridging to `IServiceCollection`.** Modules that need Microsoft-DI extension methods (`AddHttpClient`, `AddMemoryCache`, …) call `builder.RegisterServiceCollection(services => …)`, which fills a fresh `ServiceCollection` and `Populate`s it into Autofac. Those extension methods share their plumbing through `TryAdd`/`TryAddEnumerable`, which dedupes only **within one collection** — so every caller re-adds it and `Populate` faithfully registers each copy. Four modules calling `AddHttpClient` (Api, Application, Licensing, Proxy) therefore put four `IHttpMessageHandlerBuilderFilter`s in the container, and each one's logging handler wrapped every outgoing request: one upstream LLM call, logged four times ([#451](https://github.com/NordsteinSoftware/Proxytrace/issues/451)). `RegisterServiceCollection` now drops descriptors whose (service, implementation, lifetime) triple an earlier call already populated into the same container — an identical type-based registration can never mean two different things, while genuine multi-registrations use distinct implementation types and instance/factory descriptors are left alone.
 

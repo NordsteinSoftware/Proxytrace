@@ -324,8 +324,8 @@ public sealed class CustomAnomalyDetectorsControllerTests : BaseTest<Module>
     private async Task<IAgent> CreateAgentIn(IServiceProvider services, IProject project)
     {
         var createAgent = services.GetRequiredService<IAgent.CreateNew>();
-        var createPrompt = services.GetRequiredService<Proxytrace.Domain.Prompt.IPromptTemplate.Create>();
-        var createParameters = services.GetRequiredService<Proxytrace.Domain.Inference.IModelParameters.Create>();
+        var createPrompt = services.GetRequiredService<Nordstein.Core.AI.Prompts.IPromptTemplate.Create>();
+        var createParameters = services.GetRequiredService<Nordstein.Core.AI.Completions.IModelParameters.Create>();
         var agent = createAgent(
             name: $"Agent {Guid.NewGuid():N}",
             systemPrompt: createPrompt("agent", "You help."),
@@ -364,8 +364,8 @@ public sealed class CustomAnomalyDetectorsControllerTests : BaseTest<Module>
         services.GetRequiredService<IRepository<IModelEndpoint>>(),
         services.GetRequiredService<IAgent.CreateNew>(),
         services.GetRequiredService<ICustomAnomalyDetector.CreateNew>(),
-        services.GetRequiredService<Proxytrace.Domain.Prompt.IPromptTemplate.Create>(),
-        services.GetRequiredService<Proxytrace.Domain.Inference.IModelParameters.Create>(),
+        services.GetRequiredService<Nordstein.Core.AI.Prompts.IPromptTemplate.Create>(),
+        services.GetRequiredService<Nordstein.Core.AI.Completions.IModelParameters.Create>(),
         services.GetRequiredService<ITransaction>(),
         accessGuard ?? services.GetRequiredService<Api.Auth.IProjectAccessGuard>(),
         Microsoft.Extensions.Logging.Abstractions.NullLogger<Proxytrace.Domain.AuditLog.Audit>.Instance);

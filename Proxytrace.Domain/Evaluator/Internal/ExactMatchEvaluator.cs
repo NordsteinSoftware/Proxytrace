@@ -3,7 +3,7 @@ using System.Diagnostics;
 using JetBrains.Annotations;
 using Proxytrace.Domain.Evaluation;
 using Nordstein.Core.Domain;
-using Proxytrace.Domain.Message;
+using Nordstein.Core.AI.Messages;
 using Proxytrace.Domain.Project;
 using Proxytrace.Domain.TestResult;
 

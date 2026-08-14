@@ -1,7 +1,7 @@
 using System.Text.Json;
 using Proxytrace.Domain.Agent;
 using Proxytrace.Domain.TestResult;
-using Proxytrace.Domain.Tools;
+using Nordstein.Core.AI.Tools;
 
 namespace Proxytrace.Application.Optimization.Internal.Evidence;
 

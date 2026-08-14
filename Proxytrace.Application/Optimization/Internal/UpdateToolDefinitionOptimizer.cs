@@ -4,14 +4,15 @@ using Proxytrace.Application.Optimization.Internal.Evidence;
 using Proxytrace.Domain.Statistics.TestRun;
 using Proxytrace.Application.TestRun;
 using Proxytrace.Domain.Agent;
-using Proxytrace.Domain.Message;
+using Nordstein.Core.AI.Messages;
 using Proxytrace.Domain.ModelEndpoint;
 using Proxytrace.Domain.OptimizationTheory;
+using Nordstein.Core.AI.Prompts;
 using Proxytrace.Domain.Prompt;
 using Proxytrace.Domain.Proposal;
 using Proxytrace.Domain.TestRun;
 using Proxytrace.Domain.TestRunGroup;
-using Proxytrace.Domain.Tools;
+using Nordstein.Core.AI.Tools;
 
 namespace Proxytrace.Application.Optimization.Internal;
 

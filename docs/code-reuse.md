@@ -25,9 +25,16 @@ the decisions still open before anything is published.
 | `Nordstein.Core.Testing` | `BaseTest<TModule>` and the MSTest + AwesomeAssertions + NSubstitute baseline |
 | `Nordstein.Core.Licensing` | The generic license engine: JWT verification (issuer/audience/keys injected), runtime activation, the resolved `LicenseSnapshot`, and the periodic server check with the offline-grace state machine. Tier/feature/limit vocabulary is supplied by the product through `ILicenseTierPolicy` (string names that double as the JWT claim values) |
 | `Nordstein.Core.Storage` | `NordsteinDbContext` base, `Entity`/`IEntity`/`IArchivableEntity`, `AbstractRepository`/`ArchivableRepository`, the `AmbientDbContext`/`ITransaction` seam, `IMapper`, `EntityCache`/`EntityCacheVersions`, `AbstractEntityConfiguration`, `LikePattern`, the concurrency-token helpers, and `StorageFoundationModule<TContext>` (assembly-scoped entity/config/repository/cache discovery). Provider-neutral — depends only on EF Core Relational |
+| `Nordstein.Core.AI` | The generic AI vocabulary: LLM message/conversation types, tool specifications, prompt templates (`IPromptTemplate`/`IPrompt`), completions/`TokenUsage`/`IModelParameters`, the versionless `IAgent` and `IModelClient` contracts with their option records, structured model-output parsing (`IOutputFormat`, `ITextSerializer`, truncated-JSON repair), and the Autofac `Module` wiring generators, JSON converters, serializer, and output formats. See [`core/docs/ai.md`](../core/docs/ai.md) |
 
-The reusable domain contracts, **the storage foundation**, and **the licensing engine** are now
-extracted. What stays in the product is the provider- and schema-specific storage code: the concrete
+The reusable domain contracts, **the storage foundation**, **the licensing engine**, and **the AI
+foundation** (`Nordstein.Core.AI` — messages, tools, prompts, completions, the versionless agent
+and model-client contracts, output parsing; the former `Proxytrace.Serialization` project is
+retired into it) are now extracted. For AI, the product keeps everything that ties an agent to
+Proxytrace: `Proxytrace.Domain.Agent.IAgent` extends the Core contract with version history,
+endpoint binding, tenancy, search and archiving; `ModelClientFactory`/`ModelOptionsFactory` are
+the product seams over the Core client contract; the OpenAI `ModelClient` implementation,
+providers/endpoints/pricing, and the prompt-template repository stay product-side. What stays in the product is the provider- and schema-specific storage code: the concrete
 `StorageDbContext` (a thin `NordsteinDbContext` subclass), the `StorageConfiguration` provider
 switch (Npgsql / in-memory), the migrations assembly and its snapshot, the concrete
 entities/configurations/repositories, the statistics/query stores, and the backfills. The foundation
@@ -142,4 +149,8 @@ tier policy, enums and trust root):
    hooks, as an `@nordstein/ui` npm package. Same question, different registry; do it after the
    backend split rather than alongside it.
 
-Never extracted: anything that knows what an agent, a trace, an evaluator or a test run is.
+Never extracted: anything that knows what a trace, a project, an evaluator or a test run is. The
+*generic* agent vocabulary (messages, tools, prompts, completions, the versionless agent and
+model-client contracts, output parsing) lives in `Nordstein.Core.AI`; what stays product-side is
+everything that ties an agent to this product — tenancy, version history, endpoints and pricing,
+the OpenAI `ModelClient` implementation, ingestion, and search.

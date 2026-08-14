@@ -1,24 +1,24 @@
+using Nordstein.Core.AI.Clients;
+using Nordstein.Core.AI.Completions;
+using Nordstein.Core.AI.Prompts;
+using Nordstein.Core.AI.Tools;
 using Proxytrace.Domain.AgentVersion;
-using Proxytrace.Domain.Inference;
-using Proxytrace.Domain.Message;
 using Proxytrace.Domain.ModelEndpoint;
 using Proxytrace.Domain.Project;
-using Proxytrace.Domain.Prompt;
 using Proxytrace.Domain.Search;
-using Proxytrace.Domain.Tools;
 
 namespace Proxytrace.Domain.Agent;
 
 /// <summary>
-/// Represents an AI agent. Identity is the (project, name) pair. The agent's prompt and tool-set
+/// Represents an AI agent. Identity is the (project, name) pair. The generic agent contract
+/// (name, system prompt, tools, model parameters, system-message rendering) comes from
+/// <see cref="Nordstein.Core.AI.Agents.IAgent"/>; this adds the product concerns: version
+/// history, endpoint binding, tenancy, search, and archiving. The agent's prompt and tool-set
 /// live on its <see cref="IAgentVersion"/> history; <see cref="CurrentVersion"/> is the version
 /// currently in effect (latest, unless pinned).
 /// </summary>
-public interface IAgent : IDomainEntity<IAgent>, ISearchable, IArchivable
+public interface IAgent : Nordstein.Core.AI.Agents.IAgent, IDomainEntity<IAgent>, ISearchable, IArchivable
 {
-    /// <summary>Short human-readable name generated from the system message at creation time.</summary>
-    string Name { get; }
-
     /// <summary>
     /// The endpoint the agent completes against.
     /// </summary>
@@ -30,17 +30,6 @@ public interface IAgent : IDomainEntity<IAgent>, ISearchable, IArchivable
     /// storage carry their current version (storage invariant).
     /// </summary>
     IAgentVersion CurrentVersion { get; }
-
-    /// <summary>The system prompt of <see cref="CurrentVersion"/>.</summary>
-    IPromptTemplate SystemPrompt { get; }
-
-    /// <summary>The tools of <see cref="CurrentVersion"/>.</summary>
-    IReadOnlyList<ToolSpecification> Tools { get; }
-
-    /// <summary>
-    /// Sampling and decoding parameters last seen for this agent. Not part of the version identity.
-    /// </summary>
-    IModelParameters ModelParameters { get; }
 
     /// <summary>
     /// Whether the agent is a built-in agent (e.g. for prompt optimization).
@@ -101,7 +90,4 @@ public interface IAgent : IDomainEntity<IAgent>, ISearchable, IArchivable
     Task<IAgent> ChangeModelParameters(
         IModelParameters modelParameters,
         CancellationToken cancellationToken = default);
-
-    SystemMessage CreateSystemMessage(
-        IReadOnlyDictionary<string, string>? variables = null);
 }

@@ -7,11 +7,12 @@ using Proxytrace.Domain.Agent;
 using Proxytrace.Domain.AgentVersion;
 using Nordstein.Core.Domain.Events;
 using Nordstein.Core.Domain.Exceptions;
-using Proxytrace.Domain.Inference;
+using Nordstein.Core.AI.Completions;
 using Proxytrace.Domain.ModelEndpoint;
 using Proxytrace.Domain.Project;
+using Nordstein.Core.AI.Prompts;
 using Proxytrace.Domain.Prompt;
-using Proxytrace.Domain.Tools;
+using Nordstein.Core.AI.Tools;
 using Proxytrace.Storage.Internal.Entities.AgentVersion;
 
 namespace Proxytrace.Storage.Internal.Entities.Agent;

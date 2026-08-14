@@ -3,8 +3,9 @@ using Nordstein.Core.Common.Async;
 using Nordstein.Core.Common.Validation;
 using Proxytrace.Domain.Agent;
 using Nordstein.Core.Domain;
+using Nordstein.Core.AI.Prompts;
 using Proxytrace.Domain.Prompt;
-using Proxytrace.Domain.Tools;
+using Nordstein.Core.AI.Tools;
 
 namespace Proxytrace.Domain.AgentVersion.Internal;
 

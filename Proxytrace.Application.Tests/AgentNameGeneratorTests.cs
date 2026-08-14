@@ -1,15 +1,17 @@
+using Nordstein.Core.AI.Clients;
 using AwesomeAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
 using Proxytrace.Application.Agent;
 using Proxytrace.Domain.Agent;
-using Proxytrace.Domain.Completion;
-using Proxytrace.Domain.Message;
+using Nordstein.Core.AI.Completions;
+using Nordstein.Core.AI.Messages;
 using Proxytrace.Domain.ModelEndpoint;
 using Proxytrace.Domain.Project;
+using Nordstein.Core.AI.Prompts;
 using Proxytrace.Domain.Prompt;
-using Proxytrace.Domain.Tools;
+using Nordstein.Core.AI.Tools;
 using Nordstein.Core.Testing;
 
 namespace Proxytrace.Application.Tests;
@@ -45,7 +47,7 @@ public sealed class AgentNameGeneratorTests : BaseTest<Module>
             endpoint: Arg.Any<IModelEndpoint>(),
             name: Arg.Any<string?>(),
             isSystemAgent: Arg.Any<bool>(),
-            modelParameters: Arg.Any<Domain.Inference.IModelParameters?>(),
+            modelParameters: Arg.Any<Nordstein.Core.AI.Completions.IModelParameters?>(),
             cancellationToken: Arg.Any<CancellationToken>()).Returns(agent);
 
         return new AgentNameGenerator(prompts, agentRepo, NullLogger<AgentNameGenerator>.Instance);
@@ -89,7 +91,7 @@ public sealed class AgentNameGeneratorTests : BaseTest<Module>
             endpoint: project.SystemEndpoint,
             name: "agent_name_generator",
             isSystemAgent: true,
-            modelParameters: Arg.Any<Domain.Inference.IModelParameters?>(),
+            modelParameters: Arg.Any<Nordstein.Core.AI.Completions.IModelParameters?>(),
             cancellationToken: Arg.Any<CancellationToken>());
     }
 

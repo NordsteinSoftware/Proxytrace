@@ -11,7 +11,7 @@ using Proxytrace.Application.Streaming;
 using Proxytrace.Domain.Agent;
 using Proxytrace.Domain.AgentCall;
 using Proxytrace.Domain.AuditLog;
-using Proxytrace.Domain.Completion;
+using Nordstein.Core.AI.Completions;
 using Proxytrace.Domain.Session;
 using Nordstein.Core.Testing;
 

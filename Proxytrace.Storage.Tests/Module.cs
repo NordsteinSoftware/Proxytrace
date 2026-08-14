@@ -1,4 +1,5 @@
 ﻿using Autofac;
+using Nordstein.Core.AI.Clients;
 using Proxytrace.Domain.ModelEndpoint;
 using Proxytrace.Domain.ModelProvider;
 using Nordstein.Core.Testing;

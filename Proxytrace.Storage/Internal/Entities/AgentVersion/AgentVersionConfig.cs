@@ -2,8 +2,9 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Nordstein.Core.Common.Serialization;
 using Proxytrace.Domain.AgentVersion;
+using Nordstein.Core.AI.Prompts;
 using Proxytrace.Domain.Prompt;
-using Proxytrace.Domain.Tools;
+using Nordstein.Core.AI.Tools;
 using Proxytrace.Storage.Internal.Entities.Agent;
 using Proxytrace.Storage.Internal.Entities.Project;
 

@@ -1,9 +1,10 @@
 using JetBrains.Annotations;
 using Microsoft.Extensions.Logging;
 using Proxytrace.Domain.Agent;
-using Proxytrace.Domain.Message;
+using Nordstein.Core.AI.Messages;
 using Proxytrace.Domain.ModelEndpoint;
 using Proxytrace.Domain.Project;
+using Nordstein.Core.AI.Prompts;
 using Proxytrace.Domain.Prompt;
 
 namespace Proxytrace.Application.Agent;

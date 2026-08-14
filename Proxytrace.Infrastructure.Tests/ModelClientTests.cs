@@ -1,3 +1,4 @@
+using Nordstein.Core.AI.Clients;
 using System.ClientModel;
 using System.ClientModel.Primitives;
 using System.Net;
@@ -14,13 +15,13 @@ using Proxytrace.Domain.Kiosk;
 using Proxytrace.Domain;
 using Proxytrace.Domain.Agent;
 using Proxytrace.Domain.AgentCall;
-using Proxytrace.Domain.Message;
+using Nordstein.Core.AI.Messages;
 using Proxytrace.Domain.Model;
 using Proxytrace.Domain.ModelEndpoint;
 using Proxytrace.Domain.ModelProvider;
-using Proxytrace.Domain.Tools;
+using Nordstein.Core.AI.Tools;
 using Proxytrace.Infrastructure.Internal;
-using Proxytrace.Serialization;
+using Nordstein.Core.AI.Serialization;
 using Nordstein.Core.Testing;
 
 namespace Proxytrace.Infrastructure.Tests;
@@ -1084,7 +1085,7 @@ public sealed class ModelClientTests : BaseTest<Module>
     {
         var services = GetServices();
         var endpoint = MakeEndpoint(kind: ModelProviderKind.Unknown);
-        var factory = services.GetRequiredService<IModelClient.Factory>();
+        var factory = services.GetRequiredService<ModelClientFactory>();
 
         FluentActions
             .Invoking(() => factory(MakeAgent(endpoint)))
@@ -1096,7 +1097,7 @@ public sealed class ModelClientTests : BaseTest<Module>
     {
         var services = GetServices();
         var endpoint = MakeEndpoint(kind: ModelProviderKind.OpenAi);
-        var factory = services.GetRequiredService<IModelClient.Factory>();
+        var factory = services.GetRequiredService<ModelClientFactory>();
 
         FluentActions
             .Invoking(() => factory(MakeAgent(endpoint)))
@@ -1110,7 +1111,7 @@ public sealed class ModelClientTests : BaseTest<Module>
         var endpoint = MakeEndpoint(
             kind: ModelProviderKind.OpenAiCompatible,
             endpointUrl: "https://openrouter.ai/api/v1");
-        var factory = services.GetRequiredService<IModelClient.Factory>();
+        var factory = services.GetRequiredService<ModelClientFactory>();
 
         FluentActions
             .Invoking(() => factory(MakeAgent(endpoint)))

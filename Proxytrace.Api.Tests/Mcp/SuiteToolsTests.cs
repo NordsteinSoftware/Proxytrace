@@ -9,7 +9,7 @@ using Proxytrace.Domain.Agent;
 using Proxytrace.Domain.AgentCall;
 using Proxytrace.Domain.AuditLog;
 using Proxytrace.Domain.Evaluator;
-using Proxytrace.Domain.Message;
+using Nordstein.Core.AI.Messages;
 using Proxytrace.Domain.Project;
 using Proxytrace.Domain.TestCase;
 using Proxytrace.Domain.TestSuite;

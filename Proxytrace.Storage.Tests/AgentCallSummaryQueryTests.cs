@@ -4,12 +4,11 @@ using Microsoft.Extensions.DependencyInjection;
 using Proxytrace.Domain;
 using Proxytrace.Domain.Agent;
 using Proxytrace.Domain.AgentCall;
-using Proxytrace.Domain.Completion;
-using Proxytrace.Domain.Message;
+using Nordstein.Core.AI.Completions;
+using Nordstein.Core.AI.Messages;
 using Proxytrace.Domain.Model;
 using Proxytrace.Domain.ModelEndpoint;
 using Proxytrace.Domain.ModelProvider;
-using Proxytrace.Domain.Usage;
 using Nordstein.Core.Testing;
 
 namespace Proxytrace.Storage.Tests;

@@ -383,12 +383,12 @@ public sealed class ProposalsControllerTests : BaseTest<Module>
         var agent = await services.GetRequiredService<IAgentRepository>().AddAsync(
             services.GetRequiredService<IAgent.CreateNew>()(
                 $"A-{name}",
-                services.GetRequiredService<Proxytrace.Domain.Prompt.IPromptTemplate.Create>()(
+                services.GetRequiredService<Nordstein.Core.AI.Prompts.IPromptTemplate.Create>()(
                     $"T-{name}", "You are a test agent."),
                 [],
                 endpoint,
                 project,
-                services.GetRequiredService<Proxytrace.Domain.Inference.IModelParameters.Create>()(
+                services.GetRequiredService<Nordstein.Core.AI.Completions.IModelParameters.Create>()(
                     null, null, null, null, null)),
             CancellationToken);
 

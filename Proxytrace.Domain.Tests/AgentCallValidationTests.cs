@@ -3,10 +3,9 @@ using AwesomeAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Proxytrace.Domain.Agent;
 using Proxytrace.Domain.AgentCall;
-using Proxytrace.Domain.Completion;
-using Proxytrace.Domain.Message;
+using Nordstein.Core.AI.Completions;
+using Nordstein.Core.AI.Messages;
 using Proxytrace.Domain.ModelEndpoint;
-using Proxytrace.Domain.Usage;
 
 namespace Proxytrace.Domain.Tests;
 

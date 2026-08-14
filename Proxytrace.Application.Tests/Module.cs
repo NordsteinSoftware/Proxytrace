@@ -1,3 +1,4 @@
+using Nordstein.Core.AI.Clients;
 using Autofac;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
@@ -10,6 +11,7 @@ using Proxytrace.Domain.Agent;
 using Proxytrace.Domain.ModelEndpoint;
 using Proxytrace.Domain.ModelProvider;
 using Proxytrace.Domain.Project;
+using Nordstein.Core.AI.Prompts;
 using Proxytrace.Domain.Prompt;
 using Proxytrace.Storage;
 using Nordstein.Core.Testing;
@@ -29,7 +31,6 @@ public class Module : Autofac.Module
         // they are registered afterwards.
         builder.RegisterModule<Proxytrace.Application.Module>();
         builder.RegisterModule<Proxytrace.Infrastructure.Security.SecretProtectionModule>();
-        builder.RegisterModule<Proxytrace.Serialization.Module>();
 
         builder.RegisterStub<IModelClient>();
         builder.RegisterStub<IProviderClient>();

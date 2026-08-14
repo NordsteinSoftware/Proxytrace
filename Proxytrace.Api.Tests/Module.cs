@@ -1,3 +1,4 @@
+using Nordstein.Core.AI.Clients;
 using Proxytrace.Domain.Notifications;
 using Proxytrace.Domain.AuditLog;
 using Autofac;
@@ -7,6 +8,7 @@ using Proxytrace.Domain.Agent;
 using Proxytrace.Domain.ModelEndpoint;
 using Proxytrace.Domain.ModelProvider;
 using Proxytrace.Domain.Project;
+using Nordstein.Core.AI.Prompts;
 using Proxytrace.Domain.Prompt;
 using Proxytrace.Domain.User;
 using Proxytrace.Storage;

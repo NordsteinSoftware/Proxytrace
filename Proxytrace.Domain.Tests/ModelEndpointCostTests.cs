@@ -3,7 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Proxytrace.Domain.Model;
 using Proxytrace.Domain.ModelEndpoint;
 using Proxytrace.Domain.ModelProvider;
-using Proxytrace.Domain.Usage;
+using Nordstein.Core.AI.Completions;
 
 namespace Proxytrace.Domain.Tests;
 

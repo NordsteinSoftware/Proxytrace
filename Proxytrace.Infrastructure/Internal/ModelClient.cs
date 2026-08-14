@@ -1,3 +1,4 @@
+using Nordstein.Core.AI.Clients;
 using System.ClientModel;
 using System.ClientModel.Primitives;
 using System.Diagnostics;
@@ -10,12 +11,11 @@ using OpenAI;
 using Proxytrace.Domain.Kiosk;
 using Proxytrace.Domain.Agent;
 using Proxytrace.Domain.AgentCall;
-using Proxytrace.Domain.Completion;
-using Proxytrace.Domain.Message;
+using Nordstein.Core.AI.Completions;
+using Nordstein.Core.AI.Messages;
 using Proxytrace.Domain.ModelEndpoint;
 using Proxytrace.Domain.ModelProvider;
-using Proxytrace.Domain.Usage;
-using Proxytrace.Serialization;
+using Nordstein.Core.AI.Serialization;
 
 namespace Proxytrace.Infrastructure.Internal;
 
@@ -132,7 +132,7 @@ internal class ModelClient : IModelClient
         IReadOnlyDictionary<string, string>? promptVariables = null)
     {
         SystemMessage systemMessage = agent.CreateSystemMessage(promptVariables);
-        options ??= ModelOptions.FromAgent(agent, endpoint.Model);
+        options ??= ModelOptionsFactory.FromAgent(agent, endpoint.Model);
         conversation = Conversation.ReplaceSystemMessage(conversation, systemMessage);
 
         var messages = conversation.Messages.Select(ToPreviewMessage).ToList();
@@ -180,7 +180,7 @@ internal class ModelClient : IModelClient
                 "This instance of ModelClient is not functional.");
         }
         
-        options ??= ModelOptions.FromAgent(agent, endpoint.Model);
+        options ??= ModelOptionsFactory.FromAgent(agent, endpoint.Model);
         conversation = Conversation.ReplaceSystemMessage(conversation, systemMessage);
 
         ICompletion? completion = null;
@@ -307,7 +307,7 @@ internal class ModelClient : IModelClient
         ModelOptions? options = null,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
-        options ??= ModelOptions.FromAgent(agent, endpoint.Model);
+        options ??= ModelOptionsFactory.FromAgent(agent, endpoint.Model);
         conversation = Conversation.ReplaceSystemMessage(conversation, systemMessage);
 
         Stopwatch sw = Stopwatch.StartNew();

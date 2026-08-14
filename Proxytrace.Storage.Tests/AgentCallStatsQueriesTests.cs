@@ -5,13 +5,12 @@ using Proxytrace.Domain.Statistics;
 using Proxytrace.Domain;
 using Proxytrace.Domain.Agent;
 using Proxytrace.Domain.AgentCall;
-using Proxytrace.Domain.Completion;
-using Proxytrace.Domain.Inference;
-using Proxytrace.Domain.Message;
+using Nordstein.Core.AI.Completions;
+using Nordstein.Core.AI.Messages;
 using Proxytrace.Domain.ModelEndpoint;
 using Proxytrace.Domain.Project;
+using Nordstein.Core.AI.Prompts;
 using Proxytrace.Domain.Prompt;
-using Proxytrace.Domain.Usage;
 using Nordstein.Core.Testing;
 
 namespace Proxytrace.Storage.Tests;

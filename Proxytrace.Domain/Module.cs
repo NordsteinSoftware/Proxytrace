@@ -4,15 +4,15 @@ using Nordstein.Core.Domain;
 using Proxytrace.Domain.Agent;
 using Proxytrace.Domain.AgentVersion;
 using Proxytrace.Domain.AgentVersion.Internal;
-using Proxytrace.Domain.Inference;
+using Nordstein.Core.AI.Completions;
 using Proxytrace.Domain.ModelEndpoint;
 using Proxytrace.Domain.Project;
 using Proxytrace.Domain.Evaluator.Internal;
-using Proxytrace.Domain.Message.Internal;
+using Nordstein.Core.AI.Messages.Internal;
 using Proxytrace.Domain.OptimizationProposal.Internal;
+using Nordstein.Core.AI.Prompts;
 using Proxytrace.Domain.Prompt;
 using Proxytrace.Domain.Prompt.Internal;
-using Proxytrace.Domain.Tools.Internal;
 
 namespace Proxytrace.Domain;
 
@@ -34,14 +34,7 @@ public sealed class Module : Autofac.Module
         builder.Properties[RegisteredKey] = true;
 
         builder.RegisterModule(new Nordstein.Core.Domain.Module(typeof(Module).Assembly));
-
-        builder.RegisterType<ContentJsonConverter>()
-            .As<JsonConverter>()
-            .SingleInstance();
-
-        builder.RegisterType<ToolArgumentsJsonConverter>()
-            .As<JsonConverter>()
-            .SingleInstance();
+        builder.RegisterModule<Nordstein.Core.AI.Module>();
 
         builder.RegisterType<EvaluatorGenerator>()
             .AsImplementedInterfaces();

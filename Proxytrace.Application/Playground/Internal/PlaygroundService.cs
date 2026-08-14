@@ -1,3 +1,4 @@
+using Nordstein.Core.AI.Clients;
 using System.ComponentModel.DataAnnotations;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
@@ -6,10 +7,10 @@ using Microsoft.Extensions.Logging;
 using Proxytrace.Application.ErrorLog;
 using Proxytrace.Domain;
 using Proxytrace.Domain.Agent;
-using Proxytrace.Domain.Message;
+using Nordstein.Core.AI.Messages;
 using Proxytrace.Domain.ModelEndpoint;
-using Proxytrace.Domain.Tools;
-using Proxytrace.Domain.Usage;
+using Nordstein.Core.AI.Tools;
+using Nordstein.Core.AI.Completions;
 
 namespace Proxytrace.Application.Playground.Internal;
 

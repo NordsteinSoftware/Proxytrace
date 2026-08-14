@@ -1,9 +1,8 @@
 using System.Net;
 using Proxytrace.Domain.Agent;
 using Proxytrace.Domain.AgentVersion;
-using Proxytrace.Domain.Completion;
-using Proxytrace.Domain.Inference;
-using Proxytrace.Domain.Message;
+using Nordstein.Core.AI.Completions;
+using Nordstein.Core.AI.Messages;
 using Proxytrace.Domain.ModelEndpoint;
 using Proxytrace.Domain.Search;
 

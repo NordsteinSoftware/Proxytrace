@@ -5,7 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Proxytrace.Domain;
 using Proxytrace.Domain.AgentCall;
-using Proxytrace.Domain.Message;
+using Nordstein.Core.AI.Messages;
 using Proxytrace.Storage.Internal;
 using Proxytrace.Storage.Internal.Entities.AgentCall;
 using Nordstein.Core.Testing;

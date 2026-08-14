@@ -1,10 +1,13 @@
+using Nordstein.Core.AI.Completions;
+using Nordstein.Core.AI.Clients;
 using System.Text;
 using System.Text.Json;
 using JetBrains.Annotations;
 using Proxytrace.Domain.Agent;
 using Proxytrace.Domain.AgentCall;
-using Proxytrace.Domain.Message;
+using Nordstein.Core.AI.Messages;
 using Proxytrace.Domain.ModelEndpoint;
+using Nordstein.Core.AI.Prompts;
 using Proxytrace.Domain.Prompt;
 using Proxytrace.Domain.TestSuite;
 
@@ -85,7 +88,7 @@ internal sealed class TestCaseSynthesisService : ITestCaseSynthesisService
         Conversation modelConversation = BuildModelConversation(transcript, destination, priorRounds, instruction);
 
         using IModelClient client = synthesizer.CreateClient();
-        ModelOptions options = ModelOptions.FromAgent(synthesizer, synthesizer.Endpoint.Model) with
+        ModelOptions options = ModelOptionsFactory.FromAgent(synthesizer, synthesizer.Endpoint.Model) with
         {
             Sampling = new ModelSamplingParameters(ReasoningEffort: ReasoningBudget),
         };

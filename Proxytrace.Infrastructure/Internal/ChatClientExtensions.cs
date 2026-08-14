@@ -1,7 +1,8 @@
+using Nordstein.Core.AI.Clients;
 using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.AI;
-using Proxytrace.Domain.Message;
+using Nordstein.Core.AI.Messages;
 // Aliased rather than imported: OpenAI.Chat also defines a ChatMessage, which would collide with
 // Microsoft.Extensions.AI's own throughout this file.
 using OpenAiChatOptions = OpenAI.Chat.ChatCompletionOptions;

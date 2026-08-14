@@ -1,5 +1,5 @@
 using Proxytrace.Domain.Evaluation;
-using Proxytrace.Domain.Message;
+using Nordstein.Core.AI.Messages;
 using Proxytrace.Domain.TestResult;
 
 namespace Proxytrace.Storage.Internal.Entities.TestResult;
