@@ -4,6 +4,15 @@ Storage is **PostgreSQL** for all persistent deployments (debug, release, and e2
 **in-memory** store for unit tests and kiosk (single-process demo) mode. SQLite and SQL Server are
 no longer supported.
 
+> **Where the storage foundation lives.** The provider-agnostic machinery this page describes —
+> `NordsteinDbContext`, `AbstractRepository`/`ArchivableRepository`, the `AmbientDbContext`/`ITransaction`
+> seam, `EntityCache`, `AbstractEntityConfiguration`, `LikePattern` and the concurrency-token helpers —
+> now lives in the **`Nordstein.Core.Storage`** submodule package (see
+> [`code-reuse.md`](code-reuse.md) and [`core/docs/storage.md`](../core/docs/storage.md)). `Proxytrace.Storage`
+> keeps the provider choice, the concrete `StorageDbContext`, the migrations, and the concrete
+> entities/repositories. The behaviour is unchanged, so the type names below still resolve — they are
+> just imported from Core.
+
 | Mode | Selected when | Schema init |
 |------|---------------|-------------|
 | PostgreSQL | non-kiosk (connection string from `Proxytrace.Api/appsettings.json`) | EF migrations (`MigrateAsync`) on startup |
@@ -311,8 +320,9 @@ Every entity derives from `Entity` and carries an `UpdatedAt` timestamp that `Ab
 stamps on each write and uses as an optimistic-concurrency version stamp.
 
 `UpdatedAt` is configured as an **EF concurrency token** centrally in
-`StorageDbContext.OnModelCreating` (which loops the model and marks the `UpdatedAt` property of every
-entity type). EF therefore emits `UPDATE/DELETE … WHERE Id = @id AND UpdatedAt = @original` and
+`NordsteinDbContext.OnModelCreating` — the reusable context base in `Nordstein.Core.Storage` that the
+product's thin `StorageDbContext` derives from — which loops the model and marks the `UpdatedAt`
+property of every entity type. EF therefore emits `UPDATE/DELETE … WHERE Id = @id AND UpdatedAt = @original` and
 checks the affected row count: if a concurrent writer already moved the row on, zero rows match and
 EF raises `DbUpdateConcurrencyException`. `UpdateCoreAsync` translates that into the domain
 `OptimisticConcurrencyException`; `RemoveAsync` treats it as "not removed by us" and returns `false`.

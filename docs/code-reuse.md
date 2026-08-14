@@ -18,12 +18,18 @@ decisions still open before anything is published.
 | `Nordstein.Core.Common` | `IClock`, `IRandom`, `IAsyncLock`, validation helpers, `ITypeConverter`, `ISecretProtector`, `ISecretHasher`, Autofac registration helpers, `AddResilientBackgroundServices`, `IAppVersion`, `Sha256`, slug/log-safe text helpers |
 | `Nordstein.Core.Domain` | `IDomainObject`, `IDomainEntity`, `IRepository`, `ITransaction`, archive contracts, entity/generator bases, paging, persistence exceptions, entity events, consuming-assembly Autofac discovery |
 | `Nordstein.Core.Testing` | `BaseTest<TModule>` and the MSTest + AwesomeAssertions + NSubstitute baseline |
+| `Nordstein.Core.Storage` | `NordsteinDbContext` base, `Entity`/`IEntity`/`IArchivableEntity`, `AbstractRepository`/`ArchivableRepository`, the `AmbientDbContext`/`ITransaction` seam, `IMapper`, `EntityCache`/`EntityCacheVersions`, `AbstractEntityConfiguration`, `LikePattern`, the concurrency-token helpers, and `StorageFoundationModule<TContext>` (assembly-scoped entity/config/repository/cache discovery). Provider-neutral — depends only on EF Core Relational |
 
-The reusable domain contracts and bases are now extracted; the EF implementation remains in the
-product. The bigger prizes — the storage foundation (`AbstractRepository`,
-`AbstractEntityConfiguration`, `Entity`, `EntityCache`, `AmbientDbContext`,
-`StorageConfiguration`) and whole subsystems like licensing, audit logging, product-specific secret
-protection, and user/auth/MFA — are **not** extracted yet. See [What comes next](#what-comes-next).
+The reusable domain contracts **and the storage foundation** are now extracted. What stays in the
+product is the provider- and schema-specific storage code: the concrete `StorageDbContext` (a thin
+`NordsteinDbContext` subclass), the `StorageConfiguration` provider switch (Npgsql / in-memory), the
+migrations assembly and its snapshot, the concrete entities/configurations/repositories, the
+statistics/query stores, and the backfills. The foundation is threaded off a `DbContext` base so it
+is product-context-agnostic, and off EF Core Relational only so it is provider-agnostic — each
+product supplies its own provider, concrete context and migrations. Whole subsystems like licensing,
+audit logging, product-specific secret protection, and user/auth/MFA are **not** extracted yet. See
+[What comes next](#what-comes-next). The Core-side reference for the storage package is
+[`core/docs/storage.md`](../core/docs/storage.md).
 
 ## The one rule
 
@@ -107,22 +113,20 @@ later extraction tranche. The verified original recipe is in
 
 ## What comes next
 
-Roughly in order of value per unit of pain:
+Roughly in order of value per unit of pain (the storage foundation — item 1 in earlier tranches —
+is **done**: `Nordstein.Core.Storage` now owns `NordsteinDbContext`, the repositories, the
+ambient-transaction seam, the cache, the EF-config base and `StorageFoundationModule<TContext>`,
+while the product keeps its concrete context, provider switch and migrations):
 
-1. **The storage foundation** — `AbstractRepository`, `AbstractEntityConfiguration`, `Entity`,
-   `EntityCache`, `AmbientDbContext`, and `StorageConfiguration`. Domain discovery already takes the
-   consuming product assembly; storage discovery must do the same. Almost all storage foundations
-   are still `internal`, and Core must provide a reusable DbContext base while each product keeps its
-   concrete context and migrations assembly.
-2. **Licensing** — split the reusable JWT verification, activation, caching, server-check and
+1. **Licensing** — split the reusable JWT verification, activation, caching, server-check and
    offline-grace engine from Proxytrace's feature/limit enums, issuer, audience, trust root and tier
    policy before moving it. See [#539](https://github.com/NordsteinSoftware/Proxytrace/issues/539).
-3. **Cross-cutting subsystems** — the audit-log pipeline, product-specific secret-protection
+2. **Cross-cutting subsystems** — the audit-log pipeline, product-specific secret-protection
    implementations and blind indexes, user/auth/MFA/invites/API
    keys, the application-error log, notifications, and the SSE broadcaster infrastructure. The
    generic `ISecretProtector` and `ISecretHasher` contracts are already in Core; Proxytrace keeps the
    Data Protection purpose, key-ring path, hash implementation, and persisted blind-index scheme.
-4. **Frontend** — the `frontend/src/components/ui/` primitives, the Lingui setup and the SSE
+3. **Frontend** — the `frontend/src/components/ui/` primitives, the Lingui setup and the SSE
    hooks, as an `@nordstein/ui` npm package. Same question, different registry; do it after the
    backend split rather than alongside it.
 

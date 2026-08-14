@@ -20,6 +20,10 @@
 
     <ItemGroup>
         <Using Include="Microsoft.VisualStudio.TestTools.UnitTesting" />
+        <!-- The storage foundation (AbstractRepository, EntityCache, AmbientDbContext, LikePattern,
+             the concurrency-token helpers, …) now lives in Nordstein.Core.Storage; import it globally
+             so the existing tests resolve those types without a per-file using. -->
+        <Using Include="Nordstein.Core.Storage" />
     </ItemGroup>
 
     <ItemGroup>
@@ -31,6 +35,7 @@
       <ProjectReference Include="..\Proxytrace.Infrastructure\Proxytrace.Infrastructure.csproj" />
       <ProjectReference Include="..\Proxytrace.Storage\Proxytrace.Storage.csproj" />
       <NordsteinCoreReference Include="Nordstein.Core.Domain" />
+      <NordsteinCoreReference Include="Nordstein.Core.Storage" />
       <NordsteinCoreReference Include="Nordstein.Core.Testing" />
     </ItemGroup>
 

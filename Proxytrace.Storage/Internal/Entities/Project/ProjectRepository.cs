@@ -93,7 +93,7 @@ internal class ProjectRepository : AbstractRepository<IProject, ProjectEntity>, 
     }
 
     protected override async Task UpdateRelationsAsync(
-        StorageDbContext context,
+        DbContext context,
         ProjectEntity storedEntity,
         CancellationToken cancellationToken)
     {

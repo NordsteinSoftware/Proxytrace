@@ -71,7 +71,7 @@ internal class TestRunScheduleRepository : AbstractRepository<ITestRunSchedule, 
     }
 
     protected override async Task UpdateRelationsAsync(
-        StorageDbContext context,
+        DbContext context,
         TestRunScheduleEntity storedEntity,
         CancellationToken cancellationToken)
     {
