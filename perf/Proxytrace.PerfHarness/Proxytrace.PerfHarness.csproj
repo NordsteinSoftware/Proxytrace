@@ -19,7 +19,6 @@
     <ItemGroup>
         <ProjectReference Include="..\..\Proxytrace.Application\Proxytrace.Application.csproj" />
         <ProjectReference Include="..\..\Proxytrace.Storage\Proxytrace.Storage.csproj" />
-        <ProjectReference Include="..\..\Proxytrace.Serialization\Proxytrace.Serialization.csproj" />
         <ProjectReference Include="..\..\Proxytrace.Domain\Proxytrace.Domain.csproj" />
         <!-- #270: Storage.Module no longer transitively registers the secret seams; the harness
              registers Infrastructure's SecretProtectionModule directly (see PerfModule). -->
