@@ -1,14 +1,14 @@
 using Autofac;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Nordstein.Core.Common.DependencyInjection;
 using Proxytrace.Licensing.Internal;
+using Core = Nordstein.Core.Licensing;
 
 namespace Proxytrace.Licensing;
 
 /// <summary>
-/// Autofac module wiring the licensing subsystem. The configuration (including the resolved
-/// license JWT) is supplied by the composition root.
+/// Autofac module wiring the licensing subsystem: the product-agnostic engine from
+/// Nordstein.Core.Licensing, parameterized with Proxytrace's identity (issuer, audience, trust
+/// root) and tier policy, plus the enum-typed adapters the rest of the application consumes.
+/// The configuration (including the resolved license JWT) is supplied by the composition root.
 /// </summary>
 public sealed class Module : Autofac.Module
 {
@@ -18,6 +18,12 @@ public sealed class Module : Autofac.Module
     /// skip their Free-tier fallback registration (and to avoid registering twice).
     /// </summary>
     public const string RegisteredKey = "Proxytrace.Licensing.Registered";
+
+    // The identity the license server signs Proxytrace licenses under. Together with the trust
+    // root in LicensePublicKeys this is what makes a license a *Proxytrace* license; the
+    // verification machinery itself lives in Nordstein.Core.Licensing.
+    private const string Issuer = "https://license.proxytrace.dev";
+    private const string Audience = "proxytrace";
 
     private readonly LicensingConfiguration configuration;
 
@@ -30,48 +36,40 @@ public sealed class Module : Autofac.Module
     {
         base.Load(builder);
 
+        builder.RegisterModule(new Core.LicensingModule(
+            ToCoreConfiguration(configuration),
+            new ProxytraceLicenseTierPolicy()));
+
         builder.RegisterInstance(configuration).SingleInstance();
 
-        builder.RegisterType<JwtLicenseValidator>()
-            .As<IJwtLicenseValidator>()
+        // The engine resolves its configuration from the container, so derive it from the
+        // (possibly test-overridden) product configuration rather than only the constructor
+        // argument. This later registration wins over the instance the engine module registered.
+        builder.Register(c => ToCoreConfiguration(c.Resolve<LicensingConfiguration>()))
             .SingleInstance();
 
-        builder.RegisterType<LicenseCacheStore>()
-            .As<ILicenseCacheStore>()
+        builder.RegisterType<LicenseServiceAdapter>()
+            .As<ILicenseService>()
             .SingleInstance();
 
-        builder.RegisterType<ConfiguredLicenseResolver>()
-            .AsSelf()
-            .SingleInstance();
-
-        builder.RegisterType<LicenseActivator>()
+        builder.RegisterType<LicenseActivatorAdapter>()
             .As<ILicenseActivator>()
             .SingleInstance();
-
-        // AutoActivate forces the constructor (and thus the synchronous startup resolution) to
-        // run at container build time, so the resolved tier is logged and in force before any
-        // request is served. An invalid configured JWT no longer crashes the host — it degrades
-        // to Free entitlements with LicenseStatus.Invalid and is surfaced in the UI.
-        builder.RegisterType<LicenseService>()
-            .As<ILicenseService>()
-            .AsSelf()
-            .SingleInstance()
-            .AutoActivate();
-
-        builder.RegisterType<LicenseCheckService>()
-            .As<ILicenseRefreshTrigger>()
-            .AsSelf()
-            .SingleInstance();
-
-        builder.RegisterServiceCollection(services =>
-        {
-            services.AddHttpClient<ILicenseServerClient, LicenseServerClient>("license-server", client =>
-            {
-                client.BaseAddress = new Uri(configuration.ServerUrl.TrimEnd('/') + "/");
-                client.Timeout = TimeSpan.FromSeconds(30);
-            });
-
-            services.AddHostedService(sp => sp.GetRequiredService<LicenseCheckService>());
-        });
     }
+
+    private static Core.LicensingConfiguration ToCoreConfiguration(LicensingConfiguration configuration) => new()
+    {
+        Issuer = Issuer,
+        Audience = Audience,
+        ServerUrl = configuration.ServerUrl,
+        PublicKeys = configuration.PublicKeys,
+        LicenseJwt = configuration.LicenseJwt,
+        OverrideSnapshot = configuration.OverrideSnapshot is { } snapshot
+            ? LicenseSnapshotMapper.ToCore(snapshot)
+            : null,
+        ServerCheckEnabled = configuration.ServerCheckEnabled,
+        CheckIntervalHours = configuration.CheckIntervalHours,
+        OfflineGracePeriodDays = configuration.OfflineGracePeriodDays,
+        CacheFilePath = configuration.CacheFilePath,
+    };
 }

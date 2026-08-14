@@ -1,5 +1,10 @@
 # Domain Validation
 
+> The validation helpers are **Nordstein.Core code**
+> (`core/Nordstein.Core.Common/Validation/`); the Core-side reference — including the bar for
+> adding new helpers — is [`core/docs/validation.md`](../core/docs/validation.md). This page
+> covers using them from Proxytrace.
+
 Domain entities are validated by Autofac on activation (`OnActivated` runs `Validator.ValidateObject`) and again before repository `Add`/`Update`. Override `Validate(ValidationContext)` and yield `base.Validate(...)` first. Use helpers from `Nordstein.Core.Common.Validation`:
 
 ```csharp

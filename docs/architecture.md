@@ -15,7 +15,11 @@ Proxytrace.Api  →  Proxytrace.Application  →  Proxytrace.Domain  →  Nordst
 > arrow only ever points *into* them — Core knows nothing about agents, traces or projects, and
 > a change that would teach it belongs in `Proxytrace.Domain` instead. Consuming projects
 > declare `<NordsteinCoreReference Include="…" />` rather than a direct reference; see
-> [`code-reuse.md`](code-reuse.md).
+> [`code-reuse.md`](code-reuse.md). Core's own internals — package layering, the Autofac
+> module/discovery conventions, the hosting helpers — are documented on the Core side in
+> [`core/docs/architecture.md`](../core/docs/architecture.md) and
+> [`core/docs/domain.md`](../core/docs/domain.md); any change under `core/` follows
+> [`core/CLAUDE.md`](../core/CLAUDE.md) and updates those docs, not this page.
 
 > **`Proxytrace.Storage` references only `Domain` and `Nordstein.Core.Domain`** (+ `Serialization`/`Common` transitively) — it does
 > **not** reference `Application`. Most secondary-port **interfaces** that `Storage` implements live in
@@ -92,7 +96,8 @@ DI is wired with Autofac. Each project ships a `Module : Autofac.Module` (`Proxy
 
 Both process hosts (`Proxytrace.Api`, `Proxytrace.Proxy.Api`) call
 `AddResilientBackgroundServices()` from
-[`core/Nordstein.Core.Common/Hosting/HostingServiceCollectionExtensions.cs`](../core/Nordstein.Core.Common/Hosting/HostingServiceCollectionExtensions.cs),
+[`core/Nordstein.Core.Common/Hosting/HostingServiceCollectionExtensions.cs`](../core/Nordstein.Core.Common/Hosting/HostingServiceCollectionExtensions.cs)
+(Core-side doc: [`core/docs/architecture.md`](../core/docs/architecture.md#hosting-what-may-kill-the-host)),
 which sets `HostOptions.BackgroundServiceExceptionBehavior` to `Ignore`. .NET's default is
 `StopHost`: **one** throwing `BackgroundService` stops the whole host and the process exits with
 code **0** — a clean shutdown no restart policy treats as a failure, so the container just stays
