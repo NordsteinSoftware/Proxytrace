@@ -58,7 +58,7 @@ internal class ModelProviderRepository : ArchivableRepository<IModelProvider, Mo
     /// that reference them by id are preserved (a hard provider delete would have cascade-removed them).
     /// </summary>
     protected override async Task ArchiveRelationsAsync(
-        StorageDbContext context,
+        DbContext context,
         Guid id,
         CancellationToken cancellationToken)
     {

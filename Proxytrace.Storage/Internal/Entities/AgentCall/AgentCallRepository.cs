@@ -320,7 +320,7 @@ internal class AgentCallRepository : AbstractRepository<IAgentCall, AgentCallEnt
     /// query with no hits, or a fulltext query without a project scope).
     /// </summary>
     private async Task<IQueryable<AgentCallEntity>?> BuildFilteredQueryAsync(
-        StorageDbContext context,
+        DbContext context,
         AgentCallFilter filter,
         CancellationToken cancellationToken)
     {

@@ -1,4 +1,3 @@
-﻿using System.Reflection;
 using Autofac;
 using Autofac.Extensions.DependencyInjection;
 using Microsoft.EntityFrameworkCore;
@@ -6,13 +5,11 @@ using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Nordstein.Core.Common.DependencyInjection;
-using Proxytrace.Domain;
 using Proxytrace.Domain.Demo;
 using Proxytrace.Domain.Outliers;
 using Proxytrace.Domain.Statistics;
 using Proxytrace.Domain.TestSupport;
 using Proxytrace.Storage.Internal;
-using Proxytrace.Storage.Internal.Entities;
 using Proxytrace.Storage.Internal.Entities.CustomAnomalyDetector;
 using Proxytrace.Storage.Internal.Entities.Project;
 using Proxytrace.Storage.Internal.Entities.TestRunSchedule;
@@ -45,6 +42,23 @@ public sealed class Module : Autofac.Module
         base.Load(builder);
 
         builder.RegisterModule<Domain.Module>();
+
+        // The product-agnostic storage foundation (Nordstein.Core.Storage): the ambient-transaction
+        // seam, the generic repositories/caches, and assembly-scoped discovery of this project's
+        // stored entities, EF configurations and repositories. Storage-only join entities that carry
+        // no Id — and so do not implement IEntity — are listed explicitly, because the IEntity scan
+        // that finds the rest would miss them.
+        //
+        // AgentCallToolEntity is deliberately NOT listed: unlike the bare join records above it
+        // extends Entity and therefore already implements IEntity, so the assembly scan registers it
+        // (and its config) once. Listing it here too would double-register its IModelConfiguration.
+        builder.RegisterModule(new StorageFoundationModule<StorageDbContext>(
+            typeof(Module).Assembly,
+            typeof(TestSuiteEvaluatorEntity),
+            typeof(TestRunScheduleEndpointEntity),
+            typeof(CustomAnomalyDetectorAgentEntity),
+            typeof(ProjectUserEntity),
+            typeof(Internal.Entities.TestResult.EvaluationStatEntity)));
 
         if (registerApplicationServices)
         {
@@ -113,49 +127,20 @@ public sealed class Module : Autofac.Module
             return dbBuilder.Options;
         }).SingleInstance();
 
-        builder.RegisterType<StorageDbContext>()
-            .AsSelf()
-            .InstancePerDependency();
-
-        // Ambient-aware context factory: while a logical transaction is active, every repository,
-        // mapper and query resolves the single shared transactional context (read-your-writes on
-        // one connection). Outside a transaction it hands out a fresh context per call. This
-        // explicit Func<StorageDbContext> registration overrides Autofac's auto-generated one.
-        //
-        // Note the fresh-resolve branch tracks the context on the *resolving* scope until that scope
-        // disposes — fine on a short-lived request scope, but a singleton resolved from the root
-        // container would accumulate one per call until process shutdown. A non-transactional
-        // batch/read loop in a singleton hosted service must therefore take a disposable context via
-        // Autofac's auto-provided Func<Owned<StorageDbContext>> and dispose it per batch instead (see
-        // AgentCallPreviewBackfillService / SecretsBackfillService, issue #256).
+        // Ambient-aware factory of the *concrete* context for product services (the statistics
+        // queries and settings stores) that need StorageDbContext-typed access. The foundation
+        // module registers the Func<DbContext> the generic repositories use; this mirrors it for the
+        // concrete type. The cast is safe: StorageDbContext is the only context type ever created, so
+        // an active ambient context is always a StorageDbContext.
         builder.Register<Func<StorageDbContext>>(ct =>
         {
             var scope = ct.Resolve<ILifetimeScope>();
             return () =>
             {
                 var ambient = scope.Resolve<AmbientDbContext>();
-                return ambient.Context ?? scope.Resolve<StorageDbContext>();
+                return ambient.Context as StorageDbContext ?? scope.Resolve<StorageDbContext>();
             };
         }).InstancePerLifetimeScope();
-
-        ConfigureEntities(builder);
-        ConfigureEntity(typeof(TestSuiteEvaluatorEntity), builder);
-        ConfigureEntity(typeof(TestRunScheduleEndpointEntity), builder);
-        ConfigureEntity(typeof(CustomAnomalyDetectorAgentEntity), builder);
-        ConfigureEntity(typeof(ProjectUserEntity), builder);
-        ConfigureEntity(typeof(Internal.Entities.TestResult.EvaluationStatEntity), builder);
-        // AgentCallToolEntity is NOT listed here like the storage-only entities above: unlike those
-        // (bare records with no Id, so ConfigureEntities' IEntity scan skips them), it extends Entity
-        // and therefore already implements IEntity — ConfigureEntities already registers it and its
-        // config via the assembly scan. Adding it here too would double-register its
-        // IModelConfiguration, running AgentCallToolConfig.Configure twice against the same model.
-
-        builder.RegisterType<AmbientDbContext>()
-            .AsSelf()
-            .InstancePerLifetimeScope();
-
-        builder.RegisterType<Transaction>()
-            .As<ITransaction>();
 
         builder.RegisterType<TestDataReset>()
             .As<ITestDataReset>()
@@ -193,75 +178,6 @@ public sealed class Module : Autofac.Module
             .Register(context => new AutofacServiceProvider(context.Resolve<ILifetimeScope>()))
             .InstancePerLifetimeScope()
             .IfNotRegistered(typeof(IServiceProvider));
-    }
-
-    private static void ConfigureEntities(ContainerBuilder builder)
-    {
-        var entityTypes = typeof(Module).Assembly
-            .GetTypes()
-            .Where(t => typeof(IEntity).IsAssignableFrom(t) && t is { IsInterface: false, IsAbstract: false })
-            .ToList();
-
-        foreach (Type entityType in entityTypes)
-        {
-            ConfigureEntity(entityType, builder);
-        }
-    }
-
-    private static void ConfigureEntity(Type storedEntityType, ContainerBuilder builder)
-    {
-        builder.RegisterType(storedEntityType)
-            .AsSelf();
-
-        var configurationBaseType = typeof(AbstractEntityConfiguration<>).MakeGenericType(storedEntityType);
-
-        // find the type that derives from configurationBaseType
-        Type configurationType = typeof(Module).Assembly
-                                     .GetTypes()
-                                     .SingleOrDefault(t => t.IsSubclassOf(configurationBaseType))
-                                 ?? throw new InvalidOperationException(
-                                     $"No configuration type found for entity type {storedEntityType.Name}");
-
-        builder
-            .RegisterType(configurationType)
-            .AsImplementedInterfaces()
-            .InstancePerLifetimeScope();
-
-        // get the StoredDomainEntity attribute to locate the associated Domain Entity Type
-        var domainEntityType = storedEntityType.GetDomainEntityType();
-        if (domainEntityType != null)
-        {
-            var repositoryBaseType = typeof(AbstractRepository<,>).MakeGenericType(domainEntityType, storedEntityType);
-            // find the type that derives from repositoryBaseType
-            Type repositoryType = typeof(Module).Assembly
-                                      .GetTypes()
-                                      .SingleOrDefault(t => t.IsSubclassOf(repositoryBaseType))
-                                  ?? throw new InvalidOperationException(
-                                      $"No repository type found for entity type {storedEntityType.Name}");
-
-            // register repository type as all registered interfaces
-            foreach (Type interfaceType in repositoryType.GetInterfaces())
-            {
-                builder.RegisterType(repositoryType).As(interfaceType);
-            }
-
-            // opt-in in-memory cache for slow-changing reference data
-            if (storedEntityType.GetCustomAttribute<CacheableAttribute>() != null)
-            {
-                // The invalidation registry is a singleton; the cache that consults it is NOT.
-                // Cached domain entities hold the repository they were materialized from, which
-                // closes over its resolving lifetime scope — caching them in the root container
-                // would hand out entities bound to a disposed request scope (fc4b5f72). Keeping
-                // the entries scope-local and the *versions* process-wide gives cross-scope
-                // write-through invalidation without reintroducing that. See EntityCacheVersions.
-                Type versionsType = typeof(EntityCacheVersions<>).MakeGenericType(domainEntityType);
-                builder.RegisterType(versionsType).AsSelf().SingleInstance();
-
-                Type cacheImpl = typeof(EntityCache<>).MakeGenericType(domainEntityType);
-                Type cacheInterface = typeof(IEntityCache<>).MakeGenericType(domainEntityType);
-                builder.RegisterType(cacheImpl).As(cacheInterface).InstancePerLifetimeScope();
-            }
-        }
     }
 
     private static void ConfigureStorage(DbContextOptionsBuilder options, StorageConfiguration configuration)

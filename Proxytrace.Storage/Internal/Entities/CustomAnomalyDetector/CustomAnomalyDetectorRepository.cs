@@ -100,7 +100,7 @@ internal class CustomAnomalyDetectorRepository
     }
 
     protected override async Task UpdateRelationsAsync(
-        StorageDbContext context,
+        DbContext context,
         CustomAnomalyDetectorEntity storedEntity,
         CancellationToken cancellationToken)
     {

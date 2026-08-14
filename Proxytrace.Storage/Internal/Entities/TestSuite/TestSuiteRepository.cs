@@ -131,7 +131,7 @@ internal class TestSuiteRepository : AbstractRepository<ITestSuite, TestSuiteEnt
     }
 
     protected override async Task UpdateRelationsAsync(
-        StorageDbContext context,
+        DbContext context,
         TestSuiteEntity storedEntity,
         CancellationToken cancellationToken)
     {

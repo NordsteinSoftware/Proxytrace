@@ -44,7 +44,7 @@ internal class EvaluatorRepository : ArchivableRepository<IEvaluator, EvaluatorE
     /// Past test results keep resolving it by id (the row stays), so history is preserved.
     /// </summary>
     protected override Task ArchiveRelationsAsync(
-        StorageDbContext context,
+        DbContext context,
         Guid id,
         CancellationToken cancellationToken)
         => transaction.InvokeAsync(async () =>

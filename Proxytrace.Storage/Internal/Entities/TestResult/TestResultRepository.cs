@@ -38,7 +38,7 @@ internal class TestResultRepository : AbstractRepository<ITestResult, TestResult
     // the stat rows at their original timestamps and the evaluator-stats queries bucketed on stale
     // times. Rebuild the projection from the freshly mapped entity so it always mirrors the parent.
     protected override async Task UpdateRelationsAsync(
-        StorageDbContext context,
+        DbContext context,
         TestResultEntity storedEntity,
         CancellationToken cancellationToken)
     {
@@ -157,7 +157,7 @@ internal class TestResultRepository : AbstractRepository<ITestResult, TestResult
     /// </para>
     /// </remarks>
     private static IQueryable<EvaluationStatEntity> EvaluatorStatsQuery(
-        StorageDbContext context,
+        DbContext context,
         Guid evaluatorId,
         EvaluationScore? score = null)
     {
@@ -192,7 +192,7 @@ internal class TestResultRepository : AbstractRepository<ITestResult, TestResult
     /// scales with what the caller asked for.
     /// </remarks>
     private static async Task<IReadOnlyList<Guid>> DedupedRecentIdsAsync(
-        StorageDbContext context,
+        DbContext context,
         Guid evaluatorId,
         EvaluationScore? score,
         int take,
@@ -232,7 +232,7 @@ internal class TestResultRepository : AbstractRepository<ITestResult, TestResult
 
     // Loads the full rows for the given ids and maps them, preserving the order of <paramref name="ids"/>.
     private async Task<IReadOnlyList<ITestResult>> LoadFullInOrderAsync(
-        StorageDbContext context,
+        DbContext context,
         IReadOnlyList<Guid> ids,
         CancellationToken cancellationToken)
     {

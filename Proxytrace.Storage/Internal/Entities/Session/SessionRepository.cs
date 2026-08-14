@@ -150,7 +150,7 @@ internal class SessionRepository
     // CreatedAt, making the entity fail domain validation on load. The counters still bump — the
     // trace did arrive.
     private static async Task<bool> TryBumpAsync(
-        StorageDbContext context,
+        DbContext context,
         Guid sessionId,
         long totalTokens,
         DateTimeOffset lastActivityAt,
