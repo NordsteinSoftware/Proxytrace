@@ -1,5 +1,10 @@
 # Backend Code Style
 
+> These rules are shared across all Nordstein backends; the Core-side statement is
+> [`core/docs/code-style.md`](../core/docs/code-style.md), which additionally requires XML docs on
+> every public member and sanctions **no** concurrency exceptions. When writing code under
+> `core/`, follow that page (and [`core/CLAUDE.md`](../core/CLAUDE.md)) — it is held stricter.
+
 > **`TreatWarningsAsErrors=true`** is set solution-wide in `Directory.Build.props` — the build
 > fails on *any* compiler warning. Leave no unused usings/variables, no obsolete-API calls, no
 > nullable warnings. This is why suppressing nullable warnings with `!` is both forbidden and

@@ -1,9 +1,7 @@
 using Autofac;
 using AwesomeAssertions;
 using Microsoft.Extensions.DependencyInjection;
-using NSubstitute;
 using Proxytrace.Licensing.Exceptions;
-using Proxytrace.Licensing.Internal;
 using Nordstein.Core.Testing;
 
 namespace Proxytrace.Licensing.Tests;

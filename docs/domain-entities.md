@@ -17,6 +17,12 @@ A `I[Entity]Repository.cs` interface (in `Proxytrace.Domain/[Entity]/`) plus `[E
 The reusable contracts, bases, paging types, persistence exceptions, and entity-event service live
 in `Nordstein.Core.Domain`. `Proxytrace.Domain.Module` passes the product assembly to
 `Nordstein.Core.Domain.Module`; do not add product knowledge or a product assembly reference to Core.
+The machinery this pattern rides on is documented Core-side in
+[`core/docs/domain.md`](../core/docs/domain.md) (factory delegates, generators, FK/archive
+rationale) and [`core/docs/storage.md`](../core/docs/storage.md) (the storage foundation) — a
+change to the machinery itself happens under `core/` per [`core/CLAUDE.md`](../core/CLAUDE.md)
+and updates those pages; this page owns only the Proxytrace-side pattern and its reference
+implementations.
 
 ## Domain entities vs domain objects
 

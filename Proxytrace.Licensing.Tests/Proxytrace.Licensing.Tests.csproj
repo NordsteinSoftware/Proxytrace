@@ -19,7 +19,8 @@
         <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.8.1" />
         <PackageReference Include="MSTest" Version="4.3.3" />
         <PackageReference Include="NSubstitute" Version="6.0.0" />
-        <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.10" />
+        <!-- The test license factory signs throwaway JWTs itself. -->
+        <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.22.0" />
     </ItemGroup>
 
     <ItemGroup>
@@ -28,9 +29,8 @@
 
     <ItemGroup>
         <ProjectReference Include="..\Proxytrace.Licensing\Proxytrace.Licensing.csproj" />
-      <NordsteinCoreReference Include="Nordstein.Core.Common" />
-      <NordsteinCoreReference Include="Nordstein.Core.Testing" />
-        <ProjectReference Include="..\Proxytrace.Storage\Proxytrace.Storage.csproj" />
+        <NordsteinCoreReference Include="Nordstein.Core.Common" />
+        <NordsteinCoreReference Include="Nordstein.Core.Testing" />
     </ItemGroup>
 
 </Project>

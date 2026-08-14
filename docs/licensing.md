@@ -4,6 +4,16 @@
 **single source of truth** for licensing decisions across the application — never hard-code tier
 checks or duplicate gating logic elsewhere.
 
+The subsystem is split along the Core boundary (see [`code-reuse.md`](code-reuse.md)): the
+**engine** — JWT verification, activation, the resolved snapshot, and the background server check
+with offline grace — lives in `Nordstein.Core.Licensing`
+([`core/docs/licensing.md`](../core/docs/licensing.md)), keyed by a string vocabulary.
+`Proxytrace.Licensing` supplies the **product policy**: the `LicenseFeature`/`LicenseLimit`/
+`LicenseTier` enums (whose member names are the JWT claim values — a wire-format contract), the
+`LicensePolicy` tier definitions, the issuer/audience, the `LicensePublicKeys` trust root, and
+thin enum-typed adapters implementing the `ILicenseService`/`ILicenseActivator` interfaces below.
+Everything in this page's directives is unchanged by that split.
+
 ```csharp
 public interface ILicenseService
 {
@@ -60,8 +70,8 @@ everything and is not user-manageable.
   Storage) → activates as `Stored`; `RemoveAsync` deletes and falls back via `ActivateConfigured`.
 - `StoredLicenseStartupService` (Application hosted service, registered **after** the database
   initializer) applies the stored key once migrations have run. Failures are logged, never fatal.
-- `LicenseCheckService` reacts to `Changed` — a license activated at runtime starts revocation
-  checks; it no longer latches onto the startup snapshot.
+- The engine's `LicenseCheckService` (`Nordstein.Core.Licensing`) reacts to `Changed` — a license
+  activated at runtime starts revocation checks; it no longer latches onto the startup snapshot.
 - API: `GET /api/license` (anonymous; includes `source`/`invalidReason`),
   `POST /api/license/validate` (anonymous dry run), `PUT /api/license` (admin, **or anonymous while
   no users exist** — the setup wizard's gate), `DELETE /api/license` (admin),
@@ -75,11 +85,11 @@ An **offline-only** license is for air-gapped installs that cannot reach the lic
 JWT carries one extra claim, `offline` (a JSON boolean), and the server emits it **present and
 `true`** only on these keys — a normal online license omits the claim entirely.
 
-- `JwtLicenseValidator` parses `offline` by JSON type onto `LicenseSnapshot.Offline` (true only when
+- The engine's `JwtLicenseValidator` parses `offline` by JSON type onto `LicenseSnapshot.Offline` (true only when
   present and exactly `true`; absent / `false` / any other value ⇒ online). Everything else about the
   token — ES256 signature, `iss`/`aud`/`exp` validation against the bundled public keys — is
   unchanged, so an offline token still verifies fully offline.
-- `LicenseCheckService` **skips the periodic `/licenses/check` call entirely** for an offline
+- The engine's `LicenseCheckService` **skips the periodic `/licenses/check` call entirely** for an offline
   snapshot (both the background loop and the admin "Re-check now" / `ForceRefreshAsync` path). The
   offline-grace state machine (the `OfflineGracePeriodDays` window that degrades a *normal* license
   when the server is unreachable) therefore never runs for these keys — they do not degrade just

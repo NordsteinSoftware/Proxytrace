@@ -40,6 +40,12 @@ When reporting results, say which scope you ran — a scoped green run must neve
 
 ## The harness
 
+The harness itself (`BaseTest<TModule>`) is **Nordstein.Core code**, shared by all Nordstein
+products — it lives in `core/Nordstein.Core.Testing` and is documented Core-side in
+[`core/docs/testing.md`](../core/docs/testing.md) (which also states the stricter coverage bar
+that applies to changes *inside* `core/`). Changing the harness means changing every product's
+suite; follow [`core/CLAUDE.md`](../core/CLAUDE.md) for that.
+
 All tests extend `BaseTest<TModule>` (MSTest + AwesomeAssertions):
 
 ```csharp
