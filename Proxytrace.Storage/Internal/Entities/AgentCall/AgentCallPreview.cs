@@ -1,5 +1,5 @@
 using System.Text.RegularExpressions;
-using Proxytrace.Domain.Message;
+using Nordstein.Core.AI.Messages;
 
 namespace Proxytrace.Storage.Internal.Entities.AgentCall;
 

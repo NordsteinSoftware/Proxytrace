@@ -6,7 +6,7 @@ using Proxytrace.Domain;
 using Proxytrace.Domain.AgentCall;
 using Proxytrace.Domain.Evaluator;
 using Proxytrace.Domain.Kiosk;
-using Proxytrace.Domain.Message;
+using Nordstein.Core.AI.Messages;
 using Proxytrace.Domain.ModelEndpoint;
 using Proxytrace.Domain.Notification;
 using Proxytrace.Domain.OptimizationProposal;
@@ -14,7 +14,7 @@ using Proxytrace.Domain.OptimizationTheory;
 using Proxytrace.Domain.TestRun;
 using Proxytrace.Domain.TestRunGroup;
 using Proxytrace.Domain.TestSuite;
-using Proxytrace.Domain.Usage;
+using Nordstein.Core.AI.Completions;
 using Proxytrace.Domain.User;
 using Nordstein.Core.Testing;
 

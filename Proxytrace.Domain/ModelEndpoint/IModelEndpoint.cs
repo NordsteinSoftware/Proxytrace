@@ -1,6 +1,6 @@
 using Proxytrace.Domain.Model;
 using Proxytrace.Domain.ModelProvider;
-using Proxytrace.Domain.Usage;
+using Nordstein.Core.AI.Completions;
 
 namespace Proxytrace.Domain.ModelEndpoint;
 

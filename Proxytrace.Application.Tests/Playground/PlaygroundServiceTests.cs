@@ -1,3 +1,4 @@
+using Nordstein.Core.AI.Clients;
 using AwesomeAssertions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -6,11 +7,11 @@ using Proxytrace.Application.Playground.Internal;
 using Proxytrace.Domain;
 using Proxytrace.Domain.Agent;
 using Nordstein.Core.Domain.Exceptions;
-using Proxytrace.Domain.Message;
+using Nordstein.Core.AI.Messages;
 using Proxytrace.Domain.Model;
 using Proxytrace.Domain.ModelEndpoint;
-using Proxytrace.Domain.Tools;
-using Proxytrace.Domain.Usage;
+using Nordstein.Core.AI.Tools;
+using Nordstein.Core.AI.Completions;
 using Nordstein.Core.Testing;
 
 namespace Proxytrace.Application.Tests.Playground;

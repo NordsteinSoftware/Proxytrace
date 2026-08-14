@@ -1,3 +1,4 @@
+using Nordstein.Core.AI.Clients;
 using System.Net;
 using AwesomeAssertions;
 using Autofac;
@@ -9,13 +10,13 @@ using Proxytrace.Application.Streaming;
 using Proxytrace.Domain;
 using Proxytrace.Domain.Agent;
 using Proxytrace.Domain.AgentCall;
-using Proxytrace.Domain.Completion;
+using Nordstein.Core.AI.Completions;
 using Proxytrace.Domain.CustomAnomaly;
-using Proxytrace.Domain.Message;
+using Nordstein.Core.AI.Messages;
 using Proxytrace.Domain.ModelEndpoint;
 using Proxytrace.Domain.Notification;
 using Proxytrace.Licensing;
-using Proxytrace.Serialization;
+using Nordstein.Core.AI.Serialization;
 using Nordstein.Core.Testing;
 
 namespace Proxytrace.Application.Tests.CustomAnomaly;
@@ -210,7 +211,7 @@ public sealed class CustomAnomalyReviewServiceTests : BaseTest<Module>
         builder.RegisterInstance(license).As<ILicenseService>();
         builder.RegisterInstance(broadcaster).As<ICustomAnomalyBroadcaster>();
         builder.RegisterInstance(notifications).As<INotificationService>();
-        builder.RegisterInstance<IModelClient.Factory>((agent, _, skipIngestion) => clients.Resolve(agent, skipIngestion));
+        builder.RegisterInstance<ModelClientFactory>((agent, _, skipIngestion) => clients.Resolve(agent, skipIngestion));
     }
 
     private static CustomAnomalyReviewService ResolveService(IServiceProvider services)

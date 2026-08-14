@@ -18,11 +18,10 @@ using Proxytrace.Application.Streaming;
 using Proxytrace.Domain.Agent;
 using Proxytrace.Domain.AgentCall;
 using Proxytrace.Domain.AuditLog;
-using Proxytrace.Domain.Completion;
-using Proxytrace.Domain.Message;
+using Nordstein.Core.AI.Completions;
+using Nordstein.Core.AI.Messages;
 using Nordstein.Core.Domain.Paging;
 using Proxytrace.Domain.Session;
-using Proxytrace.Domain.Usage;
 
 namespace Proxytrace.Api.Controllers;
 
@@ -459,11 +458,11 @@ public class AgentCallsController : ControllerBase
 
         var conversation = Conversation.Create();
         if (!string.IsNullOrEmpty(request.SystemContent))
-            conversation = conversation.WithSystemMessage(new SystemMessage([Proxytrace.Domain.Message.Content.FromText(request.SystemContent)]));
-        conversation = conversation.With(new UserMessage([Proxytrace.Domain.Message.Content.FromText(request.UserContent)]));
+            conversation = conversation.WithSystemMessage(new SystemMessage([Nordstein.Core.AI.Messages.Content.FromText(request.SystemContent)]));
+        conversation = conversation.With(new UserMessage([Nordstein.Core.AI.Messages.Content.FromText(request.UserContent)]));
 
         var assistantMessage = new AssistantMessage(
-            [Proxytrace.Domain.Message.Content.FromText(request.AssistantContent)],
+            [Nordstein.Core.AI.Messages.Content.FromText(request.AssistantContent)],
             (request.ToolNames ?? []).Select((name, i) => new ToolRequest($"seed-{i}", name, "{}")).ToList());
         var usage = new TokenUsage((ulong)request.InputTokens, (ulong)request.OutputTokens);
         ICompletion completion = createCompletion(

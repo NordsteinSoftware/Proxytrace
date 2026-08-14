@@ -1,3 +1,4 @@
+using Nordstein.Core.AI.Clients;
 using Autofac;
 using AwesomeAssertions;
 using Microsoft.Extensions.DependencyInjection;
@@ -10,12 +11,13 @@ using Proxytrace.Domain;
 using Proxytrace.Domain.Agent;
 using Proxytrace.Domain.Evaluation;
 using Proxytrace.Domain.Evaluator;
-using Proxytrace.Domain.Message;
+using Nordstein.Core.AI.Messages;
 using Proxytrace.Domain.Model;
 using Proxytrace.Domain.ModelEndpoint;
 using Proxytrace.Domain.ModelProvider;
 using Proxytrace.Domain.OptimizationTheory;
 using Proxytrace.Domain.Project;
+using Nordstein.Core.AI.Prompts;
 using Proxytrace.Domain.Prompt;
 using Proxytrace.Domain.Proposal;
 using Proxytrace.Domain.TestCase;
@@ -23,7 +25,7 @@ using Proxytrace.Domain.TestResult;
 using Proxytrace.Domain.TestRun;
 using Proxytrace.Domain.TestRunGroup;
 using Proxytrace.Domain.TestSuite;
-using Proxytrace.Domain.Tools;
+using Nordstein.Core.AI.Tools;
 using Proxytrace.Domain.Kiosk;
 using Nordstein.Core.Testing;
 
@@ -310,7 +312,7 @@ public sealed class UpdateToolDefinitionOptimizerIntegrationTests : BaseTest<Mod
         agent.Project.Returns(project);
         agent.SystemPrompt.Returns(systemPrompt);
         agent.Tools.Returns(tools);
-        agent.ModelParameters.Returns(Substitute.For<Domain.Inference.IModelParameters>());
+        agent.ModelParameters.Returns(Substitute.For<Nordstein.Core.AI.Completions.IModelParameters>());
 
         var suite = Substitute.For<ITestSuite>();
         suite.Agent.Returns(agent);

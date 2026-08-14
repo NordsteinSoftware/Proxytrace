@@ -1,5 +1,5 @@
 using AwesomeAssertions;
-using Proxytrace.Domain.Message;
+using Nordstein.Core.AI.Messages;
 using Proxytrace.Storage.Internal.Entities.AgentCall;
 
 namespace Proxytrace.Storage.Tests;

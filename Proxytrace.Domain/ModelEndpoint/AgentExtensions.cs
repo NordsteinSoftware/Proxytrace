@@ -1,5 +1,6 @@
-using Proxytrace.Domain.Completion;
-using Proxytrace.Domain.Message;
+using Nordstein.Core.AI.Clients;
+using Nordstein.Core.AI.Completions;
+using Nordstein.Core.AI.Messages;
 
 namespace Proxytrace.Domain.ModelEndpoint;
 

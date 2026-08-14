@@ -3,7 +3,7 @@ using System.Text;
 using Lucene.Net.Documents;
 using Microsoft.Extensions.Logging;
 using Proxytrace.Domain;
-using Proxytrace.Domain.Message;
+using Nordstein.Core.AI.Messages;
 using Proxytrace.Domain.Search;
 using Proxytrace.Domain.TestCase;
 using Proxytrace.Domain.TestSuite;

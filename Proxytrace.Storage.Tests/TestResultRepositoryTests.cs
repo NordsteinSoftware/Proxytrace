@@ -2,7 +2,7 @@ using AwesomeAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Proxytrace.Domain;
-using Proxytrace.Domain.Completion;
+using Nordstein.Core.AI.Completions;
 using Proxytrace.Domain.Evaluation;
 using Proxytrace.Domain.Evaluator;
 using Proxytrace.Domain.TestCase;

@@ -2,10 +2,9 @@ using System.ComponentModel.DataAnnotations;
 using System.Net;
 using Proxytrace.Domain.Agent;
 using Proxytrace.Domain.AgentVersion;
-using Proxytrace.Domain.Completion;
-using Proxytrace.Domain.Inference;
+using Nordstein.Core.AI.Completions;
 using Nordstein.Core.Domain;
-using Proxytrace.Domain.Message;
+using Nordstein.Core.AI.Messages;
 using Proxytrace.Domain.ModelEndpoint;
 using Proxytrace.Domain.Project;
 
@@ -52,7 +51,7 @@ internal record AgentCall : DomainEntity<IAgentCall>, IAgentCall
         HttpStatus = httpStatus;
         FinishReason = finishReason;
         ErrorMessage = errorMessage;
-        ModelParameters = modelParameters ?? Inference.Internal.ModelParameters.Empty;
+        ModelParameters = modelParameters ?? IModelParameters.Empty;
         ConversationId = conversationId;
         SessionId = sessionId;
         OutlierFlags = outlierFlags;

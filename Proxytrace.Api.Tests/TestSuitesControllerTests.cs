@@ -674,8 +674,8 @@ public sealed class TestSuitesControllerTests : BaseTest<Module>
     {
         var project = await services.GetRequiredService<IDomainEntityGenerator<Proxytrace.Domain.Project.IProject>>().CreateAsync(CancellationToken);
         var endpoint = await services.GetRequiredService<IDomainEntityGenerator<Proxytrace.Domain.ModelEndpoint.IModelEndpoint>>().GetOrCreateAsync(CancellationToken);
-        var prompt = await services.GetRequiredService<IDomainObjectGenerator<Proxytrace.Domain.Prompt.IPromptTemplate>>().CreateAsync(CancellationToken);
-        var modelParameters = await services.GetRequiredService<IDomainObjectGenerator<Proxytrace.Domain.Inference.IModelParameters>>().CreateAsync(CancellationToken);
+        var prompt = await services.GetRequiredService<IDomainObjectGenerator<Nordstein.Core.AI.Prompts.IPromptTemplate>>().CreateAsync(CancellationToken);
+        var modelParameters = await services.GetRequiredService<IDomainObjectGenerator<Nordstein.Core.AI.Completions.IModelParameters>>().CreateAsync(CancellationToken);
         return await services.GetRequiredService<IAgentRepository>().CreateWithInitialVersionAsync(
             name: "Suite agent",
             systemPrompt: prompt,

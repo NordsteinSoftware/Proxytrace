@@ -1,4 +1,5 @@
 using Proxytrace.Domain.Project;
+using Nordstein.Core.AI.Prompts;
 using Proxytrace.Domain.Prompt;
 
 namespace Proxytrace.Domain.Agent;

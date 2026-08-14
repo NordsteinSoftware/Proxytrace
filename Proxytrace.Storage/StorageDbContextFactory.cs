@@ -8,6 +8,7 @@ using Nordstein.Core.Common.Security;
 using Proxytrace.Domain.Agent;
 using Proxytrace.Domain.ModelProvider;
 using Proxytrace.Domain.Project;
+using Nordstein.Core.AI.Prompts;
 using Proxytrace.Domain.Prompt;
 using Proxytrace.Domain.Security;
 

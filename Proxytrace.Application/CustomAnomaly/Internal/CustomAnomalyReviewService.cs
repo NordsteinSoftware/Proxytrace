@@ -6,7 +6,7 @@ using Proxytrace.Application.Notifications;
 using Proxytrace.Application.Streaming;
 using Proxytrace.Domain.AgentCall;
 using Proxytrace.Domain.CustomAnomaly;
-using Proxytrace.Domain.Message;
+using Nordstein.Core.AI.Messages;
 using Proxytrace.Domain.Notification;
 using Proxytrace.Licensing;
 

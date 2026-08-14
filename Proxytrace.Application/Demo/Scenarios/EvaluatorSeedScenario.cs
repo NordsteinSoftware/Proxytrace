@@ -2,7 +2,8 @@ using Proxytrace.Application.Evaluator;
 using Proxytrace.Domain;
 using Proxytrace.Domain.Agent;
 using Proxytrace.Domain.Evaluator;
-using Proxytrace.Domain.Inference;
+using Nordstein.Core.AI.Completions;
+using Nordstein.Core.AI.Prompts;
 using Proxytrace.Domain.Prompt;
 
 namespace Proxytrace.Application.Demo.Scenarios;

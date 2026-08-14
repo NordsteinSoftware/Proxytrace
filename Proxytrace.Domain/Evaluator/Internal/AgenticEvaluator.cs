@@ -1,3 +1,4 @@
+using Nordstein.Core.AI.Clients;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.Diagnostics;
@@ -6,11 +7,11 @@ using Nordstein.Core.Common.Validation;
 using Proxytrace.Domain.Agent;
 using Proxytrace.Domain.Evaluation;
 using Nordstein.Core.Domain;
-using Proxytrace.Domain.Message;
+using Nordstein.Core.AI.Messages;
 using Proxytrace.Domain.ModelEndpoint;
 using Proxytrace.Domain.Project;
 using Proxytrace.Domain.TestResult;
-using Proxytrace.Domain.Usage;
+using Nordstein.Core.AI.Completions;
 
 namespace Proxytrace.Domain.Evaluator.Internal;
 
@@ -120,7 +121,7 @@ internal sealed record AgenticEvaluator : DomainEntity<IEvaluator>, IAgenticEval
                           "{testResult.ActualResponse}"
                           """;
 
-        return Message.Message.CreateUserMessage(content);
+        return Message.CreateUserMessage(content);
     }
 
     public override IEnumerable<ValidationResult> Validate(ValidationContext validationContext)

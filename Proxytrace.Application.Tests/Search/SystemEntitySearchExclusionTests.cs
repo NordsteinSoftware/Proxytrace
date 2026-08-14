@@ -6,9 +6,8 @@ using Proxytrace.Application.Search.Internal.Mappers;
 using Proxytrace.Domain;
 using Proxytrace.Domain.Agent;
 using Proxytrace.Domain.AgentCall;
-using Proxytrace.Domain.Completion;
-using Proxytrace.Domain.Message;
-using Proxytrace.Domain.Usage;
+using Nordstein.Core.AI.Completions;
+using Nordstein.Core.AI.Messages;
 using Nordstein.Core.Testing;
 
 namespace Proxytrace.Application.Tests.Search;

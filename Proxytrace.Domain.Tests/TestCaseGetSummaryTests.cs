@@ -1,6 +1,6 @@
 using AwesomeAssertions;
 using Microsoft.Extensions.DependencyInjection;
-using Proxytrace.Domain.Message;
+using Nordstein.Core.AI.Messages;
 using Proxytrace.Domain.TestCase;
 using Nordstein.Core.Testing;
 
@@ -62,7 +62,7 @@ public sealed class TestCaseGetSummaryTests : BaseTest<Module>
         testCase.GetSummary(maxLength: 10).Should().Be(new string('y', 10) + "…");
     }
 
-    private ITestCase BuildTestCase(params Message.Message[] messages)
+    private ITestCase BuildTestCase(params Message[] messages)
     {
         var services = GetServices();
         var factory = services.GetRequiredService<ITestCase.CreateNew>();

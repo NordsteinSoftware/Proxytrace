@@ -9,10 +9,11 @@ using Proxytrace.Domain.Agent;
 using Proxytrace.Domain.AgentVersion;
 using Proxytrace.Domain.ModelEndpoint;
 using Proxytrace.Domain.OptimizationProposal;
+using Nordstein.Core.AI.Prompts;
 using Proxytrace.Domain.Prompt;
 using Proxytrace.Domain.Proposal;
 using Proxytrace.Domain.TestRun;
-using Proxytrace.Domain.Tools;
+using Nordstein.Core.AI.Tools;
 using Nordstein.Core.Testing;
 
 namespace Proxytrace.Application.Tests.Optimization;

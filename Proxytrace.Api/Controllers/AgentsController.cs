@@ -11,10 +11,11 @@ using Proxytrace.Domain.Agent;
 using Proxytrace.Domain.AgentCall;
 using Proxytrace.Domain.AgentVersion;
 using Proxytrace.Domain.AuditLog;
-using Proxytrace.Domain.Inference;
+using Nordstein.Core.AI.Completions;
 using Proxytrace.Domain.ModelEndpoint;
 using Nordstein.Core.Domain.Paging;
 using Proxytrace.Domain.Project;
+using Nordstein.Core.AI.Prompts;
 using Proxytrace.Domain.Prompt;
 
 namespace Proxytrace.Api.Controllers;

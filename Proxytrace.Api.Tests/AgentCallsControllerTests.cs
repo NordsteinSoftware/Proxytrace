@@ -13,9 +13,8 @@ using Proxytrace.Application.Streaming;
 using Proxytrace.Domain;
 using Proxytrace.Domain.Agent;
 using Proxytrace.Domain.AgentCall;
-using Proxytrace.Domain.Completion;
-using Proxytrace.Domain.Message;
-using Proxytrace.Domain.Usage;
+using Nordstein.Core.AI.Completions;
+using Nordstein.Core.AI.Messages;
 using Nordstein.Core.Testing;
 
 namespace Proxytrace.Api.Tests;
@@ -278,9 +277,9 @@ public sealed class AgentCallsControllerTests : BaseTest<Module>
             services.GetRequiredService<Proxytrace.Domain.Project.IProject.CreateNew>()($"P-{name}-{Guid.NewGuid():N}", endpoint, []),
             CancellationToken);
 
-        var template = services.GetRequiredService<Proxytrace.Domain.Prompt.IPromptTemplate.Create>()(
+        var template = services.GetRequiredService<Nordstein.Core.AI.Prompts.IPromptTemplate.Create>()(
             $"T-{name}", "You are a test agent.");
-        var parameters = services.GetRequiredService<Proxytrace.Domain.Inference.IModelParameters.Create>()(null, null, null, null, null);
+        var parameters = services.GetRequiredService<Nordstein.Core.AI.Completions.IModelParameters.Create>()(null, null, null, null, null);
 
         return await services.GetRequiredService<IAgentRepository>().AddAsync(
             services.GetRequiredService<IAgent.CreateNew>()(
@@ -477,7 +476,7 @@ public sealed class AgentCallsControllerTests : BaseTest<Module>
         services.GetRequiredService<AgentCallDtoMapper>(),
         services.GetRequiredService<AgentDtoMapper>(),
         services.GetRequiredService<Proxytrace.Domain.AgentCall.IAgentCall.CreateNew>(),
-        services.GetRequiredService<Proxytrace.Domain.Completion.ICompletion.Create>(),
+        services.GetRequiredService<Nordstein.Core.AI.Completions.ICompletion.Create>(),
         guard,
         NullLogger<Audit>.Instance,
         services.GetRequiredService<Proxytrace.Domain.TestSuite.ITestSuiteRepository>(),

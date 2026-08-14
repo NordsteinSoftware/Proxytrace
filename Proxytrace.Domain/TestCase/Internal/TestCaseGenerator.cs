@@ -1,6 +1,6 @@
 using Nordstein.Core.Common.Random;
 using Nordstein.Core.Domain;
-using Proxytrace.Domain.Message;
+using Nordstein.Core.AI.Messages;
 
 namespace Proxytrace.Domain.TestCase.Internal;
 

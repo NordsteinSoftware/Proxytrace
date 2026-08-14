@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Proxytrace.Domain.Statistics;
 using Proxytrace.Domain.Statistics.TestRun;
 using Proxytrace.Domain;
-using Proxytrace.Domain.Usage;
+using Nordstein.Core.AI.Completions;
 using Proxytrace.Storage.Internal.Entities.Statistics;
 
 namespace Proxytrace.Storage.Internal.Statistics;

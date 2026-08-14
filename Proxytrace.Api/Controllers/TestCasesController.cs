@@ -5,7 +5,7 @@ using Proxytrace.Api.Auth;
 using Proxytrace.Api.Dto.TestSuites;
 using Proxytrace.Domain;
 using Proxytrace.Domain.AuditLog;
-using Proxytrace.Domain.Message;
+using Nordstein.Core.AI.Messages;
 using Proxytrace.Domain.TestCase;
 using Proxytrace.Domain.TestSuite;
 

@@ -1,4 +1,4 @@
-using Proxytrace.Domain.Inference;
+using Nordstein.Core.AI.Completions;
 
 namespace Proxytrace.Api.Dto.Inference;
 

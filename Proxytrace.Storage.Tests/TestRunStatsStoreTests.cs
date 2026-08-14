@@ -4,7 +4,7 @@ using Proxytrace.Domain.Statistics;
 using Proxytrace.Domain.Statistics.TestRun;
 using Proxytrace.Domain;
 using Proxytrace.Domain.TestRun;
-using Proxytrace.Domain.Usage;
+using Nordstein.Core.AI.Completions;
 using Nordstein.Core.Testing;
 
 namespace Proxytrace.Storage.Tests;

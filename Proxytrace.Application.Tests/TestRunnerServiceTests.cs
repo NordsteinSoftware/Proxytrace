@@ -1,3 +1,4 @@
+using Nordstein.Core.AI.Clients;
 using System.Collections.Concurrent;
 using System.Reflection;
 using Autofac;
@@ -11,17 +12,16 @@ using Proxytrace.Application.Streaming;
 using Proxytrace.Application.TestRun;
 using Proxytrace.Domain;
 using Proxytrace.Domain.Agent;
-using Proxytrace.Domain.Completion;
+using Nordstein.Core.AI.Completions;
 using Proxytrace.Domain.Evaluation;
 using Proxytrace.Domain.Evaluator;
-using Proxytrace.Domain.Message;
+using Nordstein.Core.AI.Messages;
 using Proxytrace.Domain.ModelEndpoint;
 using Proxytrace.Domain.TestCase;
 using Proxytrace.Domain.TestResult;
 using Proxytrace.Domain.TestRun;
 using Proxytrace.Domain.TestRunGroup;
 using Proxytrace.Domain.TestSuite;
-using Proxytrace.Domain.Usage;
 using Proxytrace.Licensing;
 using Nordstein.Core.Testing;
 

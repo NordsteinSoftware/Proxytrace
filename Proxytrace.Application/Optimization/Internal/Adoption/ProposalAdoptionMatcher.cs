@@ -1,7 +1,7 @@
 using Proxytrace.Domain.Agent;
 using Proxytrace.Domain.AgentVersion;
 using Proxytrace.Domain.OptimizationProposal;
-using Proxytrace.Domain.Tools;
+using Nordstein.Core.AI.Tools;
 
 namespace Proxytrace.Application.Optimization.Internal.Adoption;
 

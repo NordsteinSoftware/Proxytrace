@@ -1,4 +1,5 @@
-﻿using System.Resources;
+using Nordstein.Core.AI.Prompts;
+using System.Resources;
 using Nordstein.Core.Common.Validation;
 
 namespace Proxytrace.Domain.Prompt.Internal;
@@ -9,10 +10,14 @@ namespace Proxytrace.Domain.Prompt.Internal;
 internal class ResourcesPromptRepository : IPromptTemplateRepository
 {
     private readonly IReadOnlyCollection<ResourceManager> resources;
+    private readonly IPromptTemplate.Create createTemplate;
 
-    public ResourcesPromptRepository(IReadOnlyCollection<ResourceManager> resources)
+    public ResourcesPromptRepository(
+        IReadOnlyCollection<ResourceManager> resources,
+        IPromptTemplate.Create createTemplate)
     {
         this.resources = resources;
+        this.createTemplate = createTemplate;
     }
 
     /// <inheritdoc />
@@ -40,7 +45,7 @@ internal class ResourcesPromptRepository : IPromptTemplateRepository
             return Task.FromResult<IPromptTemplate?>(null);
         }
 
-        IPromptTemplate template = new PromptTemplate(name, templateContent);
+        IPromptTemplate template = createTemplate(name, templateContent);
         template.Validate();
         return Task.FromResult<IPromptTemplate?>(template);
     }

@@ -4,19 +4,21 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Nordstein.Core.Common.Async;
 using Nordstein.Core.Common.Validation;
 using Proxytrace.Domain.AgentVersion;
-using Proxytrace.Domain.Inference;
+using Nordstein.Core.AI.Clients;
+using Nordstein.Core.AI.Completions;
 using Nordstein.Core.Domain;
-using Proxytrace.Domain.Message;
+using Nordstein.Core.AI.Messages;
 using Proxytrace.Domain.ModelEndpoint;
 using Proxytrace.Domain.Project;
+using Nordstein.Core.AI.Prompts;
 using Proxytrace.Domain.Prompt;
-using Proxytrace.Domain.Tools;
+using Nordstein.Core.AI.Tools;
 
 namespace Proxytrace.Domain.Agent.Internal;
 
 internal record Agent : DomainEntity<IAgent>, IAgent
 {
-    private readonly IModelClient.Factory modelClientFactory;
+    private readonly ModelClientFactory modelClientFactory;
     private readonly ILogger<IAgent> logger;
     private readonly IAgentVersion.CreateNew createVersion;
     private readonly Lazy<IAgentVersionRepository> versionRepository;
@@ -55,7 +57,7 @@ internal record Agent : DomainEntity<IAgent>, IAgent
         IModelParameters modelParameters,
         bool isSystemAgent,
         IRepository<IAgent> repository,
-        IModelClient.Factory modelClientFactory,
+        ModelClientFactory modelClientFactory,
         IAgentVersion.CreateNew createVersion,
         Lazy<IAgentVersionRepository> versionRepository,
         Lazy<IAgentRepository> agentRepository,
@@ -88,7 +90,7 @@ internal record Agent : DomainEntity<IAgent>, IAgent
         IAgentVersion currentVersion,
         IDomainEntityData existing,
         IRepository<IAgent> repository,
-        IModelClient.Factory modelClientFactory,
+        ModelClientFactory modelClientFactory,
         IAgentVersion.CreateNew createVersion,
         Lazy<IAgentVersionRepository> versionRepository,
         Lazy<IAgentRepository> agentRepository,
@@ -174,7 +176,7 @@ internal record Agent : DomainEntity<IAgent>, IAgent
             : ApplyAsync(this with { ModelParameters = modelParameters }, cancellationToken);
 
     public SystemMessage CreateSystemMessage(IReadOnlyDictionary<string, string>? variables = null)
-        => Message.Message.CreateSystemMessage(SystemPrompt, variables);
+        => Message.CreateSystemMessage(SystemPrompt, variables);
 
     public override IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {

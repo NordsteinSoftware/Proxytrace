@@ -13,7 +13,7 @@ using Proxytrace.Domain.TestResult;
 using Proxytrace.Domain.TestRun;
 using Proxytrace.Domain.TestRunGroup;
 using Proxytrace.Domain.TestSuite;
-using Proxytrace.Domain.Usage;
+using Nordstein.Core.AI.Completions;
 using Nordstein.Core.Testing;
 
 namespace Proxytrace.Application.Tests;

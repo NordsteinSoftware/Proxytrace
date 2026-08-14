@@ -1,6 +1,7 @@
 using Nordstein.Core.Common.Random;
 using Proxytrace.Domain.Agent;
 using Nordstein.Core.Domain;
+using Nordstein.Core.AI.Prompts;
 using Proxytrace.Domain.Prompt;
 
 namespace Proxytrace.Domain.AgentVersion.Internal;

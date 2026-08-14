@@ -14,7 +14,7 @@ using Proxytrace.Domain.OptimizationProposal;
 using Proxytrace.Domain.TestRun;
 using Proxytrace.Domain.TestRunGroup;
 using Proxytrace.Domain.TestSuite;
-using Proxytrace.Domain.Tools;
+using Nordstein.Core.AI.Tools;
 using Proxytrace.Licensing;
 
 namespace Proxytrace.Api.Controllers;

@@ -1,3 +1,4 @@
+using Nordstein.Core.AI.Clients;
 using System.ClientModel;
 using System.ClientModel.Primitives;
 using System.Net;

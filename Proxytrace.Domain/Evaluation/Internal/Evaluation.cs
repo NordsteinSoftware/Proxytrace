@@ -1,7 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using Nordstein.Core.Common.Validation;
 using Proxytrace.Domain.Evaluator;
-using Proxytrace.Domain.Usage;
+using Nordstein.Core.AI.Completions;
 
 namespace Proxytrace.Domain.Evaluation.Internal;
 

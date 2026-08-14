@@ -1,4 +1,4 @@
-using Proxytrace.Domain.Tools;
+using Nordstein.Core.AI.Tools;
 
 namespace Proxytrace.Storage.Internal.Entities.OptimizationProposal;
 

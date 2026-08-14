@@ -1,7 +1,7 @@
 using Autofac;
 using Nordstein.Core.Common.Serialization;
-using Proxytrace.Domain.Message;
-using Proxytrace.Domain.Tools;
+using Nordstein.Core.AI.Messages;
+using Nordstein.Core.AI.Tools;
 
 namespace Proxytrace.Domain.Tests;
 

@@ -2,7 +2,7 @@ using AwesomeAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Nordstein.Core.Common.Serialization;
 using Proxytrace.Domain.Proposal;
-using Proxytrace.Domain.Tools;
+using Nordstein.Core.AI.Tools;
 using Nordstein.Core.Testing;
 
 namespace Proxytrace.Domain.Tests;

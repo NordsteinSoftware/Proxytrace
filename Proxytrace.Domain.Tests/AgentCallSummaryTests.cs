@@ -2,7 +2,7 @@ using AwesomeAssertions;
 using NSubstitute;
 using Proxytrace.Domain.AgentCall;
 using Proxytrace.Domain.ModelEndpoint;
-using Proxytrace.Domain.Usage;
+using Nordstein.Core.AI.Completions;
 
 namespace Proxytrace.Domain.Tests;
 

@@ -1,6 +1,7 @@
 ﻿using System.Resources;
 using Autofac;
 using Microsoft.Testing.Platform.Services;
+using Nordstein.Core.AI.Prompts;
 using Proxytrace.Domain.Prompt;
 using Nordstein.Core.Testing;
 

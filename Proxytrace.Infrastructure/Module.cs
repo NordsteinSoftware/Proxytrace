@@ -1,3 +1,4 @@
+using Nordstein.Core.AI.Clients;
 using Autofac;
 using Autofac.Core;
 using Microsoft.Extensions.Configuration;
@@ -14,7 +15,6 @@ public class Module : Autofac.Module
     {
         base.Load(builder);
         builder.RegisterModule<Proxytrace.Domain.Module>();
-        builder.RegisterModule<Proxytrace.Serialization.Module>();
 
         builder.RegisterType<ModelClient>()
             .As<IModelClient>()

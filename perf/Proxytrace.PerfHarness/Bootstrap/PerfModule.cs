@@ -1,3 +1,4 @@
+using Nordstein.Core.AI.Clients;
 using Autofac;
 using Autofac.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection;
@@ -9,6 +10,7 @@ using Proxytrace.Domain.Agent;
 using Proxytrace.Domain.ModelEndpoint;
 using Proxytrace.Domain.ModelProvider;
 using Proxytrace.Domain.Project;
+using Nordstein.Core.AI.Prompts;
 using Proxytrace.Domain.Prompt;
 using Proxytrace.Storage;
 using Nordstein.Core.Testing;
@@ -62,7 +64,6 @@ internal sealed class PerfModule : Autofac.Module
         // were pulled in transitively via Storage.Module).
         builder.RegisterModule<Proxytrace.Application.Module>();
         builder.RegisterModule<Proxytrace.Infrastructure.Security.SecretProtectionModule>();
-        builder.RegisterModule<Proxytrace.Serialization.Module>();
 
         // --- substitute the infrastructure seams the data/ingestion graph depends on ---
         builder.RegisterStub<IModelClient>();

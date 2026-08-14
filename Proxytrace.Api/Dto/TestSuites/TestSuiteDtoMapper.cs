@@ -1,5 +1,5 @@
 using Proxytrace.Domain.Statistics.TestRun;
-using Proxytrace.Domain.Message;
+using Nordstein.Core.AI.Messages;
 using Proxytrace.Domain.TestSuite;
 
 namespace Proxytrace.Api.Dto.TestSuites;

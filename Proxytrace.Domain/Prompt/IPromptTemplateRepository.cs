@@ -1,4 +1,5 @@
-﻿namespace Proxytrace.Domain.Prompt;
+using Nordstein.Core.AI.Prompts;
+namespace Proxytrace.Domain.Prompt;
 
 /// <summary>
 /// Repository for <see cref="IPromptTemplate"/>

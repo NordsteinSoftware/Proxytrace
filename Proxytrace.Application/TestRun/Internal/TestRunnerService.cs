@@ -1,3 +1,4 @@
+using Nordstein.Core.AI.Clients;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Threading.Channels;
@@ -9,7 +10,7 @@ using Proxytrace.Application.Streaming;
 using Nordstein.Core.Common.Async;
 using Proxytrace.Domain;
 using Proxytrace.Domain.Agent;
-using Proxytrace.Domain.Completion;
+using Nordstein.Core.AI.Completions;
 using Proxytrace.Domain.Evaluation;
 using Proxytrace.Domain.Evaluator;
 using Proxytrace.Domain.ModelEndpoint;

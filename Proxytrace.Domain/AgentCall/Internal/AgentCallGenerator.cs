@@ -2,9 +2,9 @@ using System.Net;
 using Nordstein.Core.Common.Random;
 using Proxytrace.Domain.Agent;
 using Proxytrace.Domain.AgentVersion;
-using Proxytrace.Domain.Completion;
+using Nordstein.Core.AI.Completions;
 using Nordstein.Core.Domain;
-using Proxytrace.Domain.Message;
+using Nordstein.Core.AI.Messages;
 using Proxytrace.Domain.ModelEndpoint;
 
 namespace Proxytrace.Domain.AgentCall.Internal;

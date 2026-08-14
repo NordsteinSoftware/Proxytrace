@@ -7,10 +7,9 @@ using Proxytrace.Api.Dto.AgentCalls;
 using Proxytrace.Domain;
 using Proxytrace.Domain.Agent;
 using Proxytrace.Domain.AgentCall;
-using Proxytrace.Domain.Completion;
+using Nordstein.Core.AI.Completions;
 using Proxytrace.Domain.CustomAnomaly;
-using Proxytrace.Domain.Message;
-using Proxytrace.Domain.Usage;
+using Nordstein.Core.AI.Messages;
 using Nordstein.Core.Testing;
 
 namespace Proxytrace.Api.Tests;

@@ -4,7 +4,7 @@ using Microsoft.Extensions.Logging;
 using Proxytrace.Domain.Statistics;
 using Proxytrace.Domain.AgentCall;
 using Proxytrace.Domain.ModelEndpoint;
-using Proxytrace.Domain.Usage;
+using Nordstein.Core.AI.Completions;
 using Proxytrace.Storage.Internal.Entities.Agent;
 using Proxytrace.Storage.Internal.Entities.AgentCall;
 using Proxytrace.Storage.Internal.Entities.AgentVersion;

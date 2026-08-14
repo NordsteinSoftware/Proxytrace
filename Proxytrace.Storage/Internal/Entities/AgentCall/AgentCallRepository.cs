@@ -11,7 +11,7 @@ using Proxytrace.Domain.ModelEndpoint;
 using Nordstein.Core.Domain.Paging;
 using Proxytrace.Domain.Project;
 using Proxytrace.Domain.Search;
-using Proxytrace.Domain.Usage;
+using Nordstein.Core.AI.Completions;
 using Proxytrace.Storage.Internal.Entities.Agent;
 using Proxytrace.Storage.Internal.Entities.AgentVersion;
 using Proxytrace.Storage.Internal.Entities.Model;

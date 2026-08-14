@@ -1,7 +1,7 @@
 namespace Proxytrace.Storage.Internal.Entities.Inference;
 
 /// <summary>
-/// Storage value object for serializing <see cref="Proxytrace.Domain.Inference.IModelParameters"/> as JSON.
+/// Storage value object for serializing <see cref="Nordstein.Core.AI.Completions.IModelParameters"/> as JSON.
 /// </summary>
 internal record ModelParametersData(
     double? Temperature,

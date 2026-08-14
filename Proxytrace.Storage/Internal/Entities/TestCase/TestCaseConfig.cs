@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Nordstein.Core.Common.Async;
 using Nordstein.Core.Common.Serialization;
-using Proxytrace.Domain.Message;
+using Nordstein.Core.AI.Messages;
 using Proxytrace.Domain.TestCase;
 
 namespace Proxytrace.Storage.Internal.Entities.TestCase;

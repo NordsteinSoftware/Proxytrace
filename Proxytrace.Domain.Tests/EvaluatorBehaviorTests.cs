@@ -6,7 +6,7 @@ using NSubstitute;
 using Proxytrace.Domain.Evaluation;
 using Proxytrace.Domain.Evaluator;
 using Proxytrace.Domain.Evaluator.Internal;
-using Proxytrace.Domain.Message;
+using Nordstein.Core.AI.Messages;
 using Proxytrace.Domain.Project;
 using Proxytrace.Domain.TestCase;
 using Proxytrace.Domain.TestResult;

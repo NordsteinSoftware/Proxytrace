@@ -3,8 +3,8 @@ using AwesomeAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Proxytrace.Application.Ingestion.Internal;
 using Proxytrace.Domain;
-using Proxytrace.Domain.Completion;
-using Proxytrace.Domain.Message;
+using Nordstein.Core.AI.Completions;
+using Nordstein.Core.AI.Messages;
 using Proxytrace.Domain.ModelProvider;
 using Nordstein.Core.Testing;
 

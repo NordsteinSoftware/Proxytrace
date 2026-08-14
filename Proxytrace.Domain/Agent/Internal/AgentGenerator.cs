@@ -1,8 +1,9 @@
 using Nordstein.Core.Common.Random;
-using Proxytrace.Domain.Inference;
+using Nordstein.Core.AI.Completions;
 using Nordstein.Core.Domain;
 using Proxytrace.Domain.ModelEndpoint;
 using Proxytrace.Domain.Project;
+using Nordstein.Core.AI.Prompts;
 using Proxytrace.Domain.Prompt;
 
 namespace Proxytrace.Domain.Agent.Internal;

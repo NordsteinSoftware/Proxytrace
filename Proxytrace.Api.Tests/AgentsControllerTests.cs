@@ -173,8 +173,8 @@ public sealed class AgentsControllerTests : BaseTest<Module>
         services.GetRequiredService<ITheoryBroadcaster>(),
         services.GetRequiredService<AgentDtoMapper>(),
         services.GetRequiredService<Proxytrace.Domain.Agent.IAgent.CreateNew>(),
-        services.GetRequiredService<Proxytrace.Domain.Prompt.IPromptTemplate.Create>(),
-        services.GetRequiredService<Proxytrace.Domain.Inference.IModelParameters.Create>(),
+        services.GetRequiredService<Nordstein.Core.AI.Prompts.IPromptTemplate.Create>(),
+        services.GetRequiredService<Nordstein.Core.AI.Completions.IModelParameters.Create>(),
         Microsoft.Extensions.Logging.Abstractions.NullLogger<Proxytrace.Domain.AuditLog.Audit>.Instance,
         services.GetRequiredService<Proxytrace.Api.Auth.IProjectAccessGuard>());
 }

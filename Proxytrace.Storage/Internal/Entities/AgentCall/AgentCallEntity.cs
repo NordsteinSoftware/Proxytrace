@@ -1,5 +1,5 @@
 using Proxytrace.Domain.AgentCall;
-using Proxytrace.Domain.Message;
+using Nordstein.Core.AI.Messages;
 using Proxytrace.Storage.Internal.Entities.Inference;
 
 namespace Proxytrace.Storage.Internal.Entities.AgentCall;

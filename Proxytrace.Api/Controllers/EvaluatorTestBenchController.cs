@@ -3,9 +3,9 @@ using Microsoft.AspNetCore.Mvc;
 using Proxytrace.Api.Auth;
 using Proxytrace.Api.Dto.Evaluators;
 using Proxytrace.Api.Dto.TestRuns;
-using Proxytrace.Domain.Completion;
+using Nordstein.Core.AI.Completions;
 using Proxytrace.Domain.Evaluator;
-using Proxytrace.Domain.Message;
+using Nordstein.Core.AI.Messages;
 using Proxytrace.Domain.TestCase;
 using Proxytrace.Domain.TestResult;
 using Proxytrace.Domain.TestSuite;
@@ -178,7 +178,7 @@ public class EvaluatorTestBenchController : ControllerBase
         TimeSpan latency;
         if (request.ActualResponseOverride is not null)
         {
-            actual = new AssistantMessage([Domain.Message.Content.FromText(request.ActualResponseOverride)], []);
+            actual = new AssistantMessage([Nordstein.Core.AI.Messages.Content.FromText(request.ActualResponseOverride)], []);
             var latest = await testResults.GetLatestByTestCaseAsync(request.TestCaseId, cancellationToken);
             latency = latest?.Latency ?? TimeSpan.FromMilliseconds(1);
         }

@@ -2,7 +2,7 @@ using System.Text.RegularExpressions;
 using Proxytrace.Api.Dto.Inference;
 using Proxytrace.Api.Dto.Tools;
 using Proxytrace.Domain.AgentCall;
-using Proxytrace.Domain.Message;
+using Nordstein.Core.AI.Messages;
 
 namespace Proxytrace.Api.Dto.AgentCalls;
 
