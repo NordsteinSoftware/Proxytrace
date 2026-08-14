@@ -21,6 +21,7 @@
     <ItemGroup>
       <NordsteinCoreReference Include="Nordstein.Core.Common" />
       <NordsteinCoreReference Include="Nordstein.Core.Domain" />
+      <NordsteinCoreReference Include="Nordstein.Core.AI" />
     </ItemGroup>
 
     <ItemGroup>
