@@ -35,6 +35,10 @@ follow [Semantic Versioning](https://semver.org). Ongoing work is collected unde
 
 ### Changed
 
+- **More generous Free tier.** The Free tier now allows **2 agents** and **2 test suites** (up from
+  1 each), so you can compare two agents or keep two benchmark suites without a license. All other
+  limits and the premium feature set are unchanged.
+
 - **Generate tests replaces Add test on a trace.** The trace detail panel used to offer two
   competing ways to build a test case; it now offers one. **Generate tests** takes the primary slot,
   and the single-click **Add test** promote dialog is gone — what it did by hand is a subset of what
