@@ -20,8 +20,8 @@ configuration. The Free tier allows:
 
 - **1** project
 - **1** user
-- **1** agent
-- **1** test suite
+- **2** agents
+- **2** test suites
 - **14-day** trace retention
 - **10,000** traces per month
 
@@ -134,8 +134,8 @@ These values live in `Proxytrace.Api/appsettings.json` under the `Licensing` sec
 |---|---|---|
 | Projects | 1 | Unlimited |
 | Users | 1 | Unlimited |
-| Agents | 1 | Unlimited |
-| Test suites | 1 | Unlimited |
+| Agents | 2 | Unlimited |
+| Test suites | 2 | Unlimited |
 | Traces / month | 10,000 | Unlimited |
 | Trace retention | 14 days | 365 days |
 | Optimization Proposals | — | Yes |

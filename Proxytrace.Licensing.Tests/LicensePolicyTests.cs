@@ -16,8 +16,8 @@ public sealed class LicensePolicyTests
         definition.Features.Should().NotContain(LicenseFeature.ScheduledTestRuns);
         definition.Limits[LicenseLimit.MaxProjects].Should().Be(1);
         definition.Limits[LicenseLimit.MaxUsers].Should().Be(1);
-        definition.Limits[LicenseLimit.MaxAgents].Should().Be(1);
-        definition.Limits[LicenseLimit.MaxTestSuites].Should().Be(1);
+        definition.Limits[LicenseLimit.MaxAgents].Should().Be(2);
+        definition.Limits[LicenseLimit.MaxTestSuites].Should().Be(2);
         definition.Limits[LicenseLimit.MaxTracesPerMonth].Should().Be(10_000);
         definition.Limits[LicenseLimit.TraceRetentionDays].Should().Be(14);
     }
