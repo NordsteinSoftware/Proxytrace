@@ -27,7 +27,8 @@ public class ApplicationErrorsController : ControllerBase
     }
 
     /// <summary>
-    /// Gets the all.
+    /// Returns a paginated, newest-first list of captured application errors. Supports filtering by
+    /// severity level, free-text search, and date range. Admin-only.
     /// </summary>
     [HttpGet]
     public async Task<PagedResult<ApplicationErrorDto>> GetAll(
@@ -44,7 +45,8 @@ public class ApplicationErrorsController : ControllerBase
     }
 
     /// <summary>
-    /// Gets.
+    /// Returns the full detail of a single application error including its stack trace. Admin-only;
+    /// returns 404 when the error does not exist.
     /// </summary>
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<ApplicationErrorDto>> Get(Guid id, CancellationToken cancellationToken)

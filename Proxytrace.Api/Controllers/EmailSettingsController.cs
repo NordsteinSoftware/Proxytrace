@@ -11,7 +11,8 @@ using Proxytrace.Domain.User;
 namespace Proxytrace.Api.Controllers;
 
 /// <summary>
-/// API controller for email settings operations.
+/// Admin-only SMTP configuration endpoints. Supports reading, updating, and test-sending the
+/// email settings used for notifications, invites, and password resets.
 /// </summary>
 [ApiController]
 [Authorize(Roles = nameof(UserRole.Admin))]
@@ -48,7 +49,7 @@ public class EmailSettingsController : ControllerBase
     }
 
     /// <summary>
-    /// Gets.
+    /// Returns the current SMTP email configuration, or 204 when none has been saved yet.
     /// </summary>
     [HttpGet]
     public async Task<ActionResult<EmailSettingsDto>> Get(CancellationToken cancellationToken)
@@ -58,7 +59,8 @@ public class EmailSettingsController : ControllerBase
     }
 
     /// <summary>
-    /// Updates.
+    /// Saves a new SMTP configuration. An empty password in the request preserves the existing stored
+    /// password; supply a new value to rotate it.
     /// </summary>
     [HttpPut]
     public async Task<ActionResult<EmailSettingsDto>> Update(
@@ -79,7 +81,8 @@ public class EmailSettingsController : ControllerBase
     }
 
     /// <summary>
-    /// Sends the test.
+    /// Sends a test email to the authenticated admin's address using the current SMTP configuration.
+    /// Returns 400 with a message when email is not configured or the send fails.
     /// </summary>
     [HttpPost("test")]
     public async Task<IActionResult> SendTest(CancellationToken cancellationToken)

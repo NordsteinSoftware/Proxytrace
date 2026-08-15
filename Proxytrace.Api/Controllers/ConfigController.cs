@@ -6,7 +6,9 @@ using Nordstein.Core.Common.Hosting;
 namespace Proxytrace.Api.Controllers;
 
 /// <summary>
-/// API controller for config operations.
+/// Anonymous endpoint that surfaces the runtime configuration the SPA needs before any user exists:
+/// kiosk mode flag, interactive mode flag, application version, and the public ingestion proxy base
+/// URL.
 /// </summary>
 [ApiController]
 [Route("api/config")]
@@ -33,7 +35,8 @@ public class ConfigController : ControllerBase
     }
 
     /// <summary>
-    /// Gets.
+    /// Returns the anonymous configuration payload used by the SPA on startup: kiosk mode, whether
+    /// interactive features are available, the application version, and the ingestion proxy base URL.
     /// </summary>
     [HttpGet]
     [AllowAnonymous]

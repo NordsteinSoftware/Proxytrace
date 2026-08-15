@@ -30,7 +30,9 @@ public class AnomalyStreamController : ControllerBase
     }
 
     /// <summary>
-    /// Stream.
+    /// SSE stream that emits <c>anomaly-flagged</c> events as custom anomaly detectors flag calls.
+    /// Non-admin callers receive only events belonging to their accessible projects; periodic
+    /// heartbeat comments detect half-open sockets.
     /// </summary>
     [HttpGet("stream")]
     public async Task Stream(CancellationToken cancellationToken)

@@ -37,7 +37,9 @@ public class AuditLogController : ControllerBase
     }
 
     /// <summary>
-    /// Gets the all.
+    /// Returns a paginated, newest-first list of audit log entries scoped to the caller's
+    /// accessible projects. Admins see every entry including global rows; project members see only
+    /// their projects' rows and never global entries.
     /// </summary>
     [HttpGet]
     public async Task<ActionResult<PagedResult<AuditLogEntryDto>>> GetAll(
@@ -90,7 +92,8 @@ public class AuditLogController : ControllerBase
     }
 
     /// <summary>
-    /// Gets.
+    /// Returns a single audit log entry. Returns 404 when it does not exist or the caller cannot
+    /// access its project (existence is never disclosed to unauthorized callers).
     /// </summary>
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<AuditLogEntryDto>> Get(Guid id, CancellationToken cancellationToken)

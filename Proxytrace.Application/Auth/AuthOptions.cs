@@ -1,16 +1,17 @@
 namespace Proxytrace.Application.Auth;
 
 /// <summary>
-/// Represents a auth options.
+/// Root configuration block for authentication, bound from the 'Authentication' config section.
 /// </summary>
 public sealed class AuthOptions
 {
     /// <summary>
-    /// Gets or sets the oidc.
+    /// OIDC configuration block; a non-empty <see cref="OidcOptions.Authority"/> activates OIDC mode.
     /// </summary>
     public OidcOptions Oidc { get; init; } = new();
+
     /// <summary>
-    /// Gets or sets the local.
+    /// Local auth configuration block, used when no OIDC authority is configured.
     /// </summary>
     public LocalSection Local { get; init; } = new();
 
@@ -25,7 +26,7 @@ public sealed class AuthOptions
     public bool EmergencyLogResetLink { get; init; }
 
     /// <summary>
-    /// Provides additional functionality.
+    /// Computed auth mode: <see cref="AuthMode.Oidc"/> when an OIDC authority is configured, <see cref="AuthMode.Local"/> otherwise.
     /// </summary>
     public AuthMode Mode
         => string.IsNullOrWhiteSpace(Oidc.Authority)
@@ -33,39 +34,43 @@ public sealed class AuthOptions
             : AuthMode.Oidc;
 
     /// <summary>
-    /// Represents a oidc options.
+    /// OIDC-provider settings consumed by the API's JWT bearer middleware.
     /// </summary>
     public sealed class OidcOptions
     {
         /// <summary>
-        /// Gets or sets the authority.
+        /// OIDC authority URL; a non-empty value enables OIDC mode and is used for metadata discovery.
         /// </summary>
         public string Authority { get; init; } = string.Empty;
+
         /// <summary>
-        /// Gets or sets the audience.
+        /// Expected audience claim used to validate incoming OIDC tokens.
         /// </summary>
         public string Audience { get; init; } = string.Empty;
+
         /// <summary>
-        /// Gets or sets the require https metadata.
+        /// Whether the OIDC metadata endpoint must use HTTPS; set to false only in local development.
         /// </summary>
         public bool RequireHttpsMetadata { get; init; } = true;
+
         /// <summary>
-        /// Gets or sets the email claim type.
+        /// Claim type the OIDC provider uses for the user's email address.
         /// </summary>
         public string EmailClaimType { get; init; } = "email";
+
         /// <summary>
-        /// Gets or sets the name claim type.
+        /// Claim type the OIDC provider uses for the user's display name.
         /// </summary>
         public string NameClaimType { get; init; } = "name";
     }
 
     /// <summary>
-    /// Represents a local section.
+    /// Local-auth sub-section that mirrors <see cref="LocalAuthOptions"/> for hosts that bind the top-level 'Authentication' block.
     /// </summary>
     public sealed class LocalSection
     {
         /// <summary>
-        /// Gets or sets the signing key.
+        /// Hex-encoded HMAC-SHA256 key used to sign local session JWTs.
         /// </summary>
         public string SigningKey { get; init; } = string.Empty;
     }

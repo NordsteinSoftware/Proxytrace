@@ -26,7 +26,9 @@ using Proxytrace.Domain.Session;
 namespace Proxytrace.Api.Controllers;
 
 /// <summary>
-/// API controller for agent calls operations.
+/// CRUD and streaming endpoints for agent calls (traces). Provides filtered, paginated trace
+/// listings; per-trace full detail; a histogram and KPI summary; a real-time SSE stream scoped
+/// to the caller's projects; and test-support seed/delete operations.
 /// </summary>
 [ApiController]
 [Authorize]
@@ -126,7 +128,9 @@ public class AgentCallsController : ControllerBase
     }
 
     /// <summary>
-    /// Gets the all.
+    /// Returns a paginated, sorted list of agent calls matching the supplied filter. Scoped to the
+    /// caller's accessible projects; returns an empty page when the caller has no access or the
+    /// scope resolves to nothing.
     /// </summary>
     [HttpGet]
     public async Task<PagedResult<AgentCallListItemDto>> GetAll(
@@ -238,7 +242,9 @@ public class AgentCallsController : ControllerBase
     }
 
     /// <summary>
-    /// Gets the overview.
+    /// Returns the traces-page overview: agents sorted by last-call time, per-agent call-count
+    /// breakdowns, and latency percentiles (P50/P95/P99). Scoped to the caller's accessible
+    /// projects.
     /// </summary>
     [HttpGet("overview")]
     public async Task<TracesOverviewDto> GetOverview(
@@ -280,7 +286,9 @@ public class AgentCallsController : ControllerBase
     }
 
     /// <summary>
-    /// Gets the histogram.
+    /// Returns a time-bucketed call-count histogram matching the same filters as
+    /// <see cref="GetAll"/>. The number of buckets can be specified (clamped to 1–240); each bucket
+    /// carries a start timestamp, total count, and error count.
     /// </summary>
     [HttpGet("histogram")]
     public async Task<IReadOnlyList<TraceHistogramBucketDto>> GetHistogram(
@@ -398,7 +406,8 @@ public class AgentCallsController : ControllerBase
     }
 
     /// <summary>
-    /// Gets.
+    /// Returns the full detail of a single agent call including request, response, tool calls, and
+    /// usage. Returns 404 when the call does not exist or the caller cannot access its project.
     /// </summary>
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<AgentCallDto>> Get(Guid id, CancellationToken cancellationToken)
@@ -529,7 +538,9 @@ public class AgentCallsController : ControllerBase
     }
 
     /// <summary>
-    /// Stream.
+    /// SSE stream that emits <c>trace-created</c> events as new agent calls arrive. Non-admin callers
+    /// receive only traces belonging to their accessible projects; global (admin) callers receive
+    /// all. Sends periodic heartbeat comments to detect half-open sockets.
     /// </summary>
     [HttpGet("stream")]
     public async Task Stream(CancellationToken cancellationToken)
@@ -565,7 +576,8 @@ public class AgentCallsController : ControllerBase
     }
 
     /// <summary>
-    /// Deletes.
+    /// Permanently deletes a trace and reverses its contribution to the owning session's token
+    /// counters. Returns 404 when the trace does not exist or the caller cannot access its project.
     /// </summary>
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)

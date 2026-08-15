@@ -10,23 +10,25 @@ internal record SystemPromptData(string Name, string Template);
 internal record AgentEntity : Entity, IArchivableEntity
 {
     /// <summary>
-    /// Gets or sets the name.
+    /// Human-readable display name of the agent, unique within the owning project. Maps to the agents.name column.
     /// </summary>
     public required string Name { get; init; }
     /// <summary>
-    /// Gets or sets the project.
+    /// FK to the project that owns this agent. Maps to the agents.project_id column.
     /// </summary>
     public required Guid Project { get; init; }
     /// <summary>
-    /// Gets or sets the endpoint.
+    /// FK to the model endpoint this agent routes calls through by default. Maps to the agents.endpoint_id column.
     /// </summary>
     public required Guid Endpoint { get; init; }
     /// <summary>
-    /// Gets or sets the is system agent.
+    /// True for agents created automatically by the proxy to represent a recognized configuration, not by a user.
+    /// System agents are excluded from the licensed agent count and are filtered out of most user-facing lists.
     /// </summary>
     public required bool IsSystemAgent { get; init; }
     /// <summary>
-    /// Gets or sets the model parameters.
+    /// JSON-serialized inference parameters (temperature, top-p, etc.) applied to calls through this agent.
+    /// Maps to the agents.model_parameters column.
     /// </summary>
     public required ModelParametersData ModelParameters { get; init; }
 

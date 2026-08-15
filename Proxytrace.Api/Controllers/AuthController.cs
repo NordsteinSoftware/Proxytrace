@@ -16,7 +16,9 @@ using Proxytrace.Domain.User;
 namespace Proxytrace.Api.Controllers;
 
 /// <summary>
-/// API controller for auth operations.
+/// Authentication endpoints for local-mode (password + TOTP MFA) and OIDC mode. Covers login,
+/// logout, invite-based signup, password reset, MFA enrollment/verification, stream-ticket
+/// issuance, and the <c>/me</c> session-restore endpoint.
 /// </summary>
 [ApiController]
 [Route("api/auth")]
@@ -76,7 +78,9 @@ public class AuthController : ControllerBase
     }
 
     /// <summary>
-    /// Gets the mode.
+    /// Returns the authentication mode (<c>local</c> or <c>oidc</c>), whether first-admin setup is
+    /// still required, and whether a legacy-account claim is available. Anonymous; used by the SPA
+    /// before any session exists.
     /// </summary>
     [HttpGet("mode")]
     [AllowAnonymous]
@@ -89,7 +93,9 @@ public class AuthController : ControllerBase
     }
 
     /// <summary>
-    /// Claim legacy.
+    /// Claims the single unclaimed legacy (pre-auth) admin account by associating it with a new
+    /// email and password. Local-mode only; rate-limited per IP. Returns 409 when no eligible
+    /// legacy account exists.
     /// </summary>
     [HttpPost("claim-legacy")]
     [AllowAnonymous]
@@ -108,7 +114,8 @@ public class AuthController : ControllerBase
     }
 
     /// <summary>
-    /// Setup.
+    /// Creates the first admin account. Local-mode only; returns 409 after setup has already been
+    /// completed. Issues a session immediately so the wizard can continue authenticated.
     /// </summary>
     [HttpPost("setup")]
     [AllowAnonymous]
@@ -131,7 +138,8 @@ public class AuthController : ControllerBase
     // leak via browser history / Referer / proxy logs). Validate this ticket in
     // JwtBearerEventsFactory.OnMessageReceived alongside the existing access_token path.
     /// <summary>
-    /// Stream ticket.
+    /// Issues a short-lived, single-use ticket for authenticating SSE connections without leaking
+    /// the long-lived session JWT in a query string. Requires an active session.
     /// </summary>
     [HttpGet("stream-ticket")]
     [Authorize]
@@ -147,7 +155,9 @@ public class AuthController : ControllerBase
     // Rate-limited per client IP: there is no per-account failed-attempt counter, so without this
     // password guessing against a known address is bounded only by request throughput.
     /// <summary>
-    /// Login.
+    /// Authenticates with email and password. Local-mode only; rate-limited per IP. Returns 401 on
+    /// bad credentials. When MFA is required a challenge token is returned instead of a session;
+    /// the session is issued after the second factor is verified at <c>mfa/verify</c>.
     /// </summary>
     [HttpPost("login")]
     [AllowAnonymous]
@@ -190,7 +200,8 @@ public class AuthController : ControllerBase
     // Completes the second step of login: verifies a TOTP code (or backup code) against the challenge
     // ticket and, on success, issues the session. Rate-limited because the TOTP code space is small.
     /// <summary>
-    /// Mfa verify.
+    /// Completes the second step of login by verifying a TOTP code (or backup code) against the
+    /// challenge ticket and issuing a session. Local-mode only; rate-limited per IP.
     /// </summary>
     [HttpPost("mfa/verify")]
     [AllowAnonymous]
@@ -213,7 +224,9 @@ public class AuthController : ControllerBase
     // Starts TOTP enrollment: returns a fresh secret + otpauth URI for the caller to add to their
     // authenticator app. The enrollment is pending until confirmed via mfa/activate.
     /// <summary>
-    /// Mfa setup.
+    /// Begins TOTP enrollment for the authenticated user, returning a TOTP secret and
+    /// <c>otpauth://</c> URI to add to an authenticator app. Enrollment is not active until
+    /// confirmed via <c>mfa/activate</c>. Returns 409 when MFA is already enabled.
     /// </summary>
     [HttpPost("mfa/setup")]
     [Authorize]
@@ -230,7 +243,8 @@ public class AuthController : ControllerBase
 
     // Confirms enrollment with a first code, turning MFA on and returning one-time backup codes (shown once).
     /// <summary>
-    /// Mfa activate.
+    /// Confirms TOTP enrollment with a first code, enabling MFA on the account and returning one-time
+    /// backup codes that are shown only at this point. Returns 400 when the code is invalid.
     /// </summary>
     [HttpPost("mfa/activate")]
     [Authorize]
@@ -249,7 +263,8 @@ public class AuthController : ControllerBase
 
     // Self-service disable: requires the account password as re-authentication.
     /// <summary>
-    /// Mfa disable.
+    /// Self-service MFA disable: verifies the account password as re-authentication before removing
+    /// the TOTP enrollment. Returns 400 when the password is incorrect. Local-mode only.
     /// </summary>
     [HttpPost("mfa/disable")]
     [Authorize]
@@ -268,7 +283,8 @@ public class AuthController : ControllerBase
     // The session rides in an httpOnly cookie (see SessionCookie), so the SPA cannot read
     // or clear it itself — logout clears it server-side. Anonymous and idempotent.
     /// <summary>
-    /// Logout.
+    /// Clears the httpOnly session cookie server-side, logging the user out from the browser. No-op
+    /// when no session cookie is present. Local-mode only; anonymous and idempotent.
     /// </summary>
     [HttpPost("logout")]
     [AllowAnonymous]
@@ -287,7 +303,8 @@ public class AuthController : ControllerBase
     // Session restore for the SPA: identifies the caller from the httpOnly session cookie
     // (or bearer token), since the client cannot decode the cookie itself.
     /// <summary>
-    /// Me.
+    /// Returns the authenticated caller's user record, role, notification preferences, MFA status,
+    /// and whether email is configured. Used by the SPA to restore session state after a page reload.
     /// </summary>
     [HttpGet("me")]
     [Authorize]
@@ -305,7 +322,9 @@ public class AuthController : ControllerBase
     }
 
     /// <summary>
-    /// Signup.
+    /// Consumes an invite token to create a new user account and immediately issues a session.
+    /// Local-mode only; rate-limited per IP. Returns 410 when the invite is invalid, expired, or
+    /// already consumed.
     /// </summary>
     [HttpPost("signup")]
     [AllowAnonymous]
@@ -331,7 +350,9 @@ public class AuthController : ControllerBase
     // the reset link is emailed; otherwise it is written to the server log for the operator to relay
     // (the only escape from a sole-admin lockout). Rate-limited to blunt enumeration/abuse.
     /// <summary>
-    /// Forgot password.
+    /// Initiates a password-reset flow for the given email. Always returns 202 regardless of whether
+    /// the email matches an account, to prevent address enumeration. The reset link is emailed when
+    /// SMTP is configured, otherwise logged for operator relay. Rate-limited per IP.
     /// </summary>
     [HttpPost("forgot-password")]
     [AllowAnonymous]
@@ -345,7 +366,9 @@ public class AuthController : ControllerBase
     }
 
     /// <summary>
-    /// Reset password.
+    /// Completes a password-reset flow by validating the one-time token and setting the new
+    /// password. Returns 410 when the token is invalid or already used. On success either issues a
+    /// session directly (no MFA) or returns an MFA challenge token when the account has TOTP enabled.
     /// </summary>
     [HttpPost("reset-password")]
     [AllowAnonymous]
@@ -384,7 +407,9 @@ public class AuthController : ControllerBase
     // Anonymous lookup of an invite by its raw token — rate-limited so the token space cannot be
     // swept, sharing the login bucket because both are anonymous credential guesses.
     /// <summary>
-    /// Preview.
+    /// Returns the email, role, and expiry of an invite by its raw token — used by the signup page
+    /// to pre-fill the form. Anonymous; rate-limited per IP. Returns 410 when the invite is invalid
+    /// or already consumed.
     /// </summary>
     [HttpGet("invites/by-token/{token}")]
     [AllowAnonymous]
@@ -398,7 +423,8 @@ public class AuthController : ControllerBase
     }
 
     /// <summary>
-    /// Creates.
+    /// Creates a user invite for the given email and role. Admin-only; local-mode only. Returns the
+    /// one-time invite URL (the raw token is not recoverable from the list endpoint).
     /// </summary>
     [Authorize(Roles = nameof(UserRole.Admin))]
     [RequireLocalMode]
@@ -426,7 +452,8 @@ public class AuthController : ControllerBase
     }
 
     /// <summary>
-    /// Lists.
+    /// Returns all invites with their status (pending, consumed, expired). Admin-only; local-mode
+    /// only. The invite link is not shown here — it is returned once when the invite is created.
     /// </summary>
     [Authorize(Roles = nameof(UserRole.Admin))]
     [RequireLocalMode]
@@ -440,7 +467,8 @@ public class AuthController : ControllerBase
     }
 
     /// <summary>
-    /// Deletes.
+    /// Revokes a pending invite so its token can no longer be used to sign up. Admin-only; local-mode
+    /// only. Returns 404 when the invite does not exist.
     /// </summary>
     [Authorize(Roles = nameof(UserRole.Admin))]
     [RequireLocalMode]

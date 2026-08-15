@@ -72,7 +72,9 @@ public class CustomAnomalyDetectorsController : ControllerBase
     }
 
     /// <summary>
-    /// Gets the all.
+    /// Returns all custom anomaly detectors for the given project. Returns an empty list (not 404)
+    /// when the caller cannot access the project. Requires the <c>CustomAnomalyDetectors</c> license
+    /// feature.
     /// </summary>
     [HttpGet]
     public async Task<IReadOnlyList<CustomAnomalyDetectorDto>> GetAll(
@@ -88,7 +90,8 @@ public class CustomAnomalyDetectorsController : ControllerBase
     }
 
     /// <summary>
-    /// Gets.
+    /// Returns a single custom anomaly detector by id. Returns 404 when it does not exist or the
+    /// caller cannot access its project.
     /// </summary>
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<CustomAnomalyDetectorDto>> Get(Guid id, CancellationToken cancellationToken)
@@ -102,7 +105,10 @@ public class CustomAnomalyDetectorsController : ControllerBase
     }
 
     /// <summary>
-    /// Creates.
+    /// Creates a new LLM-based anomaly detector and its hidden system agent. Each detector carries
+    /// a set of regex/literal triggers, a review-instructions system prompt, a judge model endpoint,
+    /// and an optional per-agent scope. Returns 400 when the endpoint or any agent id is not found,
+    /// or when the trigger patterns are invalid.
     /// </summary>
     [HttpPost]
     public async Task<ActionResult<CustomAnomalyDetectorDto>> Create(
@@ -161,7 +167,9 @@ public class CustomAnomalyDetectorsController : ControllerBase
     }
 
     /// <summary>
-    /// Updates.
+    /// Replaces all mutable fields of a custom anomaly detector. If the endpoint changes, the hidden
+    /// agent is updated; new instructions create a new prompt version on the hidden agent. Returns
+    /// 404 when the detector does not exist or the caller cannot access its project.
     /// </summary>
     [HttpPut("{id:guid}")]
     public async Task<ActionResult<CustomAnomalyDetectorDto>> Update(
@@ -216,7 +224,8 @@ public class CustomAnomalyDetectorsController : ControllerBase
     }
 
     /// <summary>
-    /// Deletes.
+    /// Deletes a custom anomaly detector and its hidden system agent in a single transaction.
+    /// Returns 404 when the detector does not exist or the caller cannot access its project.
     /// </summary>
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
