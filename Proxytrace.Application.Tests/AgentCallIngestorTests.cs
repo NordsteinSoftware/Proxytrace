@@ -785,8 +785,14 @@ public sealed class AgentCallIngestorTests : BaseTest<Module>
     [TestMethod]
     public async Task IngestAsync_WhenAgentLimitReached_DropsTraceForNewAgent()
     {
-        // Default license is Free, which caps non-system agents at 1.
-        var services = GetServices();
+        // Cap non-system agents at 1 explicitly, independent of the Free tier value.
+        var services = GetServices(builder =>
+        {
+            var license = Substitute.For<ILicenseService>();
+            license.GetLimit(Arg.Any<LicenseLimit>()).Returns(long.MaxValue);
+            license.GetLimit(LicenseLimit.MaxAgents).Returns(1);
+            builder.RegisterInstance(license).As<ILicenseService>();
+        });
         var ingestion = services.GetRequiredService<AgentCallProcessor>();
         var agentRepo = services.GetRequiredService<IAgentRepository>();
         var callRepo = services.GetRequiredService<IAgentCallRepository>();
