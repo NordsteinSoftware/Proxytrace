@@ -30,7 +30,8 @@ internal sealed class AppSettingsLocalSigningKeyStore : ISigningKeyStore
     };
 
     /// <summary>
-    /// Registers services with the Autofac container builder.
+    /// Reads <c>Authentication:Local:SigningKey</c> from <c>appsettings.local.json</c> in the
+    /// content root, returning <see langword="null"/> when the file is absent or unparseable.
     /// </summary>
     public string? Load()
     {
@@ -50,7 +51,9 @@ internal sealed class AppSettingsLocalSigningKeyStore : ISigningKeyStore
     }
 
     /// <summary>
-    /// Persist.
+    /// Writes <paramref name="signingKey"/> into <c>appsettings.local.json</c> under
+    /// <c>Authentication:Local:SigningKey</c>, merging into the existing JSON so unrelated
+    /// configuration keys are not overwritten.
     /// </summary>
     public void Persist(string signingKey)
     {

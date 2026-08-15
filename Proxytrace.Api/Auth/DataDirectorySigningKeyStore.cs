@@ -22,7 +22,8 @@ internal sealed class DataDirectorySigningKeyStore : ISigningKeyStore
     }
 
     /// <summary>
-    /// Registers services with the Autofac container builder.
+    /// Reads the signing key from the <c>signing-key</c> file in the data directory, returning
+    /// <see langword="null"/> when the file is absent or empty.
     /// </summary>
     public string? Load()
     {
@@ -35,7 +36,8 @@ internal sealed class DataDirectorySigningKeyStore : ISigningKeyStore
     }
 
     /// <summary>
-    /// Persist.
+    /// Writes <paramref name="signingKey"/> to the <c>signing-key</c> file in the data directory,
+    /// creating the directory if it does not exist.
     /// </summary>
     public void Persist(string signingKey)
     {

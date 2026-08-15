@@ -6,24 +6,26 @@ namespace Proxytrace.Api.Configuration;
 public sealed record SearchRequestOptions
 {
     /// <summary>
-    /// Gets or sets the min query length.
+    /// Minimum number of characters a search query must contain before the request is accepted.
     /// </summary>
     public int MinQueryLength { get; init; } = 2;
     /// <summary>
-    /// Gets or sets the max query length.
+    /// Maximum number of characters a search query may contain; requests exceeding this are rejected
+    /// with a 400.
     /// </summary>
     public int MaxQueryLength { get; init; } = 200;
     /// <summary>
-    /// Gets or sets the min snippet length.
+    /// Minimum character length of a snippet submitted for snippet-search indexing.
     /// </summary>
     public int MinSnippetLength { get; init; } = 20;
     /// <summary>
-    /// Gets or sets the max snippet length.
+    /// Maximum character length of a snippet; snippets longer than this are rejected with a 400.
     /// </summary>
     public int MaxSnippetLength { get; init; } = 1000;
 
     /// <summary>
-    /// Validates.
+    /// Asserts that the configured bounds are internally consistent; throws
+    /// <see cref="InvalidOperationException"/> on startup when they are not.
     /// </summary>
     public void Validate()
     {

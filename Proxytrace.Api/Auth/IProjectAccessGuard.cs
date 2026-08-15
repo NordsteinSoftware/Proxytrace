@@ -45,7 +45,8 @@ internal sealed class ProjectAccessGuard : IProjectAccessGuard
     }
 
     /// <summary>
-    /// Determines whether the access project asynchronously.
+    /// Returns <see langword="true"/> when the caller is an admin or a member of
+    /// <paramref name="projectId"/>, and the request's API key (if any) is confined to that project.
     /// </summary>
     public async Task<bool> CanAccessProjectAsync(Guid projectId, CancellationToken cancellationToken = default)
     {
@@ -66,7 +67,9 @@ internal sealed class ProjectAccessGuard : IProjectAccessGuard
     }
 
     /// <summary>
-    /// Gets the accessible project ids asynchronously.
+    /// Returns the set of project ids the caller may see — <see langword="null"/> for an admin who
+    /// may see all, an empty collection when the caller may see none, and the caller's member
+    /// projects otherwise. A REST API key further narrows the result to its single project.
     /// </summary>
     public async Task<IReadOnlyCollection<Guid>?> GetAccessibleProjectIdsAsync(CancellationToken cancellationToken = default)
     {

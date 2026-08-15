@@ -24,7 +24,8 @@ internal class LocalUserResolver : IAuthUserResolver
     }
 
     /// <summary>
-    /// Resolves.
+    /// Looks up the <see cref="IUser"/> by the <c>sub</c> claim GUID. Fails the token validation
+    /// context and returns <see langword="null"/> when the sub is unparseable or the user no longer exists.
     /// </summary>
     public async Task<IUser?> Resolve(TokenValidatedContext context, ClaimsPrincipal principal)
     {
@@ -62,7 +63,8 @@ internal class JitUserResolver : IAuthUserResolver
     }
 
     /// <summary>
-    /// Resolves.
+    /// Derives an external subject identifier from the token's issuer and subject claims, then
+    /// JIT-provisions or retrieves the matching local user via <c>IJitUserProvisioner</c>.
     /// </summary>
     public async Task<IUser?> Resolve(TokenValidatedContext context, ClaimsPrincipal principal)
     {

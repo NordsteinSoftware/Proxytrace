@@ -13,19 +13,23 @@ public sealed record StatisticsOptions
     public const double DashboardPollIntervalSeconds = 30d;
 
     /// <summary>
-    /// Gets or sets the default recent trace count.
+    /// How many recent traces the dashboard statistics endpoint returns when the caller does not
+    /// specify a count.
     /// </summary>
     public int DefaultRecentTraceCount { get; init; } = 6;
     /// <summary>
-    /// Gets or sets the max recent trace count.
+    /// Hard cap on the number of recent traces the dashboard endpoint will return, regardless of what
+    /// the caller requests.
     /// </summary>
     public int MaxRecentTraceCount { get; init; } = 50;
     /// <summary>
-    /// Gets or sets the default agent limit.
+    /// How many agents the dashboard's agent-breakdown list returns when the caller does not specify
+    /// a limit.
     /// </summary>
     public int DefaultAgentLimit { get; init; } = 10;
     /// <summary>
-    /// Gets or sets the max agent limit.
+    /// Hard cap on the agent count the dashboard endpoint returns, regardless of what the caller
+    /// requests.
     /// </summary>
     public int MaxAgentLimit { get; init; } = 100;
 
@@ -37,7 +41,8 @@ public sealed record StatisticsOptions
     public double DashboardCacheTtlSeconds { get; init; } = 10d;
 
     /// <summary>
-    /// Validates.
+    /// Asserts that the configured page sizes and cache TTL are internally consistent; throws
+    /// <see cref="InvalidOperationException"/> on startup when they are not.
     /// </summary>
     public void Validate()
     {
