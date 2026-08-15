@@ -8,14 +8,38 @@ namespace Proxytrace.Domain.User.Internal;
 
 internal record User : DomainEntity<IUser>, IUser
 {
+    /// <summary>
+    /// Gets the email.
+    /// </summary>
     public string Email { get; }
+    /// <summary>
+    /// Gets the external subject.
+    /// </summary>
     public string? ExternalSubject { get; }
+    /// <summary>
+    /// Gets or sets the password hash.
+    /// </summary>
     public string? PasswordHash { get; private init; }
+    /// <summary>
+    /// Gets or sets the role.
+    /// </summary>
     public UserRole Role { get; private init; }
+    /// <summary>
+    /// Gets or sets the language.
+    /// </summary>
     public string Language { get; private init; }
+    /// <summary>
+    /// Gets or sets the email notifications enabled.
+    /// </summary>
     public bool EmailNotificationsEnabled { get; private init; }
+    /// <summary>
+    /// Gets or sets the email notification min severity.
+    /// </summary>
     public NotificationSeverity EmailNotificationMinSeverity { get; private init; }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="User"/> class.
+    /// </summary>
     public User(
         string email,
         string? externalSubject,
@@ -38,6 +62,9 @@ internal record User : DomainEntity<IUser>, IUser
         EmailNotificationMinSeverity = emailNotificationMinSeverity;
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="User"/> class.
+    /// </summary>
     public User(
         string email,
         string? externalSubject,
@@ -60,19 +87,31 @@ internal record User : DomainEntity<IUser>, IUser
         EmailNotificationMinSeverity = emailNotificationMinSeverity;
     }
 
+    /// <summary>
+    /// Change role.
+    /// </summary>
     public Task<IUser> ChangeRole(UserRole role, CancellationToken cancellationToken = default)
         => Role == role
             ? Task.FromResult<IUser>(this)
             : ApplyAsync(this with { Role = role }, cancellationToken);
 
+    /// <summary>
+    /// Change password hash.
+    /// </summary>
     public Task<IUser> ChangePasswordHash(string passwordHash, CancellationToken cancellationToken = default)
         => ApplyAsync(this with { PasswordHash = passwordHash }, cancellationToken);
 
+    /// <summary>
+    /// Change language.
+    /// </summary>
     public Task<IUser> ChangeLanguage(string language, CancellationToken cancellationToken = default)
         => Language == language
             ? Task.FromResult<IUser>(this)
             : ApplyAsync(this with { Language = language }, cancellationToken);
 
+    /// <summary>
+    /// Change email notification preferences.
+    /// </summary>
     public Task<IUser> ChangeEmailNotificationPreferences(bool emailNotificationsEnabled, NotificationSeverity emailNotificationMinSeverity, CancellationToken cancellationToken = default)
         => EmailNotificationsEnabled == emailNotificationsEnabled && EmailNotificationMinSeverity == emailNotificationMinSeverity
             ? Task.FromResult<IUser>(this)
@@ -103,6 +142,9 @@ internal record User : DomainEntity<IUser>, IUser
         return true;
     }
 
+    /// <summary>
+    /// Validates.
+    /// </summary>
     public override IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
         foreach (var result in base.Validate(validationContext))

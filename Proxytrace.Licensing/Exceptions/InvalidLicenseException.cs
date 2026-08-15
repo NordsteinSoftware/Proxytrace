@@ -19,17 +19,26 @@ public enum InvalidLicenseReason
 /// </summary>
 public sealed class InvalidLicenseException : Exception
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="InvalidLicenseException"/> class.
+    /// </summary>
     public InvalidLicenseException(InvalidLicenseReason reason)
         : this(reason, $"The configured license is invalid: {reason}.")
     {
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="InvalidLicenseException"/> class.
+    /// </summary>
     public InvalidLicenseException(InvalidLicenseReason reason, string message)
         : base(message)
     {
         Reason = reason;
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="InvalidLicenseException"/> class.
+    /// </summary>
     public InvalidLicenseException(InvalidLicenseReason reason, string message, Exception innerException)
         : base(message, innerException)
     {

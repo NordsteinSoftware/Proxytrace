@@ -6,12 +6,30 @@ namespace Proxytrace.Domain.CustomAnomaly.Internal;
 
 internal record CustomAnomalyResult : DomainEntity<ICustomAnomalyResult>, ICustomAnomalyResult
 {
+    /// <summary>
+    /// Gets the detector id.
+    /// </summary>
     public Guid DetectorId { get; }
+    /// <summary>
+    /// Gets the agent call id.
+    /// </summary>
     public Guid AgentCallId { get; }
+    /// <summary>
+    /// Gets the project id.
+    /// </summary>
     public Guid ProjectId { get; }
+    /// <summary>
+    /// Gets the matched trigger.
+    /// </summary>
     public string MatchedTrigger { get; }
+    /// <summary>
+    /// Gets the reasoning.
+    /// </summary>
     public string? Reasoning { get; }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CustomAnomalyResult"/> class.
+    /// </summary>
     public CustomAnomalyResult(
         Guid detectorId,
         Guid agentCallId,
@@ -27,6 +45,9 @@ internal record CustomAnomalyResult : DomainEntity<ICustomAnomalyResult>, ICusto
         Reasoning = reasoning;
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CustomAnomalyResult"/> class.
+    /// </summary>
     public CustomAnomalyResult(
         Guid detectorId,
         Guid agentCallId,
@@ -43,6 +64,9 @@ internal record CustomAnomalyResult : DomainEntity<ICustomAnomalyResult>, ICusto
         Reasoning = reasoning;
     }
 
+    /// <summary>
+    /// Validates.
+    /// </summary>
     public override IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
         foreach (var result in base.Validate(validationContext))

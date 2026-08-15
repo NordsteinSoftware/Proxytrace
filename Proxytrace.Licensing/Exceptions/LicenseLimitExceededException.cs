@@ -6,6 +6,9 @@ namespace Proxytrace.Licensing.Exceptions;
 /// </summary>
 public sealed class LicenseLimitExceededException : Exception
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="LicenseLimitExceededException"/> class.
+    /// </summary>
     public LicenseLimitExceededException(LicenseLimit limit, long current, long max)
         : base($"The limit '{limit}' has been reached ({current}/{max}).")
     {

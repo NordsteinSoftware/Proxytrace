@@ -11,6 +11,9 @@ namespace Proxytrace.Storage.Internal.Entities.AgentCall;
 /// </summary>
 internal static partial class AgentCallPreview
 {
+    /// <summary>
+    /// The max length constant value.
+    /// </summary>
     public const int MaxLength = 1000;
 
     /// <summary>First user message in the request, whitespace-collapsed and truncated to

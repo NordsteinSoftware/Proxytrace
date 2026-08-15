@@ -41,6 +41,9 @@ internal sealed class RunTools
     private readonly TestRunDtoMapper mapper;
     private readonly ILogger<Audit> audit;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="RunTools"/> class.
+    /// </summary>
     public RunTools(
         IMcpProjectAccessor project,
         ITestRunGroupRepository groups,
@@ -62,6 +65,9 @@ internal sealed class RunTools
     [McpServerTool(Name = "list_test_runs")]
     [Description("List test runs (run groups) in the current project, newest first, with per-run status " +
                  "and pass/fail counts. System runs are excluded.")]
+    /// <summary>
+    /// Lists the test runs.
+    /// </summary>
     public async Task<IReadOnlyList<TestRunGroupListItemDto>> ListTestRuns(
         [Description("Maximum number of runs to return (1-100, default 50).")] int limit = 50,
         CancellationToken cancellationToken = default)
@@ -76,6 +82,9 @@ internal sealed class RunTools
     [McpServerTool(Name = "get_test_run")]
     [Description("Get a single test run (run group) by id, including each run's status and results. " +
                  "The run must belong to the current project.")]
+    /// <summary>
+    /// Gets the test run.
+    /// </summary>
     public async Task<TestRunGroupDto> GetTestRun(
         [Description("The run group id (GUID), as returned by list_test_runs or start_test_run.")] Guid runGroupId,
         CancellationToken cancellationToken)
@@ -88,6 +97,9 @@ internal sealed class RunTools
     [Description("Start a test run of a suite against its agent's current endpoint. Returns the run group; " +
                  "poll get_test_run for progress. The suite must belong to the current project. NOTE: a run " +
                  "makes real LLM calls and incurs cost.")]
+    /// <summary>
+    /// Starts the test run.
+    /// </summary>
     public async Task<TestRunGroupDto> StartTestRun(
         [Description("The suite id (GUID) to run, from list_suites.")] Guid suiteId,
         CancellationToken cancellationToken)
@@ -104,6 +116,9 @@ internal sealed class RunTools
         return await ToDtoAsync(group, cancellationToken);
     }
 
+    /// <summary>
+    /// Cancels the test run.
+    /// </summary>
     [McpServerTool(Name = "cancel_test_run")]
     [Description("Cancel an in-progress test run (run group). The run must belong to the current project.")]
     public async Task<TestRunGroupDto> CancelTestRun(
@@ -120,6 +135,9 @@ internal sealed class RunTools
     [Description("Analyze the failing cases of a single run, with each evaluator's verdict and reasoning and " +
                  "the actual response — the primary evidence for an optimization theory. Pass a run id from a " +
                  "run group's `runs` (get_test_run). The run must belong to the current project.")]
+    /// <summary>
+    /// Gets the run failures.
+    /// </summary>
     public async Task<IReadOnlyList<McpRunFailureDto>> GetRunFailures(
         [Description("The run id (GUID) — a single run from a run group's `runs`, via get_test_run.")] Guid runId,
         [Description("Maximum number of failing cases to return (1-50, default 20).")] int limit = 20,
@@ -143,6 +161,9 @@ internal sealed class RunTools
     [McpServerTool(Name = "compare_runs")]
     [Description("Compare two runs of the same suite case-by-case: which cases were fixed (fail→pass), which " +
                  "regressed (pass→fail), and the pass rates. Both runs must belong to the current project.")]
+    /// <summary>
+    /// Compares the runs.
+    /// </summary>
     public async Task<McpRunComparisonDto> CompareRuns(
         [Description("The baseline run id (GUID).")] Guid baselineRunId,
         [Description("The new run id (GUID) to compare against the baseline.")] Guid newRunId,

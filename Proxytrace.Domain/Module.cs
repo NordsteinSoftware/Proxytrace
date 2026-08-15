@@ -16,6 +16,9 @@ using Proxytrace.Domain.Prompt.Internal;
 
 namespace Proxytrace.Domain;
 
+/// <summary>
+/// Autofac module that registers  services.
+/// </summary>
 public sealed class Module : Autofac.Module
 {
     private const string RegisteredKey = "Proxytrace.Domain.Module.Registered";

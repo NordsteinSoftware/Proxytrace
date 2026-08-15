@@ -13,6 +13,9 @@ public interface IModelSwitchTheory : IOptimizationTheory
     /// <summary>The endpoint proposed as a replacement for the agent's current one.</summary>
     IModelEndpoint ProposedEndpoint { get; }
 
+    /// <summary>
+    /// Factory delegate for creating a new new instance.
+    /// </summary>
     public delegate IModelSwitchTheory CreateNew(
         IAgent agent,
         ITestSuite suite,
@@ -22,6 +25,9 @@ public interface IModelSwitchTheory : IOptimizationTheory
         IModelEndpoint proposedEndpoint,
         IReadOnlyCollection<Guid> evidenceTestRunIds);
 
+    /// <summary>
+    /// Factory delegate for creating a new existing instance.
+    /// </summary>
     public delegate IModelSwitchTheory CreateExisting(
         IAgent agent,
         ITestSuite suite,

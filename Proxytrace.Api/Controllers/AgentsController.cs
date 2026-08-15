@@ -20,6 +20,9 @@ using Proxytrace.Domain.Prompt;
 
 namespace Proxytrace.Api.Controllers;
 
+/// <summary>
+/// API controller for agents operations.
+/// </summary>
 [ApiController]
 [Authorize]
 [Route("api/agents")]
@@ -39,6 +42,9 @@ public class AgentsController : ControllerBase
     private readonly ILogger<Audit> audit;
     private readonly IProjectAccessGuard accessGuard;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AgentsController"/> class.
+    /// </summary>
     public AgentsController(
         IAgentRepository repository,
         IRepository<IModelEndpoint> endpoints,
@@ -69,6 +75,9 @@ public class AgentsController : ControllerBase
         this.accessGuard = accessGuard;
     }
 
+    /// <summary>
+    /// Gets the all.
+    /// </summary>
     [HttpGet]
     public async Task<PagedResult<AgentListItemDto>> GetAll(
         [FromQuery] Guid? projectId = null,
@@ -105,6 +114,9 @@ public class AgentsController : ControllerBase
         return new PagedResult<AgentListItemDto>(items, sorted.Length, page, pageSize);
     }
 
+    /// <summary>
+    /// Gets.
+    /// </summary>
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<AgentDto>> Get(Guid id, CancellationToken cancellationToken)
     {
@@ -153,6 +165,9 @@ public class AgentsController : ControllerBase
         return Ok(agentDtoMapper.ToDto(agent, null));
     }
 
+    /// <summary>
+    /// Stream proposals.
+    /// </summary>
     [HttpGet("{id:guid}/proposals/stream")]
     public async Task StreamProposals(Guid id, CancellationToken cancellationToken)
     {
@@ -191,6 +206,9 @@ public class AgentsController : ControllerBase
         }
     }
 
+    /// <summary>
+    /// Stream theories.
+    /// </summary>
     [HttpGet("{id:guid}/theories/stream")]
     public async Task StreamTheories(Guid id, CancellationToken cancellationToken)
     {
@@ -223,6 +241,9 @@ public class AgentsController : ControllerBase
         }
     }
 
+    /// <summary>
+    /// Deletes.
+    /// </summary>
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
     {
@@ -247,6 +268,9 @@ public class AgentsController : ControllerBase
         return NoContent();
     }
 
+    /// <summary>
+    /// Updates the endpoint.
+    /// </summary>
     [HttpPatch("{id:guid}/endpoint")]
     public async Task<IActionResult> UpdateEndpoint(
         Guid id,
@@ -268,6 +292,9 @@ public class AgentsController : ControllerBase
         return NoContent();
     }
 
+    /// <summary>
+    /// Lists the versions.
+    /// </summary>
     [HttpGet("{id:guid}/versions")]
     public async Task<ActionResult<IReadOnlyList<AgentVersionDto>>> ListVersions(
         Guid id,

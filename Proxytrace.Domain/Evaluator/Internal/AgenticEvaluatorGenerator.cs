@@ -9,6 +9,9 @@ internal class AgenticEvaluatorGenerator : EvaluatorGeneratorBase<IAgenticEvalua
     private readonly IAgenticEvaluator.CreateNew factory;
     private readonly IRandom random;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AgenticEvaluatorGenerator"/> class.
+    /// </summary>
     public AgenticEvaluatorGenerator(
         IAgentGenerator agentGenerator,
         IAgenticEvaluator.CreateNew factory,
@@ -20,6 +23,9 @@ internal class AgenticEvaluatorGenerator : EvaluatorGeneratorBase<IAgenticEvalua
         this.random = random;
     }
 
+    /// <summary>
+    /// Generates asynchronously.
+    /// </summary>
     public override async Task<IAgenticEvaluator> GenerateAsync(CancellationToken cancellationToken = default)
     {
         IAgent agent = await agentGenerator.CreateAsync(random.String(), isSystemAgent: true, cancellationToken: cancellationToken);

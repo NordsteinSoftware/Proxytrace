@@ -12,6 +12,9 @@ internal class SystemPromptTheoryGenerator : OptimizationTheoryGeneratorBase<ISy
     private readonly IDomainEntityGenerator<ITestSuite> suiteGenerator;
     private readonly IRandom random;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SystemPromptTheoryGenerator"/> class.
+    /// </summary>
     public SystemPromptTheoryGenerator(
         ISystemPromptTheory.CreateNew factory,
         IDomainEntityGenerator<IAgent> agentGenerator,
@@ -25,6 +28,9 @@ internal class SystemPromptTheoryGenerator : OptimizationTheoryGeneratorBase<ISy
         this.random = random;
     }
 
+    /// <summary>
+    /// Generates asynchronously.
+    /// </summary>
     public override async Task<ISystemPromptTheory> GenerateAsync(CancellationToken cancellationToken = default)
     {
         var agent = await agentGenerator.GetOrCreateAsync(cancellationToken);

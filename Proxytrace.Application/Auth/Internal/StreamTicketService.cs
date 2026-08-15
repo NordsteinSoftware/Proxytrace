@@ -11,6 +11,9 @@ internal sealed class StreamTicketService : IStreamTicketService
 
     private readonly ConcurrentDictionary<string, Entry> tickets = new(StringComparer.Ordinal);
 
+    /// <summary>
+    /// Issue.
+    /// </summary>
     public StreamTicket Issue(IUser user)
     {
         ArgumentNullException.ThrowIfNull(user);
@@ -23,6 +26,9 @@ internal sealed class StreamTicketService : IStreamTicketService
         return new StreamTicket(token, expiresAt);
     }
 
+    /// <summary>
+    /// Consume.
+    /// </summary>
     public Guid? Consume(string token)
     {
         if (string.IsNullOrEmpty(token) || !tickets.TryRemove(token, out var entry))

@@ -1,7 +1,13 @@
 namespace Proxytrace.Domain.ModelProvider;
 
+/// <summary>
+/// Client for communicating with the provider endpoint.
+/// </summary>
 public interface IProviderClient
 {
+    /// <summary>
+    /// Encapsulates a factory operation.
+    /// </summary>
     public delegate IProviderClient Factory(IModelProvider provider);
 
     Task<ProviderConnectionResult> VerifyConnectionAsync(CancellationToken cancellationToken = default);

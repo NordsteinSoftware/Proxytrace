@@ -2,6 +2,9 @@ using System.Threading.Channels;
 
 namespace Proxytrace.Application.Streaming;
 
+/// <summary>
+/// Event raised when a anomaly flagged occurs.
+/// </summary>
 public record AnomalyFlaggedEvent(
     Guid AgentCallId,
     Guid AgentId,
@@ -10,6 +13,9 @@ public record AnomalyFlaggedEvent(
     string DetectorName,
     bool Blocked = false);
 
+/// <summary>
+/// Broadcasts custom anomaly events.
+/// </summary>
 public interface ICustomAnomalyBroadcaster
 {
     ChannelReader<AnomalyFlaggedEvent> Subscribe(CancellationToken cancellationToken);

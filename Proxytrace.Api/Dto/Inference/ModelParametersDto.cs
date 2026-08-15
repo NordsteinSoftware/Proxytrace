@@ -2,6 +2,9 @@ using Nordstein.Core.AI.Completions;
 
 namespace Proxytrace.Api.Dto.Inference;
 
+/// <summary>
+/// Data transfer object representing a model parameters.
+/// </summary>
 public record ModelParametersDto(
     double? Temperature,
     double? TopP,
@@ -13,6 +16,9 @@ public record ModelParametersDto(
     IReadOnlyList<string>? Stop,
     int? N)
 {
+    /// <summary>
+    /// From domain.
+    /// </summary>
     public static ModelParametersDto FromDomain(IModelParameters p) => new(
         p.Temperature,
         p.TopP,

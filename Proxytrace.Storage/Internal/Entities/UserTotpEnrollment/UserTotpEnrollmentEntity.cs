@@ -5,6 +5,9 @@ namespace Proxytrace.Storage.Internal.Entities.UserTotpEnrollment;
 [StoredDomainEntity(typeof(IUserTotpEnrollment))]
 internal record UserTotpEnrollmentEntity : Entity
 {
+    /// <summary>
+    /// Gets or sets the user.
+    /// </summary>
     public required Guid User { get; init; }
 
     /// <summary>
@@ -13,6 +16,12 @@ internal record UserTotpEnrollmentEntity : Entity
     /// </summary>
     public required string Secret { get; init; }
 
+    /// <summary>
+    /// Gets or sets the confirmed at.
+    /// </summary>
     public DateTimeOffset? ConfirmedAt { get; init; }
+    /// <summary>
+    /// Gets or sets the last used step.
+    /// </summary>
     public long? LastUsedStep { get; init; }
 }

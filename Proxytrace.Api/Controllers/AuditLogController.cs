@@ -23,6 +23,9 @@ public class AuditLogController : ControllerBase
     private readonly ICurrentUserAccessor currentUser;
     private readonly IProjectRepository projects;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AuditLogController"/> class.
+    /// </summary>
     public AuditLogController(
         IAuditLogRepository repository,
         ICurrentUserAccessor currentUser,
@@ -33,6 +36,9 @@ public class AuditLogController : ControllerBase
         this.projects = projects;
     }
 
+    /// <summary>
+    /// Gets the all.
+    /// </summary>
     [HttpGet]
     public async Task<ActionResult<PagedResult<AuditLogEntryDto>>> GetAll(
         [FromQuery] int page = 1,
@@ -83,6 +89,9 @@ public class AuditLogController : ControllerBase
         return paged.Map(ToDto);
     }
 
+    /// <summary>
+    /// Gets.
+    /// </summary>
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<AuditLogEntryDto>> Get(Guid id, CancellationToken cancellationToken)
     {

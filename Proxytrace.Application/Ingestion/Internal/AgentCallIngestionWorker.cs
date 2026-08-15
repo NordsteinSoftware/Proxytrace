@@ -53,6 +53,9 @@ internal sealed class AgentCallIngestionWorker : BackgroundService
     // single in-process consumer is blocked on the one envelope while it retries.
     private static readonly TimeSpan InlineRetryBackoff = TimeSpan.FromMilliseconds(200);
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AgentCallIngestionWorker"/> class.
+    /// </summary>
     public AgentCallIngestionWorker(
         IIngestionStream stream,
         IIngestionExecutor executor,

@@ -22,8 +22,14 @@ public record ProposalArtifactDto(
     ProposalArtifactEvidenceDto Evidence,
     ProposalArtifactAdoptionDto Adoption);
 
+/// <summary>
+/// Data transfer object representing a proposal artifact agent.
+/// </summary>
 public record ProposalArtifactAgentDto(Guid Id, string Name);
 
+/// <summary>
+/// Data transfer object representing a proposal artifact evidence.
+/// </summary>
 public record ProposalArtifactEvidenceDto(
     double? CurrentPassRate,
     double? ProposedPassRate,
@@ -31,6 +37,9 @@ public record ProposalArtifactEvidenceDto(
     Guid[] EvidenceTestRunIds,
     AbTestRunSummaryDto? AbTestRun);
 
+/// <summary>
+/// Data transfer object representing a proposal artifact adoption.
+/// </summary>
 public record ProposalArtifactAdoptionDto(
     DateTimeOffset? AdoptedAt,
     Guid? AdoptedAgentVersionId,

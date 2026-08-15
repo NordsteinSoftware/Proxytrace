@@ -3,6 +3,9 @@ using Proxytrace.Domain.TestRunGroup;
 
 namespace Proxytrace.Application.Optimization;
 
+/// <summary>
+/// Represents a optimizer.
+/// </summary>
 public interface IOptimizer
 {
     /// <summary>

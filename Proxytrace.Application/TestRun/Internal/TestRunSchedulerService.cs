@@ -24,6 +24,9 @@ internal sealed class TestRunSchedulerService : BackgroundService
     private readonly IAgentRepository agents;
     private readonly ILogger<Audit> audit;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TestRunSchedulerService"/> class.
+    /// </summary>
     public TestRunSchedulerService(
         ITestRunScheduleRepository schedules,
         ITestRunGroupRepository groups,

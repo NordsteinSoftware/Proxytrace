@@ -25,6 +25,9 @@ using Proxytrace.Domain.Session;
 
 namespace Proxytrace.Api.Controllers;
 
+/// <summary>
+/// API controller for agent calls operations.
+/// </summary>
 [ApiController]
 [Authorize]
 [Route("api/agent-calls")]
@@ -45,6 +48,9 @@ public class AgentCallsController : ControllerBase
     private readonly ITestCaseSynthesisService synthesis;
     private readonly TestCaseProposalDtoMapper proposalMapper;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AgentCallsController"/> class.
+    /// </summary>
     public AgentCallsController(
         IAgentCallRepository repository,
         IAgentRepository agentRepository,
@@ -119,6 +125,9 @@ public class AgentCallsController : ControllerBase
         return (SessionIdDerivation.Derive(projectId, key), key);
     }
 
+    /// <summary>
+    /// Gets the all.
+    /// </summary>
     [HttpGet]
     public async Task<PagedResult<AgentCallListItemDto>> GetAll(
         [FromQuery] Guid? projectId = null,
@@ -228,6 +237,9 @@ public class AgentCallsController : ControllerBase
         return new PagedResult<IAgentCall>(items, total, page, pageSize).Map(agentCallDtoMapper.ToDto);
     }
 
+    /// <summary>
+    /// Gets the overview.
+    /// </summary>
     [HttpGet("overview")]
     public async Task<TracesOverviewDto> GetOverview(
         [FromQuery] Guid? projectId = null,
@@ -267,6 +279,9 @@ public class AgentCallsController : ControllerBase
             latencyTask.Result.Select(r => new LatencyDto(r.EndpointId, r.P50Ms, r.P95Ms, r.P99Ms, r.MinMs, r.MaxMs, r.SampleCount)).ToArray());
     }
 
+    /// <summary>
+    /// Gets the histogram.
+    /// </summary>
     [HttpGet("histogram")]
     public async Task<IReadOnlyList<TraceHistogramBucketDto>> GetHistogram(
         [FromQuery] Guid? projectId = null,
@@ -382,6 +397,9 @@ public class AgentCallsController : ControllerBase
         return agentCallDtoMapper.ToSummaryDto(await repository.GetSummaryAsync(filter, cancellationToken));
     }
 
+    /// <summary>
+    /// Gets.
+    /// </summary>
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<AgentCallDto>> Get(Guid id, CancellationToken cancellationToken)
     {
@@ -510,6 +528,9 @@ public class AgentCallsController : ControllerBase
         return Ok(agentCallDtoMapper.ToDto(call));
     }
 
+    /// <summary>
+    /// Stream.
+    /// </summary>
     [HttpGet("stream")]
     public async Task Stream(CancellationToken cancellationToken)
     {
@@ -543,6 +564,9 @@ public class AgentCallsController : ControllerBase
         }
     }
 
+    /// <summary>
+    /// Deletes.
+    /// </summary>
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
     {

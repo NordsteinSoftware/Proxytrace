@@ -10,9 +10,15 @@ namespace Proxytrace.Api.Dto.Tools;
 /// </summary>
 public sealed class ToolDtoMapper
 {
+    /// <summary>
+    /// To tool spec dto.
+    /// </summary>
     public ToolSpecificationDto ToToolSpecDto(ToolSpecification t)
         => new(t.Name, t.Description, [.. t.Arguments.Arguments.Select(ToToolArgumentDto)]);
 
+    /// <summary>
+    /// To tool argument dto.
+    /// </summary>
     public ToolArgumentDto ToToolArgumentDto(IToolArgument arg)
     {
         var (type, enumValues) = ParseJsonSchema(arg.JsonSchema);

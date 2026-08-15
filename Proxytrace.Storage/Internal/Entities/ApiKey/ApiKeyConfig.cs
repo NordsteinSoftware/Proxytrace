@@ -19,6 +19,9 @@ internal class ApiKeyConfig : AbstractEntityConfiguration<ApiKeyEntity>, IMapper
     private readonly IRepository<IModelProvider> providers;
     private readonly IRepository<IUser> users;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ApiKeyConfig"/> class.
+    /// </summary>
     public ApiKeyConfig(
         IApiKey.CreateExisting factory,
         IRepository<IProject> projects,
@@ -31,6 +34,9 @@ internal class ApiKeyConfig : AbstractEntityConfiguration<ApiKeyEntity>, IMapper
         this.users = users;
     }
 
+    /// <summary>
+    /// Configures the application request pipeline.
+    /// </summary>
     public override void Configure(EntityTypeBuilder<ApiKeyEntity> builder)
     {
         builder.HasIndex(e => e.KeyHash).IsUnique();
@@ -72,6 +78,9 @@ internal class ApiKeyConfig : AbstractEntityConfiguration<ApiKeyEntity>, IMapper
             .OnDelete(DeleteBehavior.Restrict);
     }
 
+    /// <summary>
+    /// Maps.
+    /// </summary>
     public async Task<IApiKey> Map(ApiKeyEntity stored, CancellationToken cancellationToken = default)
     {
         var project = await projects.GetAsync(stored.Project, cancellationToken);
@@ -80,6 +89,9 @@ internal class ApiKeyConfig : AbstractEntityConfiguration<ApiKeyEntity>, IMapper
         return factory(stored.Name, stored.KeyHash, stored.KeyPrefix ?? string.Empty, project, provider, stored.Scopes, owner, stored);
     }
 
+    /// <summary>
+    /// Maps.
+    /// </summary>
     public Task<ApiKeyEntity> Map(IApiKey domain, CancellationToken cancellationToken = default)
         => new ApiKeyEntity
         {

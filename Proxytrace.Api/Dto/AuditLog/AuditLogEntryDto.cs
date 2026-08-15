@@ -2,6 +2,9 @@ using Proxytrace.Domain.AuditLog;
 
 namespace Proxytrace.Api.Dto.AuditLog;
 
+/// <summary>
+/// Data transfer object representing a audit log entry.
+/// </summary>
 public record AuditLogEntryDto(
     Guid Id,
     AuditAction Action,

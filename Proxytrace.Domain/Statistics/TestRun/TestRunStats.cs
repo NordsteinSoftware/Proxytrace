@@ -18,11 +18,20 @@ public record TestRunStats(
     decimal? Cost,
     DateTimeOffset RunCompletedAt)
 {
+    /// <summary>
+    /// Gets the failed.
+    /// </summary>
     public int Failed => TestCases - Passed;
 
+    /// <summary>
+    /// Provides additional functionality.
+    /// </summary>
     public double? PassRate
         => TestCases > 0 ? Passed / (double)TestCases : null;
     
+    /// <summary>
+    /// Represents a filter.
+    /// </summary>
     public record Filter(
         Guid? AgentId = null,
         IReadOnlyCollection<Guid>? AgentIds = null,

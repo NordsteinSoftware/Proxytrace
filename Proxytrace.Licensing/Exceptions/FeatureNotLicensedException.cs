@@ -6,6 +6,9 @@ namespace Proxytrace.Licensing.Exceptions;
 /// </summary>
 public sealed class FeatureNotLicensedException : Exception
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="FeatureNotLicensedException"/> class.
+    /// </summary>
     public FeatureNotLicensedException(LicenseFeature feature, LicenseTier tier)
         : base($"The feature '{feature}' is not available on the '{tier}' tier.")
     {

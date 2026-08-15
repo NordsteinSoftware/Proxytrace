@@ -7,13 +7,34 @@ namespace Proxytrace.Domain.Invite.Internal;
 
 internal record Invite : DomainEntity<IInvite>, IInvite
 {
+    /// <summary>
+    /// Gets the email.
+    /// </summary>
     public string Email { get; }
+    /// <summary>
+    /// Gets the role.
+    /// </summary>
     public UserRole Role { get; }
+    /// <summary>
+    /// Gets the token hash.
+    /// </summary>
     public string TokenHash { get; }
+    /// <summary>
+    /// Gets the expires at.
+    /// </summary>
     public DateTimeOffset ExpiresAt { get; }
+    /// <summary>
+    /// Gets or sets the consumed at.
+    /// </summary>
     public DateTimeOffset? ConsumedAt { get; private init; }
+    /// <summary>
+    /// Gets the invited by.
+    /// </summary>
     public IUser InvitedBy { get; }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Invite"/> class.
+    /// </summary>
     public Invite(
         string email,
         UserRole role,
@@ -29,6 +50,9 @@ internal record Invite : DomainEntity<IInvite>, IInvite
         InvitedBy = invitedBy;
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Invite"/> class.
+    /// </summary>
     public Invite(
         string email,
         UserRole role,
@@ -47,6 +71,9 @@ internal record Invite : DomainEntity<IInvite>, IInvite
         InvitedBy = invitedBy;
     }
 
+    /// <summary>
+    /// Mark consumed asynchronously.
+    /// </summary>
     public Task<IInvite> MarkConsumedAsync(CancellationToken cancellationToken = default)
     {
         if (ConsumedAt is not null)
@@ -56,6 +83,9 @@ internal record Invite : DomainEntity<IInvite>, IInvite
         return ApplyAsync(this with { ConsumedAt = DateTimeOffset.UtcNow }, cancellationToken);
     }
 
+    /// <summary>
+    /// Validates.
+    /// </summary>
     public override IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
         foreach (var result in base.Validate(validationContext))

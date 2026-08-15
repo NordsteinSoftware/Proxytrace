@@ -18,6 +18,9 @@ public class AnomalyStreamController : ControllerBase
     private readonly ICustomAnomalyBroadcaster broadcaster;
     private readonly IProjectAccessGuard accessGuard;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AnomalyStreamController"/> class.
+    /// </summary>
     public AnomalyStreamController(
         ICustomAnomalyBroadcaster broadcaster,
         IProjectAccessGuard accessGuard)
@@ -26,6 +29,9 @@ public class AnomalyStreamController : ControllerBase
         this.accessGuard = accessGuard;
     }
 
+    /// <summary>
+    /// Stream.
+    /// </summary>
     [HttpGet("stream")]
     public async Task Stream(CancellationToken cancellationToken)
     {

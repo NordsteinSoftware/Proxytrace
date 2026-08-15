@@ -25,10 +25,25 @@ internal record Agent : DomainEntity<IAgent>, IAgent
     private readonly Lazy<IAgentRepository> agentRepository;
     private readonly IAsyncLock locker;
 
+    /// <summary>
+    /// Gets the name.
+    /// </summary>
     public string Name { get; }
+    /// <summary>
+    /// Gets or sets the endpoint.
+    /// </summary>
     public IModelEndpoint Endpoint { get; private init; }
+    /// <summary>
+    /// Gets the project.
+    /// </summary>
     public IProject Project { get; }
+    /// <summary>
+    /// Gets or sets the model parameters.
+    /// </summary>
     public IModelParameters ModelParameters { get; private init; }
+    /// <summary>
+    /// Gets the is system agent.
+    /// </summary>
     public bool IsSystemAgent { get; }
     private IAgentVersion? CurrentVersion { get; init; }
 
@@ -38,9 +53,15 @@ internal record Agent : DomainEntity<IAgent>, IAgent
                $"Agent {Id} ({Name}) has no current version. " +
                "This should only be observable inside the IAgent.CreateNew factory before WithInitialVersion is called.");
 
+    /// <summary>
+    /// Provides additional functionality.
+    /// </summary>
     public IPromptTemplate SystemPrompt
         => ((IAgent)this).CurrentVersion.SystemPrompt;
 
+    /// <summary>
+    /// Provides additional functionality.
+    /// </summary>
     public IReadOnlyList<ToolSpecification> Tools
         => ((IAgent)this).CurrentVersion.Tools;
 
@@ -117,11 +138,17 @@ internal record Agent : DomainEntity<IAgent>, IAgent
     internal Agent WithInitialVersion(IAgentVersion version)
         => this with { CurrentVersion = version };
 
+    /// <summary>
+    /// Creates the client.
+    /// </summary>
     public IModelClient CreateClient(
         IModelEndpoint? customEndpoint = null,
         bool skipIngestion = false)
         => modelClientFactory(this, customEndpoint, skipIngestion: skipIngestion);
 
+    /// <summary>
+    /// Creates the new version asynchronously.
+    /// </summary>
     public async Task<IAgent> CreateNewVersionAsync(
         IPromptTemplate systemPrompt,
         IReadOnlyList<ToolSpecification> tools,
@@ -140,6 +167,9 @@ internal record Agent : DomainEntity<IAgent>, IAgent
         return await ReloadAsync(cancellationToken);
     }
 
+    /// <summary>
+    /// Change system message.
+    /// </summary>
     public Task<IAgent> ChangeSystemMessage(
         IPromptTemplate systemPrompt,
         CancellationToken cancellationToken = default)
@@ -147,6 +177,9 @@ internal record Agent : DomainEntity<IAgent>, IAgent
             ? Task.FromResult<IAgent>(this)
             : CreateNewVersionAsync(systemPrompt, Tools, cancellationToken);
 
+    /// <summary>
+    /// Change tools.
+    /// </summary>
     public Task<IAgent> ChangeTools(
         IReadOnlyList<ToolSpecification> tools,
         CancellationToken cancellationToken = default)
@@ -154,6 +187,9 @@ internal record Agent : DomainEntity<IAgent>, IAgent
             ? Task.FromResult<IAgent>(this)
             : CreateNewVersionAsync(SystemPrompt, tools, cancellationToken);
 
+    /// <summary>
+    /// Change endpoint.
+    /// </summary>
     public Task<IAgent> ChangeEndpoint(IModelEndpoint modelEndpoint,
         CancellationToken cancellationToken = default)
     {
@@ -168,6 +204,9 @@ internal record Agent : DomainEntity<IAgent>, IAgent
         return ApplyAsync(this with { Endpoint = modelEndpoint }, cancellationToken);
     }
 
+    /// <summary>
+    /// Change model parameters.
+    /// </summary>
     public Task<IAgent> ChangeModelParameters(
         IModelParameters modelParameters,
         CancellationToken cancellationToken = default)
@@ -175,9 +214,15 @@ internal record Agent : DomainEntity<IAgent>, IAgent
             ? Task.FromResult<IAgent>(this)
             : ApplyAsync(this with { ModelParameters = modelParameters }, cancellationToken);
 
+    /// <summary>
+    /// Creates the system message.
+    /// </summary>
     public SystemMessage CreateSystemMessage(IReadOnlyDictionary<string, string>? variables = null)
         => Message.CreateSystemMessage(SystemPrompt, variables);
 
+    /// <summary>
+    /// Validates.
+    /// </summary>
     public override IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
         foreach (var result in base.Validate(validationContext))

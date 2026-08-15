@@ -28,6 +28,9 @@ public class AnomaliesController : ControllerBase
     private readonly ICustomAnomalyResultRepository customAnomalyResults;
     private readonly ICustomAnomalyDetectorRepository customAnomalyDetectors;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AnomaliesController"/> class.
+    /// </summary>
     public AnomaliesController(
         IAgentCallRepository repository,
         IAgentRepository agentRepository,

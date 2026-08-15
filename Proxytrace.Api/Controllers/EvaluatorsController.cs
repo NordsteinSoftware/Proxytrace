@@ -18,6 +18,9 @@ using Proxytrace.Domain.TestSuite;
 
 namespace Proxytrace.Api.Controllers;
 
+/// <summary>
+/// API controller for evaluators operations.
+/// </summary>
 [ApiController]
 [Authorize]
 [Route("api/evaluators")]
@@ -36,6 +39,9 @@ public class EvaluatorsController : ControllerBase
     private readonly IProjectAccessGuard accessGuard;
     private readonly ILogger<Audit> audit;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="EvaluatorsController"/> class.
+    /// </summary>
     public EvaluatorsController(
         IEvaluatorRepository evaluatorRepository,
         IProjectRepository projectRepository,
@@ -97,12 +103,18 @@ public class EvaluatorsController : ControllerBase
         return scope is null ? all : all.Where(s => scope.Contains(s.Agent.Project.Id)).ToArray();
     }
 
+    /// <summary>
+    /// Gets the agentic presets.
+    /// </summary>
     [HttpGet("agentic-presets")]
     public IReadOnlyList<AgenticEvaluatorPresetDto> GetAgenticPresets()
         => agenticPresets.GetAll()
             .Select(p => new AgenticEvaluatorPresetDto(p.Key, p.Name, p.SystemPrompt))
             .ToArray();
 
+    /// <summary>
+    /// Gets the all.
+    /// </summary>
     [HttpGet]
     public async Task<IReadOnlyList<EvaluatorDetailDto>> GetAll(
         [FromQuery] Guid? projectId = null,
@@ -113,6 +125,9 @@ public class EvaluatorsController : ControllerBase
         return all.Select(evaluatorMapper.ToDto).ToArray();
     }
 
+    /// <summary>
+    /// Gets the summaries.
+    /// </summary>
     [HttpGet("summaries")]
     public async Task<IReadOnlyList<EvaluatorListItemDto>> GetSummaries(
         [FromQuery] Guid? projectId = null,
@@ -123,6 +138,9 @@ public class EvaluatorsController : ControllerBase
         return all.Select(e => new EvaluatorListItemDto(e.Id, e.Kind, e.Name)).ToArray();
     }
 
+    /// <summary>
+    /// Gets.
+    /// </summary>
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<EvaluatorDetailDto>> Get(Guid id, CancellationToken cancellationToken)
     {
@@ -134,6 +152,9 @@ public class EvaluatorsController : ControllerBase
         return evaluatorMapper.ToDto(evaluator);
     }
 
+    /// <summary>
+    /// Gets the overview.
+    /// </summary>
     [HttpGet("overview")]
     public async Task<EvaluatorsOverviewDto> GetOverview(
         [FromQuery] Guid? projectId = null,
@@ -170,6 +191,9 @@ public class EvaluatorsController : ControllerBase
             Sparklines: sparklinesTask.Result.Select(EvaluatorStatsDtoMapper.ToDto).ToArray());
     }
 
+    /// <summary>
+    /// Gets the detail view.
+    /// </summary>
     [HttpGet("{id:guid}/detail")]
     public async Task<ActionResult<EvaluatorDetailViewDto>> GetDetailView(
         Guid id,
@@ -203,6 +227,9 @@ public class EvaluatorsController : ControllerBase
                 .ToArray());
     }
 
+    /// <summary>
+    /// Creates.
+    /// </summary>
     [HttpPost]
     public async Task<ActionResult<EvaluatorDetailDto>> Create(
         [FromBody] CreateEvaluatorRequest request,
@@ -231,6 +258,9 @@ public class EvaluatorsController : ControllerBase
         return result;
     }
 
+    /// <summary>
+    /// Updates.
+    /// </summary>
     [HttpPut("{id:guid}")]
     public async Task<ActionResult<EvaluatorDetailDto>> Update(
         Guid id,
@@ -257,6 +287,9 @@ public class EvaluatorsController : ControllerBase
         return result;
     }
 
+    /// <summary>
+    /// Deletes.
+    /// </summary>
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
     {
@@ -277,6 +310,9 @@ public class EvaluatorsController : ControllerBase
         return NoContent();
     }
 
+    /// <summary>
+    /// Recent evaluations.
+    /// </summary>
     [HttpGet("{id:guid}/recent-evaluations")]
     public async Task<ActionResult<IReadOnlyList<RecentEvaluationItemDto>>> RecentEvaluations(
         Guid id,

@@ -16,14 +16,23 @@ internal sealed class AuditChannelLoggerProvider : ILoggerProvider
 
     private readonly AuditChannelLogger logger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AuditChannelLoggerProvider"/> class.
+    /// </summary>
     public AuditChannelLoggerProvider(IAuditChannel channel, IAuditActorAccessor? actorAccessor)
     {
         logger = new AuditChannelLogger(channel, actorAccessor);
     }
 
+    /// <summary>
+    /// Creates the logger.
+    /// </summary>
     public ILogger CreateLogger(string categoryName)
         => categoryName == AuditCategory ? logger : NullLogger.Instance;
 
+    /// <summary>
+    /// Releases all resources used by the current instance.
+    /// </summary>
     public void Dispose()
     {
     }

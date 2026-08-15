@@ -14,19 +14,61 @@ namespace Proxytrace.Domain.OptimizationTheory.Internal;
 /// </summary>
 internal abstract record OptimizationTheory : DomainEntity<IOptimizationTheory>, IOptimizationTheory
 {
+    /// <summary>
+    /// Gets or sets the agent.
+    /// </summary>
     public IAgent Agent { get; private init; }
+    /// <summary>
+    /// Gets or sets the suite.
+    /// </summary>
     public ITestSuite Suite { get; private init; }
+    /// <summary>
+    /// Gets the kind.
+    /// </summary>
     public abstract ProposalKind Kind { get; }
+    /// <summary>
+    /// Gets or sets the status.
+    /// </summary>
     public TheoryStatus Status { get; private init; }
+    /// <summary>
+    /// Gets or sets the source.
+    /// </summary>
     public TheorySource Source { get; private init; }
+    /// <summary>
+    /// Gets or sets the priority.
+    /// </summary>
     public Priority Priority { get; private init; }
+    /// <summary>
+    /// Gets or sets the rationale.
+    /// </summary>
     public string Rationale { get; private init; }
+    /// <summary>
+    /// Gets or sets the evidence test run ids.
+    /// </summary>
     public IReadOnlyCollection<Guid> EvidenceTestRunIds { get; private init; }
+    /// <summary>
+    /// Gets or sets the resulting proposal id.
+    /// </summary>
     public Guid? ResultingProposalId { get; private init; }
+    /// <summary>
+    /// Gets or sets the baseline pass rate.
+    /// </summary>
     public double? BaselinePassRate { get; private init; }
+    /// <summary>
+    /// Gets or sets the projected pass rate.
+    /// </summary>
     public double? ProjectedPassRate { get; private init; }
+    /// <summary>
+    /// Gets or sets the p value.
+    /// </summary>
     public double? PValue { get; private init; }
+    /// <summary>
+    /// Gets or sets the ab test run id.
+    /// </summary>
     public Guid? ABTestRunId { get; private init; }
+    /// <summary>
+    /// Gets or sets the content hash.
+    /// </summary>
     public string ContentHash { get; private init; }
 
     protected OptimizationTheory(
@@ -82,6 +124,9 @@ internal abstract record OptimizationTheory : DomainEntity<IOptimizationTheory>,
         ContentHash = contentHash;
     }
 
+    /// <summary>
+    /// Sets the validating.
+    /// </summary>
     public Task<IOptimizationTheory> SetValidating(CancellationToken cancellationToken = default)
     {
         if (Status != TheoryStatus.Proposed)
@@ -90,6 +135,9 @@ internal abstract record OptimizationTheory : DomainEntity<IOptimizationTheory>,
         return ApplyAsync(this with { Status = TheoryStatus.Validating }, cancellationToken);
     }
 
+    /// <summary>
+    /// Attaches the ab test run.
+    /// </summary>
     public Task<IOptimizationTheory> AttachAbTestRun(Guid abTestRunId, CancellationToken cancellationToken = default)
     {
         if (Status != TheoryStatus.Validating)
@@ -98,6 +146,9 @@ internal abstract record OptimizationTheory : DomainEntity<IOptimizationTheory>,
         return ApplyAsync(this with { ABTestRunId = abTestRunId }, cancellationToken);
     }
 
+    /// <summary>
+    /// Sets the validated.
+    /// </summary>
     public Task<IOptimizationTheory> SetValidated(
         Guid resultingProposalId,
         double? baselinePassRate,
@@ -122,6 +173,9 @@ internal abstract record OptimizationTheory : DomainEntity<IOptimizationTheory>,
             cancellationToken);
     }
 
+    /// <summary>
+    /// Sets the invalidated.
+    /// </summary>
     public Task<IOptimizationTheory> SetInvalidated(
         double? baselinePassRate,
         double? projectedPassRate,
@@ -144,6 +198,9 @@ internal abstract record OptimizationTheory : DomainEntity<IOptimizationTheory>,
             cancellationToken);
     }
 
+    /// <summary>
+    /// Sets the failed.
+    /// </summary>
     public Task<IOptimizationTheory> SetFailed(Guid? abTestRunId, CancellationToken cancellationToken = default)
     {
         if (Status != TheoryStatus.Validating)
@@ -154,6 +211,9 @@ internal abstract record OptimizationTheory : DomainEntity<IOptimizationTheory>,
         return ApplyAsync(this with { Status = TheoryStatus.Failed, ABTestRunId = abTestRunId }, cancellationToken);
     }
 
+    /// <summary>
+    /// Rejects.
+    /// </summary>
     public Task<IOptimizationTheory> Reject(CancellationToken cancellationToken = default)
     {
         if (Status is not (TheoryStatus.Proposed or TheoryStatus.Validating or TheoryStatus.Failed))
@@ -164,6 +224,9 @@ internal abstract record OptimizationTheory : DomainEntity<IOptimizationTheory>,
         return ApplyAsync(this with { Status = TheoryStatus.Invalidated }, cancellationToken);
     }
 
+    /// <summary>
+    /// Reset to proposed.
+    /// </summary>
     public Task<IOptimizationTheory> ResetToProposed(CancellationToken cancellationToken = default)
     {
         if (Status is not (TheoryStatus.Validated or TheoryStatus.Invalidated or TheoryStatus.Failed))
@@ -182,6 +245,9 @@ internal abstract record OptimizationTheory : DomainEntity<IOptimizationTheory>,
             cancellationToken);
     }
 
+    /// <summary>
+    /// Validates.
+    /// </summary>
     public override IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
         foreach (var result in base.Validate(validationContext))

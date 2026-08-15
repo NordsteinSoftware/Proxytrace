@@ -17,6 +17,9 @@ internal sealed class EmailSettingsStore : IEmailSettingsStore
     private readonly IClock clock;
     private readonly ILogger<EmailSettingsStore> logger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="EmailSettingsStore"/> class.
+    /// </summary>
     public EmailSettingsStore(
         Func<StorageDbContext> contextFactory,
         ISecretProtector secretProtector,
@@ -29,6 +32,9 @@ internal sealed class EmailSettingsStore : IEmailSettingsStore
         this.logger = logger;
     }
 
+    /// <summary>
+    /// Gets asynchronously.
+    /// </summary>
     public async Task<AppEmailSettings?> GetAsync(CancellationToken cancellationToken = default)
     {
         EmailSettingsEntity? entity = await contextFactory()
@@ -73,6 +79,9 @@ internal sealed class EmailSettingsStore : IEmailSettingsStore
         }
     }
 
+    /// <summary>
+    /// Saves asynchronously.
+    /// </summary>
     public async Task SaveAsync(AppEmailSettings settings, CancellationToken cancellationToken = default)
     {
         var cipher = string.IsNullOrEmpty(settings.Password)

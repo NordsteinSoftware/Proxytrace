@@ -12,6 +12,9 @@ internal class OptimizationProposalRepository :
     AbstractRepository<IOptimizationProposal, OptimizationProposalEntity>,
     IOptimizationProposalRepository
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="OptimizationProposalRepository"/> class.
+    /// </summary>
     public OptimizationProposalRepository(
         IMapper<IOptimizationProposal, OptimizationProposalEntity> mapper,
         Func<StorageDbContext> contextFactory,
@@ -21,6 +24,9 @@ internal class OptimizationProposalRepository :
     {
     }
 
+    /// <summary>
+    /// Gets the by agent asynchronously.
+    /// </summary>
     public async Task<IReadOnlyList<IOptimizationProposal>> GetByAgentAsync(
         Guid agentId,
         CancellationToken cancellationToken = default)
@@ -35,11 +41,17 @@ internal class OptimizationProposalRepository :
         return await Map(stored, cancellationToken);
     }
 
+    /// <summary>
+    /// Gets the by project asynchronously.
+    /// </summary>
     public Task<IReadOnlyList<IOptimizationProposal>> GetByProjectAsync(
         Guid projectId,
         CancellationToken cancellationToken = default) =>
         GetByProjectsAsync([projectId], cancellationToken);
 
+    /// <summary>
+    /// Gets the by projects asynchronously.
+    /// </summary>
     public async Task<IReadOnlyList<IOptimizationProposal>> GetByProjectsAsync(
         IReadOnlyCollection<Guid> projectIds,
         CancellationToken cancellationToken = default)
@@ -60,6 +72,9 @@ internal class OptimizationProposalRepository :
         return await Map(stored, cancellationToken);
     }
 
+    /// <summary>
+    /// Finds the latest by content hash asynchronously.
+    /// </summary>
     public async Task<IOptimizationProposal?> FindLatestByContentHashAsync(
         Guid agentId,
         string contentHash,
@@ -75,6 +90,9 @@ internal class OptimizationProposalRepository :
         return await Map(stored, cancellationToken);
     }
 
+    /// <summary>
+    /// Gets the by agent and status asynchronously.
+    /// </summary>
     public async Task<IReadOnlyList<IOptimizationProposal>> GetByAgentAndStatusAsync(
         Guid agentId,
         ProposalStatus status,
@@ -90,6 +108,9 @@ internal class OptimizationProposalRepository :
         return await Map(stored, cancellationToken);
     }
 
+    /// <summary>
+    /// Gets the by status asynchronously.
+    /// </summary>
     public async Task<IReadOnlyList<IOptimizationProposal>> GetByStatusAsync(
         ProposalStatus status,
         CancellationToken cancellationToken = default)

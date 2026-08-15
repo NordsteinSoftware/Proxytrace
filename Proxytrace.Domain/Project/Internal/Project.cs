@@ -8,10 +8,22 @@ namespace Proxytrace.Domain.Project.Internal;
 
 internal record Project : DomainEntity<IProject>, IProject
 {
+    /// <summary>
+    /// Gets the name.
+    /// </summary>
     public string Name { get; }
+    /// <summary>
+    /// Gets the system endpoint.
+    /// </summary>
     public IModelEndpoint SystemEndpoint { get; }
+    /// <summary>
+    /// Gets the members.
+    /// </summary>
     public IReadOnlyCollection<IUser> Members { get; }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Project"/> class.
+    /// </summary>
     public Project(
         string name,
         IModelEndpoint systemEndpoint,
@@ -23,6 +35,9 @@ internal record Project : DomainEntity<IProject>, IProject
         Members = members.ToArray();
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Project"/> class.
+    /// </summary>
     public Project(
         string name,
         IModelEndpoint systemEndpoint,
@@ -35,6 +50,9 @@ internal record Project : DomainEntity<IProject>, IProject
         Members = members.ToArray();
     }
 
+    /// <summary>
+    /// Validates.
+    /// </summary>
     public override IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
         foreach (var result in base.Validate(validationContext))

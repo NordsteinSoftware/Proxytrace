@@ -17,6 +17,9 @@ internal sealed class ModelSwitchTheoryValidator : TheoryValidatorBase
 {
     private readonly IModelSwitchProposal.CreateNew proposalFactory;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ModelSwitchTheoryValidator"/> class.
+    /// </summary>
     public ModelSwitchTheoryValidator(
         IModelSwitchProposal.CreateNew proposalFactory,
         Lazy<ITestRunnerService> testRunnerService,
@@ -27,8 +30,14 @@ internal sealed class ModelSwitchTheoryValidator : TheoryValidatorBase
         this.proposalFactory = proposalFactory;
     }
 
+    /// <summary>
+    /// Determines whether the validate.
+    /// </summary>
     public override bool CanValidate(IOptimizationTheory theory) => theory is IModelSwitchTheory;
 
+    /// <summary>
+    /// Validates asynchronously.
+    /// </summary>
     public override async Task<TheoryValidationOutcome> ValidateAsync(
         IOptimizationTheory theory,
         CancellationToken cancellationToken = default,

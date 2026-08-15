@@ -11,11 +11,17 @@ internal sealed class SmtpEmailSender : IEmailSender
 
     private readonly IEmailSettingsStore settingsStore;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SmtpEmailSender"/> class.
+    /// </summary>
     public SmtpEmailSender(IEmailSettingsStore settingsStore)
     {
         this.settingsStore = settingsStore;
     }
 
+    /// <summary>
+    /// Sends asynchronously.
+    /// </summary>
     public async Task SendAsync(EmailMessage message, CancellationToken cancellationToken = default)
     {
         EmailSettings? settings = await settingsStore.GetAsync(cancellationToken);

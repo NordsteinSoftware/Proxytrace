@@ -41,8 +41,14 @@ public record UpdateCostLimitRequest(
     decimal? HardLimitEur,
     bool Enabled);
 
+/// <summary>
+/// Data transfer object representing a agent cost point.
+/// </summary>
 public record AgentCostPointDto(DateTimeOffset BucketStart, Guid AgentId, decimal CostEur);
 
+/// <summary>
+/// Data transfer object representing a agent cost total.
+/// </summary>
 public record AgentCostTotalDto(Guid AgentId, string AgentName, decimal CostEur);
 
 /// <summary>

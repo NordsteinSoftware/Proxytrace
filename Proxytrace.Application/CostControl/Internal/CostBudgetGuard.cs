@@ -37,6 +37,9 @@ internal sealed class CostBudgetGuard : BackgroundService
     private readonly ILogger<Audit> auditLogger;
     private readonly ILogger<CostBudgetGuard> logger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CostBudgetGuard"/> class.
+    /// </summary>
     public CostBudgetGuard(
         ICostStatistics costStatistics,
         ICostLimitRepository costLimits,

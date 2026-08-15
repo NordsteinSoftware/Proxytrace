@@ -23,6 +23,9 @@ internal class AgentConfig : AbstractEntityConfiguration<AgentEntity>, IMapper<I
     private readonly IRepository<IModelEndpoint> endpoints;
     private readonly Lazy<IRepository<IAgentVersion>> versions;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AgentConfig"/> class.
+    /// </summary>
     public AgentConfig(
         IAgent.CreateExisting factory,
         IModelParameters.Create modelParametersFactory,
@@ -39,6 +42,9 @@ internal class AgentConfig : AbstractEntityConfiguration<AgentEntity>, IMapper<I
         this.versions = versions;
     }
 
+    /// <summary>
+    /// Configures the application request pipeline.
+    /// </summary>
     public override void Configure(EntityTypeBuilder<AgentEntity> builder)
     {
         builder.HasIndex(e => e.IsSystemAgent);
@@ -67,6 +73,9 @@ internal class AgentConfig : AbstractEntityConfiguration<AgentEntity>, IMapper<I
             );
     }
 
+    /// <summary>
+    /// Maps.
+    /// </summary>
     public async Task<IAgent> Map(AgentEntity stored, CancellationToken cancellationToken = default)
     {
         var project = await projects.GetAsync(stored.Project, cancellationToken);
@@ -85,6 +94,9 @@ internal class AgentConfig : AbstractEntityConfiguration<AgentEntity>, IMapper<I
             existing: stored);
     }
 
+    /// <summary>
+    /// Maps.
+    /// </summary>
     public Task<AgentEntity> Map(IAgent domain, CancellationToken cancellationToken = default)
         => new AgentEntity
         {

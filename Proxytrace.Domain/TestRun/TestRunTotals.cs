@@ -8,6 +8,9 @@ namespace Proxytrace.Domain.TestRun;
 /// </summary>
 public record TestRunTotals(decimal? CostEur, long? TokensIn, long? TokensOut, long? CachedTokensIn)
 {
+    /// <summary>
+    /// From.
+    /// </summary>
     public static TestRunTotals From(ITestRun run)
     {
         var usages = run.TestResults

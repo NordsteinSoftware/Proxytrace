@@ -23,6 +23,9 @@ internal sealed class CachedBlockingRuleProvider : IBlockingRuleProvider
     private readonly TimeSpan ttl;
     private readonly ILogger<CachedBlockingRuleProvider> logger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CachedBlockingRuleProvider"/> class.
+    /// </summary>
     public CachedBlockingRuleProvider(
         ICustomAnomalyDetectorRepository detectors,
         ILicenseService license,
@@ -37,6 +40,9 @@ internal sealed class CachedBlockingRuleProvider : IBlockingRuleProvider
         this.logger = logger;
     }
 
+    /// <summary>
+    /// Gets the rules asynchronously.
+    /// </summary>
     public async Task<IReadOnlyList<BlockingDetectorRule>> GetRulesAsync(
         Guid projectId,
         CancellationToken cancellationToken)

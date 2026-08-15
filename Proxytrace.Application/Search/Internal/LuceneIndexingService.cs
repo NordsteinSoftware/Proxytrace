@@ -29,6 +29,9 @@ internal sealed class LuceneIndexingService : BackgroundService, ISearchIndexer
     private TaskCompletionSource idleSignal = CreateIdleSignal();
     private int pendingCount;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="LuceneIndexingService"/> class.
+    /// </summary>
     public LuceneIndexingService(
         LuceneIndexWriter writer,
         IServiceScopeFactory scopeFactory,
@@ -46,6 +49,9 @@ internal sealed class LuceneIndexingService : BackgroundService, ISearchIndexer
 
     private int started;
 
+    /// <summary>
+    /// Starts asynchronously.
+    /// </summary>
     public override Task StartAsync(CancellationToken cancellationToken)
     {
         if (Interlocked.Exchange(ref started, 1) != 0)
@@ -55,12 +61,21 @@ internal sealed class LuceneIndexingService : BackgroundService, ISearchIndexer
         return base.StartAsync(cancellationToken);
     }
 
+    /// <summary>
+    /// Indexes asynchronously.
+    /// </summary>
     public Task IndexAsync(SearchKind kind, Guid projectId, Guid entityId, CancellationToken cancellationToken = default)
         => EnqueueAsync(new IndexRequest(kind, entityId, Remove: false), cancellationToken);
 
+    /// <summary>
+    /// Removes asynchronously.
+    /// </summary>
     public Task RemoveAsync(SearchKind kind, Guid entityId, CancellationToken cancellationToken = default)
         => EnqueueAsync(new IndexRequest(kind, entityId, Remove: true), cancellationToken);
 
+    /// <summary>
+    /// Reindexes the project asynchronously.
+    /// </summary>
     public async Task ReindexProjectAsync(Guid projectId, CancellationToken cancellationToken = default)
     {
         using var _ = reindexTracker.BeginReindex(projectId);
@@ -98,6 +113,9 @@ internal sealed class LuceneIndexingService : BackgroundService, ISearchIndexer
             .GroupBy(m => m.Kind)
             .ToDictionary(g => g.Key, g => g.First());
 
+    /// <summary>
+    /// Flushes asynchronously.
+    /// </summary>
     public Task FlushAsync(CancellationToken cancellationToken = default)
     {
         Task signal;

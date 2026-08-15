@@ -14,6 +14,9 @@ internal class PasswordResetTokenRepository
 {
     private readonly ISecretHasher hasher;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="PasswordResetTokenRepository"/> class.
+    /// </summary>
     public PasswordResetTokenRepository(
         IMapper<IPasswordResetToken, PasswordResetTokenEntity> mapper,
         Func<StorageDbContext> context,
@@ -25,6 +28,9 @@ internal class PasswordResetTokenRepository
         this.hasher = hasher;
     }
 
+    /// <summary>
+    /// Finds the by token asynchronously.
+    /// </summary>
     public async Task<IPasswordResetToken?> FindByTokenAsync(string token, CancellationToken cancellationToken = default)
     {
         // The token is stored as a hash; match on the hash of the presented raw token.

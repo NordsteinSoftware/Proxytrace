@@ -13,6 +13,9 @@ namespace Proxytrace.Proxy.Api.Internal;
 /// </summary>
 internal sealed class UnusedAgentNameGenerator : IAgentNameGenerator
 {
+    /// <summary>
+    /// Generates the name asynchronously.
+    /// </summary>
     public Task<string> GenerateNameAsync(
         IPromptTemplate systemPrompt,
         IProject project,

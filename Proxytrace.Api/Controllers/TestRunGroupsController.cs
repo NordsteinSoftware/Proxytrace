@@ -19,6 +19,9 @@ using Proxytrace.Domain.TestSuite;
 
 namespace Proxytrace.Api.Controllers;
 
+/// <summary>
+/// API controller for test run groups operations.
+/// </summary>
 [ApiController]
 [Authorize]
 [Route("api/test-run-groups")]
@@ -36,6 +39,9 @@ public class TestRunGroupsController : ControllerBase
     private readonly IProjectAccessGuard accessGuard;
     private readonly ILogger<Audit> audit;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TestRunGroupsController"/> class.
+    /// </summary>
     public TestRunGroupsController(
         ITestRunGroupRepository groupRepository,
         ITestRunRepository runRepository,
@@ -93,6 +99,9 @@ public class TestRunGroupsController : ControllerBase
         return scope;
     }
 
+    /// <summary>
+    /// Gets the all.
+    /// </summary>
     [HttpGet]
     public async Task<PagedResult<TestRunGroupListItemDto>> GetAll(
         [FromQuery] Guid? suiteId = null,
@@ -122,6 +131,9 @@ public class TestRunGroupsController : ControllerBase
         return new PagedResult<TestRunGroupListItemDto>(items, paged.Total, paged.Page, paged.PageSize);
     }
 
+    /// <summary>
+    /// Gets.
+    /// </summary>
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<TestRunGroupDto>> Get(Guid id, CancellationToken cancellationToken)
     {
@@ -133,6 +145,9 @@ public class TestRunGroupsController : ControllerBase
         return await ToDtoAsync(group, cancellationToken);
     }
 
+    /// <summary>
+    /// Creates.
+    /// </summary>
     [HttpPost]
     public async Task<ActionResult<TestRunGroupDto>> Create(
         [FromBody] CreateTestRunGroupRequest request,
@@ -166,6 +181,9 @@ public class TestRunGroupsController : ControllerBase
         return AcceptedAtAction(nameof(Get), new { id = group.Id }, await ToDtoAsync(group, cancellationToken));
     }
 
+    /// <summary>
+    /// Stream.
+    /// </summary>
     [HttpGet("{id:guid}/stream")]
     public async Task Stream(Guid id, CancellationToken cancellationToken)
     {
@@ -213,6 +231,9 @@ public class TestRunGroupsController : ControllerBase
         }
     }
 
+    /// <summary>
+    /// Optimize.
+    /// </summary>
     [HttpPost("{id:guid}/optimize")]
     public async Task<IActionResult> Optimize(Guid id, CancellationToken cancellationToken)
     {
@@ -230,6 +251,9 @@ public class TestRunGroupsController : ControllerBase
         return Accepted();
     }
 
+    /// <summary>
+    /// Cancels.
+    /// </summary>
     [HttpPost("{id:guid}/cancel")]
     public async Task<ActionResult<TestRunGroupDto>> Cancel(Guid id, CancellationToken cancellationToken)
     {
@@ -245,6 +269,9 @@ public class TestRunGroupsController : ControllerBase
         return AcceptedAtAction(nameof(Get), new { id = group.Id }, await ToDtoAsync(group, cancellationToken));
     }
 
+    /// <summary>
+    /// Deletes.
+    /// </summary>
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
     {

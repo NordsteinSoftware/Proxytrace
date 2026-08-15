@@ -13,6 +13,9 @@ internal sealed class HmacSecretIndexer : ISecretIndexer
 {
     private readonly BlindIndexKey key;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="HmacSecretIndexer"/> class.
+    /// </summary>
     public HmacSecretIndexer(BlindIndexKey key, ILogger<HmacSecretIndexer> logger)
     {
         this.key = key;
@@ -27,13 +30,22 @@ internal sealed class HmacSecretIndexer : ISecretIndexer
         }
     }
 
+    /// <summary>
+    /// Gets the is keyed.
+    /// </summary>
     public bool IsKeyed => key.IsAvailable;
 
+    /// <summary>
+    /// Indexes.
+    /// </summary>
     public string Index(string value)
         => key.Material is { } material
             ? SecretIndexScheme.KeyedPrefix + Convert.ToHexString(
                 HMACSHA256.HashData(material, Encoding.UTF8.GetBytes(value))).ToLowerInvariant()
             : LegacyIndex(value);
 
+    /// <summary>
+    /// Legacy index.
+    /// </summary>
     public string LegacyIndex(string value) => Sha256.HexHash(value);
 }

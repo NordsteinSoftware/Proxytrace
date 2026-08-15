@@ -39,6 +39,9 @@ internal sealed class ProposalAdoptionService : BackgroundService
     private readonly ILogger<ProposalAdoptionService> logger;
     private readonly ILogger<Audit> audit;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ProposalAdoptionService"/> class.
+    /// </summary>
     public ProposalAdoptionService(
         IEntityEventService entityEvents,
         IOptimizationProposalRepository proposals,

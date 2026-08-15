@@ -12,12 +12,18 @@ internal sealed class OutlierSettingsStore : IOutlierSettingsStore
     private readonly Func<StorageDbContext> contextFactory;
     private readonly IClock clock;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="OutlierSettingsStore"/> class.
+    /// </summary>
     public OutlierSettingsStore(Func<StorageDbContext> contextFactory, IClock clock)
     {
         this.contextFactory = contextFactory;
         this.clock = clock;
     }
 
+    /// <summary>
+    /// Gets asynchronously.
+    /// </summary>
     public async Task<AppOutlierSettings?> GetAsync(CancellationToken cancellationToken = default)
     {
         OutlierSettingsEntity? entity = await contextFactory()
@@ -33,6 +39,9 @@ internal sealed class OutlierSettingsStore : IOutlierSettingsStore
             entity.Enabled, entity.SigmaMultiplier, entity.MinSampleCount, entity.SampleWindow);
     }
 
+    /// <summary>
+    /// Saves asynchronously.
+    /// </summary>
     public async Task SaveAsync(AppOutlierSettings settings, CancellationToken cancellationToken = default)
     {
         StorageDbContext context = contextFactory();

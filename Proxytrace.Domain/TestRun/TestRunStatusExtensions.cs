@@ -7,6 +7,9 @@ namespace Proxytrace.Domain.TestRun;
 /// </summary>
 public static class TestRunStatusExtensions
 {
+    /// <summary>
+    /// Determines whether the terminal.
+    /// </summary>
     public static bool IsTerminal(this TestRunStatus status)
         => status is TestRunStatus.Completed or TestRunStatus.Failed or TestRunStatus.Cancelled;
 }

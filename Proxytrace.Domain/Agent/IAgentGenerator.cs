@@ -1,5 +1,8 @@
 namespace Proxytrace.Domain.Agent;
 
+/// <summary>
+/// Generates agent instances.
+/// </summary>
 public interface IAgentGenerator : IDomainEntityGenerator<IAgent>
 {
     Task<IAgent> CreateAsync(

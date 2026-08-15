@@ -53,6 +53,9 @@ using Proxytrace.Licensing;
 
 namespace Proxytrace.Application;
 
+/// <summary>
+/// Autofac module that registers  services.
+/// </summary>
 public sealed class Module : Autofac.Module
 {
     protected override void Load(ContainerBuilder builder)

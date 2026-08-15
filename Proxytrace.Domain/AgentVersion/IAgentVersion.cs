@@ -37,6 +37,9 @@ public interface IAgentVersion : IDomainEntity<IAgentVersion>
     /// </summary>
     Task<IAgentVersion> MoveToAgentAsync(IAgent targetAgent, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Factory delegate for creating a new new instance.
+    /// </summary>
     public delegate IAgentVersion CreateNew(
         Guid projectId,
         Guid agentId,
@@ -44,6 +47,9 @@ public interface IAgentVersion : IDomainEntity<IAgentVersion>
         IPromptTemplate systemPrompt,
         IReadOnlyList<ToolSpecification> tools);
 
+    /// <summary>
+    /// Factory delegate for creating a new existing instance.
+    /// </summary>
     public delegate IAgentVersion CreateExisting(
         Guid projectId,
         Guid agentId,

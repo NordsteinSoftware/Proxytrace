@@ -9,6 +9,9 @@ internal abstract class AbstractStatsProjector<TDomainEntity, TStats> : IStatsPr
     private readonly IStatsWriter<TStats> writer;
     private readonly IRepository<TDomainEntity> repository;
 
+    /// <summary>
+    /// Gets the entity type.
+    /// </summary>
     public Type EntityType => typeof(TDomainEntity);
 
     protected AbstractStatsProjector(
@@ -19,6 +22,9 @@ internal abstract class AbstractStatsProjector<TDomainEntity, TStats> : IStatsPr
         this.repository = repository;
     }
 
+    /// <summary>
+    /// Project asynchronously.
+    /// </summary>
     public async Task ProjectAsync(Guid entityId, CancellationToken cancellationToken)
     {
         TDomainEntity? entity = await repository.FindAsync(entityId, cancellationToken);

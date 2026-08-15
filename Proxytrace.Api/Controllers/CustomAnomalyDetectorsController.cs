@@ -42,6 +42,9 @@ public class CustomAnomalyDetectorsController : ControllerBase
     private readonly IProjectAccessGuard accessGuard;
     private readonly ILogger<Audit> audit;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CustomAnomalyDetectorsController"/> class.
+    /// </summary>
     public CustomAnomalyDetectorsController(
         ICustomAnomalyDetectorRepository detectorRepository,
         IProjectRepository projectRepository,
@@ -68,6 +71,9 @@ public class CustomAnomalyDetectorsController : ControllerBase
         this.audit = audit;
     }
 
+    /// <summary>
+    /// Gets the all.
+    /// </summary>
     [HttpGet]
     public async Task<IReadOnlyList<CustomAnomalyDetectorDto>> GetAll(
         [FromQuery] Guid projectId,
@@ -81,6 +87,9 @@ public class CustomAnomalyDetectorsController : ControllerBase
         return detectors.Select(ToDto).ToArray();
     }
 
+    /// <summary>
+    /// Gets.
+    /// </summary>
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<CustomAnomalyDetectorDto>> Get(Guid id, CancellationToken cancellationToken)
     {
@@ -92,6 +101,9 @@ public class CustomAnomalyDetectorsController : ControllerBase
         return ToDto(detector);
     }
 
+    /// <summary>
+    /// Creates.
+    /// </summary>
     [HttpPost]
     public async Task<ActionResult<CustomAnomalyDetectorDto>> Create(
         [FromBody] CreateCustomAnomalyDetectorRequest request,
@@ -148,6 +160,9 @@ public class CustomAnomalyDetectorsController : ControllerBase
         return result;
     }
 
+    /// <summary>
+    /// Updates.
+    /// </summary>
     [HttpPut("{id:guid}")]
     public async Task<ActionResult<CustomAnomalyDetectorDto>> Update(
         Guid id,
@@ -200,6 +215,9 @@ public class CustomAnomalyDetectorsController : ControllerBase
         return result;
     }
 
+    /// <summary>
+    /// Deletes.
+    /// </summary>
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
     {

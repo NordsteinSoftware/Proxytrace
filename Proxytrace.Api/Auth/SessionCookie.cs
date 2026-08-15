@@ -43,15 +43,24 @@ public interface ISessionCookie
 /// </summary>
 internal sealed class SessionCookie : ISessionCookie
 {
+    /// <summary>
+    /// The name constant value.
+    /// </summary>
     public const string Name = "proxytrace_session";
 
     private readonly SessionCookieOptions options;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SessionCookie"/> class.
+    /// </summary>
     public SessionCookie(SessionCookieOptions options)
     {
         this.options = options;
     }
 
+    /// <summary>
+    /// Appends.
+    /// </summary>
     public void Append(HttpResponse response, string token, DateTimeOffset expiresAt) =>
         response.Cookies.Append(Name, token, new CookieOptions
         {
@@ -62,6 +71,9 @@ internal sealed class SessionCookie : ISessionCookie
             Expires = expiresAt,
         });
 
+    /// <summary>
+    /// Deletes.
+    /// </summary>
     public void Delete(HttpResponse response) =>
         response.Cookies.Delete(Name, new CookieOptions
         {

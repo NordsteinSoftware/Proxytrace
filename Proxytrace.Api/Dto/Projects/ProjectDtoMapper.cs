@@ -9,6 +9,9 @@ namespace Proxytrace.Api.Dto.Projects;
 /// </summary>
 internal static class ProjectDtoMapper
 {
+    /// <summary>
+    /// To dto.
+    /// </summary>
     public static ProjectDto ToDto(IProject p) =>
         new(p.Id,
             p.Name,
@@ -26,6 +29,9 @@ internal static class ProjectDtoMapper
             p.CreatedAt,
             p.UpdatedAt);
 
+    /// <summary>
+    /// To member dto.
+    /// </summary>
     public static ProjectMemberDto ToMemberDto(IUser user) =>
         new(user.Id, user.Email);
 }

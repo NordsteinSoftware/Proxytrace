@@ -76,6 +76,9 @@ public interface IAgentCall : IDomainEntity<IAgentCall>, ISearchable
 
     SearchKind ISearchable.SearchKind => SearchKind.AgentCall;
 
+    /// <summary>
+    /// Factory delegate for creating a new new instance.
+    /// </summary>
     public delegate IAgentCall CreateNew(
         IAgent agent,
         IAgentVersion version,
@@ -91,6 +94,9 @@ public interface IAgentCall : IDomainEntity<IAgentCall>, ISearchable
         OutlierFlags outlierFlags = OutlierFlags.None,
         Guid? apiKeyId = null);
 
+    /// <summary>
+    /// Factory delegate for creating a new existing instance.
+    /// </summary>
     public delegate IAgentCall CreateExisting(
         IAgent agent,
         IAgentVersion version,

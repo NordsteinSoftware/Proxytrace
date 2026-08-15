@@ -10,12 +10,30 @@ namespace Proxytrace.Domain.TestSuite.Internal;
 
 internal record TestSuite : DomainEntity<ITestSuite>, ITestSuite
 {
+    /// <summary>
+    /// Gets the name.
+    /// </summary>
     public string Name { get; }
+    /// <summary>
+    /// Gets the agent.
+    /// </summary>
     public IAgent Agent { get; }
+    /// <summary>
+    /// Gets the evaluators.
+    /// </summary>
     public IReadOnlyCollection<IEvaluator> Evaluators { get; }
+    /// <summary>
+    /// Gets the test cases.
+    /// </summary>
     public IReadOnlyCollection<ITestCase> TestCases { get; }
+    /// <summary>
+    /// Gets the project.
+    /// </summary>
     public IProject Project => Agent.Project;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TestSuite"/> class.
+    /// </summary>
     public TestSuite(
         string name,
         IAgent agent,
@@ -29,6 +47,9 @@ internal record TestSuite : DomainEntity<ITestSuite>, ITestSuite
         TestCases = testCases.ToArray();
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TestSuite"/> class.
+    /// </summary>
     public TestSuite(
         string name,
         IAgent agent,
@@ -43,6 +64,9 @@ internal record TestSuite : DomainEntity<ITestSuite>, ITestSuite
         TestCases = testCases.ToArray();
     }
 
+    /// <summary>
+    /// Validates.
+    /// </summary>
     public override IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
         foreach (var result in base.Validate(validationContext))

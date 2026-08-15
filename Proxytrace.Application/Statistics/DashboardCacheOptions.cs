@@ -16,5 +16,8 @@ public sealed record DashboardCacheOptions
     /// </summary>
     public double TtlSeconds { get; init; } = 10d;
 
+    /// <summary>
+    /// Gets the ttl.
+    /// </summary>
     public TimeSpan Ttl => TimeSpan.FromSeconds(TtlSeconds);
 }

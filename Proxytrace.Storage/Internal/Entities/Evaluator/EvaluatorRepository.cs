@@ -10,6 +10,9 @@ namespace Proxytrace.Storage.Internal.Entities.Evaluator;
 [UsedImplicitly]
 internal class EvaluatorRepository : ArchivableRepository<IEvaluator, EvaluatorEntity>, IEvaluatorRepository
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="EvaluatorRepository"/> class.
+    /// </summary>
     public EvaluatorRepository(
         IMapper<IEvaluator, EvaluatorEntity> mapper,
         Func<StorageDbContext> contextFactory,
@@ -19,6 +22,9 @@ internal class EvaluatorRepository : ArchivableRepository<IEvaluator, EvaluatorE
     {
     }
 
+    /// <summary>
+    /// Gets the by project asynchronously.
+    /// </summary>
     public async Task<IReadOnlyList<IEvaluator>> GetByProjectAsync(Guid projectId, CancellationToken cancellationToken = default)
     {
         var stored = await contextFactory()
@@ -31,6 +37,9 @@ internal class EvaluatorRepository : ArchivableRepository<IEvaluator, EvaluatorE
         return await Map(stored, cancellationToken);
     }
 
+    /// <summary>
+    /// Gets the project id asynchronously.
+    /// </summary>
     public async Task<Guid?> GetProjectIdAsync(Guid evaluatorId, CancellationToken cancellationToken = default)
         => await contextFactory()
             .Set<EvaluatorEntity>()

@@ -15,12 +15,18 @@ internal sealed class OutlierDetector : IOutlierDetector
     private readonly IOutlierSettingsStore settingsStore;
     private readonly IOutlierBaselineReader baselineReader;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="OutlierDetector"/> class.
+    /// </summary>
     public OutlierDetector(IOutlierSettingsStore settingsStore, IOutlierBaselineReader baselineReader)
     {
         this.settingsStore = settingsStore;
         this.baselineReader = baselineReader;
     }
 
+    /// <summary>
+    /// Evaluates asynchronously.
+    /// </summary>
     public async Task<OutlierFlags> EvaluateAsync(
         Guid agentId, OutlierMetrics metrics, CancellationToken cancellationToken = default)
     {

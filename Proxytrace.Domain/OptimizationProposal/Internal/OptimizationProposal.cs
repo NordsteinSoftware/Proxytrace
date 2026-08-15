@@ -15,19 +15,61 @@ namespace Proxytrace.Domain.OptimizationProposal.Internal;
 /// </summary>
 internal abstract record OptimizationProposal : DomainEntity<IOptimizationProposal>, IOptimizationProposal
 {
+    /// <summary>
+    /// Gets or sets the agent.
+    /// </summary>
     public IAgent Agent { get; private init; }
+    /// <summary>
+    /// Gets the kind.
+    /// </summary>
     public abstract ProposalKind Kind { get; }
+    /// <summary>
+    /// Gets or sets the status.
+    /// </summary>
     public ProposalStatus Status { get; private init; }
+    /// <summary>
+    /// Gets or sets the priority.
+    /// </summary>
     public Priority Priority { get; private init; }
+    /// <summary>
+    /// Gets or sets the rationale.
+    /// </summary>
     public string Rationale { get; private init; }
+    /// <summary>
+    /// Gets or sets the ab test run.
+    /// </summary>
     public ITestRun ABTestRun { get; private init; }
+    /// <summary>
+    /// Gets or sets the current pass rate.
+    /// </summary>
     public double? CurrentPassRate { get; private init; }
+    /// <summary>
+    /// Gets or sets the proposed pass rate.
+    /// </summary>
     public double? ProposedPassRate { get; private init; }
+    /// <summary>
+    /// Gets or sets the evidence test run ids.
+    /// </summary>
     public IReadOnlyCollection<Guid> EvidenceTestRunIds { get; private init; }
+    /// <summary>
+    /// Gets or sets the content hash.
+    /// </summary>
     public string ContentHash { get; private init; }
+    /// <summary>
+    /// Gets or sets the adopted at.
+    /// </summary>
     public DateTimeOffset? AdoptedAt { get; private init; }
+    /// <summary>
+    /// Gets or sets the adopted agent version id.
+    /// </summary>
     public Guid? AdoptedAgentVersionId { get; private init; }
+    /// <summary>
+    /// Gets or sets the adopted agent version number.
+    /// </summary>
     public int? AdoptedAgentVersionNumber { get; private init; }
+    /// <summary>
+    /// Gets or sets the adopted manually.
+    /// </summary>
     public bool? AdoptedManually { get; private init; }
 
     protected OptimizationProposal(
@@ -84,6 +126,9 @@ internal abstract record OptimizationProposal : DomainEntity<IOptimizationPropos
         AdoptedManually = adoptedManually;
     }
 
+    /// <summary>
+    /// Accepts.
+    /// </summary>
     public Task<IOptimizationProposal> Accept(CancellationToken cancellationToken = default)
     {
         if (Status != ProposalStatus.Draft)
@@ -92,6 +137,9 @@ internal abstract record OptimizationProposal : DomainEntity<IOptimizationPropos
         return ApplyAsync(this with { Status = ProposalStatus.Accepted }, cancellationToken);
     }
 
+    /// <summary>
+    /// Rejects.
+    /// </summary>
     public Task<IOptimizationProposal> Reject(CancellationToken cancellationToken = default)
     {
         if (Status != ProposalStatus.Draft)
@@ -100,6 +148,9 @@ internal abstract record OptimizationProposal : DomainEntity<IOptimizationPropos
         return ApplyAsync(this with { Status = ProposalStatus.Rejected }, cancellationToken);
     }
 
+    /// <summary>
+    /// Mark adopted.
+    /// </summary>
     public Task<IOptimizationProposal> MarkAdopted(
         IAgentVersion? adoptedVersion,
         bool manual,
@@ -120,6 +171,9 @@ internal abstract record OptimizationProposal : DomainEntity<IOptimizationPropos
             cancellationToken);
     }
 
+    /// <summary>
+    /// Validates.
+    /// </summary>
     public override IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
         foreach (var result in base.Validate(validationContext))

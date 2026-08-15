@@ -11,6 +11,9 @@ namespace Proxytrace.Licensing.Internal;
 /// </summary>
 internal static class LicenseSnapshotMapper
 {
+    /// <summary>
+    /// To product.
+    /// </summary>
     public static LicenseSnapshot ToProduct(Core.LicenseSnapshot snapshot)
     {
         var tier = Enum.TryParse<LicenseTier>(snapshot.Tier, ignoreCase: true, out var parsedTier)
@@ -45,6 +48,9 @@ internal static class LicenseSnapshotMapper
             snapshot.Offline);
     }
 
+    /// <summary>
+    /// To core.
+    /// </summary>
     public static Core.LicenseSnapshot ToCore(LicenseSnapshot snapshot)
         => new(
             snapshot.Tier.ToString(),
@@ -59,6 +65,9 @@ internal static class LicenseSnapshotMapper
             snapshot.InvalidReason,
             snapshot.Offline);
 
+    /// <summary>
+    /// To product.
+    /// </summary>
     public static LicenseStatus ToProduct(Core.LicenseStatus status) => status switch
     {
         Core.LicenseStatus.Free => LicenseStatus.Free,
@@ -69,6 +78,9 @@ internal static class LicenseSnapshotMapper
         _ => LicenseStatus.Free,
     };
 
+    /// <summary>
+    /// To core.
+    /// </summary>
     public static Core.LicenseStatus ToCore(LicenseStatus status) => status switch
     {
         LicenseStatus.Free => Core.LicenseStatus.Free,
@@ -79,6 +91,9 @@ internal static class LicenseSnapshotMapper
         _ => Core.LicenseStatus.Free,
     };
 
+    /// <summary>
+    /// To product.
+    /// </summary>
     public static LicenseSource ToProduct(Core.LicenseSource source) => source switch
     {
         Core.LicenseSource.None => LicenseSource.None,
@@ -88,6 +103,9 @@ internal static class LicenseSnapshotMapper
         _ => LicenseSource.None,
     };
 
+    /// <summary>
+    /// To core.
+    /// </summary>
     public static Core.LicenseSource ToCore(LicenseSource source) => source switch
     {
         LicenseSource.None => Core.LicenseSource.None,
@@ -104,6 +122,9 @@ internal static class LicenseSnapshotMapper
     public static InvalidLicenseException ToProduct(Core.InvalidLicenseException exception)
         => new(ToProduct(exception.Reason), exception.Message, exception);
 
+    /// <summary>
+    /// To product.
+    /// </summary>
     public static InvalidLicenseReason ToProduct(Core.InvalidLicenseReason reason) => reason switch
     {
         Core.InvalidLicenseReason.Malformed => InvalidLicenseReason.Malformed,

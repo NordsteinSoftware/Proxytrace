@@ -31,6 +31,9 @@ internal sealed class ProjectAccessGuard : IProjectAccessGuard
     private readonly IProjectRepository projects;
     private readonly IHttpContextAccessor httpContextAccessor;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ProjectAccessGuard"/> class.
+    /// </summary>
     public ProjectAccessGuard(
         ICurrentUserAccessor currentUser,
         IProjectRepository projects,
@@ -41,6 +44,9 @@ internal sealed class ProjectAccessGuard : IProjectAccessGuard
         this.httpContextAccessor = httpContextAccessor;
     }
 
+    /// <summary>
+    /// Determines whether the access project asynchronously.
+    /// </summary>
     public async Task<bool> CanAccessProjectAsync(Guid projectId, CancellationToken cancellationToken = default)
     {
         // A REST API key is confined to the project it was minted for, on top of whatever its owner
@@ -59,6 +65,9 @@ internal sealed class ProjectAccessGuard : IProjectAccessGuard
         return memberships.Any(p => p.Id == projectId);
     }
 
+    /// <summary>
+    /// Gets the accessible project ids asynchronously.
+    /// </summary>
     public async Task<IReadOnlyCollection<Guid>?> GetAccessibleProjectIdsAsync(CancellationToken cancellationToken = default)
     {
         var user = await currentUser.GetCurrentUserAsync(cancellationToken);

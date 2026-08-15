@@ -18,11 +18,17 @@ public class ApplicationErrorsController : ControllerBase
 {
     private readonly IApplicationErrorRepository repository;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ApplicationErrorsController"/> class.
+    /// </summary>
     public ApplicationErrorsController(IApplicationErrorRepository repository)
     {
         this.repository = repository;
     }
 
+    /// <summary>
+    /// Gets the all.
+    /// </summary>
     [HttpGet]
     public async Task<PagedResult<ApplicationErrorDto>> GetAll(
         [FromQuery] int page = 1,
@@ -37,6 +43,9 @@ public class ApplicationErrorsController : ControllerBase
         return paged.Map(ToDto);
     }
 
+    /// <summary>
+    /// Gets.
+    /// </summary>
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<ApplicationErrorDto>> Get(Guid id, CancellationToken cancellationToken)
     {

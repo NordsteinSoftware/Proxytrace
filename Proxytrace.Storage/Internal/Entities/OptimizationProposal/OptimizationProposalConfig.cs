@@ -26,6 +26,9 @@ internal class OptimizationProposalConfig :
     private readonly IRepository<IModelEndpoint> endpoints;
     private readonly IRepository<ITestRun> testRuns;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="OptimizationProposalConfig"/> class.
+    /// </summary>
     public OptimizationProposalConfig(
         IModelSwitchProposal.CreateExisting createModelSwitch,
         ISystemPromptProposal.CreateExisting createSystemPrompt,
@@ -44,6 +47,9 @@ internal class OptimizationProposalConfig :
         this.testRuns = testRuns;
     }
 
+    /// <summary>
+    /// Configures the application request pipeline.
+    /// </summary>
     public override void Configure(EntityTypeBuilder<OptimizationProposalEntity> builder)
     {
         builder
@@ -77,6 +83,9 @@ internal class OptimizationProposalConfig :
         builder.HasIndex(e => new { e.Agent, e.ContentHash });
     }
 
+    /// <summary>
+    /// Maps.
+    /// </summary>
     public async Task<IOptimizationProposal> Map(OptimizationProposalEntity stored, CancellationToken cancellationToken = default)
     {
         var agent = await agents.GetAsync(stored.Agent, cancellationToken);
@@ -175,6 +184,9 @@ internal class OptimizationProposalConfig :
             existing: stored);
     }
 
+    /// <summary>
+    /// Maps.
+    /// </summary>
     public Task<OptimizationProposalEntity> Map(IOptimizationProposal domain, CancellationToken cancellationToken = default)
     {
         string data = domain switch

@@ -53,6 +53,9 @@ public interface ICostLimit : IDomainEntity<ICostLimit>
     /// <summary>Whether the guard evaluates this limit and the proxy enforces its hard threshold.</summary>
     bool Enabled { get; }
 
+    /// <summary>
+    /// Factory delegate for creating a new new instance.
+    /// </summary>
     public delegate ICostLimit CreateNew(
         IProject project,
         IAgent? agent,
@@ -61,6 +64,9 @@ public interface ICostLimit : IDomainEntity<ICostLimit>
         decimal? hardLimitEur,
         bool enabled);
 
+    /// <summary>
+    /// Factory delegate for creating a new existing instance.
+    /// </summary>
     public delegate ICostLimit CreateExisting(
         IProject project,
         IAgent? agent,

@@ -19,9 +19,15 @@ internal class TestResultBroadcaster : ITestResultBroadcaster, IDisposable
     private readonly ConcurrentDictionary<Guid, ConcurrentDictionary<Guid, ChannelWriter<TestRunEvent>>>
         groupSubscribers = new();
 
+    /// <summary>
+    /// Subscribes.
+    /// </summary>
     public ChannelReader<TestRunEvent> Subscribe(Guid runId, CancellationToken cancellationToken)
         => Add(runSubscribers, runId, cancellationToken);
 
+    /// <summary>
+    /// Subscribes the to group.
+    /// </summary>
     public ChannelReader<TestRunEvent> SubscribeToGroup(Guid groupId, CancellationToken cancellationToken)
         => Add(groupSubscribers, groupId, cancellationToken);
 
@@ -75,12 +81,18 @@ internal class TestResultBroadcaster : ITestResultBroadcaster, IDisposable
         return total;
     }
 
+    /// <summary>
+    /// Publishes.
+    /// </summary>
     public void Publish(TestRunEvent evt)
     {
         ForwardToRunSubscribers(evt);
         ForwardToGroupSubscribers(evt);
     }
 
+    /// <summary>
+    /// Publishes the complete.
+    /// </summary>
     public void PublishComplete(RunCompleteEvent evt)
     {
         if (runSubscribers.TryRemove(evt.RunId, out var bucket))
@@ -97,6 +109,9 @@ internal class TestResultBroadcaster : ITestResultBroadcaster, IDisposable
         ForwardToGroupSubscribers(evt);
     }
 
+    /// <summary>
+    /// Publishes the group complete.
+    /// </summary>
     public void PublishGroupComplete(GroupRunCompleteEvent evt)
     {
         if (!groupSubscribers.TryRemove(evt.GroupId, out var bucket))
@@ -108,6 +123,9 @@ internal class TestResultBroadcaster : ITestResultBroadcaster, IDisposable
         }
     }
 
+    /// <summary>
+    /// Releases all resources used by the current instance.
+    /// </summary>
     public void Dispose()
     {
         foreach (var bucket in runSubscribers.Values)

@@ -5,6 +5,9 @@ using Nordstein.Core.Common.Hosting;
 
 namespace Proxytrace.Api.Controllers;
 
+/// <summary>
+/// API controller for config operations.
+/// </summary>
 [ApiController]
 [Route("api/config")]
 public class ConfigController : ControllerBase
@@ -14,6 +17,9 @@ public class ConfigController : ControllerBase
     private readonly IAppVersion appVersion;
     private readonly IngestionProxyOptions ingestionProxy;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ConfigController"/> class.
+    /// </summary>
     public ConfigController(
         KioskOptions kioskOptions,
         KioskEndpointOptions kioskEndpoint,
@@ -26,6 +32,9 @@ public class ConfigController : ControllerBase
         this.ingestionProxy = ingestionProxy;
     }
 
+    /// <summary>
+    /// Gets.
+    /// </summary>
     [HttpGet]
     [AllowAnonymous]
     public object Get() => new

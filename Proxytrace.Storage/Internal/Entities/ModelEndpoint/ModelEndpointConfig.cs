@@ -16,6 +16,9 @@ internal class ModelEndpointConfig : AbstractEntityConfiguration<ModelEndpointEn
     private readonly IRepository<IModel> models;
     private readonly IRepository<IModelProvider> providers;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ModelEndpointConfig"/> class.
+    /// </summary>
     public ModelEndpointConfig(
         IModelEndpoint.CreateExisting factory,
         IRepository<IModel> models,
@@ -26,6 +29,9 @@ internal class ModelEndpointConfig : AbstractEntityConfiguration<ModelEndpointEn
         this.providers = providers;
     }
 
+    /// <summary>
+    /// Configures the application request pipeline.
+    /// </summary>
     public override void Configure(EntityTypeBuilder<ModelEndpointEntity> builder)
     {
         builder.Property(e => e.InputTokenCost).HasPrecision(18, 6).IsRequired(false);
@@ -54,6 +60,9 @@ internal class ModelEndpointConfig : AbstractEntityConfiguration<ModelEndpointEn
         builder.HasIndex(e => new { e.Provider, e.IsArchived });
     }
 
+    /// <summary>
+    /// Maps.
+    /// </summary>
     public async Task<IModelEndpoint> Map(ModelEndpointEntity stored, CancellationToken cancellationToken = default)
     {
         var model = await models.GetAsync(stored.Model, cancellationToken);
@@ -61,6 +70,9 @@ internal class ModelEndpointConfig : AbstractEntityConfiguration<ModelEndpointEn
         return factory(model, provider, stored.InputTokenCost, stored.OutputTokenCost, stored.CachedInputTokenCost, stored);
     }
 
+    /// <summary>
+    /// Maps.
+    /// </summary>
     public Task<ModelEndpointEntity> Map(IModelEndpoint domain, CancellationToken cancellationToken = default)
         => new ModelEndpointEntity
         {

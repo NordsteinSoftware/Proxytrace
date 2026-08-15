@@ -28,6 +28,9 @@ internal sealed class StatsTools
     private readonly IAgentStatistics agentStatistics;
     private readonly IAgentRepository agents;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="StatsTools"/> class.
+    /// </summary>
     public StatsTools(
         IMcpProjectAccessor project,
         IDashboardStatistics dashboard,
@@ -43,6 +46,9 @@ internal sealed class StatsTools
     [McpServerTool(Name = "get_dashboard")]
     [Description("Get project-wide usage statistics: total calls, token usage, average latency, overall " +
                  "pass rate, and a per-model breakdown. Optionally bound the window with from/to (ISO-8601).")]
+    /// <summary>
+    /// Gets the dashboard.
+    /// </summary>
     public async Task<McpDashboardDto> GetDashboard(
         [Description("Optional start of the window (ISO-8601). Omit for all-time.")] DateTimeOffset? from = null,
         [Description("Optional end of the window (ISO-8601). Omit for all-time.")] DateTimeOffset? to = null,
@@ -72,6 +78,9 @@ internal sealed class StatsTools
     [Description("Get an agent's overview over a window (default last 30 days): token/cost/latency summary, " +
                  "daily time series, pass-rate trend, per-suite pass rates and entity counts. Use it to motivate " +
                  "an optimization (e.g. a model switch). The agent must belong to the current project.")]
+    /// <summary>
+    /// Gets the agent overview.
+    /// </summary>
     public async Task<AgentOverviewDto> GetAgentOverview(
         [Description("The agent id (GUID), from list_agents.")] Guid agentId,
         [Description("Optional window start (ISO-8601). Defaults to 30 days before the end.")] DateTimeOffset? from = null,

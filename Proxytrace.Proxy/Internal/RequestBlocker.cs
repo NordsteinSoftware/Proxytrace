@@ -16,11 +16,17 @@ internal sealed class RequestBlocker : IRequestBlocker
 {
     private readonly IBlockingRuleProvider ruleProvider;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="RequestBlocker"/> class.
+    /// </summary>
     public RequestBlocker(IBlockingRuleProvider ruleProvider)
     {
         this.ruleProvider = ruleProvider;
     }
 
+    /// <summary>
+    /// Evaluates asynchronously.
+    /// </summary>
     public async Task<BlockedRequestMatch?> EvaluateAsync(
         Guid projectId,
         string? agentName,

@@ -12,6 +12,9 @@ internal class ApplicationErrorRepository
     : AbstractRepository<IApplicationError, ApplicationErrorEntity>,
       IApplicationErrorRepository
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ApplicationErrorRepository"/> class.
+    /// </summary>
     public ApplicationErrorRepository(
         IMapper<IApplicationError, ApplicationErrorEntity> mapper,
         Func<StorageDbContext> contextFactory,
@@ -21,6 +24,9 @@ internal class ApplicationErrorRepository
     {
     }
 
+    /// <summary>
+    /// Gets the paged newest first asynchronously.
+    /// </summary>
     public async Task<PagedResult<IApplicationError>> GetPagedNewestFirstAsync(
         int page,
         int pageSize,
@@ -72,6 +78,9 @@ internal class ApplicationErrorRepository
         return new PagedResult<IApplicationError>(items, total, page, pageSize);
     }
 
+    /// <summary>
+    /// Removes the older than asynchronously.
+    /// </summary>
     public async Task<int> RemoveOlderThanAsync(DateTimeOffset cutoffDate, CancellationToken cancellationToken = default)
     {
         var context = contextFactory();
@@ -85,6 +94,9 @@ internal class ApplicationErrorRepository
         return await context.SaveChangesAsync(cancellationToken);
     }
 
+    /// <summary>
+    /// Trims the to newest asynchronously.
+    /// </summary>
     public async Task<int> TrimToNewestAsync(int max, CancellationToken cancellationToken = default)
     {
         var context = contextFactory();

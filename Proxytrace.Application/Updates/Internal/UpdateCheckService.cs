@@ -27,6 +27,9 @@ internal sealed class UpdateCheckService : BackgroundService, IUpdateService
 
     private volatile UpdateStatus current;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="UpdateCheckService"/> class.
+    /// </summary>
     public UpdateCheckService(
         UpdatesConfiguration configuration,
         IHttpClientFactory httpClientFactory,
@@ -50,6 +53,9 @@ internal sealed class UpdateCheckService : BackgroundService, IUpdateService
             CheckedAt: null);
     }
 
+    /// <summary>
+    /// Gets the current.
+    /// </summary>
     public UpdateStatus Current => current;
 
     protected override async Task ExecuteAsync(CancellationToken cancellationToken)

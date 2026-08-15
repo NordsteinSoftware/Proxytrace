@@ -16,6 +16,9 @@ internal sealed class LuceneDirectoryFactory : ILuceneDirectoryFactory
     private readonly IHostEnvironment? environment;
     private readonly ILogger<LuceneDirectoryFactory>? logger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="LuceneDirectoryFactory"/> class.
+    /// </summary>
     public LuceneDirectoryFactory(
         SearchConfiguration configuration,
         IHostEnvironment? environment = null,
@@ -26,6 +29,9 @@ internal sealed class LuceneDirectoryFactory : ILuceneDirectoryFactory
         this.logger = logger;
     }
 
+    /// <summary>
+    /// Opens.
+    /// </summary>
     public Directory Open()
     {
         // No host environment registered (e.g. unit-test container) → in-memory index.

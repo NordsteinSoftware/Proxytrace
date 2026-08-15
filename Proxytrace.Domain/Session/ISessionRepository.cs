@@ -6,6 +6,9 @@ namespace Proxytrace.Domain.Session;
 /// </summary>
 public readonly record struct SessionTraceRemoval(Guid SessionId, int TraceCount, long TotalTokens);
 
+/// <summary>
+/// Repository for persisting and querying session entities.
+/// </summary>
 public interface ISessionRepository : IRepository<ISession>
 {
     /// <summary>

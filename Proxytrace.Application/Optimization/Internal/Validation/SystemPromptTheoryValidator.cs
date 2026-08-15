@@ -20,6 +20,9 @@ internal sealed class SystemPromptTheoryValidator : AbTestTheoryValidator<ISyste
     private readonly IPromptTemplate.Create promptTemplateFactory;
     private readonly IAgent.CreateNew agentFactory;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SystemPromptTheoryValidator"/> class.
+    /// </summary>
     public SystemPromptTheoryValidator(
         ISystemPromptProposal.CreateNew proposalFactory,
         IPromptTemplate.Create promptTemplateFactory,

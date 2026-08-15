@@ -33,6 +33,9 @@ internal class AgentCallStatsQueries : IAgentCallStatsReader
     private readonly IMapper<IModelEndpoint, ModelEndpointEntity> endpointMapper;
     private readonly ILogger<AgentCallStatsQueries> logger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AgentCallStatsQueries"/> class.
+    /// </summary>
     public AgentCallStatsQueries(
         Func<StorageDbContext> contextFactory,
         IMapper<IModelEndpoint, ModelEndpointEntity> endpointMapper,
@@ -43,6 +46,9 @@ internal class AgentCallStatsQueries : IAgentCallStatsReader
         this.logger = logger;
     }
 
+    /// <summary>
+    /// Gets the summary asynchronously.
+    /// </summary>
     public async Task<StatisticsSummary> GetSummaryAsync(StatisticsFilter filter, CancellationToken cancellationToken = default)
     {
         StorageDbContext context = contextFactory();
@@ -73,6 +79,9 @@ internal class AgentCallStatsQueries : IAgentCallStatsReader
             OverallPassRate: null);
     }
 
+    /// <summary>
+    /// Gets the earliest call asynchronously.
+    /// </summary>
     public async Task<DateTimeOffset?> GetEarliestCallAsync(StatisticsFilter filter, CancellationToken cancellationToken = default)
     {
         StorageDbContext context = contextFactory();
@@ -82,6 +91,9 @@ internal class AgentCallStatsQueries : IAgentCallStatsReader
             .FirstOrDefaultAsync(cancellationToken);
     }
 
+    /// <summary>
+    /// Gets the token usage asynchronously.
+    /// </summary>
     public async Task<IReadOnlyList<TokenUsageStat>> GetTokenUsageAsync(StatisticsFilter filter, StatisticsBucket bucket, CancellationToken cancellationToken = default)
     {
         StorageDbContext context = contextFactory();
@@ -119,6 +131,9 @@ internal class AgentCallStatsQueries : IAgentCallStatsReader
             .ToArray();
     }
 
+    /// <summary>
+    /// Gets the latency asynchronously.
+    /// </summary>
     public async Task<IReadOnlyList<LatencyStat>> GetLatencyAsync(StatisticsFilter filter, CancellationToken cancellationToken = default)
     {
         StorageDbContext context = contextFactory();
@@ -273,6 +288,9 @@ internal class AgentCallStatsQueries : IAgentCallStatsReader
         return (where, parameters);
     }
 
+    /// <summary>
+    /// Gets the error rates asynchronously.
+    /// </summary>
     public async Task<IReadOnlyList<ErrorRateStat>> GetErrorRatesAsync(StatisticsFilter filter, CancellationToken cancellationToken = default)
     {
         StorageDbContext context = contextFactory();
@@ -298,6 +316,9 @@ internal class AgentCallStatsQueries : IAgentCallStatsReader
             .ToArray();
     }
 
+    /// <summary>
+    /// Gets the model breakdown asynchronously.
+    /// </summary>
     public async Task<IReadOnlyList<ModelBreakdownStat>> GetModelBreakdownAsync(StatisticsFilter filter, CancellationToken cancellationToken = default)
     {
         StorageDbContext context = contextFactory();
@@ -334,6 +355,9 @@ internal class AgentCallStatsQueries : IAgentCallStatsReader
             .ToArray();
     }
 
+    /// <summary>
+    /// Gets the agent breakdown asynchronously.
+    /// </summary>
     public async Task<IReadOnlyList<AgentBreakdownStat>> GetAgentBreakdownAsync(StatisticsFilter filter, CancellationToken cancellationToken = default)
     {
         StorageDbContext context = contextFactory();
@@ -350,6 +374,9 @@ internal class AgentCallStatsQueries : IAgentCallStatsReader
         return rows.OrderByDescending(r => r.CallCount).ThenBy(r => r.AgentId).ToArray();
     }
 
+    /// <summary>
+    /// Gets the cost estimate asynchronously.
+    /// </summary>
     public async Task<IReadOnlyList<CostEstimateStat>> GetCostEstimateAsync(StatisticsFilter filter, CancellationToken cancellationToken = default)
     {
         StorageDbContext context = contextFactory();
@@ -393,6 +420,9 @@ internal class AgentCallStatsQueries : IAgentCallStatsReader
             .ToArray();
     }
 
+    /// <summary>
+    /// Gets the cost by project and agent asynchronously.
+    /// </summary>
     public async Task<IReadOnlyList<ProjectAgentCostStat>> GetCostByProjectAndAgentAsync(
         StatisticsFilter filter,
         CancellationToken cancellationToken = default)
@@ -436,6 +466,9 @@ internal class AgentCallStatsQueries : IAgentCallStatsReader
             .ToArray();
     }
 
+    /// <summary>
+    /// Gets the cost series by agent asynchronously.
+    /// </summary>
     public async Task<IReadOnlyList<AgentCostPoint>> GetCostSeriesByAgentAsync(
         StatisticsFilter filter,
         StatisticsBucket bucket,
@@ -483,6 +516,9 @@ internal class AgentCallStatsQueries : IAgentCallStatsReader
             .ToArray();
     }
 
+    /// <summary>
+    /// Gets the cost by api key asynchronously.
+    /// </summary>
     public async Task<IReadOnlyList<ProjectApiKeyCostStat>> GetCostByApiKeyAsync(
         StatisticsFilter filter,
         CancellationToken cancellationToken = default)
@@ -527,6 +563,9 @@ internal class AgentCallStatsQueries : IAgentCallStatsReader
             .ToArray();
     }
 
+    /// <summary>
+    /// Gets the cost series by api key asynchronously.
+    /// </summary>
     public async Task<IReadOnlyList<ApiKeyCostPoint>> GetCostSeriesByApiKeyAsync(
         StatisticsFilter filter,
         StatisticsBucket bucket,
@@ -572,6 +611,9 @@ internal class AgentCallStatsQueries : IAgentCallStatsReader
             .ToArray();
     }
 
+    /// <summary>
+    /// Determines whether the unpriced endpoints asynchronously.
+    /// </summary>
     public async Task<bool> HasUnpricedEndpointsAsync(
         StatisticsFilter filter,
         CancellationToken cancellationToken = default)
@@ -607,6 +649,9 @@ internal class AgentCallStatsQueries : IAgentCallStatsReader
                 (ulong)Math.Max(input, 0L), (ulong)Math.Max(output, 0L), (ulong)Math.Max(cached, 0L))) ?? 0m
             : 0m;
 
+    /// <summary>
+    /// Gets the token usage by agent asynchronously.
+    /// </summary>
     public async Task<IReadOnlyList<AgentTokenUsageStat>> GetTokenUsageByAgentAsync(StatisticsFilter filter, StatisticsBucket bucket, CancellationToken cancellationToken = default)
     {
         StorageDbContext context = contextFactory();
@@ -652,6 +697,9 @@ internal class AgentCallStatsQueries : IAgentCallStatsReader
     private const OutlierFlags StaticOutlierBits =
         OutlierFlags.HighTokens | OutlierFlags.HighLatency | OutlierFlags.LowCacheHit | OutlierFlags.ManyToolCalls;
 
+    /// <summary>
+    /// Gets the anomaly counts by agent asynchronously.
+    /// </summary>
     public async Task<IReadOnlyList<AgentAnomalyStat>> GetAnomalyCountsByAgentAsync(StatisticsFilter filter, StatisticsBucket bucket, CancellationToken cancellationToken = default)
     {
         StorageDbContext context = contextFactory();
@@ -693,6 +741,9 @@ internal class AgentCallStatsQueries : IAgentCallStatsReader
             .ToArray();
     }
 
+    /// <summary>
+    /// Gets the live telemetry asynchronously.
+    /// </summary>
     public async Task<LiveTelemetry> GetLiveTelemetryAsync(StatisticsFilter filter, DateTimeOffset since, DateTimeOffset now, CancellationToken cancellationToken = default)
     {
         StorageDbContext context = contextFactory();
@@ -775,6 +826,9 @@ internal class AgentCallStatsQueries : IAgentCallStatsReader
         }
     }
 
+    /// <summary>
+    /// Gets the call trends asynchronously.
+    /// </summary>
     public async Task<CallTrends> GetCallTrendsAsync(StatisticsFilter filter, int buckets, DateTimeOffset from, DateTimeOffset to, CancellationToken cancellationToken = default)
     {
         buckets = Math.Max(buckets, 1);
@@ -824,6 +878,9 @@ internal class AgentCallStatsQueries : IAgentCallStatsReader
         return new CallTrends(traces, latencyMs, throughput);
     }
 
+    /// <summary>
+    /// Gets the pulse asynchronously.
+    /// </summary>
     public async Task<IReadOnlyList<int>> GetPulseAsync(StatisticsFilter filter, DateTimeOffset from, DateTimeOffset to, int buckets, CancellationToken cancellationToken = default)
     {
         buckets = Math.Max(buckets, 1);
@@ -850,6 +907,9 @@ internal class AgentCallStatsQueries : IAgentCallStatsReader
         return counts;
     }
 
+    /// <summary>
+    /// Gets the agent time series asynchronously.
+    /// </summary>
     public async Task<IReadOnlyList<AgentTimeSeriesPoint>> GetAgentTimeSeriesAsync(
         Guid agentId,
         DateTimeOffset from,
@@ -861,6 +921,9 @@ internal class AgentCallStatsQueries : IAgentCallStatsReader
         return series;
     }
 
+    /// <summary>
+    /// Gets the agent window asynchronously.
+    /// </summary>
     public async Task<(IReadOnlyList<AgentTimeSeriesPoint> Series, AgentTimeSummary Summary)> GetAgentWindowAsync(
         Guid agentId,
         DateTimeOffset from,
@@ -937,6 +1000,9 @@ internal class AgentCallStatsQueries : IAgentCallStatsReader
         return (series, summary);
     }
 
+    /// <summary>
+    /// Gets the agent distributions asynchronously.
+    /// </summary>
     public async Task<AgentCallDistributions> GetAgentDistributionsAsync(
         Guid agentId, DateTimeOffset from, DateTimeOffset to, CancellationToken cancellationToken = default)
     {

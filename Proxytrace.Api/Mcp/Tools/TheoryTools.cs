@@ -48,6 +48,9 @@ internal sealed class TheoryTools
     private readonly ILicenseService license;
     private readonly ILogger<Audit> audit;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TheoryTools"/> class.
+    /// </summary>
     public TheoryTools(
         IMcpProjectAccessor project,
         IOptimizationTheoryRepository repository,
@@ -79,6 +82,9 @@ internal sealed class TheoryTools
     [McpServerTool(Name = "list_theories")]
     [Description("List optimization theories in the current project, with each one's status, rationale and " +
                  "A/B validation outcome. Optionally filter by status.")]
+    /// <summary>
+    /// Lists the theories.
+    /// </summary>
     public async Task<IReadOnlyList<TheoryDto>> ListTheories(
         [Description("Optional status filter: Proposed, Validating, Validated or Invalidated.")] TheoryStatus? status = null,
         CancellationToken cancellationToken = default)
@@ -91,6 +97,9 @@ internal sealed class TheoryTools
         return theories.Select(mapper.ToDto).ToArray();
     }
 
+    /// <summary>
+    /// Gets the theory.
+    /// </summary>
     [McpServerTool(Name = "get_theory")]
     [Description("Get a single optimization theory by id. It must belong to the current project.")]
     public async Task<TheoryDto> GetTheory(
@@ -110,6 +119,9 @@ internal sealed class TheoryTools
                  "by a background baseline-vs-candidate A/B run against a suite. On a win it becomes a reviewable " +
                  "proposal; otherwise it's invalidated. Poll get_theory for the outcome. Choose exactly one " +
                  "`kind` and fill its field. Agent and suite must belong to the current project.")]
+    /// <summary>
+    /// Submit theory.
+    /// </summary>
     public async Task<TheoryDto> SubmitTheory(
         [Description("The agent id (GUID) to optimize, from list_agents.")] Guid agentId,
         [Description("The suite id (GUID) to validate against, from list_suites.")] Guid suiteId,

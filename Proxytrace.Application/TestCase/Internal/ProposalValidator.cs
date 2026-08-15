@@ -12,6 +12,9 @@ namespace Proxytrace.Application.TestCase.Internal;
 /// </summary>
 internal static class ProposalValidator
 {
+    /// <summary>
+    /// Validates.
+    /// </summary>
     public static TestCaseProposalSet Validate(
         SynthesisOutput output,
         IReadOnlyList<IAgentCall> conversation)

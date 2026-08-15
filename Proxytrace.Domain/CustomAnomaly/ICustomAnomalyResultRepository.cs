@@ -1,5 +1,8 @@
 namespace Proxytrace.Domain.CustomAnomaly;
 
+/// <summary>
+/// Repository for persisting and querying custom anomaly result entities.
+/// </summary>
 public interface ICustomAnomalyResultRepository : IRepository<ICustomAnomalyResult>
 {
     /// <summary>

@@ -13,6 +13,9 @@ internal class CostLimitBreachRepository
     : AbstractRepository<ICostLimitBreach, CostLimitBreachEntity>,
       ICostLimitBreachRepository
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CostLimitBreachRepository"/> class.
+    /// </summary>
     public CostLimitBreachRepository(
         IMapper<ICostLimitBreach, CostLimitBreachEntity> mapper,
         Func<StorageDbContext> contextFactory,
@@ -22,6 +25,9 @@ internal class CostLimitBreachRepository
     {
     }
 
+    /// <summary>
+    /// Gets the fired thresholds asynchronously.
+    /// </summary>
     public async Task<IReadOnlyList<FiredThreshold>> GetFiredThresholdsAsync(
         DateTimeOffset monthStart,
         Guid? projectId = null,
@@ -53,6 +59,9 @@ internal class CostLimitBreachRepository
         return await query.ToListAsync(cancellationToken);
     }
 
+    /// <summary>
+    /// Deletes the for limit asynchronously.
+    /// </summary>
     public async Task DeleteForLimitAsync(Guid costLimitId, CancellationToken cancellationToken = default)
     {
         var context = contextFactory();
@@ -73,6 +82,9 @@ internal class CostLimitBreachRepository
         Notify(costLimitId, EntityChangeType.Removed);
     }
 
+    /// <summary>
+    /// Gets the active hard blocks asynchronously.
+    /// </summary>
     public async Task<IReadOnlyList<BudgetHardBlock>> GetActiveHardBlocksAsync(
         Guid projectId,
         DateTimeOffset monthStart,

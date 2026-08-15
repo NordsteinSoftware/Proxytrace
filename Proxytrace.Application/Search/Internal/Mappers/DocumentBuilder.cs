@@ -5,6 +5,9 @@ namespace Proxytrace.Application.Search.Internal.Mappers;
 
 internal static class DocumentBuilder
 {
+    /// <summary>
+    /// Builds.
+    /// </summary>
     public static Document Build(
         SearchKind kind,
         Guid entityId,

@@ -38,6 +38,9 @@ public interface IAgent : Nordstein.Core.AI.Agents.IAgent, IDomainEntity<IAgent>
 
     SearchKind ISearchable.SearchKind => SearchKind.Agent;
 
+    /// <summary>
+    /// Factory delegate for creating a new new instance.
+    /// </summary>
     public delegate IAgent CreateNew(
         string name,
         IPromptTemplate systemPrompt,
@@ -47,6 +50,9 @@ public interface IAgent : Nordstein.Core.AI.Agents.IAgent, IDomainEntity<IAgent>
         IModelParameters modelParameters,
         bool isSystemAgent = false);
 
+    /// <summary>
+    /// Factory delegate for creating a new existing instance.
+    /// </summary>
     public delegate IAgent CreateExisting(
         string name,
         IProject project,

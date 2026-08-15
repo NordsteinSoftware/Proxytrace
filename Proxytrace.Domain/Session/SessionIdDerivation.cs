@@ -11,6 +11,9 @@ namespace Proxytrace.Domain.Session;
 /// </summary>
 public static class SessionIdDerivation
 {
+    /// <summary>
+    /// Derive.
+    /// </summary>
     public static Guid Derive(Guid projectId, string externalKey)
     {
         var keyBytes = Encoding.UTF8.GetBytes(externalKey);
@@ -21,6 +24,9 @@ public static class SessionIdDerivation
         return new Guid(hash.AsSpan(0, 16));
     }
 
+    /// <summary>
+    /// Truncates the key.
+    /// </summary>
     public static string TruncateKey(string raw)
         => raw.Length <= ISession.MaxExternalKeyLength ? raw : raw[..ISession.MaxExternalKeyLength];
 }

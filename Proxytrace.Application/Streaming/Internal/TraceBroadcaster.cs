@@ -13,6 +13,9 @@ internal class TraceBroadcaster : ITraceBroadcaster, IDisposable
 
     private readonly ConcurrentDictionary<Guid, ChannelWriter<TraceCreatedEvent>> traceSubscribers = new();
 
+    /// <summary>
+    /// Subscribes.
+    /// </summary>
     public ChannelReader<TraceCreatedEvent> Subscribe(CancellationToken cancellationToken)
     {
         if (!cancellationToken.CanBeCanceled)
@@ -45,6 +48,9 @@ internal class TraceBroadcaster : ITraceBroadcaster, IDisposable
         return channel.Reader;
     }
 
+    /// <summary>
+    /// Publishes.
+    /// </summary>
     public void Publish(TraceCreatedEvent evt)
     {
         foreach (var kvp in traceSubscribers)
@@ -54,6 +60,9 @@ internal class TraceBroadcaster : ITraceBroadcaster, IDisposable
         }
     }
 
+    /// <summary>
+    /// Releases all resources used by the current instance.
+    /// </summary>
     public void Dispose()
     {
         var subscribers = traceSubscribers.Values.ToList();

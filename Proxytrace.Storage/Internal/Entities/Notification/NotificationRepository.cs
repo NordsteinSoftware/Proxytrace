@@ -11,6 +11,9 @@ internal class NotificationRepository :
     AbstractRepository<INotification, NotificationEntity>,
     INotificationRepository
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="NotificationRepository"/> class.
+    /// </summary>
     public NotificationRepository(
         IMapper<INotification, NotificationEntity> mapper,
         Func<StorageDbContext> contextFactory,
@@ -20,6 +23,9 @@ internal class NotificationRepository :
     {
     }
 
+    /// <summary>
+    /// Gets the for scope asynchronously.
+    /// </summary>
     public async Task<IReadOnlyList<INotification>> GetForScopeAsync(
         Guid? projectId,
         bool includeRead,
@@ -41,6 +47,9 @@ internal class NotificationRepository :
         return await Map(stored, cancellationToken);
     }
 
+    /// <summary>
+    /// Counts the unread asynchronously.
+    /// </summary>
     public async Task<int> CountUnreadAsync(
         Guid? projectId,
         CancellationToken cancellationToken = default)
@@ -51,6 +60,9 @@ internal class NotificationRepository :
             .Where(e => e.ProjectId == null || e.ProjectId == projectId)
             .CountAsync(cancellationToken);
 
+    /// <summary>
+    /// Finds the active by target asynchronously.
+    /// </summary>
     public async Task<INotification?> FindActiveByTargetAsync(
         NotificationTargetKind targetKind,
         Guid targetId,

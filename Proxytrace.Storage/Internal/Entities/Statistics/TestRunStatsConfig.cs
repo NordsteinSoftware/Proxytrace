@@ -6,6 +6,9 @@ namespace Proxytrace.Storage.Internal.Entities.Statistics;
 
 internal class TestRunStatsConfig : AbstractEntityConfiguration<TestRunStatsEntity>
 {
+    /// <summary>
+    /// Configures the application request pipeline.
+    /// </summary>
     public override void Configure(EntityTypeBuilder<TestRunStatsEntity> builder)
     {
         builder

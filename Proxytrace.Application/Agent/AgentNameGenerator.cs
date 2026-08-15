@@ -18,6 +18,9 @@ internal sealed class AgentNameGenerator : IAgentNameGenerator
     private readonly IAgentRepository agentRepository;
     private readonly ILogger<AgentNameGenerator> logger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AgentNameGenerator"/> class.
+    /// </summary>
     public AgentNameGenerator(
         IPromptTemplateRepository prompts,
         IAgentRepository agentRepository,
@@ -28,6 +31,9 @@ internal sealed class AgentNameGenerator : IAgentNameGenerator
         this.logger = logger;
     }
 
+    /// <summary>
+    /// Generates the name asynchronously.
+    /// </summary>
     public async Task<string> GenerateNameAsync(
         IPromptTemplate promptTemplate,
         IProject project,

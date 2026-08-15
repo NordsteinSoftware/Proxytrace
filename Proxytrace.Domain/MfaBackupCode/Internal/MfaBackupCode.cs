@@ -7,10 +7,22 @@ namespace Proxytrace.Domain.MfaBackupCode.Internal;
 
 internal record MfaBackupCode : DomainEntity<IMfaBackupCode>, IMfaBackupCode
 {
+    /// <summary>
+    /// Gets the user.
+    /// </summary>
     public IUser User { get; }
+    /// <summary>
+    /// Gets the code hash.
+    /// </summary>
     public string CodeHash { get; }
+    /// <summary>
+    /// Gets or sets the consumed at.
+    /// </summary>
     public DateTimeOffset? ConsumedAt { get; private init; }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="MfaBackupCode"/> class.
+    /// </summary>
     public MfaBackupCode(
         IUser user,
         string codeHash,
@@ -20,6 +32,9 @@ internal record MfaBackupCode : DomainEntity<IMfaBackupCode>, IMfaBackupCode
         CodeHash = codeHash;
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="MfaBackupCode"/> class.
+    /// </summary>
     public MfaBackupCode(
         IUser user,
         string codeHash,
@@ -32,6 +47,9 @@ internal record MfaBackupCode : DomainEntity<IMfaBackupCode>, IMfaBackupCode
         ConsumedAt = consumedAt;
     }
 
+    /// <summary>
+    /// Mark consumed asynchronously.
+    /// </summary>
     public Task<IMfaBackupCode> MarkConsumedAsync(CancellationToken cancellationToken = default)
     {
         if (ConsumedAt is not null)
@@ -41,6 +59,9 @@ internal record MfaBackupCode : DomainEntity<IMfaBackupCode>, IMfaBackupCode
         return ApplyAsync(this with { ConsumedAt = DateTimeOffset.UtcNow }, cancellationToken);
     }
 
+    /// <summary>
+    /// Validates.
+    /// </summary>
     public override IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
         foreach (var result in base.Validate(validationContext))

@@ -16,6 +16,9 @@ internal class AgentVersionRepository : AbstractRepository<IAgentVersion, AgentV
 {
     private readonly IAgentVersionFingerprinter fingerprinter;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AgentVersionRepository"/> class.
+    /// </summary>
     public AgentVersionRepository(
         IMapper<IAgentVersion, AgentVersionEntity> mapper,
         Func<StorageDbContext> contextFactory,
@@ -28,6 +31,9 @@ internal class AgentVersionRepository : AbstractRepository<IAgentVersion, AgentV
         this.fingerprinter = fingerprinter;
     }
 
+    /// <summary>
+    /// Finds the by strict fingerprint asynchronously.
+    /// </summary>
     public async Task<IAgentVersion?> FindByStrictFingerprintAsync(
         IProject project,
         IPromptTemplate systemPrompt,
@@ -42,6 +48,9 @@ internal class AgentVersionRepository : AbstractRepository<IAgentVersion, AgentV
         return existing is null ? null : await mapper.Map(existing, cancellationToken);
     }
 
+    /// <summary>
+    /// Gets the by loose fingerprint asynchronously.
+    /// </summary>
     public async Task<IReadOnlyList<IAgentVersion>> GetByLooseFingerprintAsync(
         IProject project,
         IPromptTemplate systemPrompt,
@@ -57,6 +66,9 @@ internal class AgentVersionRepository : AbstractRepository<IAgentVersion, AgentV
         return await Map(stored, cancellationToken);
     }
 
+    /// <summary>
+    /// Gets the by agent asynchronously.
+    /// </summary>
     public async Task<IReadOnlyList<IAgentVersion>> GetByAgentAsync(
         IAgent agent,
         CancellationToken cancellationToken = default)
@@ -70,6 +82,9 @@ internal class AgentVersionRepository : AbstractRepository<IAgentVersion, AgentV
         return await Map(stored, cancellationToken);
     }
 
+    /// <summary>
+    /// Gets the strict fingerprint.
+    /// </summary>
     public string GetStrictFingerprint(IPromptTemplate systemPrompt, IReadOnlyCollection<ToolSpecification> tools)
         => fingerprinter.Strict(systemPrompt, tools);
 }

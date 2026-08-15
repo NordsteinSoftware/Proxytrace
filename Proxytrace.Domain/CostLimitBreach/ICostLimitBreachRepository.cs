@@ -35,6 +35,9 @@ public sealed record BudgetHardBlock(
 /// </remarks>
 public sealed record FiredThreshold(Guid CostLimitId, CostThreshold Threshold);
 
+/// <summary>
+/// Repository for persisting and querying cost limit breach entities.
+/// </summary>
 public interface ICostLimitBreachRepository : IRepository<ICostLimitBreach>
 {
     /// <summary>

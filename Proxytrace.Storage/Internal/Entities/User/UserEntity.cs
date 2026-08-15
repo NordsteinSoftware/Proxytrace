@@ -7,6 +7,9 @@ namespace Proxytrace.Storage.Internal.Entities.User;
 [Cacheable]
 internal record UserEntity : Entity
 {
+    /// <summary>
+    /// Gets or sets the email.
+    /// </summary>
     public required string Email { get; init; }
 
     /// <summary><see cref="Proxytrace.Domain.User.IUser.ExternalSubject"/>. Null for local-auth users.</summary>
@@ -15,6 +18,9 @@ internal record UserEntity : Entity
     /// <summary><see cref="Proxytrace.Domain.User.IUser.PasswordHash"/>. Null for OIDC users.</summary>
     public string? PasswordHash { get; init; }
 
+    /// <summary>
+    /// Gets or sets the role.
+    /// </summary>
     public required UserRole Role { get; init; }
 
     /// <summary><see cref="Proxytrace.Domain.User.IUser.Language"/>. BCP-47 culture code; defaults to English.</summary>

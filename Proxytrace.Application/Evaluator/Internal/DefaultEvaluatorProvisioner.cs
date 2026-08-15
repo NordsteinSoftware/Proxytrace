@@ -18,6 +18,9 @@ internal sealed class DefaultEvaluatorProvisioner : IDefaultEvaluatorProvisioner
     private readonly IPromptTemplate.Create createPrompt;
     private readonly IModelParameters.Create createParameters;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DefaultEvaluatorProvisioner"/> class.
+    /// </summary>
     public DefaultEvaluatorProvisioner(
         IAgenticEvaluatorPresets presets,
         IAgentRepository agents,
@@ -38,6 +41,9 @@ internal sealed class DefaultEvaluatorProvisioner : IDefaultEvaluatorProvisioner
         this.createParameters = createParameters;
     }
 
+    /// <summary>
+    /// Ensures the default evaluators asynchronously.
+    /// </summary>
     public async Task EnsureDefaultEvaluatorsAsync(IProject project, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(project);

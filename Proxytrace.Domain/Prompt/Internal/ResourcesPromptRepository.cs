@@ -12,6 +12,9 @@ internal class ResourcesPromptRepository : IPromptTemplateRepository
     private readonly IReadOnlyCollection<ResourceManager> resources;
     private readonly IPromptTemplate.Create createTemplate;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ResourcesPromptRepository"/> class.
+    /// </summary>
     public ResourcesPromptRepository(
         IReadOnlyCollection<ResourceManager> resources,
         IPromptTemplate.Create createTemplate)

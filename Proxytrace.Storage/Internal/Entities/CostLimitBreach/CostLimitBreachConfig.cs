@@ -14,6 +14,9 @@ internal class CostLimitBreachConfig
     private readonly IRepository<ICostLimit> costLimits;
     private readonly ICostLimitBreach.CreateExisting factory;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CostLimitBreachConfig"/> class.
+    /// </summary>
     public CostLimitBreachConfig(
         IRepository<ICostLimit> costLimits,
         ICostLimitBreach.CreateExisting factory)
@@ -22,6 +25,9 @@ internal class CostLimitBreachConfig
         this.factory = factory;
     }
 
+    /// <summary>
+    /// Configures the application request pipeline.
+    /// </summary>
     public override void Configure(EntityTypeBuilder<CostLimitBreachEntity> builder)
     {
         builder
@@ -42,6 +48,9 @@ internal class CostLimitBreachConfig
         builder.HasIndex(e => e.MonthStart);
     }
 
+    /// <summary>
+    /// Maps.
+    /// </summary>
     public async Task<ICostLimitBreach> Map(
         CostLimitBreachEntity storedEntity,
         CancellationToken cancellationToken = default)
@@ -52,6 +61,9 @@ internal class CostLimitBreachConfig
             spendEur: storedEntity.SpendEur,
             existing: storedEntity);
 
+    /// <summary>
+    /// Maps.
+    /// </summary>
     public Task<CostLimitBreachEntity> Map(
         ICostLimitBreach domainEntity,
         CancellationToken cancellationToken = default)

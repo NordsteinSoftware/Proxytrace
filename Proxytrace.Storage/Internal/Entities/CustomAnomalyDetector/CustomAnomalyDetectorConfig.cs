@@ -18,6 +18,9 @@ internal class CustomAnomalyDetectorConfig
     private readonly ISerializer serializer;
     private readonly Func<StorageDbContext> contextFactory;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CustomAnomalyDetectorConfig"/> class.
+    /// </summary>
     public CustomAnomalyDetectorConfig(
         IRepository<IAgent> agents,
         ICustomAnomalyDetector.CreateExisting factory,
@@ -30,6 +33,9 @@ internal class CustomAnomalyDetectorConfig
         this.contextFactory = contextFactory;
     }
 
+    /// <summary>
+    /// Configures the application request pipeline.
+    /// </summary>
     public override void Configure(EntityTypeBuilder<CustomAnomalyDetectorEntity> builder)
     {
         // The hidden system agent owns the detector in the delete graph: removing the agent (e.g.
@@ -48,6 +54,9 @@ internal class CustomAnomalyDetectorConfig
         builder.Property(e => e.BlockUpstream).HasDefaultValue(false);
     }
 
+    /// <summary>
+    /// Maps.
+    /// </summary>
     public async Task<ICustomAnomalyDetector> Map(
         CustomAnomalyDetectorEntity storedEntity,
         CancellationToken cancellationToken = default)
@@ -74,6 +83,9 @@ internal class CustomAnomalyDetectorConfig
             existing: storedEntity);
     }
 
+    /// <summary>
+    /// Maps.
+    /// </summary>
     public Task<CustomAnomalyDetectorEntity> Map(
         ICustomAnomalyDetector domainEntity,
         CancellationToken cancellationToken = default)

@@ -9,6 +9,9 @@ internal class OptimizationProposalGenerator : DomainEntityGenerator<IOptimizati
     private readonly IDomainEntityGenerator<IToolUpdateProposal> toolUpdateGenerator;
     private readonly IDomainEntityGenerator<IModelSwitchProposal> modelSwitchGenerator;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="OptimizationProposalGenerator"/> class.
+    /// </summary>
     public OptimizationProposalGenerator(
         IRepository<IOptimizationProposal> repository,
         IDomainEntityGenerator<ISystemPromptProposal> systemPromptGenerator,
@@ -21,9 +24,15 @@ internal class OptimizationProposalGenerator : DomainEntityGenerator<IOptimizati
         this.modelSwitchGenerator = modelSwitchGenerator;
     }
 
+    /// <summary>
+    /// Generates asynchronously.
+    /// </summary>
     public override async Task<IOptimizationProposal> GenerateAsync(CancellationToken cancellationToken = default)
         => await systemPromptGenerator.GenerateAsync(cancellationToken);
 
+    /// <summary>
+    /// Creates asynchronously.
+    /// </summary>
     public async Task<IOptimizationProposal> CreateAsync(ProposalKind kind, CancellationToken cancellationToken = default)
         => kind switch
         {

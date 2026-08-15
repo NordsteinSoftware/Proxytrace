@@ -34,6 +34,12 @@ public interface IMfaBackupCode : IDomainEntity<IMfaBackupCode>
     /// <summary>Marks the code as redeemed and persists.</summary>
     Task<IMfaBackupCode> MarkConsumedAsync(CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Factory delegate for creating a new new instance.
+    /// </summary>
     public delegate IMfaBackupCode CreateNew(IUser user, string codeHash);
+    /// <summary>
+    /// Factory delegate for creating a new existing instance.
+    /// </summary>
     public delegate IMfaBackupCode CreateExisting(IUser user, string codeHash, DateTimeOffset? consumedAt, IDomainEntityData existing);
 }

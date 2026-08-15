@@ -9,6 +9,9 @@ namespace Proxytrace.Application.Streaming;
 /// </summary>
 public abstract record ProposalEvent(Guid Id, Guid AgentId);
 
+/// <summary>
+/// Event raised when a proposal created occurs.
+/// </summary>
 public record ProposalCreatedEvent(
     Guid Id,
     Guid AgentId,
@@ -17,6 +20,9 @@ public record ProposalCreatedEvent(
     string Rationale,
     DateTimeOffset CreatedAt) : ProposalEvent(Id, AgentId)
 {
+    /// <summary>
+    /// Creates.
+    /// </summary>
     public static ProposalCreatedEvent Create(IOptimizationProposal proposal)
         => new(
             proposal.Id,
@@ -42,6 +48,9 @@ public record ProposalStatusChangedEvent(
     bool? AdoptedManually,
     DateTimeOffset UpdatedAt) : ProposalEvent(Id, AgentId)
 {
+    /// <summary>
+    /// Creates.
+    /// </summary>
     public static ProposalStatusChangedEvent Create(IOptimizationProposal proposal)
         => new(
             proposal.Id,
@@ -55,6 +64,9 @@ public record ProposalStatusChangedEvent(
             proposal.UpdatedAt);
 }
 
+/// <summary>
+/// Broadcasts proposal events.
+/// </summary>
 public interface IProposalBroadcaster
 {
     /// <summary>

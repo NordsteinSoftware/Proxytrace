@@ -13,6 +13,9 @@ public sealed class Module : Autofac.Module
 {
     private readonly MessagingConfiguration configuration;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Module"/> class.
+    /// </summary>
     public Module(MessagingConfiguration? configuration = null)
         => this.configuration = configuration ?? new MessagingConfiguration();
 

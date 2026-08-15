@@ -12,6 +12,9 @@ namespace Proxytrace.Storage.Internal.Entities.TestSuite;
 [UsedImplicitly]
 internal class TestSuiteRepository : AbstractRepository<ITestSuite, TestSuiteEntity>, ITestSuiteRepository
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TestSuiteRepository"/> class.
+    /// </summary>
     public TestSuiteRepository(
         IMapper<ITestSuite, TestSuiteEntity> mapper,
         Func<StorageDbContext> contextFactory,
@@ -21,6 +24,9 @@ internal class TestSuiteRepository : AbstractRepository<ITestSuite, TestSuiteEnt
     {
     }
 
+    /// <summary>
+    /// Gets the by agent asynchronously.
+    /// </summary>
     public async Task<IReadOnlyList<ITestSuite>> GetByAgentAsync(Guid agentId, CancellationToken cancellationToken = default)
     {
         var stored = await contextFactory()
@@ -32,6 +38,9 @@ internal class TestSuiteRepository : AbstractRepository<ITestSuite, TestSuiteEnt
         return await Map(stored, cancellationToken);
     }
 
+    /// <summary>
+    /// Gets the by project asynchronously.
+    /// </summary>
     public async Task<IReadOnlyList<ITestSuite>> GetByProjectAsync(Guid projectId, CancellationToken cancellationToken = default)
     {
         var context = contextFactory();
@@ -49,6 +58,9 @@ internal class TestSuiteRepository : AbstractRepository<ITestSuite, TestSuiteEnt
         return await Map(stored, cancellationToken);
     }
 
+    /// <summary>
+    /// Gets the by agent paged asynchronously.
+    /// </summary>
     public async Task<PagedResult<ITestSuite>> GetByAgentPagedAsync(
         Guid agentId,
         int page,
@@ -71,6 +83,9 @@ internal class TestSuiteRepository : AbstractRepository<ITestSuite, TestSuiteEnt
         return new PagedResult<ITestSuite>(await Map(stored, cancellationToken), total, page, pageSize);
     }
 
+    /// <summary>
+    /// Gets the by project paged asynchronously.
+    /// </summary>
     public Task<PagedResult<ITestSuite>> GetByProjectPagedAsync(
         Guid projectId,
         int page,
@@ -78,6 +93,9 @@ internal class TestSuiteRepository : AbstractRepository<ITestSuite, TestSuiteEnt
         CancellationToken cancellationToken = default) =>
         GetByProjectsPagedAsync([projectId], page, pageSize, cancellationToken);
 
+    /// <summary>
+    /// Gets the by projects paged asynchronously.
+    /// </summary>
     public async Task<PagedResult<ITestSuite>> GetByProjectsPagedAsync(
         IReadOnlyCollection<Guid> projectIds,
         int page,
@@ -106,6 +124,9 @@ internal class TestSuiteRepository : AbstractRepository<ITestSuite, TestSuiteEnt
         return new PagedResult<ITestSuite>(await Map(stored, cancellationToken), total, page, pageSize);
     }
 
+    /// <summary>
+    /// Gets the project id by test case asynchronously.
+    /// </summary>
     public async Task<Guid?> GetProjectIdByTestCaseAsync(Guid testCaseId, CancellationToken cancellationToken = default)
     {
         var context = contextFactory();

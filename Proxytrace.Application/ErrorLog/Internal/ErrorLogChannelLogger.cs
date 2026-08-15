@@ -19,6 +19,9 @@ internal sealed class ErrorLogChannelLogger : ILogger
     private readonly IErrorLogChannel channel;
     private readonly Func<IExternalScopeProvider?>? scopeAccessor;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ErrorLogChannelLogger"/> class.
+    /// </summary>
     public ErrorLogChannelLogger(
         string category,
         IErrorLogChannel channel,
@@ -29,10 +32,19 @@ internal sealed class ErrorLogChannelLogger : ILogger
         this.scopeAccessor = scopeAccessor;
     }
 
+    /// <summary>
+    /// Begins the scope.
+    /// </summary>
     public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
 
+    /// <summary>
+    /// Determines whether the enabled.
+    /// </summary>
     public bool IsEnabled(LogLevel logLevel) => logLevel >= LogLevel.Error;
 
+    /// <summary>
+    /// Logs.
+    /// </summary>
     public void Log<TState>(
         LogLevel logLevel,
         EventId eventId,

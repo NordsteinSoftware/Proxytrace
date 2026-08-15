@@ -9,6 +9,9 @@ internal class ApplicationErrorGenerator : DomainEntityGenerator<IApplicationErr
     private readonly IApplicationError.CreateNew factory;
     private readonly IApplicationError.CreateExisting createExisting;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ApplicationErrorGenerator"/> class.
+    /// </summary>
     public ApplicationErrorGenerator(
         IApplicationError.CreateNew factory,
         IApplicationError.CreateExisting createExisting,
@@ -19,6 +22,9 @@ internal class ApplicationErrorGenerator : DomainEntityGenerator<IApplicationErr
         this.createExisting = createExisting;
     }
 
+    /// <summary>
+    /// Generates asynchronously.
+    /// </summary>
     public override Task<IApplicationError> GenerateAsync(CancellationToken cancellationToken = default)
         => factory(
                 message: $"Something failed: {random.UniqueString()}",
@@ -28,6 +34,9 @@ internal class ApplicationErrorGenerator : DomainEntityGenerator<IApplicationErr
                 stackTrace: $"   at Proxytrace.Test.{random.UniqueString()}()")
             .ToTaskResult();
 
+    /// <summary>
+    /// Creates asynchronously.
+    /// </summary>
     public async Task<IApplicationError> CreateAsync(DateTimeOffset createdAt, CancellationToken cancellationToken = default)
     {
         var error = await CreateAsync(cancellationToken);

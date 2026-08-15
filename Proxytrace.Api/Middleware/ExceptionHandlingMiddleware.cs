@@ -12,6 +12,9 @@ internal sealed class ExceptionHandlingMiddleware
     private readonly IEnumerable<IExceptionMapper> mappers;
     private readonly bool isDevelopment;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ExceptionHandlingMiddleware"/> class.
+    /// </summary>
     public ExceptionHandlingMiddleware(
         RequestDelegate next,
         ILogger<ExceptionHandlingMiddleware> logger,
@@ -24,6 +27,9 @@ internal sealed class ExceptionHandlingMiddleware
         this.isDevelopment = env.IsDevelopment();
     }
 
+    /// <summary>
+    /// Invokes asynchronously.
+    /// </summary>
     public async Task InvokeAsync(HttpContext context)
     {
         try

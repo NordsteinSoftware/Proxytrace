@@ -22,12 +22,18 @@ internal sealed class McpProjectAccessor : IMcpProjectAccessor
     private readonly IHttpContextAccessor httpContextAccessor;
     private readonly IProjectRepository projects;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="McpProjectAccessor"/> class.
+    /// </summary>
     public McpProjectAccessor(IHttpContextAccessor httpContextAccessor, IProjectRepository projects)
     {
         this.httpContextAccessor = httpContextAccessor;
         this.projects = projects;
     }
 
+    /// <summary>
+    /// Gets the project asynchronously.
+    /// </summary>
     public async Task<IProject> GetProjectAsync(CancellationToken cancellationToken = default)
     {
         var ctx = httpContextAccessor.HttpContext
@@ -50,6 +56,9 @@ internal sealed class McpProjectAccessor : IMcpProjectAccessor
         return project;
     }
 
+    /// <summary>
+    /// Require write scope.
+    /// </summary>
     public void RequireWriteScope()
     {
         var ctx = httpContextAccessor.HttpContext

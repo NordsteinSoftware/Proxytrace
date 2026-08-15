@@ -1,5 +1,8 @@
 namespace Proxytrace.Domain.User;
 
+/// <summary>
+/// Repository for persisting and querying user entities.
+/// </summary>
 public interface IUserRepository : IRepository<IUser>
 {
     Task<IUser?> FindByExternalSubjectAsync(string externalSubject, CancellationToken cancellationToken = default);

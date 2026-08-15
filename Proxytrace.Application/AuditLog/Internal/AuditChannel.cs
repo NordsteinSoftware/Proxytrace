@@ -15,11 +15,20 @@ internal sealed class AuditChannel : IAuditChannel
             SingleWriter = false,
         });
 
+    /// <summary>
+    /// Tries to the write.
+    /// </summary>
     public bool TryWrite(AuditCapture entry) => channel.Writer.TryWrite(entry);
 
+    /// <summary>
+    /// Reads the all asynchronously.
+    /// </summary>
     public IAsyncEnumerable<AuditCapture> ReadAllAsync(CancellationToken cancellationToken)
         => channel.Reader.ReadAllAsync(cancellationToken);
 
+    /// <summary>
+    /// Tries to the read.
+    /// </summary>
     public bool TryRead([MaybeNullWhen(false)] out AuditCapture entry)
         => channel.Reader.TryRead(out entry);
 }

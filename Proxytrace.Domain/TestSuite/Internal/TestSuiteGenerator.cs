@@ -19,6 +19,9 @@ internal class TestSuiteGenerator : DomainEntityGenerator<ITestSuite>
         "Error Handling", "Integration", "Boundary Tests", "Sanity Check", "Full Coverage"
     ];
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TestSuiteGenerator"/> class.
+    /// </summary>
     public TestSuiteGenerator(
         ITestSuite.CreateNew factory,
         IRepository<ITestSuite> repository,
@@ -33,6 +36,9 @@ internal class TestSuiteGenerator : DomainEntityGenerator<ITestSuite>
         this.testCaseGenerator = testCaseGenerator;
     }
 
+    /// <summary>
+    /// Generates asynchronously.
+    /// </summary>
     public override async Task<ITestSuite> GenerateAsync(CancellationToken cancellationToken = default)
     {
         var agent = await agentGenerator.GetOrCreateAsync(cancellationToken);

@@ -2,6 +2,9 @@
 
 namespace Proxytrace.Storage;
 
+/// <summary>
+/// Configuration for storage.
+/// </summary>
 public abstract record StorageConfiguration
 {
     /// <summary>

@@ -31,6 +31,9 @@ internal sealed class BlockedCallRecorder : IBlockedCallRecorder
     private readonly INotificationService notifications;
     private readonly ILogger<BlockedCallRecorder> logger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="BlockedCallRecorder"/> class.
+    /// </summary>
     public BlockedCallRecorder(
         ICustomAnomalyResultRepository results,
         ICustomAnomalyResult.CreateNew createResult,
@@ -45,6 +48,9 @@ internal sealed class BlockedCallRecorder : IBlockedCallRecorder
         this.logger = logger;
     }
 
+    /// <summary>
+    /// Record asynchronously.
+    /// </summary>
     public async Task RecordAsync(
         IAgentCall call,
         Guid detectorId,

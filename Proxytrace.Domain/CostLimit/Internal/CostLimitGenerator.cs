@@ -9,6 +9,9 @@ internal class CostLimitGenerator : DomainEntityGenerator<ICostLimit>
     private readonly ICostLimit.CreateNew factory;
     private readonly IDomainEntityGenerator<IProject> projectGenerator;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CostLimitGenerator"/> class.
+    /// </summary>
     public CostLimitGenerator(
         ICostLimit.CreateNew factory,
         IRepository<ICostLimit> repository,
@@ -19,6 +22,9 @@ internal class CostLimitGenerator : DomainEntityGenerator<ICostLimit>
         this.projectGenerator = projectGenerator;
     }
 
+    /// <summary>
+    /// Generates asynchronously.
+    /// </summary>
     public override async Task<ICostLimit> GenerateAsync(CancellationToken cancellationToken = default)
     {
         IProject project = await projectGenerator.GetOrCreateAsync(cancellationToken);

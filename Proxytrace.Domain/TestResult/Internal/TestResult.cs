@@ -9,14 +9,38 @@ namespace Proxytrace.Domain.TestResult.Internal;
 
 internal record TestResult : DomainEntity<ITestResult>, ITestResult
 {
+    /// <summary>
+    /// Gets or sets the test case.
+    /// </summary>
     public ITestCase TestCase { get; init; }
+    /// <summary>
+    /// Gets or sets the actual response.
+    /// </summary>
     public AssistantMessage ActualResponse { get; init; }
+    /// <summary>
+    /// Gets the passed.
+    /// </summary>
     public bool Passed => this.IsPass();
+    /// <summary>
+    /// Gets or sets the evaluations.
+    /// </summary>
     public IReadOnlyCollection<IEvaluation> Evaluations { get; init; }
+    /// <summary>
+    /// Gets or sets the latency.
+    /// </summary>
     public TimeSpan Latency { get; init; }
+    /// <summary>
+    /// Gets or sets the usage.
+    /// </summary>
     public TokenUsage? Usage { get; init; }
+    /// <summary>
+    /// Gets the overall score.
+    /// </summary>
     public EvaluationScore? OverallScore => Evaluations.CombineScores();
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TestResult"/> class.
+    /// </summary>
     public TestResult(
         ITestCase testCase,
         ICompletion completion,
@@ -30,6 +54,9 @@ internal record TestResult : DomainEntity<ITestResult>, ITestResult
         Usage = completion.Usage;
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TestResult"/> class.
+    /// </summary>
     public TestResult(
         ITestCase testCase,
         AssistantMessage actualResponse,
@@ -46,6 +73,9 @@ internal record TestResult : DomainEntity<ITestResult>, ITestResult
         Usage = usage;
     }
 
+    /// <summary>
+    /// Adds the evaluation asynchronously.
+    /// </summary>
     public Task<ITestResult> AddEvaluationAsync(IEvaluation evaluation, CancellationToken cancellationToken = default)
     {
         IReadOnlyList<IEvaluation> updatedEvaluations =
@@ -57,6 +87,9 @@ internal record TestResult : DomainEntity<ITestResult>, ITestResult
         return ApplyAsync(this with { Evaluations = updatedEvaluations }, cancellationToken);
     }
 
+    /// <summary>
+    /// Validates.
+    /// </summary>
     public override IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
         foreach (var result in base.Validate(validationContext))

@@ -14,8 +14,14 @@ internal sealed class ErrorLogChannel : IErrorLogChannel
             SingleWriter = false,
         });
 
+    /// <summary>
+    /// Tries to the write.
+    /// </summary>
     public bool TryWrite(ErrorLogEntry entry) => channel.Writer.TryWrite(entry);
 
+    /// <summary>
+    /// Reads the all asynchronously.
+    /// </summary>
     public IAsyncEnumerable<ErrorLogEntry> ReadAllAsync(CancellationToken cancellationToken)
         => channel.Reader.ReadAllAsync(cancellationToken);
 }

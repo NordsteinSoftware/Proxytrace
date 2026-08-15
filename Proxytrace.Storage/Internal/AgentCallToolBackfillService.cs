@@ -43,6 +43,9 @@ internal sealed class AgentCallToolBackfillService : IHostedService
     // batchSize/retryDelay default to production values and are constructor-injectable purely so tests
     // can exercise the multi-batch loop and the retry/never-throw wrapper without large data or waits.
     // Autofac supplies only contextFactory/logger and uses these defaults for the optional parameters.
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AgentCallToolBackfillService"/> class.
+    /// </summary>
     public AgentCallToolBackfillService(
         Func<Owned<StorageDbContext>> contextFactory,
         ILogger<AgentCallToolBackfillService> logger,
@@ -55,6 +58,9 @@ internal sealed class AgentCallToolBackfillService : IHostedService
         this.retryDelay = retryDelay ?? TimeSpan.FromSeconds(2);
     }
 
+    /// <summary>
+    /// Starts asynchronously.
+    /// </summary>
     public async Task StartAsync(CancellationToken cancellationToken)
     {
         for (var attempt = 1; attempt <= MaxAttempts; attempt++)
@@ -149,5 +155,8 @@ internal sealed class AgentCallToolBackfillService : IHostedService
         return total;
     }
 
+    /// <summary>
+    /// Stops asynchronously.
+    /// </summary>
     public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 }

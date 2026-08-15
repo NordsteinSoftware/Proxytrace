@@ -9,6 +9,9 @@ internal class CustomAnomalyDetectorGenerator : DomainEntityGenerator<ICustomAno
     private readonly ICustomAnomalyDetector.CreateNew factory;
     private readonly IAgentGenerator agentGenerator;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CustomAnomalyDetectorGenerator"/> class.
+    /// </summary>
     public CustomAnomalyDetectorGenerator(
         ICustomAnomalyDetector.CreateNew factory,
         IRepository<ICustomAnomalyDetector> repository,
@@ -19,6 +22,9 @@ internal class CustomAnomalyDetectorGenerator : DomainEntityGenerator<ICustomAno
         this.agentGenerator = agentGenerator;
     }
 
+    /// <summary>
+    /// Generates asynchronously.
+    /// </summary>
     public override async Task<ICustomAnomalyDetector> GenerateAsync(CancellationToken cancellationToken = default)
     {
         // The review judge must be a system agent (mirrors the agentic evaluator generator).

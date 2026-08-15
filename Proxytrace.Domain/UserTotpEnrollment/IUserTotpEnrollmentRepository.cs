@@ -1,5 +1,8 @@
 namespace Proxytrace.Domain.UserTotpEnrollment;
 
+/// <summary>
+/// Repository for persisting and querying user totp enrollment entities.
+/// </summary>
 public interface IUserTotpEnrollmentRepository : IRepository<IUserTotpEnrollment>
 {
     /// <summary>The user's TOTP enrollment (pending or confirmed), or <see langword="null"/> if none exists.</summary>

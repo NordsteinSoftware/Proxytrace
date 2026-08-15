@@ -1,9 +1,21 @@
 namespace Proxytrace.Domain.Kiosk;
 
+/// <summary>
+/// Configuration options for kiosk.
+/// </summary>
 public sealed record KioskOptions
 {
+    /// <summary>
+    /// Gets or sets the enabled.
+    /// </summary>
     public bool Enabled { get; init; }
+    /// <summary>
+    /// Gets or sets the demo user email.
+    /// </summary>
     public string DemoUserEmail { get; init; } = "demo@proxytrace.dev";
+    /// <summary>
+    /// Gets or sets the demo user name.
+    /// </summary>
     public string DemoUserName { get; init; } = "Demo Visitor";
 
     /// <summary>

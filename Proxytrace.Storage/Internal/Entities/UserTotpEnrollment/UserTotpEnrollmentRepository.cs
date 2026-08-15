@@ -11,6 +11,9 @@ internal class UserTotpEnrollmentRepository
     : AbstractRepository<IUserTotpEnrollment, UserTotpEnrollmentEntity>,
       IUserTotpEnrollmentRepository
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="UserTotpEnrollmentRepository"/> class.
+    /// </summary>
     public UserTotpEnrollmentRepository(
         IMapper<IUserTotpEnrollment, UserTotpEnrollmentEntity> mapper,
         Func<StorageDbContext> context,
@@ -20,6 +23,9 @@ internal class UserTotpEnrollmentRepository
     {
     }
 
+    /// <summary>
+    /// Finds the by user asynchronously.
+    /// </summary>
     public async Task<IUserTotpEnrollment?> FindByUserAsync(Guid userId, CancellationToken cancellationToken = default)
     {
         var entity = await contextFactory().Set<UserTotpEnrollmentEntity>().AsNoTracking()
@@ -28,6 +34,9 @@ internal class UserTotpEnrollmentRepository
         return await Map(entity, cancellationToken);
     }
 
+    /// <summary>
+    /// Lists the confirmed user ids asynchronously.
+    /// </summary>
     public async Task<IReadOnlyCollection<Guid>> ListConfirmedUserIdsAsync(CancellationToken cancellationToken = default)
         => await contextFactory().Set<UserTotpEnrollmentEntity>().AsNoTracking()
             .Where(x => x.ConfirmedAt != null)

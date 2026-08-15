@@ -25,6 +25,9 @@ internal sealed class UpdateSystemPromptOptimizer : IOptimizerImplementation
     private readonly IAgentRepository agents;
     private readonly IOptimizerEvidenceBuilder evidenceBuilder;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="UpdateSystemPromptOptimizer"/> class.
+    /// </summary>
     public UpdateSystemPromptOptimizer(
         ISystemPromptTheory.CreateNew factory,
         IPromptTemplateRepository prompts,
@@ -37,6 +40,9 @@ internal sealed class UpdateSystemPromptOptimizer : IOptimizerImplementation
         this.evidenceBuilder = evidenceBuilder;
     }
 
+    /// <summary>
+    /// Discover theories.
+    /// </summary>
     public async Task<IReadOnlyList<IOptimizationTheory>> DiscoverTheories(
         ITestRunGroup testRunGroup,
         IReadOnlyList<RunCohort> cohorts,
@@ -100,9 +106,15 @@ internal sealed class UpdateSystemPromptOptimizer : IOptimizerImplementation
     [UsedImplicitly]
     private record SystemPromptOptimizerOutput
     {
+        /// <summary>
+        /// Gets or sets the proposed system prompt.
+        /// </summary>
         [Description("the full new system prompt")]
         public required string ProposedSystemPrompt { get; [UsedImplicitly] init; }
 
+        /// <summary>
+        /// Gets or sets the rationale.
+        /// </summary>
         [Description("1-3 sentences explaining what changed and why, citing patterns observed in the failing cases")]
         public required string Rationale { get; [UsedImplicitly] set; }
     }

@@ -9,6 +9,9 @@ using Proxytrace.Domain.User;
 
 namespace Proxytrace.Api.Controllers;
 
+/// <summary>
+/// API controller for search operations.
+/// </summary>
 [ApiController]
 [Authorize]
 [Route("api/projects/{projectId:guid}/search")]
@@ -23,6 +26,9 @@ public class SearchController : ControllerBase
     private readonly SearchRequestOptions options;
     private readonly IProjectAccessGuard accessGuard;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SearchController"/> class.
+    /// </summary>
     public SearchController(
         ISearchService searchService,
         ISearchIndexer indexer,
@@ -43,6 +49,9 @@ public class SearchController : ControllerBase
         this.accessGuard = accessGuard;
     }
 
+    /// <summary>
+    /// Searches.
+    /// </summary>
     [HttpGet]
     public async Task<ActionResult<SearchResultsDto>> Search(
         Guid projectId,
@@ -74,6 +83,9 @@ public class SearchController : ControllerBase
         return Ok(dto);
     }
 
+    /// <summary>
+    /// Recent.
+    /// </summary>
     [HttpGet("recent")]
     public async Task<ActionResult<SearchResultsDto>> Recent(
         Guid projectId,
@@ -122,6 +134,9 @@ public class SearchController : ControllerBase
         return Ok(dto);
     }
 
+    /// <summary>
+    /// Reindexes.
+    /// </summary>
     [HttpPost("reindex")]
     [Authorize(Roles = nameof(UserRole.Admin))]
     public async Task<ActionResult<object>> Reindex(Guid projectId, CancellationToken cancellationToken)
@@ -130,6 +145,9 @@ public class SearchController : ControllerBase
         return Ok(new { reindexed = projectId });
     }
 
+    /// <summary>
+    /// Gets the settings.
+    /// </summary>
     [HttpGet("settings")]
     [Authorize(Roles = nameof(UserRole.Admin))]
     public async Task<ActionResult<SearchIndexingSettingsDto>> GetSettings(Guid projectId, CancellationToken cancellationToken)
@@ -138,6 +156,9 @@ public class SearchController : ControllerBase
         return Ok(ToDto(settings));
     }
 
+    /// <summary>
+    /// Updates the settings.
+    /// </summary>
     [HttpPut("settings")]
     [Authorize(Roles = nameof(UserRole.Admin))]
     public async Task<ActionResult<SearchIndexingSettingsDto>> UpdateSettings(
@@ -176,6 +197,9 @@ public class SearchController : ControllerBase
         return Ok(ToDto(saved));
     }
 
+    /// <summary>
+    /// Gets the status.
+    /// </summary>
     [HttpGet("status")]
     [Authorize(Roles = nameof(UserRole.Admin))]
     public async Task<ActionResult<SearchIndexStatusDto>> GetStatus(Guid projectId, CancellationToken cancellationToken)

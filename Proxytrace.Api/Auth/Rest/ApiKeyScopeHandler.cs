@@ -19,6 +19,9 @@ internal sealed class ApiKeyScopeHandler : AuthorizationHandler<ApiKeyScopeRequi
 {
     private readonly IHttpContextAccessor httpContextAccessor;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ApiKeyScopeHandler"/> class.
+    /// </summary>
     public ApiKeyScopeHandler(IHttpContextAccessor httpContextAccessor)
     {
         this.httpContextAccessor = httpContextAccessor;

@@ -13,6 +13,9 @@ internal class NotificationBroadcaster : INotificationBroadcaster, IDisposable
 
     private readonly ConcurrentDictionary<Guid, ChannelWriter<NotificationEvent>> subscribers = new();
 
+    /// <summary>
+    /// Subscribes.
+    /// </summary>
     public ChannelReader<NotificationEvent> Subscribe(CancellationToken cancellationToken)
     {
         if (!cancellationToken.CanBeCanceled)
@@ -45,6 +48,9 @@ internal class NotificationBroadcaster : INotificationBroadcaster, IDisposable
         return channel.Reader;
     }
 
+    /// <summary>
+    /// Publishes.
+    /// </summary>
     public void Publish(NotificationEvent evt)
     {
         foreach (var kvp in subscribers)
@@ -54,6 +60,9 @@ internal class NotificationBroadcaster : INotificationBroadcaster, IDisposable
         }
     }
 
+    /// <summary>
+    /// Releases all resources used by the current instance.
+    /// </summary>
     public void Dispose()
     {
         var writers = subscribers.Values.ToList();

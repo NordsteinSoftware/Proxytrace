@@ -1,5 +1,8 @@
 namespace Proxytrace.Domain.Evaluator;
 
+/// <summary>
+/// Specifies the evaluator kind.
+/// </summary>
 public enum EvaluatorKind
 {
     Agentic = 0,

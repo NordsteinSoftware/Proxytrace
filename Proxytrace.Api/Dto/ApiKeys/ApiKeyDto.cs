@@ -2,6 +2,9 @@ using Proxytrace.Domain.ApiKey;
 
 namespace Proxytrace.Api.Dto.ApiKeys;
 
+/// <summary>
+/// Data transfer object representing a api key.
+/// </summary>
 public record ApiKeyDto(
     Guid Id,
     string Name,
@@ -18,6 +21,9 @@ public record ApiKeyDto(
     // shown again. Null in every list/overview response.
     string? PlaintextKey = null);
 
+/// <summary>
+/// Request payload for create api key operations.
+/// </summary>
 public record CreateApiKeyRequest(
     string Name,
     Guid ProjectId,

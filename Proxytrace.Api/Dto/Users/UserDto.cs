@@ -3,6 +3,9 @@ using Proxytrace.Domain.User;
 
 namespace Proxytrace.Api.Dto.Users;
 
+/// <summary>
+/// Data transfer object representing a user.
+/// </summary>
 public record UserDto(
     Guid Id,
     string Email,
@@ -12,6 +15,9 @@ public record UserDto(
     DateTimeOffset UpdatedAt,
     bool MfaEnabled);
 
+/// <summary>
+/// Request payload for update user role operations.
+/// </summary>
 public record UpdateUserRoleRequest(UserRole Role);
 
 /// <summary>Self-service UI language change for the current user (BCP-47 culture code).</summary>

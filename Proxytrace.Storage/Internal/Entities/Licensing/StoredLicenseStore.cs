@@ -11,12 +11,18 @@ internal sealed class StoredLicenseStore : IStoredLicenseStore
     private readonly Func<StorageDbContext> contextFactory;
     private readonly IClock clock;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="StoredLicenseStore"/> class.
+    /// </summary>
     public StoredLicenseStore(Func<StorageDbContext> contextFactory, IClock clock)
     {
         this.contextFactory = contextFactory;
         this.clock = clock;
     }
 
+    /// <summary>
+    /// Gets asynchronously.
+    /// </summary>
     public async Task<string?> GetAsync(CancellationToken cancellationToken = default)
     {
         StoredLicenseEntity? entity = await contextFactory()
@@ -26,6 +32,9 @@ internal sealed class StoredLicenseStore : IStoredLicenseStore
         return entity?.Jwt;
     }
 
+    /// <summary>
+    /// Saves asynchronously.
+    /// </summary>
     public async Task SaveAsync(string licenseJwt, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(licenseJwt);
@@ -54,6 +63,9 @@ internal sealed class StoredLicenseStore : IStoredLicenseStore
         await context.SaveChangesAsync(cancellationToken);
     }
 
+    /// <summary>
+    /// Removes asynchronously.
+    /// </summary>
     public async Task RemoveAsync(CancellationToken cancellationToken = default)
     {
         StorageDbContext context = contextFactory();

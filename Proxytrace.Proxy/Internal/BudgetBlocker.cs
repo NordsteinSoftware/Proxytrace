@@ -20,11 +20,17 @@ internal sealed class BudgetBlocker : IBudgetBlocker
 {
     private readonly IBudgetBlockProvider blockProvider;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="BudgetBlocker"/> class.
+    /// </summary>
     public BudgetBlocker(IBudgetBlockProvider blockProvider)
     {
         this.blockProvider = blockProvider;
     }
 
+    /// <summary>
+    /// Evaluates asynchronously.
+    /// </summary>
     public async Task<BudgetBlockMatch?> EvaluateAsync(
         Guid projectId,
         string? agentName,

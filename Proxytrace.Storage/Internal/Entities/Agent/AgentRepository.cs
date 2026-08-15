@@ -30,6 +30,9 @@ internal class AgentRepository : ArchivableRepository<IAgent, AgentEntity>, IAge
     private readonly IAgentVersionFingerprinter fingerprinter;
     private readonly IEntityCache<IAgentVersion>? versionCache;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AgentRepository"/> class.
+    /// </summary>
     public AgentRepository(
         IMapper<IAgent, AgentEntity> mapper,
         Func<StorageDbContext> contextFactory,
@@ -58,6 +61,9 @@ internal class AgentRepository : ArchivableRepository<IAgent, AgentEntity>, IAge
         this.versionCache = versionCache;
     }
 
+    /// <summary>
+    /// Upsert asynchronously.
+    /// </summary>
     public override async Task<IAgent> UpsertAsync(IAgent entity, CancellationToken cancellationToken = default)
     {
         if (await this.ContainsAsync(entity.Id, cancellationToken))
@@ -67,6 +73,9 @@ internal class AgentRepository : ArchivableRepository<IAgent, AgentEntity>, IAge
         return await PersistWithInitialVersionAsync(entity, cancellationToken);
     }
 
+    /// <summary>
+    /// Gets the or create asynchronously.
+    /// </summary>
     public async Task<IAgent> GetOrCreateAsync(
         IPromptTemplate systemPrompt,
         IReadOnlyList<ToolSpecification> tools,
@@ -125,6 +134,9 @@ internal class AgentRepository : ArchivableRepository<IAgent, AgentEntity>, IAge
         return await PersistWithInitialVersionAsync(entity, cancellationToken);
     }
 
+    /// <summary>
+    /// Creates the with initial version asynchronously.
+    /// </summary>
     public Task<IAgent> CreateWithInitialVersionAsync(
         string name,
         IPromptTemplate systemPrompt,
@@ -202,15 +214,27 @@ internal class AgentRepository : ArchivableRepository<IAgent, AgentEntity>, IAge
             InvalidateCacheEntry(agentId);
         });
 
+    /// <summary>
+    /// Gets the agent fingerprint.
+    /// </summary>
     public string GetAgentFingerprint(IPromptTemplate systemPrompt, IReadOnlyCollection<ToolSpecification> tools)
         => fingerprinter.Strict(systemPrompt, tools);
 
+    /// <summary>
+    /// Gets the agent fingerprint.
+    /// </summary>
     public string GetAgentFingerprint(IAgent agent)
         => GetAgentFingerprint(agent.SystemPrompt, agent.Tools);
 
+    /// <summary>
+    /// Sets the current version asynchronously.
+    /// </summary>
     public Task SetCurrentVersionAsync(Guid agentId, Guid versionId, CancellationToken cancellationToken = default)
         => SetCurrentVersionIdAsync(agentId, versionId, cancellationToken);
 
+    /// <summary>
+    /// Counts the non system asynchronously.
+    /// </summary>
     public async Task<int> CountNonSystemAsync(CancellationToken cancellationToken = default)
         => await contextFactory()
             .Set<AgentEntity>()
@@ -218,6 +242,9 @@ internal class AgentRepository : ArchivableRepository<IAgent, AgentEntity>, IAge
             // Archived agents are soft-deleted — they must not consume a licensed agent slot.
             .CountAsync(e => !e.IsSystemAgent && !e.IsArchived, cancellationToken);
 
+    /// <summary>
+    /// Finds the by name asynchronously.
+    /// </summary>
     public async Task<IAgent?> FindByNameAsync(IProject project, string name, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(project);
@@ -232,6 +259,9 @@ internal class AgentRepository : ArchivableRepository<IAgent, AgentEntity>, IAge
         return id is { } agentId ? await this.GetAsync(agentId, cancellationToken) : null;
     }
 
+    /// <summary>
+    /// Gets the by project asynchronously.
+    /// </summary>
     public async Task<IReadOnlyList<IAgent>> GetByProjectAsync(Guid projectId, CancellationToken cancellationToken = default)
     {
         var stored = await contextFactory()
@@ -244,6 +274,9 @@ internal class AgentRepository : ArchivableRepository<IAgent, AgentEntity>, IAge
         return await Map(stored, cancellationToken);
     }
 
+    /// <summary>
+    /// Gets the project id asynchronously.
+    /// </summary>
     public async Task<Guid?> GetProjectIdAsync(Guid agentId, CancellationToken cancellationToken = default)
         => await contextFactory()
             .Set<AgentEntity>()

@@ -8,11 +8,26 @@ namespace Proxytrace.Domain.ModelProvider.Internal;
 internal record ModelProvider : DomainEntity<IModelProvider>, IModelProvider
 {
     private readonly IProviderClient.Factory clientFactory;
+    /// <summary>
+    /// Gets the name.
+    /// </summary>
     public string Name { get; }
+    /// <summary>
+    /// Gets the endpoint.
+    /// </summary>
     public Uri Endpoint { get; }
+    /// <summary>
+    /// Gets the api key.
+    /// </summary>
     public string ApiKey { get; }
+    /// <summary>
+    /// Gets the kind.
+    /// </summary>
     public ModelProviderKind Kind { get; }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ModelProvider"/> class.
+    /// </summary>
     public ModelProvider(
         string name,
         Uri endpoint,
@@ -28,6 +43,9 @@ internal record ModelProvider : DomainEntity<IModelProvider>, IModelProvider
         Kind = kind;
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ModelProvider"/> class.
+    /// </summary>
     public ModelProvider(
         string name, 
         Uri endpoint,
@@ -44,6 +62,9 @@ internal record ModelProvider : DomainEntity<IModelProvider>, IModelProvider
         Kind = kind;
     }
     
+    /// <summary>
+    /// Creates the client.
+    /// </summary>
     public IProviderClient CreateClient()
         => clientFactory(this);
 
@@ -64,6 +85,9 @@ internal record ModelProvider : DomainEntity<IModelProvider>, IModelProvider
         return true;
     }
 
+    /// <summary>
+    /// Validates.
+    /// </summary>
     public override IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
         foreach (var result in base.Validate(validationContext))

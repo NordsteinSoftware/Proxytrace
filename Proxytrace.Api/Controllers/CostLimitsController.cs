@@ -40,6 +40,9 @@ public class CostLimitsController : ControllerBase
     private readonly IProjectAccessGuard accessGuard;
     private readonly ILogger<Audit> audit;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CostLimitsController"/> class.
+    /// </summary>
     public CostLimitsController(
         ICostLimitRepository costLimits,
         ICostLimitBreachRepository breaches,
@@ -64,6 +67,9 @@ public class CostLimitsController : ControllerBase
         this.audit = audit;
     }
 
+    /// <summary>
+    /// Gets the all.
+    /// </summary>
     [HttpGet]
     public async Task<IReadOnlyList<CostLimitDto>> GetAll(
         [FromQuery] Guid projectId,
@@ -111,6 +117,9 @@ public class CostLimitsController : ControllerBase
             .ToArray();
     }
 
+    /// <summary>
+    /// Gets.
+    /// </summary>
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<CostLimitDto>> Get(Guid id, CancellationToken cancellationToken)
     {
@@ -123,6 +132,9 @@ public class CostLimitsController : ControllerBase
         return ToDto(limit);
     }
 
+    /// <summary>
+    /// Creates.
+    /// </summary>
     [HttpPost]
     [Authorize(Roles = nameof(UserRole.Admin))]
     [RequiresFeature(LicenseFeature.CostControls)]
@@ -192,6 +204,9 @@ public class CostLimitsController : ControllerBase
         return result;
     }
 
+    /// <summary>
+    /// Updates.
+    /// </summary>
     [HttpPut("{id:guid}")]
     [Authorize(Roles = nameof(UserRole.Admin))]
     [RequiresFeature(LicenseFeature.CostControls)]
@@ -232,6 +247,9 @@ public class CostLimitsController : ControllerBase
         return result;
     }
 
+    /// <summary>
+    /// Deletes.
+    /// </summary>
     [HttpDelete("{id:guid}")]
     [Authorize(Roles = nameof(UserRole.Admin))]
     [RequiresFeature(LicenseFeature.CostControls)]

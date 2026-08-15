@@ -5,6 +5,9 @@ namespace Proxytrace.Storage.Internal.Entities.PasswordResetToken;
 [StoredDomainEntity(typeof(IPasswordResetToken))]
 internal record PasswordResetTokenEntity : Entity
 {
+    /// <summary>
+    /// Gets or sets the user.
+    /// </summary>
     public required Guid User { get; init; }
 
     /// <summary>
@@ -12,6 +15,12 @@ internal record PasswordResetTokenEntity : Entity
     /// its hash is stored).
     /// </summary>
     public required string TokenHash { get; init; }
+    /// <summary>
+    /// Gets or sets the expires at.
+    /// </summary>
     public required DateTimeOffset ExpiresAt { get; init; }
+    /// <summary>
+    /// Gets or sets the consumed at.
+    /// </summary>
     public DateTimeOffset? ConsumedAt { get; init; }
 }

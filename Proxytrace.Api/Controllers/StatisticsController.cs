@@ -13,6 +13,9 @@ using Proxytrace.Domain.Agent;
 
 namespace Proxytrace.Api.Controllers;
 
+/// <summary>
+/// API controller for statistics operations.
+/// </summary>
 [ApiController]
 [Authorize]
 [Route("api/statistics")]
@@ -27,6 +30,9 @@ public class StatisticsController : ControllerBase
     private readonly StatisticsOptions options;
     private readonly IProjectAccessGuard accessGuard;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="StatisticsController"/> class.
+    /// </summary>
     public StatisticsController(
         IDashboardStatistics dashboard,
         IAgentStatistics agentStatistics,
@@ -47,6 +53,9 @@ public class StatisticsController : ControllerBase
         this.accessGuard = accessGuard;
     }
 
+    /// <summary>
+    /// Gets the dashboard view.
+    /// </summary>
     [HttpGet("dashboard")]
     public async Task<ActionResult<DashboardViewDto>> GetDashboardView(
         [FromQuery] DateTimeOffset? from = null,
@@ -192,6 +201,9 @@ public class StatisticsController : ControllerBase
             });
     }
 
+    /// <summary>
+    /// Gets the agent overview.
+    /// </summary>
     [HttpGet("agents/{agentId:guid}/overview")]
     public async Task<ActionResult<AgentOverviewDto>> GetAgentOverview(
         Guid agentId,
@@ -216,6 +228,9 @@ public class StatisticsController : ControllerBase
             Counts: ToDto(result.Counts));
     }
 
+    /// <summary>
+    /// Gets the agent distributions.
+    /// </summary>
     [HttpGet("agents/{agentId:guid}/distributions")]
     public async Task<ActionResult<AgentDistributionsDto>> GetAgentDistributions(
         Guid agentId,

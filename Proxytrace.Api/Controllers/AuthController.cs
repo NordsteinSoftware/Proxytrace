@@ -15,6 +15,9 @@ using Proxytrace.Domain.User;
 
 namespace Proxytrace.Api.Controllers;
 
+/// <summary>
+/// API controller for auth operations.
+/// </summary>
 [ApiController]
 [Route("api/auth")]
 public class AuthController : ControllerBase
@@ -35,6 +38,9 @@ public class AuthController : ControllerBase
     private readonly IEmailSettingsStore emailSettings;
     private readonly ISessionCookie sessionCookie;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AuthController"/> class.
+    /// </summary>
     public AuthController(
         AuthOptions options,
         ISetupService setup,
@@ -69,6 +75,9 @@ public class AuthController : ControllerBase
         this.sessionCookie = sessionCookie;
     }
 
+    /// <summary>
+    /// Gets the mode.
+    /// </summary>
     [HttpGet("mode")]
     [AllowAnonymous]
     public async Task<AuthModeDto> GetMode(CancellationToken ct)
@@ -79,6 +88,9 @@ public class AuthController : ControllerBase
         return new AuthModeDto(isLocal ? "local" : "oidc", setupRequired, legacyClaimAvailable);
     }
 
+    /// <summary>
+    /// Claim legacy.
+    /// </summary>
     [HttpPost("claim-legacy")]
     [AllowAnonymous]
     [RequireLocalMode]
@@ -95,6 +107,9 @@ public class AuthController : ControllerBase
         return new TokenResponse(result.Token, result.ExpiresAt);
     }
 
+    /// <summary>
+    /// Setup.
+    /// </summary>
     [HttpPost("setup")]
     [AllowAnonymous]
     [RequireLocalMode]
@@ -115,6 +130,9 @@ public class AuthController : ControllerBase
     // session JWT never has to ride in the EventSource query string (where it would
     // leak via browser history / Referer / proxy logs). Validate this ticket in
     // JwtBearerEventsFactory.OnMessageReceived alongside the existing access_token path.
+    /// <summary>
+    /// Stream ticket.
+    /// </summary>
     [HttpGet("stream-ticket")]
     [Authorize]
     public async Task<ActionResult<StreamTicketResponse>> StreamTicket(CancellationToken ct)
@@ -128,6 +146,9 @@ public class AuthController : ControllerBase
 
     // Rate-limited per client IP: there is no per-account failed-attempt counter, so without this
     // password guessing against a known address is bounded only by request throughput.
+    /// <summary>
+    /// Login.
+    /// </summary>
     [HttpPost("login")]
     [AllowAnonymous]
     [RequireLocalMode]
@@ -168,6 +189,9 @@ public class AuthController : ControllerBase
 
     // Completes the second step of login: verifies a TOTP code (or backup code) against the challenge
     // ticket and, on success, issues the session. Rate-limited because the TOTP code space is small.
+    /// <summary>
+    /// Mfa verify.
+    /// </summary>
     [HttpPost("mfa/verify")]
     [AllowAnonymous]
     [RequireLocalMode]
@@ -188,6 +212,9 @@ public class AuthController : ControllerBase
 
     // Starts TOTP enrollment: returns a fresh secret + otpauth URI for the caller to add to their
     // authenticator app. The enrollment is pending until confirmed via mfa/activate.
+    /// <summary>
+    /// Mfa setup.
+    /// </summary>
     [HttpPost("mfa/setup")]
     [Authorize]
     [RequireLocalMode]
@@ -202,6 +229,9 @@ public class AuthController : ControllerBase
     }
 
     // Confirms enrollment with a first code, turning MFA on and returning one-time backup codes (shown once).
+    /// <summary>
+    /// Mfa activate.
+    /// </summary>
     [HttpPost("mfa/activate")]
     [Authorize]
     [RequireLocalMode]
@@ -218,6 +248,9 @@ public class AuthController : ControllerBase
     }
 
     // Self-service disable: requires the account password as re-authentication.
+    /// <summary>
+    /// Mfa disable.
+    /// </summary>
     [HttpPost("mfa/disable")]
     [Authorize]
     [RequireLocalMode]
@@ -234,6 +267,9 @@ public class AuthController : ControllerBase
 
     // The session rides in an httpOnly cookie (see SessionCookie), so the SPA cannot read
     // or clear it itself — logout clears it server-side. Anonymous and idempotent.
+    /// <summary>
+    /// Logout.
+    /// </summary>
     [HttpPost("logout")]
     [AllowAnonymous]
     [RequireLocalMode]
@@ -250,6 +286,9 @@ public class AuthController : ControllerBase
 
     // Session restore for the SPA: identifies the caller from the httpOnly session cookie
     // (or bearer token), since the client cannot decode the cookie itself.
+    /// <summary>
+    /// Me.
+    /// </summary>
     [HttpGet("me")]
     [Authorize]
     public async Task<ActionResult<MeDto>> Me(CancellationToken ct)
@@ -265,6 +304,9 @@ public class AuthController : ControllerBase
             MfaEnabled: mfaEnabled);
     }
 
+    /// <summary>
+    /// Signup.
+    /// </summary>
     [HttpPost("signup")]
     [AllowAnonymous]
     [RequireLocalMode]
@@ -288,6 +330,9 @@ public class AuthController : ControllerBase
     // account, so the response never reveals which addresses are registered. When SMTP is configured
     // the reset link is emailed; otherwise it is written to the server log for the operator to relay
     // (the only escape from a sole-admin lockout). Rate-limited to blunt enumeration/abuse.
+    /// <summary>
+    /// Forgot password.
+    /// </summary>
     [HttpPost("forgot-password")]
     [AllowAnonymous]
     [RequireLocalMode]
@@ -299,6 +344,9 @@ public class AuthController : ControllerBase
         return Accepted();
     }
 
+    /// <summary>
+    /// Reset password.
+    /// </summary>
     [HttpPost("reset-password")]
     [AllowAnonymous]
     [RequireLocalMode]
@@ -335,6 +383,9 @@ public class AuthController : ControllerBase
 
     // Anonymous lookup of an invite by its raw token — rate-limited so the token space cannot be
     // swept, sharing the login bucket because both are anonymous credential guesses.
+    /// <summary>
+    /// Preview.
+    /// </summary>
     [HttpGet("invites/by-token/{token}")]
     [AllowAnonymous]
     [RequireLocalMode]
@@ -346,6 +397,9 @@ public class AuthController : ControllerBase
         return new InvitePreviewDto(invite.Email, invite.Role, invite.ExpiresAt);
     }
 
+    /// <summary>
+    /// Creates.
+    /// </summary>
     [Authorize(Roles = nameof(UserRole.Admin))]
     [RequireLocalMode]
     [HttpPost("invites")]
@@ -371,6 +425,9 @@ public class AuthController : ControllerBase
         return $"{baseUrl.TrimEnd('/')}/signup?token={Uri.EscapeDataString(token)}";
     }
 
+    /// <summary>
+    /// Lists.
+    /// </summary>
     [Authorize(Roles = nameof(UserRole.Admin))]
     [RequireLocalMode]
     [HttpGet("invites")]
@@ -382,6 +439,9 @@ public class AuthController : ControllerBase
         return all.Select(i => new InviteDto(i.Id, i.Email, i.Role, i.ExpiresAt, i.ConsumedAt)).ToArray();
     }
 
+    /// <summary>
+    /// Deletes.
+    /// </summary>
     [Authorize(Roles = nameof(UserRole.Admin))]
     [RequireLocalMode]
     [HttpDelete("invites/{id:guid}")]

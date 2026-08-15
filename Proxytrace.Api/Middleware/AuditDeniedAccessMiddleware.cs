@@ -32,12 +32,18 @@ internal sealed class AuditDeniedAccessMiddleware
     private readonly RequestDelegate next;
     private readonly ILogger<Audit> audit;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AuditDeniedAccessMiddleware"/> class.
+    /// </summary>
     public AuditDeniedAccessMiddleware(RequestDelegate next, ILogger<Audit> audit)
     {
         this.next = next;
         this.audit = audit;
     }
 
+    /// <summary>
+    /// Invokes asynchronously.
+    /// </summary>
     public async Task InvokeAsync(HttpContext context)
     {
         await next(context);

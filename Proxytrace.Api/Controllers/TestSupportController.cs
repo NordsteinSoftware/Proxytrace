@@ -18,6 +18,9 @@ public class TestSupportController : ControllerBase
     private readonly ITestDataReset reset;
     private readonly ILogger<TestSupportController> logger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TestSupportController"/> class.
+    /// </summary>
     public TestSupportController(ITestDataReset reset, ILogger<TestSupportController> logger)
     {
         this.reset = reset;

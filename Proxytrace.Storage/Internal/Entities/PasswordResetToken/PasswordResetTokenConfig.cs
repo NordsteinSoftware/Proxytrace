@@ -15,12 +15,18 @@ internal class PasswordResetTokenConfig
     private readonly IPasswordResetToken.CreateExisting factory;
     private readonly IRepository<IUser> users;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="PasswordResetTokenConfig"/> class.
+    /// </summary>
     public PasswordResetTokenConfig(IPasswordResetToken.CreateExisting factory, IRepository<IUser> users)
     {
         this.factory = factory;
         this.users = users;
     }
 
+    /// <summary>
+    /// Configures the application request pipeline.
+    /// </summary>
     public override void Configure(EntityTypeBuilder<PasswordResetTokenEntity> builder)
     {
         builder.HasIndex(e => e.TokenHash).IsUnique();
@@ -32,12 +38,18 @@ internal class PasswordResetTokenConfig
             .OnDelete(DeleteBehavior.Cascade);
     }
 
+    /// <summary>
+    /// Maps.
+    /// </summary>
     public async Task<IPasswordResetToken> Map(PasswordResetTokenEntity stored, CancellationToken cancellationToken = default)
     {
         var user = await users.GetAsync(stored.User, cancellationToken);
         return factory(user, stored.TokenHash, stored.ExpiresAt, stored.ConsumedAt, stored);
     }
 
+    /// <summary>
+    /// Maps.
+    /// </summary>
     public Task<PasswordResetTokenEntity> Map(IPasswordResetToken domain, CancellationToken cancellationToken = default)
         => new PasswordResetTokenEntity
         {

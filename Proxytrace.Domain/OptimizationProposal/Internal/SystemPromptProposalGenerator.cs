@@ -12,6 +12,9 @@ internal class SystemPromptProposalGenerator : OptimizationProposalGeneratorBase
     private readonly IDomainEntityGenerator<ITestRun> testRunGenerator;
     private readonly IRandom random;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SystemPromptProposalGenerator"/> class.
+    /// </summary>
     public SystemPromptProposalGenerator(
         ISystemPromptProposal.CreateNew factory,
         IDomainEntityGenerator<IAgent> agentGenerator,
@@ -25,6 +28,9 @@ internal class SystemPromptProposalGenerator : OptimizationProposalGeneratorBase
         this.random = random;
     }
 
+    /// <summary>
+    /// Generates asynchronously.
+    /// </summary>
     public override async Task<ISystemPromptProposal> GenerateAsync(CancellationToken cancellationToken = default)
     {
         var agent = await agentGenerator.GetOrCreateAsync(cancellationToken);

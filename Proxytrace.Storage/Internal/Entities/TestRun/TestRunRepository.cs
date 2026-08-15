@@ -13,6 +13,9 @@ namespace Proxytrace.Storage.Internal.Entities.TestRun;
 [UsedImplicitly]
 internal class TestRunRepository : AbstractRepository<ITestRun, TestRunEntity>, ITestRunRepository
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TestRunRepository"/> class.
+    /// </summary>
     public TestRunRepository(
         IMapper<ITestRun, TestRunEntity> mapper,
         Func<StorageDbContext> contextFactory,
@@ -22,6 +25,9 @@ internal class TestRunRepository : AbstractRepository<ITestRun, TestRunEntity>, 
     {
     }
 
+    /// <summary>
+    /// Gets the by agent asynchronously.
+    /// </summary>
     public async Task<IReadOnlyList<ITestRun>> GetByAgentAsync(Guid agentId, CancellationToken cancellationToken = default)
     {
         var context = contextFactory();
@@ -43,6 +49,9 @@ internal class TestRunRepository : AbstractRepository<ITestRun, TestRunEntity>, 
         return await Map(stored, cancellationToken);
     }
 
+    /// <summary>
+    /// Gets the by agent paged asynchronously.
+    /// </summary>
     public async Task<PagedResult<ITestRun>> GetByAgentPagedAsync(
         Guid agentId,
         int page,
@@ -76,6 +85,9 @@ internal class TestRunRepository : AbstractRepository<ITestRun, TestRunEntity>, 
         return new PagedResult<ITestRun>(await Map(stored, cancellationToken), total, page, pageSize);
     }
 
+    /// <summary>
+    /// Gets the all paged asynchronously.
+    /// </summary>
     public async Task<PagedResult<ITestRun>> GetAllPagedAsync(
         int page,
         int pageSize,
@@ -104,6 +116,9 @@ internal class TestRunRepository : AbstractRepository<ITestRun, TestRunEntity>, 
         return new PagedResult<ITestRun>(await Map(stored, cancellationToken), total, page, pageSize);
     }
 
+    /// <summary>
+    /// Gets the by projects paged asynchronously.
+    /// </summary>
     public async Task<PagedResult<ITestRun>> GetByProjectsPagedAsync(
         IReadOnlyCollection<Guid> projectIds,
         int page,
@@ -141,6 +156,9 @@ internal class TestRunRepository : AbstractRepository<ITestRun, TestRunEntity>, 
         return new PagedResult<ITestRun>(await Map(stored, cancellationToken), total, page, pageSize);
     }
 
+    /// <summary>
+    /// Gets the by group asynchronously.
+    /// </summary>
     public async Task<IReadOnlyList<ITestRun>> GetByGroupAsync(Guid groupId, CancellationToken cancellationToken = default)
     {
         var context = contextFactory();
@@ -153,6 +171,9 @@ internal class TestRunRepository : AbstractRepository<ITestRun, TestRunEntity>, 
         return await Map(stored, cancellationToken);
     }
 
+    /// <summary>
+    /// Gets the by status asynchronously.
+    /// </summary>
     public async Task<IReadOnlyList<ITestRun>> GetByStatusAsync(
         IReadOnlyCollection<TestRunStatus> statuses,
         CancellationToken cancellationToken = default)
@@ -168,6 +189,9 @@ internal class TestRunRepository : AbstractRepository<ITestRun, TestRunEntity>, 
         return await Map(stored, cancellationToken);
     }
 
+    /// <summary>
+    /// Gets the run ids by result ids asynchronously.
+    /// </summary>
     public async Task<IReadOnlyDictionary<Guid, Guid>> GetRunIdsByResultIdsAsync(
         IReadOnlyCollection<Guid> resultIds,
         CancellationToken cancellationToken = default)

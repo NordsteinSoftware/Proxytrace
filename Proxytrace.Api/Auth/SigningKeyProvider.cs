@@ -9,11 +9,17 @@ internal sealed class SigningKeyProvider : ISigningKeyProvider
 
     private readonly ISigningKeyStore store;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SigningKeyProvider"/> class.
+    /// </summary>
     public SigningKeyProvider(ISigningKeyStore store)
     {
         this.store = store;
     }
 
+    /// <summary>
+    /// Ensures the signing key.
+    /// </summary>
     public string EnsureSigningKey(string? configured)
     {
         if (!string.IsNullOrWhiteSpace(configured))

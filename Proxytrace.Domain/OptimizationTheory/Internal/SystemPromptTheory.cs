@@ -12,9 +12,18 @@ namespace Proxytrace.Domain.OptimizationTheory.Internal;
 [UsedImplicitly]
 internal record SystemPromptTheory : OptimizationTheory, ISystemPromptTheory
 {
+    /// <summary>
+    /// Gets the kind.
+    /// </summary>
     public override ProposalKind Kind => ProposalKind.SystemPrompt;
+    /// <summary>
+    /// Gets or sets the proposed system message.
+    /// </summary>
     public string ProposedSystemMessage { get; private init; }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SystemPromptTheory"/> class.
+    /// </summary>
     public SystemPromptTheory(
         IAgent agent,
         ITestSuite suite,
@@ -31,6 +40,9 @@ internal record SystemPromptTheory : OptimizationTheory, ISystemPromptTheory
         ProposedSystemMessage = proposedSystemMessage;
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SystemPromptTheory"/> class.
+    /// </summary>
     public SystemPromptTheory(
         IAgent agent,
         ITestSuite suite,
@@ -54,6 +66,9 @@ internal record SystemPromptTheory : OptimizationTheory, ISystemPromptTheory
         ProposedSystemMessage = proposedSystemMessage;
     }
 
+    /// <summary>
+    /// Validates.
+    /// </summary>
     public override IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
         foreach (var result in base.Validate(validationContext))

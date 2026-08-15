@@ -15,6 +15,9 @@ internal class ModelProviderGenerator : DomainEntityGenerator<IModelProvider>
 
     private readonly IModelProvider.CreateNew factory;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ModelProviderGenerator"/> class.
+    /// </summary>
     public ModelProviderGenerator(
         IModelProvider.CreateNew factory,
         IRepository<IModelProvider> repository,
@@ -23,6 +26,9 @@ internal class ModelProviderGenerator : DomainEntityGenerator<IModelProvider>
         this.factory = factory;
     }
 
+    /// <summary>
+    /// Generates asynchronously.
+    /// </summary>
     public override Task<IModelProvider> GenerateAsync(CancellationToken cancellationToken = default)
         => Task.FromResult(factory(
             name: $"{random.Any(ProviderNames)}-{random.UniqueString()}",

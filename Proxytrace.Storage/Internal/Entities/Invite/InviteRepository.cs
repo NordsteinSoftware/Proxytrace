@@ -12,6 +12,9 @@ internal class InviteRepository : AbstractRepository<IInvite, InviteEntity>, IIn
 {
     private readonly ISecretHasher hasher;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="InviteRepository"/> class.
+    /// </summary>
     public InviteRepository(
         IMapper<IInvite, InviteEntity> mapper,
         Func<StorageDbContext> context,
@@ -23,6 +26,9 @@ internal class InviteRepository : AbstractRepository<IInvite, InviteEntity>, IIn
         this.hasher = hasher;
     }
 
+    /// <summary>
+    /// Finds the by token asynchronously.
+    /// </summary>
     public async Task<IInvite?> FindByTokenAsync(string token, CancellationToken cancellationToken = default)
     {
         // The token is stored as a hash; match on the hash of the presented raw token.

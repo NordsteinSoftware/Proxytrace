@@ -15,6 +15,9 @@ using Proxytrace.Domain.User;
 
 namespace Proxytrace.Api.Controllers;
 
+/// <summary>
+/// API controller for setup operations.
+/// </summary>
 [ApiController]
 [Authorize]
 [Route("api/setup")]
@@ -28,6 +31,9 @@ public class SetupController : ControllerBase
     private readonly ILogger<SetupController> logger;
     private readonly IWebHostEnvironment env;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SetupController"/> class.
+    /// </summary>
     public SetupController(
         IRepository<IUser> userRepository,
         IRepository<IProject> projectRepository,
@@ -46,6 +52,9 @@ public class SetupController : ControllerBase
         this.env = env;
     }
 
+    /// <summary>
+    /// Gets the status.
+    /// </summary>
     [HttpGet("status")]
     [AllowAnonymous]
     public async Task<SetupStatusDto> GetStatus(CancellationToken cancellationToken)
@@ -55,6 +64,9 @@ public class SetupController : ControllerBase
         return new SetupStatusDto { IsConfigured = users > 0 && projects > 0 };
     }
 
+    /// <summary>
+    /// Completes.
+    /// </summary>
     [HttpPost("complete")]
     [Authorize(Roles = nameof(UserRole.Admin))]
     public async Task<ActionResult<CompleteSetupResponse>> Complete(
@@ -87,6 +99,9 @@ public class SetupController : ControllerBase
             result.ProjectId);
     }
 
+    /// <summary>
+    /// Test connection.
+    /// </summary>
     [HttpPost("test-connection")]
     [Authorize(Roles = nameof(UserRole.Admin))]
     public async Task<TestConnectionResponse> TestConnection(
@@ -131,6 +146,9 @@ public class SetupController : ControllerBase
         }
     }
 
+    /// <summary>
+    /// Lists the models.
+    /// </summary>
     [HttpPost("list-models")]
     [Authorize(Roles = nameof(UserRole.Admin))]
     public async Task<ListModelsResponse> ListModels(
@@ -146,6 +164,9 @@ public class SetupController : ControllerBase
         return new ListModelsResponse(models);
     }
 
+    /// <summary>
+    /// Cleanup non model data.
+    /// </summary>
     [HttpPost("cleanup")]
     [Authorize(Roles = nameof(UserRole.Admin))]
     public async Task<IActionResult> CleanupNonModelData(CancellationToken cancellationToken)

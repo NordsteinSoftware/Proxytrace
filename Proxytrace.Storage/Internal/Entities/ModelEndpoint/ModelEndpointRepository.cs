@@ -17,6 +17,9 @@ internal class ModelEndpointRepository : ArchivableRepository<IModelEndpoint, Mo
     private readonly IAsyncLock locker;
     private readonly IModelEndpoint.CreateNew createNewEndpoint;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ModelEndpointRepository"/> class.
+    /// </summary>
     public ModelEndpointRepository(
         IMapper<IModelEndpoint, ModelEndpointEntity> mapper,
         Func<StorageDbContext> contextFactory,
@@ -38,6 +41,9 @@ internal class ModelEndpointRepository : ArchivableRepository<IModelEndpoint, Mo
     // AgentCallConfig is the DB-level backstop.
     protected override bool SupportsHardDelete => false;
 
+    /// <summary>
+    /// Gets the or create asynchronously.
+    /// </summary>
     public async Task<IModelEndpoint> GetOrCreateAsync(
         string modelName,
         IModelProvider provider,
@@ -87,6 +93,9 @@ internal class ModelEndpointRepository : ArchivableRepository<IModelEndpoint, Mo
         }
     }
 
+    /// <summary>
+    /// Gets the by provider asynchronously.
+    /// </summary>
     public async Task<IReadOnlyList<IModelEndpoint>> GetByProviderAsync(
         Guid providerId,
         CancellationToken cancellationToken = default)

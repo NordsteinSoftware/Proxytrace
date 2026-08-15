@@ -27,6 +27,9 @@ internal sealed class OutlierTraceSeedScenario : IDemoScenario
     private readonly IModelParameters.Create paramsFactory;
     private readonly IRepository<IAgentCall> agentCallRepo;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="OutlierTraceSeedScenario"/> class.
+    /// </summary>
     public OutlierTraceSeedScenario(
         DemoSeedContext ctx,
         IAgentCall.CreateExisting agentCallExisting,
@@ -43,8 +46,14 @@ internal sealed class OutlierTraceSeedScenario : IDemoScenario
 
     // After the statistics backfill (40): these sit on top of the dense history as the most
     // recent, most visible traces.
+    /// <summary>
+    /// Gets the order.
+    /// </summary>
     public int Order => 41;
 
+    /// <summary>
+    /// Seeds asynchronously.
+    /// </summary>
     public async Task SeedAsync(CancellationToken cancellationToken)
     {
         var now = DateTimeOffset.UtcNow;

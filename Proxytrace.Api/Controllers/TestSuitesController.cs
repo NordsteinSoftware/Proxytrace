@@ -18,6 +18,9 @@ using Proxytrace.Licensing;
 
 namespace Proxytrace.Api.Controllers;
 
+/// <summary>
+/// API controller for test suites operations.
+/// </summary>
 [ApiController]
 [Authorize]
 [Route("api/test-suites")]
@@ -53,6 +56,9 @@ public class TestSuitesController : ControllerBase
     /// </remarks>
     private const string SuiteQuotaLockKey = "license-quota:test-suites";
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TestSuitesController"/> class.
+    /// </summary>
     public TestSuitesController(
         ITestSuiteRepository suiteRepository,
         IAgentRepository agentRepository,
@@ -128,6 +134,9 @@ public class TestSuitesController : ControllerBase
         return true;
     }
 
+    /// <summary>
+    /// Gets the all.
+    /// </summary>
     [HttpGet]
     public async Task<PagedResult<TestSuiteListItemDto>> GetAll(
         [FromQuery] Guid? agentId = null,
@@ -187,6 +196,9 @@ public class TestSuitesController : ControllerBase
     }
 
 
+    /// <summary>
+    /// Gets.
+    /// </summary>
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<TestSuiteDto>> Get(Guid id, CancellationToken cancellationToken)
     {
@@ -224,6 +236,9 @@ public class TestSuitesController : ControllerBase
         return mapper.ToRunStatsDto(rows);
     }
 
+    /// <summary>
+    /// Creates.
+    /// </summary>
     [HttpPost]
     public async Task<ActionResult<TestSuiteDto>> Create(
         [FromBody] CreateTestSuiteRequest request,
@@ -276,6 +291,9 @@ public class TestSuitesController : ControllerBase
         return CreatedAtAction(nameof(Get), new { id = savedSuite.Id }, mapper.ToDto(savedSuite));
     }
 
+    /// <summary>
+    /// Updates.
+    /// </summary>
     [HttpPut("{id:guid}")]
     public async Task<ActionResult<TestSuiteDto>> Update(
         Guid id,
@@ -331,6 +349,9 @@ public class TestSuitesController : ControllerBase
     // Deleting a suite cascades to its run groups, runs, schedules, theories, and the proposals
     // produced from those runs (see the storage FK config) — so the delete always succeeds. The
     // DbUpdateExceptionMapper middleware still maps any unforeseen constraint to a friendly 409.
+    /// <summary>
+    /// Deletes.
+    /// </summary>
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
     {
@@ -417,6 +438,9 @@ public class TestSuitesController : ControllerBase
         return CreatedAtAction(nameof(Get), new { id = savedSuite.Id }, mapper.ToDto(savedSuite));
     }
 
+    /// <summary>
+    /// Adds the test case.
+    /// </summary>
     [HttpPost("{id:guid}/test-cases")]
     public async Task<ActionResult<TestSuiteDto>> AddTestCase(
         Guid id,
@@ -442,6 +466,9 @@ public class TestSuitesController : ControllerBase
         return mapper.ToDto(savedSuite);
     }
 
+    /// <summary>
+    /// Removes the test case.
+    /// </summary>
     [HttpDelete("{id:guid}/test-cases/{caseId:guid}")]
     public async Task<ActionResult<TestSuiteDto>> RemoveTestCase(
         Guid id,

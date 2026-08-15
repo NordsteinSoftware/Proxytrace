@@ -8,6 +8,9 @@ using Proxytrace.Domain.Notification;
 
 namespace Proxytrace.Api.Controllers;
 
+/// <summary>
+/// API controller for notifications operations.
+/// </summary>
 [ApiController]
 [Authorize]
 [Route("api/notifications")]
@@ -19,6 +22,9 @@ public class NotificationsController : ControllerBase
     private readonly IProjectAccessGuard accessGuard;
     private readonly INotification.CreateNew createNotification;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="NotificationsController"/> class.
+    /// </summary>
     public NotificationsController(
         INotificationRepository repository,
         INotificationBroadcaster broadcaster,
@@ -42,6 +48,9 @@ public class NotificationsController : ControllerBase
         return await accessGuard.GetAccessibleProjectIdsAsync(cancellationToken) is null;
     }
 
+    /// <summary>
+    /// Gets the all.
+    /// </summary>
     [HttpGet]
     public async Task<IReadOnlyList<NotificationDto>> GetAll(
         [FromQuery] Guid? projectId = null,
@@ -64,6 +73,9 @@ public class NotificationsController : ControllerBase
     // A deep link (`/notifications/{id}`, e.g. from a notification email) cannot always be resolved
     // from the list: GetAll hard-excludes dismissed rows and hides global rows from non-admins.
     // Out-of-scope and missing both return 404 — never 403, which would confirm the id exists.
+    /// <summary>
+    /// Gets.
+    /// </summary>
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<NotificationDto>> Get(Guid id, CancellationToken cancellationToken)
     {
@@ -76,6 +88,9 @@ public class NotificationsController : ControllerBase
         return mapper.ToDto(notification);
     }
 
+    /// <summary>
+    /// Mark read.
+    /// </summary>
     [HttpPatch("{id:guid}/read")]
     public async Task<ActionResult<NotificationDto>> MarkRead(Guid id, CancellationToken cancellationToken)
     {
@@ -94,6 +109,9 @@ public class NotificationsController : ControllerBase
         return Ok(mapper.ToDto(updated));
     }
 
+    /// <summary>
+    /// Dismiss.
+    /// </summary>
     [HttpPatch("{id:guid}/dismiss")]
     public async Task<ActionResult<NotificationDto>> Dismiss(Guid id, CancellationToken cancellationToken)
     {
@@ -135,6 +153,9 @@ public class NotificationsController : ControllerBase
         return mapper.ToDto(notification);
     }
 
+    /// <summary>
+    /// Stream.
+    /// </summary>
     [HttpGet("stream")]
     public async Task Stream([FromQuery] Guid? projectId = null, CancellationToken cancellationToken = default)
     {

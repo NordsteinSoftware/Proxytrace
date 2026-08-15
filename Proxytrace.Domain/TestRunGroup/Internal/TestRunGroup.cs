@@ -9,14 +9,38 @@ internal record TestRunGroup : DomainEntity<ITestRunGroup>, ITestRunGroup
 {
     private readonly ITestRunRepository testRuns;
 
+    /// <summary>
+    /// Gets the suite.
+    /// </summary>
     public ITestSuite Suite { get; }
+    /// <summary>
+    /// Gets or sets the status.
+    /// </summary>
     public TestRunStatus Status { get; private init; }
+    /// <summary>
+    /// Gets or sets the completed at.
+    /// </summary>
     public DateTimeOffset? CompletedAt { get; private init; }
+    /// <summary>
+    /// Gets the is system run.
+    /// </summary>
     public bool IsSystemRun { get; }
+    /// <summary>
+    /// Gets the schedule id.
+    /// </summary>
     public Guid? ScheduleId { get; }
+    /// <summary>
+    /// Gets the sample count.
+    /// </summary>
     public int SampleCount { get; }
+    /// <summary>
+    /// Gets or sets the optimization considered at.
+    /// </summary>
     public DateTimeOffset? OptimizationConsideredAt { get; private init; }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TestRunGroup"/> class.
+    /// </summary>
     public TestRunGroup(
         ITestSuite suite,
         bool isSystemRun,
@@ -35,6 +59,9 @@ internal record TestRunGroup : DomainEntity<ITestRunGroup>, ITestRunGroup
         OptimizationConsideredAt = null;
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TestRunGroup"/> class.
+    /// </summary>
     public TestRunGroup(
         ITestSuite suite,
         TestRunStatus status,
@@ -57,12 +84,21 @@ internal record TestRunGroup : DomainEntity<ITestRunGroup>, ITestRunGroup
         OptimizationConsideredAt = optimizationConsideredAt;
     }
 
+    /// <summary>
+    /// Mark optimization considered.
+    /// </summary>
     public Task<ITestRunGroup> MarkOptimizationConsidered(CancellationToken cancellationToken = default)
         => ApplyAsync(this with { OptimizationConsideredAt = DateTimeOffset.UtcNow }, cancellationToken);
 
+    /// <summary>
+    /// Gets the test runs.
+    /// </summary>
     public Task<IReadOnlyList<ITestRun>> GetTestRuns(CancellationToken cancellationToken = default)
         => testRuns.GetByGroupAsync(Id, cancellationToken);
 
+    /// <summary>
+    /// Validates.
+    /// </summary>
     public override IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
         foreach (var result in base.Validate(validationContext))
@@ -79,15 +115,27 @@ internal record TestRunGroup : DomainEntity<ITestRunGroup>, ITestRunGroup
         }
     }
 
+    /// <summary>
+    /// Sets the running.
+    /// </summary>
     public Task<ITestRunGroup> SetRunning(CancellationToken cancellationToken = default)
         => SetState(TestRunStatus.Running, cancellationToken);
 
+    /// <summary>
+    /// Sets the completed.
+    /// </summary>
     public Task<ITestRunGroup> SetCompleted(CancellationToken cancellationToken = default)
         => SetState(TestRunStatus.Completed, cancellationToken);
 
+    /// <summary>
+    /// Sets the failed.
+    /// </summary>
     public Task<ITestRunGroup> SetFailed(CancellationToken cancellationToken = default)
         => SetState(TestRunStatus.Failed, cancellationToken);
 
+    /// <summary>
+    /// Sets the cancelled.
+    /// </summary>
     public Task<ITestRunGroup> SetCancelled(CancellationToken cancellationToken = default)
         => SetState(TestRunStatus.Cancelled, cancellationToken);
 

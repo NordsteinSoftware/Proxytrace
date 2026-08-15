@@ -13,6 +13,9 @@ internal sealed class PriceRefreshService : BackgroundService
     private readonly IModelPriceRefresher refresher;
     private readonly ILogger<PriceRefreshService> logger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="PriceRefreshService"/> class.
+    /// </summary>
     public PriceRefreshService(
         PriceRefreshConfiguration configuration,
         IModelPriceRefresher refresher,

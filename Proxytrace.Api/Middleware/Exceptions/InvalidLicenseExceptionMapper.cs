@@ -4,8 +4,14 @@ namespace Proxytrace.Api.Middleware.Exceptions;
 
 internal sealed class InvalidLicenseExceptionMapper : IExceptionMapper
 {
+    /// <summary>
+    /// Determines whether the map.
+    /// </summary>
     public bool CanMap(Exception exception) => exception is InvalidLicenseException;
 
+    /// <summary>
+    /// Maps.
+    /// </summary>
     public ExceptionMapping Map(Exception exception)
     {
         var invalid = (InvalidLicenseException)exception;

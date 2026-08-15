@@ -27,6 +27,9 @@ internal class AgentCallConfig : AbstractEntityConfiguration<AgentCallEntity>, I
     private readonly ICompletion.Create completionFactory;
     private readonly IRepository<IModelEndpoint> endpoints;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AgentCallConfig"/> class.
+    /// </summary>
     public AgentCallConfig(
         IAgentCall.CreateExisting factory,
         IModelParameters.Create modelParametersFactory,
@@ -45,6 +48,9 @@ internal class AgentCallConfig : AbstractEntityConfiguration<AgentCallEntity>, I
         this.endpoints = endpoints;
     }
 
+    /// <summary>
+    /// Configures the application request pipeline.
+    /// </summary>
     public override void Configure(EntityTypeBuilder<AgentCallEntity> builder)
     {
         // Composite (AgentVersionId, CreatedAt): serves the agent/project-scoped trace list and
@@ -118,6 +124,9 @@ internal class AgentCallConfig : AbstractEntityConfiguration<AgentCallEntity>, I
             .OnDelete(DeleteBehavior.Restrict);
     }
 
+    /// <summary>
+    /// Maps.
+    /// </summary>
     public async Task<IAgentCall> Map(AgentCallEntity stored, CancellationToken cancellationToken = default)
     {
         IAgentVersion version = await versions.GetAsync(stored.AgentVersionId, cancellationToken);
@@ -148,6 +157,9 @@ internal class AgentCallConfig : AbstractEntityConfiguration<AgentCallEntity>, I
             apiKeyId: stored.ApiKeyId);
     }
 
+    /// <summary>
+    /// Maps.
+    /// </summary>
     public Task<AgentCallEntity> Map(IAgentCall domain, CancellationToken cancellationToken = default)
         => new AgentCallEntity
         {

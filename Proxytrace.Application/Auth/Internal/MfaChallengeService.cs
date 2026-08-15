@@ -12,6 +12,9 @@ internal sealed class MfaChallengeService : IMfaChallengeService
 
     private readonly ConcurrentDictionary<string, Entry> challenges = new(StringComparer.Ordinal);
 
+    /// <summary>
+    /// Issue.
+    /// </summary>
     public MfaChallenge Issue(IUser user)
     {
         ArgumentNullException.ThrowIfNull(user);
@@ -24,6 +27,9 @@ internal sealed class MfaChallengeService : IMfaChallengeService
         return new MfaChallenge(token, expiresAt);
     }
 
+    /// <summary>
+    /// Peek.
+    /// </summary>
     public Guid? Peek(string token)
     {
         if (string.IsNullOrEmpty(token) || !challenges.TryGetValue(token, out var entry))
@@ -40,6 +46,9 @@ internal sealed class MfaChallengeService : IMfaChallengeService
         return entry.UserId;
     }
 
+    /// <summary>
+    /// Consume.
+    /// </summary>
     public void Consume(string token)
     {
         if (!string.IsNullOrEmpty(token))
@@ -48,6 +57,9 @@ internal sealed class MfaChallengeService : IMfaChallengeService
         }
     }
 
+    /// <summary>
+    /// Registers the failure.
+    /// </summary>
     public bool RegisterFailure(string token)
     {
         if (string.IsNullOrEmpty(token) || !challenges.TryGetValue(token, out var entry))
@@ -85,8 +97,17 @@ internal sealed class MfaChallengeService : IMfaChallengeService
 
     private sealed class Entry(Guid userId, DateTimeOffset expiresAt)
     {
+        /// <summary>
+        /// Gets the user id.
+        /// </summary>
         public Guid UserId { get; } = userId;
+        /// <summary>
+        /// Gets the expires at.
+        /// </summary>
         public DateTimeOffset ExpiresAt { get; } = expiresAt;
+        /// <summary>
+        /// The failures.
+        /// </summary>
         public int Failures;
     }
 }

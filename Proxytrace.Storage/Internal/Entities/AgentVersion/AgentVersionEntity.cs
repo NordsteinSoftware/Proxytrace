@@ -8,6 +8,9 @@ namespace Proxytrace.Storage.Internal.Entities.AgentVersion;
 [Cacheable]
 internal record AgentVersionEntity : Entity
 {
+    /// <summary>
+    /// Gets or sets the agent id.
+    /// </summary>
     public required Guid AgentId { get; init; }
 
     /// <summary>
@@ -15,10 +18,19 @@ internal record AgentVersionEntity : Entity
     /// </summary>
     public required Guid Project { get; init; }
 
+    /// <summary>
+    /// Gets or sets the version number.
+    /// </summary>
     public required int VersionNumber { get; init; }
 
+    /// <summary>
+    /// Gets or sets the system prompt.
+    /// </summary>
     public required SystemPromptData SystemPrompt { get; init; }
 
+    /// <summary>
+    /// Gets or sets the tools.
+    /// </summary>
     public required IReadOnlyList<ToolSpecification> Tools { get; init; }
 
     /// <summary>

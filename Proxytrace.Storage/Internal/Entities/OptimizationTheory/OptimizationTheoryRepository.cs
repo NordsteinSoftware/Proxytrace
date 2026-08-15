@@ -12,6 +12,9 @@ internal class OptimizationTheoryRepository :
     AbstractRepository<IOptimizationTheory, OptimizationTheoryEntity>,
     IOptimizationTheoryRepository
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="OptimizationTheoryRepository"/> class.
+    /// </summary>
     public OptimizationTheoryRepository(
         IMapper<IOptimizationTheory, OptimizationTheoryEntity> mapper,
         Func<StorageDbContext> contextFactory,
@@ -21,6 +24,9 @@ internal class OptimizationTheoryRepository :
     {
     }
 
+    /// <summary>
+    /// Gets the by agent asynchronously.
+    /// </summary>
     public async Task<IReadOnlyList<IOptimizationTheory>> GetByAgentAsync(
         Guid agentId,
         CancellationToken cancellationToken = default)
@@ -35,6 +41,9 @@ internal class OptimizationTheoryRepository :
         return await Map(stored, cancellationToken);
     }
 
+    /// <summary>
+    /// Gets the by project asynchronously.
+    /// </summary>
     public async Task<IReadOnlyList<IOptimizationTheory>> GetByProjectAsync(
         Guid projectId,
         CancellationToken cancellationToken = default)
@@ -55,6 +64,9 @@ internal class OptimizationTheoryRepository :
         return await Map(stored, cancellationToken);
     }
 
+    /// <summary>
+    /// Finds the latest by content hash asynchronously.
+    /// </summary>
     public async Task<IOptimizationTheory?> FindLatestByContentHashAsync(
         Guid agentId,
         string contentHash,
@@ -70,6 +82,9 @@ internal class OptimizationTheoryRepository :
         return await Map(stored, cancellationToken);
     }
 
+    /// <summary>
+    /// Counts the by project and status asynchronously.
+    /// </summary>
     public Task<int> CountByProjectAndStatusAsync(
         Guid projectId,
         TheoryStatus status,
@@ -87,6 +102,9 @@ internal class OptimizationTheoryRepository :
             .CountAsync(cancellationToken);
     }
 
+    /// <summary>
+    /// Gets the active asynchronously.
+    /// </summary>
     public async Task<IReadOnlyList<IOptimizationTheory>> GetActiveAsync(
         CancellationToken cancellationToken = default)
     {
@@ -100,6 +118,9 @@ internal class OptimizationTheoryRepository :
         return await Map(stored, cancellationToken);
     }
 
+    /// <summary>
+    /// Counts the active by project asynchronously.
+    /// </summary>
     public Task<int> CountActiveByProjectAsync(
         Guid projectId,
         CancellationToken cancellationToken = default)

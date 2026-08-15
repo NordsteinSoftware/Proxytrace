@@ -2,6 +2,9 @@ using Proxytrace.Domain.User;
 
 namespace Proxytrace.Application.Auth.Local;
 
+/// <summary>
+/// Service that provides password functionality.
+/// </summary>
 public interface IPasswordService
 {
     string Hash(IUser user, string password);

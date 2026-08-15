@@ -33,6 +33,9 @@ public sealed class EvaluatorBuilder
     private readonly IJsonSchemaMatchEvaluator.CreateExisting createJsonSchemaMatchExisting;
     private readonly ILicenseService licenseService;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="EvaluatorBuilder"/> class.
+    /// </summary>
     public EvaluatorBuilder(
         IAgent.CreateNew createAgent,
         IModelParameters.Create createModelParameters,
@@ -67,6 +70,9 @@ public sealed class EvaluatorBuilder
             throw new FeatureNotLicensedException(LicenseFeature.AgenticEvaluators, licenseService.Current.Tier);
     }
 
+    /// <summary>
+    /// Builds asynchronously.
+    /// </summary>
     public Task<IEvaluator> BuildAsync(
         CreateEvaluatorRequest request,
         IProject project,
@@ -81,6 +87,9 @@ public sealed class EvaluatorBuilder
         _ => throw new ArgumentOutOfRangeException(nameof(request), request.GetType().Name),
     };
 
+    /// <summary>
+    /// Builds asynchronously.
+    /// </summary>
     public Task<IEvaluator> BuildAsync(
         UpdateEvaluatorRequest request,
         IEvaluator existing,

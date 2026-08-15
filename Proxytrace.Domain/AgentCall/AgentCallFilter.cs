@@ -1,5 +1,8 @@
 namespace Proxytrace.Domain.AgentCall;
 
+/// <summary>
+/// Represents a agent call filter.
+/// </summary>
 public record AgentCallFilter(
     Guid? AgentId = null,
     Guid? ProjectId = null,

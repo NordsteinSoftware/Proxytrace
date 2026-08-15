@@ -12,14 +12,38 @@ namespace Proxytrace.Domain.AuditLog;
 /// </summary>
 public readonly struct AuditState : IReadOnlyList<KeyValuePair<string, object?>>
 {
+    /// <summary>
+    /// Gets the action.
+    /// </summary>
     public AuditAction Action { get; }
+    /// <summary>
+    /// Gets the target type.
+    /// </summary>
     public string TargetType { get; }
+    /// <summary>
+    /// Gets the target id.
+    /// </summary>
     public Guid? TargetId { get; }
+    /// <summary>
+    /// Gets the target label.
+    /// </summary>
     public string? TargetLabel { get; }
+    /// <summary>
+    /// Gets the project id.
+    /// </summary>
     public Guid? ProjectId { get; }
+    /// <summary>
+    /// Gets the details.
+    /// </summary>
     public string? Details { get; }
+    /// <summary>
+    /// Gets the outcome.
+    /// </summary>
     public AuditOutcome Outcome { get; }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AuditState"/> class.
+    /// </summary>
     public AuditState(
         AuditAction action,
         string targetType,
@@ -38,13 +62,22 @@ public readonly struct AuditState : IReadOnlyList<KeyValuePair<string, object?>>
         Outcome = outcome;
     }
 
+    /// <summary>
+    /// Formats.
+    /// </summary>
     public static string Format(AuditState state, Exception? _)
         => $"Audit {state.Action}: {state.TargetType}"
            + (state.TargetId is { } id ? $" {id}" : string.Empty)
            + (state.TargetLabel is { Length: > 0 } label ? $" ({label})" : string.Empty);
 
+    /// <summary>
+    /// Gets the count.
+    /// </summary>
     public int Count => 7;
 
+    /// <summary>
+    /// Gets the element at the specified index.
+    /// </summary>
     public KeyValuePair<string, object?> this[int index] => index switch
     {
         0 => new KeyValuePair<string, object?>("Action", Action),
@@ -57,6 +90,9 @@ public readonly struct AuditState : IReadOnlyList<KeyValuePair<string, object?>>
         _ => throw new ArgumentOutOfRangeException(nameof(index)),
     };
 
+    /// <summary>
+    /// Returns an enumerator that iterates through the collection.
+    /// </summary>
     public IEnumerator<KeyValuePair<string, object?>> GetEnumerator()
     {
         for (var i = 0; i < Count; i++)

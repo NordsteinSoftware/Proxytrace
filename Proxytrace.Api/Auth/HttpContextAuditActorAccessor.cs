@@ -17,11 +17,17 @@ internal sealed class HttpContextAuditActorAccessor : IAuditActorAccessor
 {
     private readonly IHttpContextAccessor httpContextAccessor;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="HttpContextAuditActorAccessor"/> class.
+    /// </summary>
     public HttpContextAuditActorAccessor(IHttpContextAccessor httpContextAccessor)
     {
         this.httpContextAccessor = httpContextAccessor;
     }
 
+    /// <summary>
+    /// Gets the current actor.
+    /// </summary>
     public AuditActor GetCurrentActor()
     {
         var http = httpContextAccessor.HttpContext;

@@ -1,5 +1,8 @@
 namespace Proxytrace.Domain.TestRunSchedule;
 
+/// <summary>
+/// Repository for persisting and querying test run schedule entities.
+/// </summary>
 public interface ITestRunScheduleRepository : IRepository<ITestRunSchedule>
 {
     Task<IReadOnlyList<ITestRunSchedule>> GetByAgentAsync(Guid agentId, CancellationToken cancellationToken = default);

@@ -2,6 +2,9 @@ using Proxytrace.Domain.User;
 
 namespace Proxytrace.Application.Auth;
 
+/// <summary>
+/// Represents a jit user provisioner.
+/// </summary>
 public interface IJitUserProvisioner
 {
     Task<IUser> EnsureProvisionedAsync(

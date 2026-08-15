@@ -16,6 +16,9 @@ internal sealed class AgentCallCleanupService : BackgroundService
 
     private readonly int configuredRetentionDays;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AgentCallCleanupService"/> class.
+    /// </summary>
     public AgentCallCleanupService(
         AgentCallCleanupConfiguration configuration,
         ILogger<AgentCallCleanupService> logger,
@@ -37,6 +40,9 @@ internal sealed class AgentCallCleanupService : BackgroundService
         configuredRetentionDays = configuration.RetentionDurationDays;
     }
 
+    /// <summary>
+    /// Cleans the once asynchronously.
+    /// </summary>
     public async Task CleanOnceAsync(CancellationToken cancellationToken)
     {
         try

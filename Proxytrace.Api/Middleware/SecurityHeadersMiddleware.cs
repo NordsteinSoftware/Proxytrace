@@ -10,12 +10,18 @@ internal sealed class SecurityHeadersMiddleware
     private readonly RequestDelegate next;
     private readonly SecurityHeadersOptions options;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SecurityHeadersMiddleware"/> class.
+    /// </summary>
     public SecurityHeadersMiddleware(RequestDelegate next, SecurityHeadersOptions options)
     {
         this.next = next;
         this.options = options;
     }
 
+    /// <summary>
+    /// Invokes asynchronously.
+    /// </summary>
     public Task InvokeAsync(HttpContext context)
     {
         var headers = context.Response.Headers;

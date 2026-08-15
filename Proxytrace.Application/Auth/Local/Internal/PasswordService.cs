@@ -22,15 +22,24 @@ internal sealed class PasswordService : IPasswordService
             Convert.ToHexString(RandomNumberGenerator.GetBytes(32))),
         LazyThreadSafetyMode.ExecutionAndPublication);
 
+    /// <summary>
+    /// Hashes.
+    /// </summary>
     public string Hash(IUser user, string password)
         => hasher.HashPassword(user, password);
 
+    /// <summary>
+    /// Verifies.
+    /// </summary>
     public bool Verify(IUser user, string hash, string password)
     {
         var result = hasher.VerifyHashedPassword(user, hash, password);
         return result is PasswordVerificationResult.Success or PasswordVerificationResult.SuccessRehashNeeded;
     }
 
+    /// <summary>
+    /// Verifies the dummy.
+    /// </summary>
     public void VerifyDummy(string password)
     {
         // The result is deliberately unused — only the elapsed work matters. The call is not

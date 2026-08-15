@@ -2,6 +2,9 @@ using Proxytrace.Domain.TestRunGroup;
 
 namespace Proxytrace.Application.Optimization;
 
+/// <summary>
+/// Service that provides optimizer functionality.
+/// </summary>
 public interface IOptimizerService
 {
     /// <summary>

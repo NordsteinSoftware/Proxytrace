@@ -24,6 +24,9 @@ internal class CostStatistics : ICostStatistics
     private readonly IApiKeyRepository apiKeys;
     private readonly IClock clock;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CostStatistics"/> class.
+    /// </summary>
     public CostStatistics(
         IAgentCallStatsReader callStats,
         ICostLimitRepository costLimits,
@@ -40,6 +43,9 @@ internal class CostStatistics : ICostStatistics
         this.clock = clock;
     }
 
+    /// <summary>
+    /// Gets the month to date spend asynchronously.
+    /// </summary>
     public Task<IReadOnlyList<ProjectAgentCostStat>> GetMonthToDateSpendAsync(
         DateTimeOffset monthStart,
         CancellationToken cancellationToken = default)
@@ -47,6 +53,9 @@ internal class CostStatistics : ICostStatistics
             new StatisticsFilter(From: monthStart),
             cancellationToken);
 
+    /// <summary>
+    /// Gets the month to date spend by api key asynchronously.
+    /// </summary>
     public Task<IReadOnlyList<ProjectApiKeyCostStat>> GetMonthToDateSpendByApiKeyAsync(
         DateTimeOffset monthStart,
         CancellationToken cancellationToken = default)
@@ -54,6 +63,9 @@ internal class CostStatistics : ICostStatistics
             new StatisticsFilter(From: monthStart),
             cancellationToken);
 
+    /// <summary>
+    /// Gets the cost overview asynchronously.
+    /// </summary>
     public async Task<CostOverview> GetCostOverviewAsync(
         Guid projectId,
         DateTimeOffset from,
@@ -157,6 +169,9 @@ internal class CostStatistics : ICostStatistics
             Bucket: effectiveBucket);
     }
 
+    /// <summary>
+    /// Gets the budget status asynchronously.
+    /// </summary>
     public async Task<IReadOnlyList<CostBudgetStatus>> GetBudgetStatusAsync(
         Guid projectId,
         CancellationToken cancellationToken = default)

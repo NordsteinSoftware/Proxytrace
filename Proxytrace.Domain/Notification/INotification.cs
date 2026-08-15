@@ -49,6 +49,9 @@ public interface INotification : IDomainEntity<INotification>
     /// </summary>
     Task<INotification> Dismiss(CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Factory delegate for creating a new new instance.
+    /// </summary>
     public delegate INotification CreateNew(
         NotificationKind kind,
         NotificationSeverity severity,
@@ -58,6 +61,9 @@ public interface INotification : IDomainEntity<INotification>
         NotificationTargetKind? targetKind,
         Guid? targetId);
 
+    /// <summary>
+    /// Factory delegate for creating a new existing instance.
+    /// </summary>
     public delegate INotification CreateExisting(
         NotificationKind kind,
         NotificationSeverity severity,

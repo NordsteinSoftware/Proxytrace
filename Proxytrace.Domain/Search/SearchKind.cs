@@ -1,5 +1,8 @@
 namespace Proxytrace.Domain.Search;
 
+/// <summary>
+/// Specifies the search kind.
+/// </summary>
 public enum SearchKind
 {
     Agent = 0,

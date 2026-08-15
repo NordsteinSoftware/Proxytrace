@@ -6,6 +6,12 @@ namespace Proxytrace.Storage.Internal.Entities.Project;
 /// </summary>
 internal record ProjectUserEntity
 {
+    /// <summary>
+    /// Gets or sets the project id.
+    /// </summary>
     public required Guid ProjectId { get; init; }
+    /// <summary>
+    /// Gets or sets the user id.
+    /// </summary>
     public required Guid UserId { get; init; }
 }

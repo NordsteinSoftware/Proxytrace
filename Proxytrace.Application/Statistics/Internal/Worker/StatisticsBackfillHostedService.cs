@@ -20,6 +20,9 @@ internal class StatisticsBackfillHostedService : IHostedService
     private CancellationTokenSource? cts;
     private Task? backfillTask;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="StatisticsBackfillHostedService"/> class.
+    /// </summary>
     public StatisticsBackfillHostedService(
         ITestRunRepository testRuns,
         IStatsReader<TestRunStats, TestRunStats.Filter> runStatsReader,
@@ -32,6 +35,9 @@ internal class StatisticsBackfillHostedService : IHostedService
         this.logger = logger;
     }
 
+    /// <summary>
+    /// Starts asynchronously.
+    /// </summary>
     public Task StartAsync(CancellationToken cancellationToken)
     {
         cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
@@ -39,6 +45,9 @@ internal class StatisticsBackfillHostedService : IHostedService
         return Task.CompletedTask;
     }
 
+    /// <summary>
+    /// Stops asynchronously.
+    /// </summary>
     public async Task StopAsync(CancellationToken cancellationToken)
     {
         if (backfillTask is null)

@@ -9,8 +9,14 @@ namespace Proxytrace.Application.Search.Internal.Mappers;
 
 internal sealed class EvaluatorDocumentMapper : AbstractDocumentMapper<IEvaluator>
 {
+    /// <summary>
+    /// Gets the kind.
+    /// </summary>
     public override SearchKind Kind => SearchKind.Evaluator;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="EvaluatorDocumentMapper"/> class.
+    /// </summary>
     public EvaluatorDocumentMapper(
         IRepository<IEvaluator> repository,
         ILogger<EvaluatorDocumentMapper> logger) : base(repository, logger)

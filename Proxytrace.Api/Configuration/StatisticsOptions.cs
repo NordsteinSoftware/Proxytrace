@@ -12,9 +12,21 @@ public sealed record StatisticsOptions
     /// </summary>
     public const double DashboardPollIntervalSeconds = 30d;
 
+    /// <summary>
+    /// Gets or sets the default recent trace count.
+    /// </summary>
     public int DefaultRecentTraceCount { get; init; } = 6;
+    /// <summary>
+    /// Gets or sets the max recent trace count.
+    /// </summary>
     public int MaxRecentTraceCount { get; init; } = 50;
+    /// <summary>
+    /// Gets or sets the default agent limit.
+    /// </summary>
     public int DefaultAgentLimit { get; init; } = 10;
+    /// <summary>
+    /// Gets or sets the max agent limit.
+    /// </summary>
     public int MaxAgentLimit { get; init; } = 100;
 
     /// <summary>
@@ -24,6 +36,9 @@ public sealed record StatisticsOptions
     /// </summary>
     public double DashboardCacheTtlSeconds { get; init; } = 10d;
 
+    /// <summary>
+    /// Validates.
+    /// </summary>
     public void Validate()
     {
         if (DashboardCacheTtlSeconds is < 0d or >= DashboardPollIntervalSeconds)

@@ -10,6 +10,9 @@ using Proxytrace.Domain.User;
 
 namespace Proxytrace.Api.Controllers;
 
+/// <summary>
+/// API controller for email settings operations.
+/// </summary>
 [ApiController]
 [Authorize(Roles = nameof(UserRole.Admin))]
 [Route("api/email-settings")]
@@ -23,6 +26,9 @@ public class EmailSettingsController : ControllerBase
     private readonly ILogger<EmailSettingsController> logger;
     private readonly IWebHostEnvironment env;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="EmailSettingsController"/> class.
+    /// </summary>
     public EmailSettingsController(
         IEmailSettingsStore store,
         IEmailSender sender,
@@ -41,6 +47,9 @@ public class EmailSettingsController : ControllerBase
         this.env = env;
     }
 
+    /// <summary>
+    /// Gets.
+    /// </summary>
     [HttpGet]
     public async Task<ActionResult<EmailSettingsDto>> Get(CancellationToken cancellationToken)
     {
@@ -48,6 +57,9 @@ public class EmailSettingsController : ControllerBase
         return settings is null ? NoContent() : mapper.ToDto(settings);
     }
 
+    /// <summary>
+    /// Updates.
+    /// </summary>
     [HttpPut]
     public async Task<ActionResult<EmailSettingsDto>> Update(
         [FromBody] UpdateEmailSettingsRequest request,
@@ -66,6 +78,9 @@ public class EmailSettingsController : ControllerBase
         return mapper.ToDto(settings);
     }
 
+    /// <summary>
+    /// Sends the test.
+    /// </summary>
     [HttpPost("test")]
     public async Task<IActionResult> SendTest(CancellationToken cancellationToken)
     {

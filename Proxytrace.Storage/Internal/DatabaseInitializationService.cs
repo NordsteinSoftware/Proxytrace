@@ -15,6 +15,9 @@ internal class DatabaseInitializationService : IHostedService, IDatabaseInitiali
     private readonly StorageConfiguration configuration;
     private readonly ILogger<DatabaseInitializationService> logger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DatabaseInitializationService"/> class.
+    /// </summary>
     public DatabaseInitializationService(
         IServiceProvider serviceProvider,
         StorageConfiguration configuration,

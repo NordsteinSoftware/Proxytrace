@@ -1,5 +1,8 @@
 namespace Proxytrace.Messaging;
 
+/// <summary>
+/// Specifies the messaging provider.
+/// </summary>
 public enum MessagingProvider
 {
     /// <summary>In-memory channel. Single process only — used by the test suite and local runs.</summary>
@@ -9,14 +12,29 @@ public enum MessagingProvider
     Redis,
 }
 
+/// <summary>
+/// Configuration for messaging.
+/// </summary>
 public sealed record MessagingConfiguration
 {
+    /// <summary>
+    /// Gets or sets the provider.
+    /// </summary>
     public MessagingProvider Provider { get; init; } = MessagingProvider.InProcess;
 
+    /// <summary>
+    /// Gets or sets the redis connection string.
+    /// </summary>
     public string RedisConnectionString { get; init; } = "localhost:6379";
 
+    /// <summary>
+    /// Gets or sets the stream.
+    /// </summary>
     public string Stream { get; init; } = "proxytrace:ingest";
 
+    /// <summary>
+    /// Gets or sets the consumer group.
+    /// </summary>
     public string ConsumerGroup { get; init; } = "proxytrace-app";
 
     /// <summary>Per-instance consumer name within the group; defaults to the machine name.</summary>

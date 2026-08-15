@@ -4,6 +4,9 @@ using Nordstein.Core.AI.Completions;
 
 namespace Proxytrace.Domain.Statistics;
 
+/// <summary>
+/// Represents a statistics filter.
+/// </summary>
 public record StatisticsFilter(
     DateTimeOffset? From = null,
     DateTimeOffset? To = null,
@@ -26,6 +29,9 @@ public record StatisticsFilter(
     // another caller's entry — a miss, never a false hit.
     IReadOnlyCollection<Guid>? ProjectIds = null);
 
+/// <summary>
+/// Represents a statistics summary.
+/// </summary>
 public record StatisticsSummary(
     long TotalCalls,
     long TotalInputTokens,
@@ -34,6 +40,9 @@ public record StatisticsSummary(
     double AvgLatencyMs,
     double? OverallPassRate);
 
+/// <summary>
+/// Represents a token usage stat.
+/// </summary>
 public record TokenUsageStat(
     DateTimeOffset BucketStart,
     Guid EndpointId,
@@ -41,6 +50,9 @@ public record TokenUsageStat(
     long? OutputTokens,
     long? CachedInputTokens);
 
+/// <summary>
+/// Represents a latency stat.
+/// </summary>
 public record LatencyStat(
     Guid EndpointId,
     double P50Ms,
@@ -50,18 +62,27 @@ public record LatencyStat(
     double MaxMs,
     int SampleCount);
 
+/// <summary>
+/// Represents a pass rate stat.
+/// </summary>
 public record PassRateStat(
     Guid SuiteId,
     DateTimeOffset RunTimestamp,
     int PassCount,
     int FailCount);
 
+/// <summary>
+/// Represents a error rate stat.
+/// </summary>
 public record ErrorRateStat(
     Guid EndpointId,
     int TotalCalls,
     int ErrorCalls,
     double ErrorRate);
 
+/// <summary>
+/// Represents a model breakdown stat.
+/// </summary>
 public record ModelBreakdownStat(
     Guid EndpointId,
     string ModelName,
@@ -71,6 +92,9 @@ public record ModelBreakdownStat(
     long? TotalCachedInputTokens,
     double? AvgDurationMs);
 
+/// <summary>
+/// Represents a agent breakdown stat.
+/// </summary>
 public record AgentBreakdownStat(
     Guid AgentId,
     int CallCount);
@@ -143,6 +167,9 @@ public record CallTrends(
     IReadOnlyList<double> LatencyMs,
     IReadOnlyList<double> Throughput);
 
+/// <summary>
+/// Represents a cost estimate stat.
+/// </summary>
 public record CostEstimateStat(
     Guid EndpointId,
     decimal? InputCostEur,
@@ -190,6 +217,9 @@ public record ApiKeyCostPoint(
     Guid? ApiKeyId,
     decimal CostEur);
 
+/// <summary>
+/// Represents a agent time series point.
+/// </summary>
 public record AgentTimeSeriesPoint(
     DateTimeOffset BucketStart,
     int TraceCount,
@@ -199,11 +229,17 @@ public record AgentTimeSeriesPoint(
     decimal CostEur,
     double AvgLatencyMs);
 
+/// <summary>
+/// Represents a agent pass rate point.
+/// </summary>
 public record AgentPassRatePoint(
     DateTimeOffset BucketStart,
     int Passed,
     int TestCases);
 
+/// <summary>
+/// Represents a agent suite pass rate.
+/// </summary>
 public record AgentSuitePassRate(
     Guid SuiteId,
     string SuiteName,
@@ -211,12 +247,18 @@ public record AgentSuitePassRate(
     int Passed,
     int TestCases);
 
+/// <summary>
+/// Represents a agent entity counts.
+/// </summary>
 public record AgentEntityCounts(
     int SuiteCount,
     int TestCaseCount,
     int OpenProposalCount,
     int TotalProposalCount);
 
+/// <summary>
+/// Represents a agent time summary.
+/// </summary>
 public record AgentTimeSummary(
     int TotalTraces,
     long TotalInputTokens,
@@ -225,6 +267,9 @@ public record AgentTimeSummary(
     decimal TotalCostEur,
     double AvgLatencyMs);
 
+/// <summary>
+/// Represents a agent overview stat.
+/// </summary>
 public record AgentOverviewStat(
     AgentTimeSummary Summary,
     IReadOnlyList<AgentTimeSeriesPoint> TimeSeries,
@@ -248,6 +293,9 @@ public record MetricDistribution(
     double Max,
     IReadOnlyList<HistogramBin> Histogram)
 {
+    /// <summary>
+    /// Gets the empty.
+    /// </summary>
     public static MetricDistribution Empty => new(0d, 0d, 0, 0d, 0d, []);
 }
 
@@ -264,6 +312,9 @@ public record AgentCallDistributions(
     MetricDistribution CacheHitRatePerConversation,
     MetricDistribution ToolCallsPerConversation)
 {
+    /// <summary>
+    /// Gets the empty.
+    /// </summary>
     public static AgentCallDistributions Empty => new(
         MetricDistribution.Empty,
         MetricDistribution.Empty,
@@ -273,6 +324,9 @@ public record AgentCallDistributions(
         MetricDistribution.Empty);
 }
 
+/// <summary>
+/// Represents a evaluator summary.
+/// </summary>
 public record EvaluatorSummary(
     int TotalEvaluations,
     double? AvgScore,
@@ -283,6 +337,9 @@ public record EvaluatorSummary(
     decimal? TotalCost,
     double? AvgLatencyMs);
 
+/// <summary>
+/// Represents a evaluator cost point.
+/// </summary>
 public record EvaluatorCostPoint(
     DateTimeOffset BucketStart,
     long InputTokens,
@@ -291,21 +348,33 @@ public record EvaluatorCostPoint(
     decimal Cost,
     double AvgLatencyMs);
 
+/// <summary>
+/// Represents a evaluator pass rate point.
+/// </summary>
 public record EvaluatorPassRatePoint(
     DateTimeOffset BucketStart,
     int Passed,
     int Total);
 
+/// <summary>
+/// Represents a evaluator score bucket.
+/// </summary>
 public record EvaluatorScoreBucket(
     string Score,
     int Count);
 
+/// <summary>
+/// Represents a evaluator overview stat.
+/// </summary>
 public record EvaluatorOverviewStat(
     EvaluatorSummary Summary,
     IReadOnlyList<EvaluatorPassRatePoint> PassRateTrend,
     IReadOnlyList<EvaluatorScoreBucket> ScoreDistribution,
     IReadOnlyList<EvaluatorCostPoint> CostTrend);
 
+/// <summary>
+/// Represents a evaluator sparkline stat.
+/// </summary>
 public record EvaluatorSparklineStat(
     Guid EvaluatorId,
     IReadOnlyList<EvaluatorPassRatePoint> Points);
@@ -322,11 +391,20 @@ public record TestRunStatsAggregate(
     TokenUsage? Usage,
     decimal? Cost)
 {
+    /// <summary>
+    /// Gets the failed.
+    /// </summary>
     public int Failed => TestCases - Passed;
 
+    /// <summary>
+    /// Provides additional functionality.
+    /// </summary>
     public double? PassRate
         => TestCases > 0 ? Passed / (double)TestCases : null;
 
+    /// <summary>
+    /// Gets the empty.
+    /// </summary>
     public static TestRunStatsAggregate Empty => new(
         TestCases: 0,
         Passed: 0,
@@ -334,6 +412,9 @@ public record TestRunStatsAggregate(
         Usage: null,
         Cost: null);
 
+    /// <summary>
+    /// Defines the -(TestRunStatsAggregate operator for the current type.
+    /// </summary>
     public static TestRunStatsAggregate operator -(TestRunStatsAggregate a, TestRunStatsAggregate b) =>
         new(
             TestCases: a.TestCases - b.TestCases,

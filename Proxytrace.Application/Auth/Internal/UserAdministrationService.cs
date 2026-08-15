@@ -8,12 +8,18 @@ internal sealed class UserAdministrationService : IUserAdministrationService
     private readonly IUserRepository users;
     private readonly IApiKeyRepository apiKeys;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="UserAdministrationService"/> class.
+    /// </summary>
     public UserAdministrationService(IUserRepository users, IApiKeyRepository apiKeys)
     {
         this.users = users;
         this.apiKeys = apiKeys;
     }
 
+    /// <summary>
+    /// Change role asynchronously.
+    /// </summary>
     public async Task<IUser?> ChangeRoleAsync(
         Guid actingUserId,
         Guid targetUserId,
@@ -37,6 +43,9 @@ internal sealed class UserAdministrationService : IUserAdministrationService
         return await target.ChangeRole(newRole, cancellationToken);
     }
 
+    /// <summary>
+    /// Removes asynchronously.
+    /// </summary>
     public async Task<bool> RemoveAsync(
         Guid actingUserId,
         Guid targetUserId,

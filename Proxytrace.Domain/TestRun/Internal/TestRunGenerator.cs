@@ -14,6 +14,9 @@ internal class TestRunGenerator : DomainEntityGenerator<ITestRun>
     private readonly IDomainEntityGenerator<ITestRunGroup> groupGenerator;
     private readonly ITestResultGenerator testResultGenerator;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TestRunGenerator"/> class.
+    /// </summary>
     public TestRunGenerator(
         ITestRun.CreateNew factory,
         IRepository<ITestRun> repository,
@@ -28,6 +31,9 @@ internal class TestRunGenerator : DomainEntityGenerator<ITestRun>
         this.testResultGenerator = testResultGenerator;
     }
 
+    /// <summary>
+    /// Generates asynchronously.
+    /// </summary>
     public override async Task<ITestRun> GenerateAsync(CancellationToken cancellationToken = default)
     {
         ITestRun run = factory(

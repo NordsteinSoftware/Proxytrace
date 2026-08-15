@@ -45,6 +45,9 @@ public sealed class ModelProviderDtoMapper
             _ => key[..3] + new string('•', 8) + key[^4..],
         };
 
+    /// <summary>
+    /// To key dto.
+    /// </summary>
     public ApiKeyDto ToKeyDto(IApiKey k)
         => ToKeyDto(k, plaintextKey: null);
 
@@ -66,6 +69,9 @@ public sealed class ModelProviderDtoMapper
         return new(k.Id, k.Name, k.KeyPrefix, k.Project.Id, k.Project.Name, k.Provider.Id, k.Provider.Name, scopes, k.Owner.Id, k.Owner.Email, k.CreatedAt, plaintextKey);
     }
 
+    /// <summary>
+    /// To endpoint dto.
+    /// </summary>
     public ModelEndpointDto ToEndpointDto(IModelEndpoint e) =>
         new(e.Id, e.Model.Name, e.Provider.Id, e.Provider.Name, e.InputTokenCost, e.OutputTokenCost, e.CachedInputTokenCost, e.CreatedAt, e.UpdatedAt);
 }

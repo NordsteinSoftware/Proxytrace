@@ -12,12 +12,18 @@ internal sealed class DataDirectorySigningKeyStore : ISigningKeyStore
 
     private readonly string directory;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DataDirectorySigningKeyStore"/> class.
+    /// </summary>
     public DataDirectorySigningKeyStore(string directory)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(directory);
         this.directory = directory;
     }
 
+    /// <summary>
+    /// Registers services with the Autofac container builder.
+    /// </summary>
     public string? Load()
     {
         var path = Path.Combine(directory, FileName);
@@ -28,6 +34,9 @@ internal sealed class DataDirectorySigningKeyStore : ISigningKeyStore
         return key.Length == 0 ? null : key;
     }
 
+    /// <summary>
+    /// Persist.
+    /// </summary>
     public void Persist(string signingKey)
     {
         Directory.CreateDirectory(directory);

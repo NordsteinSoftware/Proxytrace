@@ -25,6 +25,9 @@ internal sealed class CompositeOptimizer : IOptimizer
     private readonly IStatsReader<TestRunStats, TestRunStats.Filter> runStats;
     private readonly ILogger<CompositeOptimizer> logger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CompositeOptimizer"/> class.
+    /// </summary>
     public CompositeOptimizer(
         IReadOnlyCollection<IOptimizerImplementation> optimizers,
         ITestRunRepository testRuns,
@@ -37,6 +40,9 @@ internal sealed class CompositeOptimizer : IOptimizer
         this.logger = logger;
     }
 
+    /// <summary>
+    /// Discover theories.
+    /// </summary>
     public async Task<IReadOnlyList<IOptimizationTheory>> DiscoverTheories(
         ITestRunGroup testRunGroup,
         CancellationToken cancellationToken = default)

@@ -9,6 +9,9 @@ internal class CostLimitBreachGenerator : DomainEntityGenerator<ICostLimitBreach
     private readonly ICostLimitBreach.CreateNew factory;
     private readonly IDomainEntityGenerator<ICostLimit> costLimitGenerator;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CostLimitBreachGenerator"/> class.
+    /// </summary>
     public CostLimitBreachGenerator(
         ICostLimitBreach.CreateNew factory,
         IRepository<ICostLimitBreach> repository,
@@ -19,6 +22,9 @@ internal class CostLimitBreachGenerator : DomainEntityGenerator<ICostLimitBreach
         this.costLimitGenerator = costLimitGenerator;
     }
 
+    /// <summary>
+    /// Generates asynchronously.
+    /// </summary>
     public override async Task<ICostLimitBreach> GenerateAsync(CancellationToken cancellationToken = default)
     {
         ICostLimit costLimit = await costLimitGenerator.GetOrCreateAsync(cancellationToken);

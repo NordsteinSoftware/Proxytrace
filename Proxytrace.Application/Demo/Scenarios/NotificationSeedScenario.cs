@@ -17,6 +17,9 @@ internal sealed class NotificationSeedScenario : IDemoScenario
     private readonly INotificationRepository notifications;
     private readonly IRepository<IOptimizationProposal> proposals;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="NotificationSeedScenario"/> class.
+    /// </summary>
     public NotificationSeedScenario(
         DemoSeedContext ctx,
         INotification.CreateNew createNotification,
@@ -30,6 +33,9 @@ internal sealed class NotificationSeedScenario : IDemoScenario
     }
 
     // After OptimizationProposalSeedScenario (40) so a proposal is available to point at.
+    /// <summary>
+    /// Gets the order.
+    /// </summary>
     public int Order => 50;
 
     private sealed record NotificationSpec(
@@ -41,6 +47,9 @@ internal sealed class NotificationSeedScenario : IDemoScenario
         Guid? TargetId,
         bool Read);
 
+    /// <summary>
+    /// Seeds asynchronously.
+    /// </summary>
     public async Task SeedAsync(CancellationToken cancellationToken)
     {
         var projectId = ctx.RequireProject().Id;

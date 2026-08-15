@@ -2,6 +2,9 @@ using ISession = Proxytrace.Domain.Session.ISession;
 
 namespace Proxytrace.Api.Dto.Sessions;
 
+/// <summary>
+/// Data transfer object representing a session.
+/// </summary>
 public record SessionDto(
     Guid Id,
     Guid ProjectId,
@@ -11,6 +14,9 @@ public record SessionDto(
     int TraceCount,
     long TotalTokens)
 {
+    /// <summary>
+    /// From.
+    /// </summary>
     public static SessionDto From(ISession session)
         => new(
             session.Id,

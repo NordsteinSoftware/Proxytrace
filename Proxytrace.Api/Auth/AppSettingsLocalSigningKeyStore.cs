@@ -15,6 +15,9 @@ internal sealed class AppSettingsLocalSigningKeyStore : ISigningKeyStore
 
     private readonly IHostEnvironment environment;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AppSettingsLocalSigningKeyStore"/> class.
+    /// </summary>
     public AppSettingsLocalSigningKeyStore(IHostEnvironment environment)
     {
         this.environment = environment;
@@ -26,6 +29,9 @@ internal sealed class AppSettingsLocalSigningKeyStore : ISigningKeyStore
         AllowTrailingCommas = true,
     };
 
+    /// <summary>
+    /// Registers services with the Autofac container builder.
+    /// </summary>
     public string? Load()
     {
         var path = Path.Combine(environment.ContentRootPath, FileName);
@@ -43,6 +49,9 @@ internal sealed class AppSettingsLocalSigningKeyStore : ISigningKeyStore
         }
     }
 
+    /// <summary>
+    /// Persist.
+    /// </summary>
     public void Persist(string signingKey)
     {
         var path = Path.Combine(environment.ContentRootPath, FileName);

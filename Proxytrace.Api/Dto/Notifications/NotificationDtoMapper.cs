@@ -7,6 +7,9 @@ namespace Proxytrace.Api.Dto.Notifications;
 /// </summary>
 public sealed class NotificationDtoMapper
 {
+    /// <summary>
+    /// To dto.
+    /// </summary>
     public NotificationDto ToDto(INotification n)
         => new(
             n.Id,

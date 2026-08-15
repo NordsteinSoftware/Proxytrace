@@ -20,4 +20,7 @@ public interface IStreamTicketService
     Guid? Consume(string token);
 }
 
+/// <summary>
+/// Represents a stream ticket.
+/// </summary>
 public sealed record StreamTicket(string Token, DateTimeOffset ExpiresAt);

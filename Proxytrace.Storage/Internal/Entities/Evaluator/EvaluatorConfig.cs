@@ -20,6 +20,9 @@ internal class EvaluatorConfig : AbstractEntityConfiguration<EvaluatorEntity>, I
     private readonly IRepository<IProject> projects;
     private readonly ISerializer serializer;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="EvaluatorConfig"/> class.
+    /// </summary>
     public EvaluatorConfig(
         IExactMatchEvaluator.CreateExisting createExactMatch,
         IAgenticEvaluator.CreateExisting createAgentic,
@@ -39,6 +42,9 @@ internal class EvaluatorConfig : AbstractEntityConfiguration<EvaluatorEntity>, I
         this.serializer = serializer;
     }
 
+    /// <summary>
+    /// Configures the application request pipeline.
+    /// </summary>
     public override void Configure(EntityTypeBuilder<EvaluatorEntity> builder)
     {
         builder.HasIndex(e => e.Kind);
@@ -46,6 +52,9 @@ internal class EvaluatorConfig : AbstractEntityConfiguration<EvaluatorEntity>, I
         builder.HasIndex(e => new { e.Project, e.IsArchived });
     }
 
+    /// <summary>
+    /// Maps.
+    /// </summary>
     public async Task<IEvaluator> Map(EvaluatorEntity stored, CancellationToken cancellationToken = default)
     {
         IProject project = await projects.GetAsync(stored.Project, cancellationToken);
@@ -78,6 +87,9 @@ internal class EvaluatorConfig : AbstractEntityConfiguration<EvaluatorEntity>, I
         return createNumericMatch(new Regex(data.ExtractionPattern), data.Tolerance, project, stored);
     }
 
+    /// <summary>
+    /// Maps.
+    /// </summary>
     public Task<EvaluatorEntity> Map(IEvaluator domain, CancellationToken cancellationToken = default)
     {
         string data = domain switch

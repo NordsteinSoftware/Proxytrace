@@ -11,6 +11,9 @@ internal sealed class LoginService : ILoginService
     private readonly IUserTotpEnrollmentRepository enrollments;
     private readonly IMfaChallengeService challenges;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="LoginService"/> class.
+    /// </summary>
     public LoginService(
         IUserRepository users,
         IPasswordService passwords,
@@ -25,6 +28,9 @@ internal sealed class LoginService : ILoginService
         this.challenges = challenges;
     }
 
+    /// <summary>
+    /// Login asynchronously.
+    /// </summary>
     public async Task<LoginOutcome?> LoginAsync(string email, string password, CancellationToken cancellationToken = default)
     {
         var user = await users.FindByEmailAsync(email, cancellationToken);

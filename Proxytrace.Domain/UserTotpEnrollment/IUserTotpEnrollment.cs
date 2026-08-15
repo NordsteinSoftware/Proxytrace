@@ -39,6 +39,12 @@ public interface IUserTotpEnrollment : IDomainEntity<IUserTotpEnrollment>
     /// <summary>Records the time-step of an accepted code (replay guard) on a confirmed enrollment. Persists.</summary>
     Task<IUserTotpEnrollment> RecordUsedStep(long step, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Factory delegate for creating a new new instance.
+    /// </summary>
     public delegate IUserTotpEnrollment CreateNew(IUser user, string secret);
+    /// <summary>
+    /// Factory delegate for creating a new existing instance.
+    /// </summary>
     public delegate IUserTotpEnrollment CreateExisting(IUser user, string secret, DateTimeOffset? confirmedAt, long? lastUsedStep, IDomainEntityData existing);
 }

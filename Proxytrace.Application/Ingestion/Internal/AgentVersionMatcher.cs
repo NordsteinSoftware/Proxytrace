@@ -8,6 +8,9 @@ using Quickenshtein;
 
 namespace Proxytrace.Application.Ingestion.Internal;
 
+/// <summary>
+/// Represents a agent version matcher.
+/// </summary>
 public interface IAgentVersionMatcher
 {
     /// <summary>
@@ -29,6 +32,9 @@ internal sealed class AgentVersionMatcher : IAgentVersionMatcher
     private readonly IAgentCallRepository calls;
     private readonly AgentVersioningOptions options;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AgentVersionMatcher"/> class.
+    /// </summary>
     public AgentVersionMatcher(
         IAgentVersionRepository versions,
         IAgentCallRepository calls,
@@ -39,6 +45,9 @@ internal sealed class AgentVersionMatcher : IAgentVersionMatcher
         this.options = options;
     }
 
+    /// <summary>
+    /// Finds the similar version asynchronously.
+    /// </summary>
     public async Task<IAgentVersion?> FindSimilarVersionAsync(
         IProject project,
         IPromptTemplate systemPrompt,

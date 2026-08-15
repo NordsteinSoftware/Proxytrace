@@ -43,6 +43,9 @@ internal sealed class CustomAnomalyReviewService : BackgroundService, ICustomAno
             SingleWriter = false,
         });
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CustomAnomalyReviewService"/> class.
+    /// </summary>
     public CustomAnomalyReviewService(
         ILicenseService license,
         IAgentCallRepository agentCalls,
@@ -63,6 +66,9 @@ internal sealed class CustomAnomalyReviewService : BackgroundService, ICustomAno
         this.logger = logger;
     }
 
+    /// <summary>
+    /// Enqueues asynchronously.
+    /// </summary>
     public Task EnqueueAsync(Guid agentCallId, CancellationToken cancellationToken = default)
         => channel.Writer.WriteAsync(agentCallId, cancellationToken).AsTask();
 

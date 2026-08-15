@@ -1,5 +1,8 @@
 namespace Proxytrace.Domain.Search;
 
+/// <summary>
+/// Represents a search hit.
+/// </summary>
 public sealed record SearchHit(
     SearchKind Kind,
     Guid EntityId,

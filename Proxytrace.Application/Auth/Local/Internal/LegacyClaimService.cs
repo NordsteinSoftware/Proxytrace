@@ -10,6 +10,9 @@ internal sealed class LegacyClaimService : ILegacyClaimService
     private readonly IPasswordService passwords;
     private readonly ILocalTokenIssuer tokens;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="LegacyClaimService"/> class.
+    /// </summary>
     public LegacyClaimService(
         IUserRepository users,
         IPasswordService passwords,
@@ -20,9 +23,15 @@ internal sealed class LegacyClaimService : ILegacyClaimService
         this.tokens = tokens;
     }
 
+    /// <summary>
+    /// Determines whether the claim available asynchronously.
+    /// </summary>
     public async Task<bool> IsClaimAvailableAsync(CancellationToken cancellationToken = default)
         => await FindEligibleAsync(cancellationToken) is not null;
 
+    /// <summary>
+    /// Claim asynchronously.
+    /// </summary>
     public async Task<LoginResult?> ClaimAsync(
         string email,
         string password,

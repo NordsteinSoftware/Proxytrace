@@ -16,6 +16,9 @@ internal sealed class TraceTools
     private readonly IAgentCallRepository calls;
     private readonly AgentCallDtoMapper mapper;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TraceTools"/> class.
+    /// </summary>
     public TraceTools(IMcpProjectAccessor project, IAgentCallRepository calls, AgentCallDtoMapper mapper)
     {
         this.project = project;
@@ -26,6 +29,9 @@ internal sealed class TraceTools
     [McpServerTool(Name = "list_traces")]
     [Description("Search captured LLM traces (agent calls) in the current project, newest first. " +
                  "Optionally filter by agent, a free-text query, or HTTP status.")]
+    /// <summary>
+    /// Lists the traces.
+    /// </summary>
     public async Task<IReadOnlyList<AgentCallListItemDto>> ListTraces(
         [Description("Optional agent id (GUID) to restrict the search to a single agent.")] Guid? agentId = null,
         [Description("Optional free-text query matched against the captured request/response.")] string? query = null,
@@ -43,6 +49,9 @@ internal sealed class TraceTools
     [McpServerTool(Name = "get_trace")]
     [Description("Get a single captured trace (agent call) by id, including the full request, response and tools. " +
                  "The trace must belong to the current project.")]
+    /// <summary>
+    /// Gets the trace.
+    /// </summary>
     public async Task<AgentCallDto> GetTrace(
         [Description("The trace id (GUID), as returned by list_traces.")] Guid traceId,
         CancellationToken cancellationToken)

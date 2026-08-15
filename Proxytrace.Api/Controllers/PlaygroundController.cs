@@ -11,6 +11,9 @@ using Proxytrace.Domain.Agent;
 
 namespace Proxytrace.Api.Controllers;
 
+/// <summary>
+/// API controller for playground operations.
+/// </summary>
 [ApiController]
 [Authorize]
 [Route("api/playground")]
@@ -22,6 +25,9 @@ public class PlaygroundController : ControllerBase
     private readonly ILogger<PlaygroundController> logger;
     private readonly IWebHostEnvironment env;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="PlaygroundController"/> class.
+    /// </summary>
     public PlaygroundController(
         IPlaygroundService service,
         IAgentRepository agents,

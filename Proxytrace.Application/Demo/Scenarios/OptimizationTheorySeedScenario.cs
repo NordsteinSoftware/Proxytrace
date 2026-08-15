@@ -34,6 +34,9 @@ internal sealed class OptimizationTheorySeedScenario : IDemoScenario
     // promoting/dismissing one silently mutates the other and the second "Promote" 409s.
     private readonly HashSet<Guid> claimedProposalIds = [];
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="OptimizationTheorySeedScenario"/> class.
+    /// </summary>
     public OptimizationTheorySeedScenario(
         DemoSeedContext ctx,
         ISystemPromptTheory.CreateNew createSystemPrompt,
@@ -51,8 +54,14 @@ internal sealed class OptimizationTheorySeedScenario : IDemoScenario
     }
 
     // After OptimizationProposalSeedScenario (40) so validated theories can reference a proposal.
+    /// <summary>
+    /// Gets the order.
+    /// </summary>
     public int Order => 45;
 
+    /// <summary>
+    /// Seeds asynchronously.
+    /// </summary>
     public async Task SeedAsync(CancellationToken cancellationToken)
     {
         var support = ctx.RequireCustomerSupportAgent();

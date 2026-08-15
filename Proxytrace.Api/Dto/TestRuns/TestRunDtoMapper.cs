@@ -15,6 +15,9 @@ namespace Proxytrace.Api.Dto.TestRuns;
 /// </summary>
 public sealed class TestRunDtoMapper
 {
+    /// <summary>
+    /// To dto.
+    /// </summary>
     public TestRunDto ToDto(ITestRun r)
     {
         // A case passes only when it has been judged (≥1 evaluation) and every evaluation passed.
@@ -128,6 +131,9 @@ public sealed class TestRunDtoMapper
             UpdatedAt: group.UpdatedAt);
     }
 
+    /// <summary>
+    /// To fixture dto.
+    /// </summary>
     public TestCaseFixtureDto ToFixtureDto(ITestRun run, ITestResult result)
         => new(
             Input: new TestCaseInputDto(MapInputMessages(result.TestCase.Input)),
@@ -137,6 +143,9 @@ public sealed class TestRunDtoMapper
             Runtime: MapRuntime(result),
             Endpoints: MapEndpoints(run, result));
 
+    /// <summary>
+    /// To request dto.
+    /// </summary>
     public ModelRequestPreviewDto ToRequestDto(ModelRequestPreview preview)
         => new(
             preview.Model,

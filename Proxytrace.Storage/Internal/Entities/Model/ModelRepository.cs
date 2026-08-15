@@ -13,6 +13,9 @@ internal class ModelRepository : AbstractRepository<IModel, ModelEntity>, IModel
     private readonly IModel.CreateNew factory;
     private readonly IAsyncLock locker;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ModelRepository"/> class.
+    /// </summary>
     public ModelRepository(
         IMapper<IModel, ModelEntity> mapper,
         IModel.CreateNew factory,
@@ -27,6 +30,9 @@ internal class ModelRepository : AbstractRepository<IModel, ModelEntity>, IModel
         this.locker = locker;
     }
 
+    /// <summary>
+    /// Gets the or create asynchronously.
+    /// </summary>
     public async Task<IModel> GetOrCreateAsync(string name, CancellationToken cancellationToken = default)
     {
         var context = contextFactory();

@@ -3,6 +3,9 @@ using Proxytrace.Api.Dto.Inference;
 
 namespace Proxytrace.Api.Dto.AgentCalls;
 
+/// <summary>
+/// Data transfer object representing a agent call.
+/// </summary>
 public record AgentCallDto(
     Guid Id,
     Guid? AgentId,
@@ -27,8 +30,14 @@ public record AgentCallDto(
     Guid? SessionId,
     int OutlierFlags);
 
+/// <summary>
+/// Data transfer object representing a agent call message.
+/// </summary>
 public record AgentCallMessageDto(string Role, string Content, IReadOnlyList<AgentCallToolRequestDto> ToolRequests, string? ToolCallId = null);
 
+/// <summary>
+/// Data transfer object representing a agent call tool request.
+/// </summary>
 public record AgentCallToolRequestDto(string Id, string Name, string Arguments);
 
 /// <summary>

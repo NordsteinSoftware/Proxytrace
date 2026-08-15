@@ -7,11 +7,17 @@ internal sealed class AnomalyDetector : IAnomalyDetector
 {
     private readonly AnomalyDetectionConfiguration configuration;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AnomalyDetector"/> class.
+    /// </summary>
     public AnomalyDetector(AnomalyDetectionConfiguration configuration)
     {
         this.configuration = configuration;
     }
 
+    /// <summary>
+    /// Detects.
+    /// </summary>
     public IReadOnlyList<DetectedAnomaly> Detect(AnomalyInput input)
     {
         // Rule 1 (hard): the group failed, a run failed, or a run produced no results at all — the

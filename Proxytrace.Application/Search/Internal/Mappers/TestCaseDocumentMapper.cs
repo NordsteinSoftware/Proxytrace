@@ -21,10 +21,19 @@ internal sealed class TestCaseDocumentMapper : IDocumentMapper
     private readonly ITestSuiteRepository testSuites;
     private readonly ILogger<TestCaseDocumentMapper> logger;
 
+    /// <summary>
+    /// Gets the kind.
+    /// </summary>
     public SearchKind Kind => SearchKind.TestCase;
 
+    /// <summary>
+    /// Gets the entity type.
+    /// </summary>
     public Type EntityType => typeof(ITestCase);
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TestCaseDocumentMapper"/> class.
+    /// </summary>
     public TestCaseDocumentMapper(
         IRepository<ITestCase> testCases,
         ITestSuiteRepository testSuites,
@@ -35,6 +44,9 @@ internal sealed class TestCaseDocumentMapper : IDocumentMapper
         this.logger = logger;
     }
 
+    /// <summary>
+    /// Builds asynchronously.
+    /// </summary>
     public async Task<Document?> BuildAsync(Guid entityId, CancellationToken cancellationToken)
     {
         var tc = await testCases.FindAsync(entityId, cancellationToken);
@@ -52,6 +64,9 @@ internal sealed class TestCaseDocumentMapper : IDocumentMapper
             : BuildDocument(tc, suite);
     }
 
+    /// <summary>
+    /// Builds the all for project asynchronously.
+    /// </summary>
     public async IAsyncEnumerable<Document> BuildAllForProjectAsync(Guid projectId, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         var suites = await testSuites.GetByProjectAsync(projectId, cancellationToken);

@@ -29,7 +29,13 @@ namespace Proxytrace.Api.Configuration;
 /// </summary>
 internal static class HostEnvironmentName
 {
+    /// <summary>
+    /// The production constant value.
+    /// </summary>
     public const string Production = "Production";
+    /// <summary>
+    /// The development constant value.
+    /// </summary>
     public const string Development = "Development";
 
     /// <summary>

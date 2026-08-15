@@ -14,6 +14,9 @@ internal class AgentStatistics : IAgentStatistics
     private readonly ITestSuiteRepository testSuites;
     private readonly IOptimizationProposalRepository proposals;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AgentStatistics"/> class.
+    /// </summary>
     public AgentStatistics(
         IStatsReader<TestRunStats, TestRunStats.Filter> runStats,
         IAgentCallStatsReader callStats,
@@ -26,6 +29,9 @@ internal class AgentStatistics : IAgentStatistics
         this.proposals = proposals;
     }
 
+    /// <summary>
+    /// Gets the agent overview asynchronously.
+    /// </summary>
     public async Task<AgentOverviewStat> GetAgentOverviewAsync(Guid agentId, DateTimeOffset from, DateTimeOffset to, StatisticsBucket bucket, CancellationToken cancellationToken = default)
     {
         Task<(IReadOnlyList<AgentTimeSeriesPoint> Series, AgentTimeSummary Summary)> windowTask
@@ -46,6 +52,9 @@ internal class AgentStatistics : IAgentStatistics
             Counts: countsTask.Result);
     }
 
+    /// <summary>
+    /// Gets the agent distributions asynchronously.
+    /// </summary>
     public Task<AgentCallDistributions> GetAgentDistributionsAsync(Guid agentId, DateTimeOffset from, DateTimeOffset to, CancellationToken cancellationToken = default)
         => callStats.GetAgentDistributionsAsync(agentId, from, to, cancellationToken);
 

@@ -12,11 +12,17 @@ internal class NotificationConfig :
 {
     private readonly INotification.CreateExisting factory;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="NotificationConfig"/> class.
+    /// </summary>
     public NotificationConfig(INotification.CreateExisting factory)
     {
         this.factory = factory;
     }
 
+    /// <summary>
+    /// Configures the application request pipeline.
+    /// </summary>
     public override void Configure(EntityTypeBuilder<NotificationEntity> builder)
     {
         // Cascade with the owning project. ProjectId is nullable, so EF treats the relationship as
@@ -36,6 +42,9 @@ internal class NotificationConfig :
         builder.HasIndex(e => new { e.TargetKind, e.TargetId });
     }
 
+    /// <summary>
+    /// Maps.
+    /// </summary>
     public Task<INotification> Map(NotificationEntity stored, CancellationToken cancellationToken = default)
         => factory(
             stored.Kind,
@@ -48,6 +57,9 @@ internal class NotificationConfig :
             stored.TargetId,
             stored).ToTaskResult();
 
+    /// <summary>
+    /// Maps.
+    /// </summary>
     public Task<NotificationEntity> Map(INotification domain, CancellationToken cancellationToken = default)
         => new NotificationEntity
         {

@@ -38,6 +38,9 @@ internal sealed class CoreSeedScenario : IDemoScenario
     private readonly IAgentCall.CreateNew agentCallFactory;
     private readonly ICompletion.Create completionFactory;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CoreSeedScenario"/> class.
+    /// </summary>
     public CoreSeedScenario(
         KioskOptions kiosk,
         KioskEndpointOptions kioskEndpoint,
@@ -76,8 +79,14 @@ internal sealed class CoreSeedScenario : IDemoScenario
         this.completionFactory = completionFactory;
     }
 
+    /// <summary>
+    /// Gets the order.
+    /// </summary>
     public int Order => 0;
 
+    /// <summary>
+    /// Seeds asynchronously.
+    /// </summary>
     public async Task SeedAsync(CancellationToken cancellationToken)
     {
         // Admin, not Member: the kiosk runs on a perpetual Enterprise override license so it can

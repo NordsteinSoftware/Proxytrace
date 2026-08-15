@@ -6,6 +6,9 @@ namespace Proxytrace.Storage.Internal.Entities.TestSuite;
 
 internal class TestSuiteEvaluatorConfig : AbstractEntityConfiguration<TestSuiteEvaluatorEntity>
 {
+    /// <summary>
+    /// Configures the application request pipeline.
+    /// </summary>
     public override void Configure(EntityTypeBuilder<TestSuiteEvaluatorEntity> builder)
     {
         builder.HasKey(e => new { e.TestSuiteId, e.EvaluatorId });

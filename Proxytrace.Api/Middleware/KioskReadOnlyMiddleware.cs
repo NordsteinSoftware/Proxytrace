@@ -16,6 +16,9 @@ internal sealed class KioskReadOnlyMiddleware
     private readonly KioskOptions options;
     private readonly KioskEndpointOptions endpoint;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="KioskReadOnlyMiddleware"/> class.
+    /// </summary>
     public KioskReadOnlyMiddleware(RequestDelegate next, KioskOptions options, KioskEndpointOptions endpoint)
     {
         this.next = next;
@@ -23,6 +26,9 @@ internal sealed class KioskReadOnlyMiddleware
         this.endpoint = endpoint;
     }
 
+    /// <summary>
+    /// Invokes asynchronously.
+    /// </summary>
     public async Task InvokeAsync(HttpContext context)
     {
         if (!options.Enabled)

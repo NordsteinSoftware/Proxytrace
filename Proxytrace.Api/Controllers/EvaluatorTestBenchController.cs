@@ -12,6 +12,9 @@ using Proxytrace.Domain.TestSuite;
 
 namespace Proxytrace.Api.Controllers;
 
+/// <summary>
+/// API controller for evaluator test bench operations.
+/// </summary>
 [ApiController]
 [Authorize]
 [Route("api/evaluators/{evaluatorId:guid}/test-bench")]
@@ -25,6 +28,9 @@ public class EvaluatorTestBenchController : ControllerBase
     private readonly ITestResult.CreateNew createTestResult;
     private readonly IProjectAccessGuard accessGuard;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="EvaluatorTestBenchController"/> class.
+    /// </summary>
     public EvaluatorTestBenchController(
         IEvaluatorRepository evaluators,
         ITestCaseRepository testCases,
@@ -64,6 +70,9 @@ public class EvaluatorTestBenchController : ControllerBase
         return projectId is null || await accessGuard.CanAccessProjectAsync(projectId.Value, cancellationToken);
     }
 
+    /// <summary>
+    /// Registers services with the Autofac container builder.
+    /// </summary>
     [HttpGet("load")]
     public async Task<ActionResult<EvaluatorTestBenchPayloadDto>> Load(
         Guid evaluatorId,
@@ -104,6 +113,9 @@ public class EvaluatorTestBenchController : ControllerBase
                     logged.ErrorMessage));
     }
 
+    /// <summary>
+    /// Default.
+    /// </summary>
     [HttpGet("default")]
     public async Task<ActionResult<EvaluatorTestBenchDefaultDto>> Default(
         Guid evaluatorId,
@@ -118,6 +130,9 @@ public class EvaluatorTestBenchController : ControllerBase
             : new EvaluatorTestBenchDefaultDto(latest.TestCase.Id, latest.TestCase.GetSummary());
     }
 
+    /// <summary>
+    /// Recent.
+    /// </summary>
     [HttpGet("recent")]
     public async Task<ActionResult<IReadOnlyList<EvaluatorTestBenchRecentItemDto>>> Recent(
         Guid evaluatorId,
@@ -137,6 +152,9 @@ public class EvaluatorTestBenchController : ControllerBase
             .ToArray();
     }
 
+    /// <summary>
+    /// Searches.
+    /// </summary>
     [HttpGet("search")]
     public async Task<ActionResult<IReadOnlyList<EvaluatorTestBenchRecentItemDto>>> Search(
         Guid evaluatorId,
@@ -157,6 +175,9 @@ public class EvaluatorTestBenchController : ControllerBase
             .ToArray();
     }
 
+    /// <summary>
+    /// Runs.
+    /// </summary>
     [HttpPost("run")]
     public async Task<ActionResult<EvaluationResultDto>> Run(
         Guid evaluatorId,

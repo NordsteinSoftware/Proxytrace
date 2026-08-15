@@ -2,6 +2,9 @@ using Proxytrace.Domain.User;
 
 namespace Proxytrace.Application.Auth.Local;
 
+/// <summary>
+/// Service that provides login functionality.
+/// </summary>
 public interface ILoginService
 {
     /// <summary>

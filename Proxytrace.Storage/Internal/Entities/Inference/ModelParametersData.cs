@@ -14,5 +14,8 @@ internal record ModelParametersData(
     IReadOnlyList<string>? Stop,
     int? N)
 {
+    /// <summary>
+    /// Gets the empty.
+    /// </summary>
     public static ModelParametersData Empty { get; } = new(null, null, null, null, null, null, null, null, null);
 }

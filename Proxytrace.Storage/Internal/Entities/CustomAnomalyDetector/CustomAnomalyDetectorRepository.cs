@@ -16,6 +16,9 @@ internal class CustomAnomalyDetectorRepository
 {
     private readonly ISerializer serializer;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CustomAnomalyDetectorRepository"/> class.
+    /// </summary>
     public CustomAnomalyDetectorRepository(
         IMapper<ICustomAnomalyDetector, CustomAnomalyDetectorEntity> mapper,
         ISerializer serializer,
@@ -27,6 +30,9 @@ internal class CustomAnomalyDetectorRepository
         this.serializer = serializer;
     }
 
+    /// <summary>
+    /// Gets the by project asynchronously.
+    /// </summary>
     public async Task<IReadOnlyList<ICustomAnomalyDetector>> GetByProjectAsync(
         Guid projectId,
         CancellationToken cancellationToken = default)
@@ -40,6 +46,9 @@ internal class CustomAnomalyDetectorRepository
         return await Map(stored, cancellationToken);
     }
 
+    /// <summary>
+    /// Gets the enabled by project asynchronously.
+    /// </summary>
     public async Task<IReadOnlyList<ICustomAnomalyDetector>> GetEnabledByProjectAsync(
         Guid projectId,
         CancellationToken cancellationToken = default)
@@ -53,6 +62,9 @@ internal class CustomAnomalyDetectorRepository
         return await Map(stored, cancellationToken);
     }
 
+    /// <summary>
+    /// Gets the enabled blocking rules by project asynchronously.
+    /// </summary>
     public async Task<IReadOnlyList<BlockingDetectorRule>> GetEnabledBlockingRulesByProjectAsync(
         Guid projectId,
         CancellationToken cancellationToken = default)

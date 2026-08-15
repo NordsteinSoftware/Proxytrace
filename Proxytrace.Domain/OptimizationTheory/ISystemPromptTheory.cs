@@ -12,6 +12,9 @@ public interface ISystemPromptTheory : IOptimizationTheory
     /// <summary>The full proposed system prompt text.</summary>
     string ProposedSystemMessage { get; }
 
+    /// <summary>
+    /// Factory delegate for creating a new new instance.
+    /// </summary>
     public delegate ISystemPromptTheory CreateNew(
         IAgent agent,
         ITestSuite suite,
@@ -21,6 +24,9 @@ public interface ISystemPromptTheory : IOptimizationTheory
         string proposedSystemMessage,
         IReadOnlyCollection<Guid> evidenceTestRunIds);
 
+    /// <summary>
+    /// Factory delegate for creating a new existing instance.
+    /// </summary>
     public delegate ISystemPromptTheory CreateExisting(
         IAgent agent,
         ITestSuite suite,

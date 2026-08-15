@@ -49,6 +49,12 @@ public interface IUser : IDomainEntity<IUser>
     /// <summary>Updates the user's email notification preferences and persists.</summary>
     Task<IUser> ChangeEmailNotificationPreferences(bool emailNotificationsEnabled, NotificationSeverity emailNotificationMinSeverity, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Factory delegate for creating a new new instance.
+    /// </summary>
     public delegate IUser CreateNew(string email, string? externalSubject, string? passwordHash, UserRole role, string language = SupportedLanguages.Default, bool emailNotificationsEnabled = true, NotificationSeverity emailNotificationMinSeverity = NotificationSeverity.Info);
+    /// <summary>
+    /// Factory delegate for creating a new existing instance.
+    /// </summary>
     public delegate IUser CreateExisting(string email, string? externalSubject, string? passwordHash, UserRole role, string language, bool emailNotificationsEnabled, NotificationSeverity emailNotificationMinSeverity, IDomainEntityData existing);
 }

@@ -25,11 +25,17 @@ internal sealed class TestDataReset : ITestDataReset
 
     private readonly Func<StorageDbContext> contextFactory;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TestDataReset"/> class.
+    /// </summary>
     public TestDataReset(Func<StorageDbContext> contextFactory)
     {
         this.contextFactory = contextFactory;
     }
 
+    /// <summary>
+    /// Reset asynchronously.
+    /// </summary>
     public async Task ResetAsync(CancellationToken cancellationToken = default)
         => await contextFactory().Database.ExecuteSqlRawAsync(TruncateSql, cancellationToken);
 }

@@ -12,11 +12,17 @@ internal class EvaluatorStatsQueries : IEvaluatorStatsReader
 {
     private readonly Func<StorageDbContext> contextFactory;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="EvaluatorStatsQueries"/> class.
+    /// </summary>
     public EvaluatorStatsQueries(Func<StorageDbContext> contextFactory)
     {
         this.contextFactory = contextFactory;
     }
 
+    /// <summary>
+    /// Gets the overview asynchronously.
+    /// </summary>
     public async Task<EvaluatorOverviewStat> GetOverviewAsync(
         Guid evaluatorId,
         DateTimeOffset from,
@@ -60,6 +66,9 @@ internal class EvaluatorStatsQueries : IEvaluatorStatsReader
         return BuildOverview(rows, bucket);
     }
 
+    /// <summary>
+    /// Gets the sparklines asynchronously.
+    /// </summary>
     public async Task<IReadOnlyList<EvaluatorSparklineStat>> GetSparklinesAsync(
         IReadOnlyCollection<Guid> projectIds,
         DateTimeOffset from,

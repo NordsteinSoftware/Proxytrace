@@ -11,9 +11,18 @@ namespace Proxytrace.Domain.OptimizationProposal.Internal;
 [UsedImplicitly]
 internal record ToolUpdateProposal : OptimizationProposal, IToolUpdateProposal
 {
+    /// <summary>
+    /// Gets the kind.
+    /// </summary>
     public override ProposalKind Kind => ProposalKind.Tool;
+    /// <summary>
+    /// Gets or sets the proposed tools.
+    /// </summary>
     public IReadOnlyList<ToolSpecification> ProposedTools { get; private init; }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ToolUpdateProposal"/> class.
+    /// </summary>
     public ToolUpdateProposal(
         IAgent agent,
         Priority priority,
@@ -31,6 +40,9 @@ internal record ToolUpdateProposal : OptimizationProposal, IToolUpdateProposal
         ProposedTools = proposedTools.ToArray();
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ToolUpdateProposal"/> class.
+    /// </summary>
     public ToolUpdateProposal(
         IAgent agent,
         ProposalStatus status,
@@ -54,6 +66,9 @@ internal record ToolUpdateProposal : OptimizationProposal, IToolUpdateProposal
         ProposedTools = proposedTools.ToArray();
     }
 
+    /// <summary>
+    /// Validates.
+    /// </summary>
     public override IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
         foreach (var result in base.Validate(validationContext))

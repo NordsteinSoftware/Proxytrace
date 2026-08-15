@@ -11,6 +11,9 @@ namespace Proxytrace.Storage;
 /// </summary>
 internal sealed class StorageDbContext : NordsteinDbContext
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="StorageDbContext"/> class.
+    /// </summary>
     public StorageDbContext(
         IEnumerable<IModelConfiguration> configurations,
         DbContextOptions<StorageDbContext> options)

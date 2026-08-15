@@ -21,6 +21,9 @@ public interface ISession : IDomainEntity<ISession>
 
     long TotalTokens { get; }
 
+    /// <summary>
+    /// Factory delegate for creating a new new instance.
+    /// </summary>
     public delegate ISession CreateNew(
         string externalKey,
         Guid projectId,
@@ -28,6 +31,9 @@ public interface ISession : IDomainEntity<ISession>
         int traceCount,
         long totalTokens);
 
+    /// <summary>
+    /// Factory delegate for creating a new existing instance.
+    /// </summary>
     public delegate ISession CreateExisting(
         string externalKey,
         Guid projectId,

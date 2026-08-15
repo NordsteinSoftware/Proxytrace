@@ -29,6 +29,9 @@ internal class AgentCallRepository : AbstractRepository<IAgentCall, AgentCallEnt
     private readonly IRepository<IAgent> agents;
     private readonly IRepository<IModelEndpoint> endpoints;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AgentCallRepository"/> class.
+    /// </summary>
     public AgentCallRepository(
         IMapper<IAgentCall, AgentCallEntity> mapper,
         Func<StorageDbContext> contextFactory,
@@ -46,6 +49,9 @@ internal class AgentCallRepository : AbstractRepository<IAgentCall, AgentCallEnt
         this.endpoints = endpoints;
     }
 
+    /// <summary>
+    /// Gets the filtered asynchronously.
+    /// </summary>
     public async Task<(IReadOnlyList<IAgentCall> Items, int Total)> GetFilteredAsync(
         AgentCallFilter filter,
         int page,
@@ -70,6 +76,9 @@ internal class AgentCallRepository : AbstractRepository<IAgentCall, AgentCallEnt
         return (items, total);
     }
 
+    /// <summary>
+    /// Gets the filtered list asynchronously.
+    /// </summary>
     public async Task<(IReadOnlyList<AgentCallListItem> Items, int Total)> GetFilteredListAsync(
         AgentCallFilter filter,
         int page,
@@ -183,6 +192,9 @@ internal class AgentCallRepository : AbstractRepository<IAgentCall, AgentCallEnt
         Guid? SessionId,
         OutlierFlags OutlierFlags);
 
+    /// <summary>
+    /// Gets the histogram asynchronously.
+    /// </summary>
     public async Task<IReadOnlyList<AgentCallHistogramBucket>> GetHistogramAsync(
         AgentCallFilter filter,
         int buckets,
@@ -248,6 +260,9 @@ internal class AgentCallRepository : AbstractRepository<IAgentCall, AgentCallEnt
             aggregated.Select(a => (a.Index, a.Total, a.Errors)), from, to, buckets);
     }
 
+    /// <summary>
+    /// Gets the summary asynchronously.
+    /// </summary>
     public async Task<AgentCallSummary> GetSummaryAsync(
         AgentCallFilter filter,
         CancellationToken cancellationToken = default)
@@ -518,6 +533,9 @@ internal class AgentCallRepository : AbstractRepository<IAgentCall, AgentCallEnt
             ? query.OrderBy(isNull).ThenByDescending(key).ThenByDescending(e => e.Id)
             : query.OrderBy(isNull).ThenBy(key).ThenBy(e => e.Id);
 
+    /// <summary>
+    /// Gets the last call times asynchronously.
+    /// </summary>
     public async Task<IReadOnlyDictionary<Guid, DateTimeOffset>> GetLastCallTimesAsync(
         CancellationToken cancellationToken = default)
     {
@@ -534,6 +552,9 @@ internal class AgentCallRepository : AbstractRepository<IAgentCall, AgentCallEnt
         return result;
     }
 
+    /// <summary>
+    /// Gets the last call time asynchronously.
+    /// </summary>
     public async Task<DateTimeOffset?> GetLastCallTimeAsync(
         Guid agentId,
         CancellationToken cancellationToken = default)
@@ -556,6 +577,9 @@ internal class AgentCallRepository : AbstractRepository<IAgentCall, AgentCallEnt
             .MaxAsync(cancellationToken);
     }
 
+    /// <summary>
+    /// Finds the latest by conversation id asynchronously.
+    /// </summary>
     public async Task<IAgentCall?> FindLatestByConversationIdAsync(
         Guid conversationId,
         IProject project,
@@ -578,6 +602,9 @@ internal class AgentCallRepository : AbstractRepository<IAgentCall, AgentCallEnt
             : await mapper.Map(stored, cancellationToken);
     }
 
+    /// <summary>
+    /// Removes the older than asynchronously.
+    /// </summary>
     public async Task<int> RemoveOlderThanAsync(DateTimeOffset cutoffDate, CancellationToken cancellationToken = default)
     {
         var context = contextFactory();
@@ -601,6 +628,9 @@ internal class AgentCallRepository : AbstractRepository<IAgentCall, AgentCallEnt
         return toRemove.Count;
     }
 
+    /// <summary>
+    /// Gets the session removals older than asynchronously.
+    /// </summary>
     public async Task<IReadOnlyList<SessionTraceRemoval>> GetSessionRemovalsOlderThanAsync(
         DateTimeOffset cutoffDate,
         CancellationToken cancellationToken = default)
@@ -634,6 +664,9 @@ internal class AgentCallRepository : AbstractRepository<IAgentCall, AgentCallEnt
         return removals;
     }
 
+    /// <summary>
+    /// Sets the outlier flag asynchronously.
+    /// </summary>
     public async Task SetOutlierFlagAsync(Guid id, OutlierFlags flag, CancellationToken cancellationToken = default)
     {
         var context = contextFactory();
@@ -659,6 +692,9 @@ internal class AgentCallRepository : AbstractRepository<IAgentCall, AgentCallEnt
         await context.SaveChangesAsync(cancellationToken);
     }
 
+    /// <summary>
+    /// Gets the tool names asynchronously.
+    /// </summary>
     public async Task<IReadOnlyList<string>> GetToolNamesAsync(
         Guid projectId, Guid? agentId = null, CancellationToken cancellationToken = default)
     {

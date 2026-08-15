@@ -16,16 +16,31 @@ internal record JsonSchemaMatchEvaluator : DomainEntity<IEvaluator>, IJsonSchema
 {
     private readonly IEvaluation.Create evaluationFactory;
 
+    /// <summary>
+    /// Provides additional functionality.
+    /// </summary>
     public string Name
         => "Json Schema Match";
 
+    /// <summary>
+    /// Provides additional functionality.
+    /// </summary>
     public EvaluatorKind Kind
         => EvaluatorKind.JsonSchemaMatch;
 
+    /// <summary>
+    /// Gets the project.
+    /// </summary>
     public IProject Project { get; }
 
+    /// <summary>
+    /// Gets the json schema.
+    /// </summary>
     public string JsonSchema { get; }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="JsonSchemaMatchEvaluator"/> class.
+    /// </summary>
     public JsonSchemaMatchEvaluator(
         string jsonSchema,
         IProject project,
@@ -37,6 +52,9 @@ internal record JsonSchemaMatchEvaluator : DomainEntity<IEvaluator>, IJsonSchema
         this.evaluationFactory = evaluationFactory;
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="JsonSchemaMatchEvaluator"/> class.
+    /// </summary>
     public JsonSchemaMatchEvaluator(
         string jsonSchema,
         IProject project,
@@ -49,6 +67,9 @@ internal record JsonSchemaMatchEvaluator : DomainEntity<IEvaluator>, IJsonSchema
         this.evaluationFactory = evaluationFactory;
     }
 
+    /// <summary>
+    /// Evaluates asynchronously.
+    /// </summary>
     public Task<IEvaluation?> EvaluateAsync(
         ITestResult testResult,
         CancellationToken cancellationToken = default)
@@ -88,6 +109,9 @@ internal record JsonSchemaMatchEvaluator : DomainEntity<IEvaluator>, IJsonSchema
         return Task.FromResult<IEvaluation?>(evaluationFactory(this, score, sw.Elapsed, reasoning: reasoning));
     }
 
+    /// <summary>
+    /// Validates.
+    /// </summary>
     public override IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
         foreach (var result in base.Validate(validationContext))

@@ -10,6 +10,9 @@ internal static class JwtBearerEventsFactory
 {
     private const string StreamTicketQueryKey = "stream_ticket";
 
+    /// <summary>
+    /// Creates.
+    /// </summary>
     public static JwtBearerEvents Create() => new()
     {
         OnMessageReceived = async context =>

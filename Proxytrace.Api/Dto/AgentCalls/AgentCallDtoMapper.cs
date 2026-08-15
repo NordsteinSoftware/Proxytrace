@@ -14,11 +14,17 @@ public sealed class AgentCallDtoMapper
 {
     private readonly ToolDtoMapper toolDtoMapper;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AgentCallDtoMapper"/> class.
+    /// </summary>
     public AgentCallDtoMapper(ToolDtoMapper toolDtoMapper)
     {
         this.toolDtoMapper = toolDtoMapper;
     }
 
+    /// <summary>
+    /// To dto.
+    /// </summary>
     public AgentCallDto ToDto(IAgentCall c) => new(
         c.Id,
         c.Agent.Id,

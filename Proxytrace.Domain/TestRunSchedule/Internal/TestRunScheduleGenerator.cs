@@ -16,6 +16,9 @@ internal class TestRunScheduleGenerator : DomainEntityGenerator<ITestRunSchedule
         "Nightly", "Hourly Smoke", "Daily Regression", "Weekly Full", "Continuous"
     ];
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TestRunScheduleGenerator"/> class.
+    /// </summary>
     public TestRunScheduleGenerator(
         ITestRunSchedule.CreateNew factory,
         IRepository<ITestRunSchedule> repository,
@@ -28,6 +31,9 @@ internal class TestRunScheduleGenerator : DomainEntityGenerator<ITestRunSchedule
         this.endpointGenerator = endpointGenerator;
     }
 
+    /// <summary>
+    /// Generates asynchronously.
+    /// </summary>
     public override async Task<ITestRunSchedule> GenerateAsync(CancellationToken cancellationToken = default)
     {
         var suite = await suiteGenerator.GetOrCreateAsync(cancellationToken);

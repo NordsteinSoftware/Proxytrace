@@ -8,11 +8,17 @@ internal sealed class LuceneSearchIndexStatistics : ISearchIndexStatistics
 {
     private readonly LuceneIndexWriter writer;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="LuceneSearchIndexStatistics"/> class.
+    /// </summary>
     public LuceneSearchIndexStatistics(LuceneIndexWriter writer)
     {
         this.writer = writer;
     }
 
+    /// <summary>
+    /// Counts asynchronously.
+    /// </summary>
     public Task<int> CountAsync(Guid projectId, CancellationToken cancellationToken = default)
     {
         var query = new TermQuery(new Term(SearchConstants.FieldProjectId, projectId.ToString()));
@@ -21,6 +27,9 @@ internal sealed class LuceneSearchIndexStatistics : ISearchIndexStatistics
         return Task.FromResult(top.TotalHits);
     }
 
+    /// <summary>
+    /// Last indexed at asynchronously.
+    /// </summary>
     public Task<DateTimeOffset?> LastIndexedAtAsync(Guid projectId, CancellationToken cancellationToken = default)
     {
         var query = new TermQuery(new Term(SearchConstants.FieldProjectId, projectId.ToString()));

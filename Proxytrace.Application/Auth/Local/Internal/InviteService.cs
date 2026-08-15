@@ -26,6 +26,9 @@ internal sealed class InviteService : IInviteService
     private readonly ILicenseService license;
     private readonly ISecretHasher hasher;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="InviteService"/> class.
+    /// </summary>
     public InviteService(
         IInviteRepository invites,
         IUserRepository users,
@@ -48,6 +51,9 @@ internal sealed class InviteService : IInviteService
         this.hasher = hasher;
     }
 
+    /// <summary>
+    /// Creates asynchronously.
+    /// </summary>
     public async Task<InviteCreated> CreateAsync(
         string email,
         UserRole role,
@@ -68,6 +74,9 @@ internal sealed class InviteService : IInviteService
         return new InviteCreated(saved, rawToken);
     }
 
+    /// <summary>
+    /// Gets the by token asynchronously.
+    /// </summary>
     public async Task<IInvite?> GetByTokenAsync(string token, CancellationToken cancellationToken = default)
     {
         var invite = await invites.FindByTokenAsync(token, cancellationToken);
@@ -84,6 +93,9 @@ internal sealed class InviteService : IInviteService
         return invite.IsExpired(DateTimeOffset.UtcNow) ? null : invite;
     }
 
+    /// <summary>
+    /// Consume asynchronously.
+    /// </summary>
     public Task<IUser?> ConsumeAsync(string token, string password, CancellationToken cancellationToken = default)
         => transaction.InvokeAsync<IUser?>(async () =>
         {

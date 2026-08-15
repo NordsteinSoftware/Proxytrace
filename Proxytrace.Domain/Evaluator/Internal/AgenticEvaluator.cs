@@ -21,16 +21,31 @@ internal sealed record AgenticEvaluator : DomainEntity<IEvaluator>, IAgenticEval
     private readonly IEvaluation.Create evaluationFactory;
     private readonly IEvaluation.CreateErrored erroredFactory;
 
+    /// <summary>
+    /// Gets the agent.
+    /// </summary>
     public IAgent Agent { get; }
 
+    /// <summary>
+    /// Gets the name.
+    /// </summary>
     public string Name => Agent.Name;
 
+    /// <summary>
+    /// Provides additional functionality.
+    /// </summary>
     public EvaluatorKind Kind
         => EvaluatorKind.Agentic;
 
+    /// <summary>
+    /// Provides additional functionality.
+    /// </summary>
     public IProject Project
         => Agent.Project;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AgenticEvaluator"/> class.
+    /// </summary>
     public AgenticEvaluator(
         IAgent agent,
         IEvaluation.Create evaluationFactory,
@@ -42,6 +57,9 @@ internal sealed record AgenticEvaluator : DomainEntity<IEvaluator>, IAgenticEval
         this.erroredFactory = erroredFactory;
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AgenticEvaluator"/> class.
+    /// </summary>
     public AgenticEvaluator(
         IAgent agent,
         IDomainEntityData existing,
@@ -54,6 +72,9 @@ internal sealed record AgenticEvaluator : DomainEntity<IEvaluator>, IAgenticEval
         this.erroredFactory = erroredFactory;
     }
 
+    /// <summary>
+    /// Evaluates asynchronously.
+    /// </summary>
     public async Task<IEvaluation?> EvaluateAsync(ITestResult testResult, CancellationToken cancellationToken = default)
     {
         Stopwatch sw = Stopwatch.StartNew();
@@ -124,6 +145,9 @@ internal sealed record AgenticEvaluator : DomainEntity<IEvaluator>, IAgenticEval
         return Message.CreateUserMessage(content);
     }
 
+    /// <summary>
+    /// Validates.
+    /// </summary>
     public override IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
         foreach (var validationResult in base.Validate(validationContext))

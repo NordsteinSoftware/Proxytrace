@@ -9,17 +9,44 @@ namespace Proxytrace.Domain.CustomAnomaly.Internal;
 
 internal record CustomAnomalyDetector : DomainEntity<ICustomAnomalyDetector>, ICustomAnomalyDetector
 {
+    /// <summary>
+    /// Gets or sets the name.
+    /// </summary>
     public string Name { get; private init; }
+    /// <summary>
+    /// Gets or sets the agent.
+    /// </summary>
     public IAgent Agent { get; private init; }
+    /// <summary>
+    /// Gets or sets the triggers.
+    /// </summary>
     public IReadOnlyList<AnomalyTrigger> Triggers { get; private init; }
+    /// <summary>
+    /// Gets or sets the all agents.
+    /// </summary>
     public bool AllAgents { get; private init; }
+    /// <summary>
+    /// Gets or sets the scoped agents.
+    /// </summary>
     public IReadOnlyCollection<IAgent> ScopedAgents { get; private init; }
+    /// <summary>
+    /// Gets or sets the is enabled.
+    /// </summary>
     public bool IsEnabled { get; private init; }
+    /// <summary>
+    /// Gets or sets the block upstream.
+    /// </summary>
     public bool BlockUpstream { get; private init; }
 
+    /// <summary>
+    /// Provides additional functionality.
+    /// </summary>
     public IProject Project
         => Agent.Project;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CustomAnomalyDetector"/> class.
+    /// </summary>
     public CustomAnomalyDetector(
         string name,
         IAgent agent,
@@ -39,6 +66,9 @@ internal record CustomAnomalyDetector : DomainEntity<ICustomAnomalyDetector>, IC
         BlockUpstream = blockUpstream;
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CustomAnomalyDetector"/> class.
+    /// </summary>
     public CustomAnomalyDetector(
         string name,
         IAgent agent,
@@ -59,6 +89,9 @@ internal record CustomAnomalyDetector : DomainEntity<ICustomAnomalyDetector>, IC
         BlockUpstream = blockUpstream;
     }
 
+    /// <summary>
+    /// Updates.
+    /// </summary>
     public Task<ICustomAnomalyDetector> Update(
         string name,
         IReadOnlyList<AnomalyTrigger> triggers,
@@ -77,6 +110,9 @@ internal record CustomAnomalyDetector : DomainEntity<ICustomAnomalyDetector>, IC
             BlockUpstream = blockUpstream,
         }, cancellationToken);
 
+    /// <summary>
+    /// Validates.
+    /// </summary>
     public override IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
         foreach (var result in base.Validate(validationContext))

@@ -14,6 +14,9 @@ internal class ModelSwitchTheoryGenerator : OptimizationTheoryGeneratorBase<IMod
     private readonly IDomainEntityGenerator<IModelEndpoint> endpointGenerator;
     private readonly IRandom random;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ModelSwitchTheoryGenerator"/> class.
+    /// </summary>
     public ModelSwitchTheoryGenerator(
         IModelSwitchTheory.CreateNew factory,
         IDomainEntityGenerator<IAgent> agentGenerator,
@@ -29,6 +32,9 @@ internal class ModelSwitchTheoryGenerator : OptimizationTheoryGeneratorBase<IMod
         this.random = random;
     }
 
+    /// <summary>
+    /// Generates asynchronously.
+    /// </summary>
     public override async Task<IModelSwitchTheory> GenerateAsync(CancellationToken cancellationToken = default)
     {
         var agent = await agentGenerator.GetOrCreateAsync(cancellationToken);

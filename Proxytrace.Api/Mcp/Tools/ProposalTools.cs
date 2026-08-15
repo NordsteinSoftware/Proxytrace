@@ -25,6 +25,9 @@ internal sealed class ProposalTools
     private readonly ILicenseService license;
     private readonly ILogger<Audit> audit;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ProposalTools"/> class.
+    /// </summary>
     public ProposalTools(
         IMcpProjectAccessor project,
         IOptimizationProposalRepository repository,
@@ -44,6 +47,9 @@ internal sealed class ProposalTools
     [McpServerTool(Name = "list_proposals")]
     [Description("List the optimization proposals in the current project (most recent first), with their " +
                  "kind, status and expected pass-rate delta.")]
+    /// <summary>
+    /// Lists the proposals.
+    /// </summary>
     public async Task<IReadOnlyList<OptimizationProposalDto>> ListProposals(CancellationToken cancellationToken)
     {
         EnsureFeature();
@@ -52,6 +58,9 @@ internal sealed class ProposalTools
         return proposals.Select(mapper.ToDto).ToArray();
     }
 
+    /// <summary>
+    /// Gets the proposal.
+    /// </summary>
     [McpServerTool(Name = "get_proposal")]
     [Description("Get a single optimization proposal by id. It must belong to the current project.")]
     public async Task<OptimizationProposalDto> GetProposal(
@@ -65,6 +74,9 @@ internal sealed class ProposalTools
     [McpServerTool(Name = "get_proposal_artifact")]
     [Description("Get the machine-readable handoff package for applying a proposal's change to the agent's " +
                  "actual implementation. The proposal must belong to the current project.")]
+    /// <summary>
+    /// Gets the proposal artifact.
+    /// </summary>
     public async Task<ProposalArtifactDto> GetProposalArtifact(
         [Description("The proposal id (GUID), from list_proposals.")] Guid proposalId,
         CancellationToken cancellationToken)
@@ -76,6 +88,9 @@ internal sealed class ProposalTools
     [McpServerTool(Name = "set_proposal_status")]
     [Description("Approve, reject or mark-adopted an optimization proposal. Valid transitions: Draft->Accepted, " +
                  "Draft->Rejected, Accepted->Adopted. The proposal must belong to the current project.")]
+    /// <summary>
+    /// Sets the proposal status.
+    /// </summary>
     public async Task<OptimizationProposalDto> SetProposalStatus(
         [Description("The proposal id (GUID), from list_proposals.")] Guid proposalId,
         [Description("The target status: Accepted, Rejected or Adopted.")] ProposalStatus status,

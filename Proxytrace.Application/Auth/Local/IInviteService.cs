@@ -9,6 +9,9 @@ namespace Proxytrace.Application.Auth.Local;
 /// </summary>
 public sealed record InviteCreated(IInvite Invite, string RawToken);
 
+/// <summary>
+/// Service that provides invite functionality.
+/// </summary>
 public interface IInviteService
 {
     Task<InviteCreated> CreateAsync(

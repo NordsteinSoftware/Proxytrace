@@ -43,6 +43,9 @@ internal class DashboardStatistics : IDashboardStatistics
     // entry is only ever requested — and therefore only ever served — for admins.
     private readonly ConcurrentDictionary<CacheKey, CacheEntry> viewCache = new();
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DashboardStatistics"/> class.
+    /// </summary>
     public DashboardStatistics(
         ITestRunStatsReader runStats,
         IAgentCallStatsReader callStats,
@@ -63,6 +66,9 @@ internal class DashboardStatistics : IDashboardStatistics
         this.cacheOptions = cacheOptions;
     }
 
+    /// <summary>
+    /// Gets the dashboard view asynchronously.
+    /// </summary>
     public async Task<DashboardView> GetDashboardViewAsync(StatisticsFilter filter, int recentTraceCount, int agentLimit, CancellationToken cancellationToken = default)
     {
         TimeSpan ttl = cacheOptions.Ttl;
@@ -214,12 +220,21 @@ internal class DashboardStatistics : IDashboardStatistics
             Pulse: pulseTask.Result);
     }
 
+    /// <summary>
+    /// Gets the agent breakdown asynchronously.
+    /// </summary>
     public Task<IReadOnlyList<AgentBreakdownStat>> GetAgentBreakdownAsync(StatisticsFilter filter, CancellationToken cancellationToken = default)
         => callStats.GetAgentBreakdownAsync(filter, cancellationToken);
 
+    /// <summary>
+    /// Gets the latency asynchronously.
+    /// </summary>
     public Task<IReadOnlyList<LatencyStat>> GetLatencyAsync(StatisticsFilter filter, CancellationToken cancellationToken = default)
         => callStats.GetLatencyAsync(filter, cancellationToken);
 
+    /// <summary>
+    /// Gets the anomaly counts by agent asynchronously.
+    /// </summary>
     public Task<IReadOnlyList<AgentAnomalyStat>> GetAnomalyCountsByAgentAsync(StatisticsFilter filter, StatisticsBucket bucket, CancellationToken cancellationToken = default)
         => callStats.GetAnomalyCountsByAgentAsync(filter, bucket, cancellationToken);
 

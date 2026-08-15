@@ -21,6 +21,9 @@ internal sealed class SwitchModelOptimizer : IOptimizerImplementation
 
     private readonly IModelSwitchTheory.CreateNew factory;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SwitchModelOptimizer"/> class.
+    /// </summary>
     public SwitchModelOptimizer(IModelSwitchTheory.CreateNew factory)
     {
         this.factory = factory;

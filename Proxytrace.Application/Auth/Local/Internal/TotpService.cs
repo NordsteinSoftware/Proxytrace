@@ -13,9 +13,15 @@ internal sealed class TotpService : ITotpService
     // (or who types the code as it rolls over) still authenticates.
     private static readonly VerificationWindow Window = new(previous: 1, future: 1);
 
+    /// <summary>
+    /// Generates the secret.
+    /// </summary>
     public string GenerateSecret()
         => Base32Encoding.ToString(KeyGeneration.GenerateRandomKey(SecretBytes));
 
+    /// <summary>
+    /// Builds the otp auth uri.
+    /// </summary>
     public string BuildOtpAuthUri(string email, string secret)
     {
         var label = Uri.EscapeDataString($"{Issuer}:{email}");
@@ -23,6 +29,9 @@ internal sealed class TotpService : ITotpService
         return $"otpauth://totp/{label}?secret={secret}&issuer={issuer}&algorithm=SHA1&digits=6&period=30";
     }
 
+    /// <summary>
+    /// Tries to the verify.
+    /// </summary>
     public bool TryVerify(string secret, string code, long? lastUsedStep, out long matchedStep)
     {
         matchedStep = 0;

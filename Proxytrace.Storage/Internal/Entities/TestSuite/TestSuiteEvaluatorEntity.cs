@@ -6,6 +6,12 @@ namespace Proxytrace.Storage.Internal.Entities.TestSuite;
 /// </summary>
 internal record TestSuiteEvaluatorEntity
 {
+    /// <summary>
+    /// Gets or sets the test suite id.
+    /// </summary>
     public required Guid TestSuiteId { get; init; }
+    /// <summary>
+    /// Gets or sets the evaluator id.
+    /// </summary>
     public required Guid EvaluatorId { get; init; }
 }

@@ -2,6 +2,9 @@ using Proxytrace.Domain.TestRun;
 
 namespace Proxytrace.Api.Dto.Proposals;
 
+/// <summary>
+/// Data transfer object representing a ab test run summary.
+/// </summary>
 public record AbTestRunSummaryDto(
     Guid Id,
     Guid GroupId,
