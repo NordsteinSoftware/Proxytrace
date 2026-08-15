@@ -12,11 +12,17 @@ internal class AgentCallSimulator
 {
     private readonly Configuration configuration;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AgentCallSimulator"/> class.
+    /// </summary>
     public AgentCallSimulator(Configuration configuration)
     {
         this.configuration = configuration;
     }
     
+    /// <summary>
+    /// Runs.
+    /// </summary>
     public async Task Run(CancellationToken cancellationToken = default)
     {
         using var httpClient = new HttpClient();

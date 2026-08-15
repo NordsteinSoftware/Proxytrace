@@ -17,11 +17,17 @@ internal class ToolCallSimulator
 
     private readonly Configuration configuration;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ToolCallSimulator"/> class.
+    /// </summary>
     public ToolCallSimulator(Configuration configuration)
     {
         this.configuration = configuration;
     }
 
+    /// <summary>
+    /// Runs.
+    /// </summary>
     public async Task Run(CancellationToken cancellationToken = default)
     {
         using var httpClient = new HttpClient();

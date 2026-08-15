@@ -4,6 +4,9 @@ using Proxytrace.Client.Sample.Internal;
 
 namespace Proxytrace.Client.Sample;
 
+/// <summary>
+/// Autofac module that registers  services.
+/// </summary>
 public class Module : Autofac.Module
 {
     protected override void Load(ContainerBuilder builder)
