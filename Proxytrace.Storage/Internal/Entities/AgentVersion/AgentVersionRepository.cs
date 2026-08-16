@@ -17,7 +17,8 @@ internal class AgentVersionRepository : AbstractRepository<IAgentVersion, AgentV
     private readonly IAgentVersionFingerprinter fingerprinter;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="AgentVersionRepository"/> class.
+    /// Initializes the repository with the fingerprinter used for strict and loose fingerprint
+    /// lookups, plus the version cache for fast repeated resolution.
     /// </summary>
     public AgentVersionRepository(
         IMapper<IAgentVersion, AgentVersionEntity> mapper,
@@ -32,7 +33,9 @@ internal class AgentVersionRepository : AbstractRepository<IAgentVersion, AgentV
     }
 
     /// <summary>
-    /// Finds the by strict fingerprint asynchronously.
+    /// Returns the agent version in the given project whose strict fingerprint (SHA-256 of system
+    /// prompt plus all tool specifications with descriptions) matches the given prompt and tools, or
+    /// null if no match exists. Used by GetOrCreateAsync to detect an exact duplicate before inserting.
     /// </summary>
     public async Task<IAgentVersion?> FindByStrictFingerprintAsync(
         IProject project,

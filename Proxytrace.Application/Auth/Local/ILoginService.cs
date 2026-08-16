@@ -3,7 +3,7 @@ using Proxytrace.Domain.User;
 namespace Proxytrace.Application.Auth.Local;
 
 /// <summary>
-/// Service that provides login functionality.
+/// Authenticates a user by email and password and issues a session token, handling the MFA challenge when the account requires a second factor.
 /// </summary>
 public interface ILoginService
 {

@@ -6,6 +6,9 @@ namespace Proxytrace.Application.Statistics;
 /// </summary>
 public interface IAgentStatistics
 {
+    /// <summary>
+    /// Returns aggregated call count, pass rate, latency, and cost totals for the agent over the requested time window and bucket granularity.
+    /// </summary>
     Task<AgentOverviewStat> GetAgentOverviewAsync(Guid agentId, DateTimeOffset from, DateTimeOffset to, StatisticsBucket bucket, CancellationToken cancellationToken = default);
 
     /// <summary>

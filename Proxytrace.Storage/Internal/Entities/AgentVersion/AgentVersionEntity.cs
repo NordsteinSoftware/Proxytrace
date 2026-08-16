@@ -9,7 +9,7 @@ namespace Proxytrace.Storage.Internal.Entities.AgentVersion;
 internal record AgentVersionEntity : Entity
 {
     /// <summary>
-    /// Gets or sets the agent id.
+    /// FK to the parent agent that owns this version. Maps to the agent_versions.agent_id column.
     /// </summary>
     public required Guid AgentId { get; init; }
 
@@ -19,17 +19,20 @@ internal record AgentVersionEntity : Entity
     public required Guid Project { get; init; }
 
     /// <summary>
-    /// Gets or sets the version number.
+    /// Monotonically increasing integer within the owning agent, starting at 1 for the initial version.
+    /// Maps to the agent_versions.version_number column.
     /// </summary>
     public required int VersionNumber { get; init; }
 
     /// <summary>
-    /// Gets or sets the system prompt.
+    /// JSON-serialized system prompt (name and template text) active in this version.
+    /// Maps to the agent_versions.system_prompt column.
     /// </summary>
     public required SystemPromptData SystemPrompt { get; init; }
 
     /// <summary>
-    /// Gets or sets the tools.
+    /// JSON-serialized list of tool specifications available to the agent in this version.
+    /// Maps to the agent_versions.tools column.
     /// </summary>
     public required IReadOnlyList<ToolSpecification> Tools { get; init; }
 

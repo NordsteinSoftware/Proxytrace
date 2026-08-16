@@ -4,7 +4,7 @@ using Proxytrace.Domain.TestRunGroup;
 namespace Proxytrace.Application.Optimization;
 
 /// <summary>
-/// Represents a optimizer.
+/// Analyses a completed test-run group and proposes optimization theories for underperforming agents.
 /// </summary>
 public interface IOptimizer
 {

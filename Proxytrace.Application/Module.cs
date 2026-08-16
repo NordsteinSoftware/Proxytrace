@@ -54,7 +54,7 @@ using Proxytrace.Licensing;
 namespace Proxytrace.Application;
 
 /// <summary>
-/// Autofac module that registers  services.
+/// Root Autofac module for the Application layer; registers all background services, hosted workers, streaming broadcasters, and cross-cutting infrastructure.
 /// </summary>
 public sealed class Module : Autofac.Module
 {

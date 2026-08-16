@@ -1,16 +1,17 @@
 namespace Proxytrace.Application.Cleanup;
 
 /// <summary>
-/// Configuration for agent call cleanup.
+/// Retention settings for the agent-call (trace) history, bound from the 'AgentCallCleanup' config section.
 /// </summary>
 public sealed record AgentCallCleanupConfiguration
 {
     /// <summary>
-    /// Gets or sets the retention duration days.
+    /// Traces older than this are permanently deleted on each cleanup pass.
     /// </summary>
     public int RetentionDurationDays { get; init; } = 30;
+
     /// <summary>
-    /// Gets or sets the cleanup interval hours.
+    /// How often the background cleanup service scans for and removes expired traces.
     /// </summary>
     public int CleanupIntervalHours { get; init; } = 6;
 }

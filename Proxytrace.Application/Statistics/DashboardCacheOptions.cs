@@ -17,7 +17,7 @@ public sealed record DashboardCacheOptions
     public double TtlSeconds { get; init; } = 10d;
 
     /// <summary>
-    /// Gets the ttl.
+    /// <see cref="TtlSeconds"/> expressed as a <see cref="TimeSpan"/> for consumers that take a duration directly.
     /// </summary>
     public TimeSpan Ttl => TimeSpan.FromSeconds(TtlSeconds);
 }

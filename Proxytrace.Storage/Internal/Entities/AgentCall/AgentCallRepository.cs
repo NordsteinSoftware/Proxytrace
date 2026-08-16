@@ -30,7 +30,8 @@ internal class AgentCallRepository : AbstractRepository<IAgentCall, AgentCallEnt
     private readonly IRepository<IModelEndpoint> endpoints;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="AgentCallRepository"/> class.
+    /// Initializes the repository with the base infrastructure plus references to the version, agent,
+    /// and endpoint repositories used to resolve metadata for list projections and query filters.
     /// </summary>
     public AgentCallRepository(
         IMapper<IAgentCall, AgentCallEntity> mapper,
@@ -50,7 +51,9 @@ internal class AgentCallRepository : AbstractRepository<IAgentCall, AgentCallEnt
     }
 
     /// <summary>
-    /// Gets the filtered asynchronously.
+    /// Returns a paged set of fully-hydrated agent calls matching the given filter, together with the
+    /// total count. Applies all filter predicates (project, agent, endpoint, date range, status, tokens,
+    /// latency, outlier flags, tool name, fulltext) before paging.
     /// </summary>
     public async Task<(IReadOnlyList<IAgentCall> Items, int Total)> GetFilteredAsync(
         AgentCallFilter filter,
@@ -77,7 +80,9 @@ internal class AgentCallRepository : AbstractRepository<IAgentCall, AgentCallEnt
     }
 
     /// <summary>
-    /// Gets the filtered list asynchronously.
+    /// Returns a paged list of lightweight trace summaries matching the given filter, together with the
+    /// total count. Projects scalar columns only — the large Request/Response JSON payloads are never
+    /// read. Agent and endpoint metadata is batch-resolved from the cached entity repositories.
     /// </summary>
     public async Task<(IReadOnlyList<AgentCallListItem> Items, int Total)> GetFilteredListAsync(
         AgentCallFilter filter,
@@ -193,7 +198,9 @@ internal class AgentCallRepository : AbstractRepository<IAgentCall, AgentCallEnt
         OutlierFlags OutlierFlags);
 
     /// <summary>
-    /// Gets the histogram asynchronously.
+    /// Returns a time-bucketed histogram of call counts and error counts for the given filter window.
+    /// Aggregates entirely in the database — one row per non-empty bucket — then expands to the
+    /// requested bucket count with zero-filled gaps in the domain layer.
     /// </summary>
     public async Task<IReadOnlyList<AgentCallHistogramBucket>> GetHistogramAsync(
         AgentCallFilter filter,
@@ -261,7 +268,9 @@ internal class AgentCallRepository : AbstractRepository<IAgentCall, AgentCallEnt
     }
 
     /// <summary>
-    /// Gets the summary asynchronously.
+    /// Returns aggregated statistics (total count, token usage, latency moments, error count, and cost)
+    /// for all calls matching the given filter. Groups by endpoint so cost can be priced per endpoint;
+    /// executes as a single grouped aggregate query.
     /// </summary>
     public async Task<AgentCallSummary> GetSummaryAsync(
         AgentCallFilter filter,
@@ -534,7 +543,8 @@ internal class AgentCallRepository : AbstractRepository<IAgentCall, AgentCallEnt
             : query.OrderBy(isNull).ThenBy(key).ThenBy(e => e.Id);
 
     /// <summary>
-    /// Gets the last call times asynchronously.
+    /// Returns a dictionary mapping each agent ID to the timestamp of its most recent call across
+    /// all versions. Executes as a single grouped aggregate query joining calls to agent versions.
     /// </summary>
     public async Task<IReadOnlyDictionary<Guid, DateTimeOffset>> GetLastCallTimesAsync(
         CancellationToken cancellationToken = default)
@@ -553,7 +563,9 @@ internal class AgentCallRepository : AbstractRepository<IAgentCall, AgentCallEnt
     }
 
     /// <summary>
-    /// Gets the last call time asynchronously.
+    /// Returns the timestamp of the most recent call for the given agent across all its versions, or
+    /// null when the agent has no recorded calls. Filters to this agent's version IDs in SQL so the
+    /// query stays indexed rather than scanning the full trace table.
     /// </summary>
     public async Task<DateTimeOffset?> GetLastCallTimeAsync(
         Guid agentId,
@@ -578,7 +590,9 @@ internal class AgentCallRepository : AbstractRepository<IAgentCall, AgentCallEnt
     }
 
     /// <summary>
-    /// Finds the latest by conversation id asynchronously.
+    /// Returns the most recent call belonging to the given conversation within the given project, or
+    /// null if no matching call exists. Scoped to the project via an agent-version subquery to prevent
+    /// cross-project leakage.
     /// </summary>
     public async Task<IAgentCall?> FindLatestByConversationIdAsync(
         Guid conversationId,
@@ -603,7 +617,9 @@ internal class AgentCallRepository : AbstractRepository<IAgentCall, AgentCallEnt
     }
 
     /// <summary>
-    /// Removes the older than asynchronously.
+    /// Deletes all agent calls created on or before the cutoff date. Executes as a server-side DELETE
+    /// on relational providers to avoid materializing rows; falls back to load-then-remove on the
+    /// in-memory provider (tests/kiosk) and also loads the Tools navigation to cascade child rows.
     /// </summary>
     public async Task<int> RemoveOlderThanAsync(DateTimeOffset cutoffDate, CancellationToken cancellationToken = default)
     {
@@ -629,7 +645,9 @@ internal class AgentCallRepository : AbstractRepository<IAgentCall, AgentCallEnt
     }
 
     /// <summary>
-    /// Gets the session removals older than asynchronously.
+    /// Returns the session-scoped trace and token deltas for all calls created on or before the
+    /// cutoff, grouped by session. Used by the retention sweep to decrement session counters before
+    /// deleting the calls.
     /// </summary>
     public async Task<IReadOnlyList<SessionTraceRemoval>> GetSessionRemovalsOlderThanAsync(
         DateTimeOffset cutoffDate,
@@ -665,7 +683,9 @@ internal class AgentCallRepository : AbstractRepository<IAgentCall, AgentCallEnt
     }
 
     /// <summary>
-    /// Sets the outlier flag asynchronously.
+    /// Bitwise-ORs the given flag into the OutlierFlags column of the specified call, without
+    /// overwriting existing flags. Uses a server-side ExecuteUpdate on relational providers to avoid
+    /// a read-modify-write race between concurrent statistical writers.
     /// </summary>
     public async Task SetOutlierFlagAsync(Guid id, OutlierFlags flag, CancellationToken cancellationToken = default)
     {
@@ -693,7 +713,9 @@ internal class AgentCallRepository : AbstractRepository<IAgentCall, AgentCallEnt
     }
 
     /// <summary>
-    /// Gets the tool names asynchronously.
+    /// Returns the distinct tool names used in calls belonging to the given project, optionally
+    /// scoped to a single agent. Uses the denormalized AgentCallToolEntity rows so the query runs
+    /// as an indexed DISTINCT on the (ProjectId, AgentId, ToolName) index without touching the trace table.
     /// </summary>
     public async Task<IReadOnlyList<string>> GetToolNamesAsync(
         Guid projectId, Guid? agentId = null, CancellationToken cancellationToken = default)

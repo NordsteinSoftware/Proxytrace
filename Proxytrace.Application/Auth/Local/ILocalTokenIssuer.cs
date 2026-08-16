@@ -3,41 +3,48 @@ using Proxytrace.Domain.User;
 namespace Proxytrace.Application.Auth.Local;
 
 /// <summary>
-/// Represents a local token issuer.
+/// Issues signed JWT session tokens for locally-authenticated users.
 /// </summary>
 public interface ILocalTokenIssuer
 {
+    /// <summary>
+    /// Mints a signed JWT for the given user, returning the token string and its expiry.
+    /// </summary>
     LocalTokenResult Issue(IUser user);
 }
 
 /// <summary>
-/// Encapsulates the result of a local token operation.
+/// A freshly minted JWT and its expiry timestamp.
 /// </summary>
 public sealed record LocalTokenResult(string Token, DateTimeOffset ExpiresAt);
 
 /// <summary>
-/// Represents a local auth options.
+/// Configuration for the local JWT issuer, bound from the 'Authentication:Local' config section.
 /// </summary>
 public sealed class LocalAuthOptions
 {
     /// <summary>
-    /// The section name constant value.
+    /// Configuration section path where <see cref="LocalAuthOptions"/> is bound.
     /// </summary>
     public const string SectionName = "Authentication:Local";
+
     /// <summary>
-    /// Gets or sets the signing key.
+    /// Hex-encoded HMAC-SHA256 key used to sign local session JWTs.
     /// </summary>
     public string SigningKey { get; init; } = string.Empty;
+
     /// <summary>
-    /// Gets or sets the issuer.
+    /// JWT 'iss' claim value; identifies this Proxytrace installation as the token issuer.
     /// </summary>
     public string Issuer { get; init; } = "proxytrace-local";
+
     /// <summary>
-    /// Gets or sets the audience.
+    /// JWT 'aud' claim value; must match the bearer validation audience configured in the API.
     /// </summary>
     public string Audience { get; init; } = "proxytrace-api";
+
     /// <summary>
-    /// Gets or sets the token lifetime.
+    /// How long issued tokens remain valid before the user must re-authenticate.
     /// </summary>
     public TimeSpan TokenLifetime { get; init; } = TimeSpan.FromDays(7);
 }
