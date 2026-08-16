@@ -1,4 +1,5 @@
-﻿FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS base
+# syntax=docker/dockerfile:1
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS base
 USER root
 # Pre-create the writable runtime data dirs (Lucene search index, plus the appdata dir
 # that holds generated secrets / the session signing key / the license offline-grace cache)
@@ -29,13 +30,15 @@ ARG APP_VERSION=0.0.0-dev
 # production key. The dev/e2e/perf composes pass the test key; official images pass nothing.
 ARG LICENSE_PUBLIC_KEY=
 WORKDIR /src
-# The Nordstein.Core reference expansion lives in these files, so restore needs them
-# before the project files. Nordstein.Core.sln is what selects source mode (see
-# Directory.Build.props); without it the image would silently restore package mode.
+# Warm the restore cache from just the project files, then bring in the rest of the tree
+# below. Every core/*/*.csproj is copied via a glob (COPY --parents preserves the per-project
+# directories) so the source-mode reference expansion resolves for all core packages and a
+# newly added Nordstein.Core package is picked up automatically instead of silently drifting
+# out of this layer. Nordstein.Core.sln is what selects source mode (see Directory.Build.props);
+# without it the image would silently restore package mode.
 COPY ["Directory.Build.props", "Directory.Build.targets", "nuget.config", "./"]
 COPY ["core/Directory.Build.props", "core/Nordstein.Core.sln", "core/"]
-COPY ["core/Nordstein.Core.Common/Nordstein.Core.Common.csproj", "core/Nordstein.Core.Common/"]
-COPY ["core/Nordstein.Core.Domain/Nordstein.Core.Domain.csproj", "core/Nordstein.Core.Domain/"]
+COPY --parents core/*/*.csproj ./
 COPY ["Proxytrace.Api/Proxytrace.Api.csproj", "Proxytrace.Api/"]
 COPY ["Proxytrace.Application/Proxytrace.Application.csproj", "Proxytrace.Application/"]
 COPY ["Proxytrace.Domain/Proxytrace.Domain.csproj", "Proxytrace.Domain/"]
