@@ -14,7 +14,7 @@
           <PrivateAssets>all</PrivateAssets>
         </PackageReference>
         <PackageReference Include="MSTest" Version="4.3.3" />
-        <PackageReference Include="Testcontainers.Redis" Version="4.13.0" />
+        <PackageReference Include="Testcontainers.Redis" Version="4.14.0" />
         <!-- Transitive-only, pinned to override the version Testcontainers.Redis resolves through
              Docker.DotNet. SSH.NET <= 2025.1.0 carries CVE-2026-48798 (GHSA-q939-rpr3-3284, high):
              ScpClient.Download() does not validate server-supplied filenames on a recursive
