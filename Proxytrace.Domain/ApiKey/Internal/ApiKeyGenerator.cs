@@ -14,6 +14,9 @@ internal class ApiKeyGenerator : DomainEntityGenerator<IApiKey>
     private readonly IDomainEntityGenerator<IModelProvider> providerGenerator;
     private readonly IDomainEntityGenerator<IUser> userGenerator;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ApiKeyGenerator"/> class.
+    /// </summary>
     public ApiKeyGenerator(
         IApiKey.CreateNew factory,
         IRepository<IApiKey> repository,
@@ -28,6 +31,9 @@ internal class ApiKeyGenerator : DomainEntityGenerator<IApiKey>
         this.userGenerator = userGenerator;
     }
 
+    /// <summary>
+    /// Generates asynchronously.
+    /// </summary>
     public override async Task<IApiKey> GenerateAsync(CancellationToken cancellationToken = default)
     {
         var project = await projectGenerator.GetOrCreateAsync(cancellationToken);

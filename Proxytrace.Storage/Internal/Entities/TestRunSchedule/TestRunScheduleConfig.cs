@@ -16,6 +16,9 @@ internal class TestRunScheduleConfig : AbstractEntityConfiguration<TestRunSchedu
     private readonly ITestRunSchedule.CreateExisting factory;
     private readonly Func<StorageDbContext> contextFactory;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TestRunScheduleConfig"/> class.
+    /// </summary>
     public TestRunScheduleConfig(
         IRepository<ITestSuite> suites,
         IRepository<IModelEndpoint> endpoints,
@@ -28,6 +31,9 @@ internal class TestRunScheduleConfig : AbstractEntityConfiguration<TestRunSchedu
         this.contextFactory = contextFactory;
     }
 
+    /// <summary>
+    /// Configures the application request pipeline.
+    /// </summary>
     public override void Configure(EntityTypeBuilder<TestRunScheduleEntity> builder)
     {
         builder
@@ -39,6 +45,9 @@ internal class TestRunScheduleConfig : AbstractEntityConfiguration<TestRunSchedu
         builder.HasIndex(e => new { e.IsEnabled, e.NextRunAt });
     }
 
+    /// <summary>
+    /// Maps.
+    /// </summary>
     public async Task<ITestRunSchedule> Map(TestRunScheduleEntity storedEntity, CancellationToken cancellationToken = default)
     {
         var context = contextFactory();
@@ -64,6 +73,9 @@ internal class TestRunScheduleConfig : AbstractEntityConfiguration<TestRunSchedu
             existing: storedEntity);
     }
 
+    /// <summary>
+    /// Maps.
+    /// </summary>
     public Task<TestRunScheduleEntity> Map(ITestRunSchedule domainEntity, CancellationToken cancellationToken = default)
         => new TestRunScheduleEntity
         {

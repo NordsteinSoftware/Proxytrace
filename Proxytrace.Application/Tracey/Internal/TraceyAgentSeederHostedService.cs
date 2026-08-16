@@ -17,6 +17,9 @@ internal sealed class TraceyAgentSeederHostedService : IHostedService
     private readonly IServiceProvider rootServices;
     private readonly ILogger<TraceyAgentSeederHostedService> logger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TraceyAgentSeederHostedService"/> class.
+    /// </summary>
     public TraceyAgentSeederHostedService(
         IServiceProvider rootServices,
         ILogger<TraceyAgentSeederHostedService> logger)
@@ -25,6 +28,9 @@ internal sealed class TraceyAgentSeederHostedService : IHostedService
         this.logger = logger;
     }
 
+    /// <summary>
+    /// Starts asynchronously.
+    /// </summary>
     public async Task StartAsync(CancellationToken cancellationToken)
     {
         using var scope = rootServices.CreateScope();
@@ -46,5 +52,8 @@ internal sealed class TraceyAgentSeederHostedService : IHostedService
         logger.LogInformation("Tracey seeding complete");
     }
 
+    /// <summary>
+    /// Stops asynchronously.
+    /// </summary>
     public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 }

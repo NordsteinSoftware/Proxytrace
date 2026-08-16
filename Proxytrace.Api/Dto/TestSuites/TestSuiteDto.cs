@@ -3,6 +3,9 @@ using Proxytrace.Domain.Evaluator;
 
 namespace Proxytrace.Api.Dto.TestSuites;
 
+/// <summary>
+/// Data transfer object representing a test suite.
+/// </summary>
 public record TestSuiteDto(
     Guid Id,
     string Name,
@@ -45,6 +48,9 @@ public record TestSuiteListItemDto(
     DateTimeOffset CreatedAt,
     DateTimeOffset UpdatedAt);
 
+/// <summary>
+/// Data transfer object representing a evaluator.
+/// </summary>
 public record EvaluatorDto(Guid Id, EvaluatorKind Kind);
 
 /// <summary>
@@ -58,6 +64,9 @@ public record SuiteRunStatsDto(
     double? AvgDurationMs,
     decimal? TotalCost);
 
+/// <summary>
+/// Data transfer object representing a test case.
+/// </summary>
 public record TestCaseDto(
     Guid Id,
     IReadOnlyList<TestSuiteMessageDto> Input,
@@ -72,17 +81,32 @@ public record TestCaseDto(
     // expected output that contradicts it can ever pass. See docs/optimization-loop.md.
     int ResolvedToolCallCount = 0);
 
+/// <summary>
+/// Data transfer object representing a test suite message.
+/// </summary>
 public record TestSuiteMessageDto(
     string Role,
     string Content,
     IReadOnlyList<ToolRequestInputDto>? ToolRequests = null,
     string? ToolCallId = null);
 
+/// <summary>
+/// Data transfer object representing a tool request input.
+/// </summary>
 public record ToolRequestInputDto(string Name, string Arguments, string? Id = null);
 
+/// <summary>
+/// Request payload for update test case operations.
+/// </summary>
 public record UpdateTestCaseRequest(TestSuiteMessageDto ExpectedOutput);
 
+/// <summary>
+/// Request payload for create test suite operations.
+/// </summary>
 public record CreateTestSuiteRequest(
+    /// <summary>
+    /// Request payload for create test case operations.
+    /// </summary>
     [Required, StringLength(200, MinimumLength = 1)] string Name,
     [Required] Guid AgentId,
     [Required, MaxLength(RequestLimits.MaxTestCases)] IReadOnlyList<CreateTestCaseRequest> TestCases,
@@ -93,6 +117,9 @@ public record CreateTestCaseRequest(
     IReadOnlyList<TestSuiteMessageDto>? Input,
     TestSuiteMessageDto? ExpectedOutput);
 
+/// <summary>
+/// Request payload for add test case operations.
+/// </summary>
 public record AddTestCaseRequest(
     Guid? FromAgentCallId,
     IReadOnlyList<TestSuiteMessageDto>? Input,

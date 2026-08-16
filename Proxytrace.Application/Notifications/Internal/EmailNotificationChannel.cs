@@ -22,6 +22,9 @@ internal sealed class EmailNotificationChannel : INotificationChannel
     private readonly IRepository<IUser> users;
     private readonly ILogger<EmailNotificationChannel> logger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="EmailNotificationChannel"/> class.
+    /// </summary>
     public EmailNotificationChannel(
         IEmailSettingsStore settingsStore,
         IEmailSender sender,
@@ -36,8 +39,14 @@ internal sealed class EmailNotificationChannel : INotificationChannel
         this.logger = logger;
     }
 
+    /// <summary>
+    /// Gets the name.
+    /// </summary>
     public string Name => "Email";
 
+    /// <summary>
+    /// Deliver asynchronously.
+    /// </summary>
     public async Task DeliverAsync(INotification notification, CancellationToken cancellationToken = default)
     {
         EmailSettings? settings = await settingsStore.GetAsync(cancellationToken);

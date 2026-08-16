@@ -34,6 +34,9 @@ internal sealed class MfaService : IMfaService
     private readonly IPasswordService passwords;
     private readonly ITransaction transaction;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="MfaService"/> class.
+    /// </summary>
     public MfaService(
         IUserTotpEnrollmentRepository enrollments,
         IMfaBackupCodeRepository backupCodes,
@@ -60,9 +63,15 @@ internal sealed class MfaService : IMfaService
         this.transaction = transaction;
     }
 
+    /// <summary>
+    /// Determines whether the enabled asynchronously.
+    /// </summary>
     public async Task<bool> IsEnabledAsync(Guid userId, CancellationToken cancellationToken = default)
         => await enrollments.FindByUserAsync(userId, cancellationToken) is { IsConfirmed: true };
 
+    /// <summary>
+    /// Setup asynchronously.
+    /// </summary>
     public async Task<MfaSetup?> SetupAsync(IUser user, CancellationToken cancellationToken = default)
     {
         var existing = await enrollments.FindByUserAsync(user.Id, cancellationToken);
@@ -117,6 +126,9 @@ internal sealed class MfaService : IMfaService
         return false;
     }
 
+    /// <summary>
+    /// Activate asynchronously.
+    /// </summary>
     public async Task<IReadOnlyList<string>?> ActivateAsync(IUser user, string code, CancellationToken cancellationToken = default)
     {
         var enrollment = await enrollments.FindByUserAsync(user.Id, cancellationToken);
@@ -142,6 +154,9 @@ internal sealed class MfaService : IMfaService
         }, cancellationToken);
     }
 
+    /// <summary>
+    /// Disables asynchronously.
+    /// </summary>
     public async Task<bool?> DisableAsync(IUser user, string password, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrEmpty(user.PasswordHash) || !passwords.Verify(user, user.PasswordHash, password))
@@ -152,9 +167,15 @@ internal sealed class MfaService : IMfaService
         return await RemoveEnrollmentAsync(user.Id, cancellationToken);
     }
 
+    /// <summary>
+    /// Admin disable asynchronously.
+    /// </summary>
     public Task<bool> AdminDisableAsync(Guid userId, CancellationToken cancellationToken = default)
         => RemoveEnrollmentAsync(userId, cancellationToken);
 
+    /// <summary>
+    /// Verifies the challenge asynchronously.
+    /// </summary>
     public async Task<LoginResult?> VerifyChallengeAsync(string challengeToken, string code, CancellationToken cancellationToken = default)
     {
         var userId = challenges.Peek(challengeToken);

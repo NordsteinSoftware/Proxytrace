@@ -15,6 +15,9 @@ internal static class ProxytracePrompts
     private static string Target(string? subject, string label)
         => string.IsNullOrWhiteSpace(subject) ? string.Empty : $"\n\n{label}: {subject}";
 
+    /// <summary>
+    /// Optimize agent.
+    /// </summary>
     [McpServerPrompt(Name = "optimize_agent")]
     [Description("Guided loop: gather evidence from runs and traces, then submit ONE A/B-tested optimization theory for an agent.")]
     public static string OptimizeAgent(
@@ -63,6 +66,9 @@ internal static class ProxytracePrompts
         and a suite.{{Target(agent, "Target agent")}}
         """;
 
+    /// <summary>
+    /// Curate suite.
+    /// </summary>
     [McpServerPrompt(Name = "curate_suite")]
     [Description("Build or grow a benchmark test suite from captured traces for an agent.")]
     public static string CurateSuite(
@@ -85,6 +91,9 @@ internal static class ProxytracePrompts
         Guardrails: only promote traces from the current project; never invent trace ids.{{Target(agent, "Target agent")}}
         """;
 
+    /// <summary>
+    /// Runs the tests.
+    /// </summary>
     [McpServerPrompt(Name = "run_tests")]
     [Description("Run a test suite against its agent and review the results.")]
     public static string RunTests(
@@ -103,6 +112,9 @@ internal static class ProxytracePrompts
            the `optimize_agent` workflow.{{Target(suite, "Target suite")}}
         """;
 
+    /// <summary>
+    /// Review proposals.
+    /// </summary>
     [McpServerPrompt(Name = "review_proposals")]
     [Description("Review open optimization proposals and approve, reject, or mark them adopted.")]
     public static string ReviewProposals() =>
@@ -125,6 +137,9 @@ internal static class ProxytracePrompts
         Guardrails: act only on proposals in the current project; explain each decision in one line.
         """;
 
+    /// <summary>
+    /// Project insights.
+    /// </summary>
     [McpServerPrompt(Name = "project_insights")]
     [Description("Survey the project's health: usage, cost, pass rates, and notable traces.")]
     public static string ProjectInsights() =>

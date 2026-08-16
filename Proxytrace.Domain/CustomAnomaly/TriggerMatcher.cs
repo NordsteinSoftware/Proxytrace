@@ -27,6 +27,9 @@ public static class TriggerMatcher
     private const int MaxCachedRegexes = 256;
     private static readonly ConcurrentDictionary<string, Regex> RegexCache = new();
 
+    /// <summary>
+    /// Finds the first match.
+    /// </summary>
     public static TriggerMatch? FindFirstMatch(string text, IReadOnlyList<AnomalyTrigger> triggers)
     {
         if (string.IsNullOrEmpty(text))

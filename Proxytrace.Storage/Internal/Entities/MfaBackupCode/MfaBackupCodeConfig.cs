@@ -15,12 +15,18 @@ internal class MfaBackupCodeConfig
     private readonly IMfaBackupCode.CreateExisting factory;
     private readonly IRepository<IUser> users;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="MfaBackupCodeConfig"/> class.
+    /// </summary>
     public MfaBackupCodeConfig(IMfaBackupCode.CreateExisting factory, IRepository<IUser> users)
     {
         this.factory = factory;
         this.users = users;
     }
 
+    /// <summary>
+    /// Configures the application request pipeline.
+    /// </summary>
     public override void Configure(EntityTypeBuilder<MfaBackupCodeEntity> builder)
     {
         builder.HasIndex(e => e.CodeHash).IsUnique();
@@ -36,12 +42,18 @@ internal class MfaBackupCodeConfig
             .OnDelete(DeleteBehavior.Cascade);
     }
 
+    /// <summary>
+    /// Maps.
+    /// </summary>
     public async Task<IMfaBackupCode> Map(MfaBackupCodeEntity stored, CancellationToken cancellationToken = default)
     {
         var user = await users.GetAsync(stored.User, cancellationToken);
         return factory(user, stored.CodeHash, stored.ConsumedAt, stored);
     }
 
+    /// <summary>
+    /// Maps.
+    /// </summary>
     public Task<MfaBackupCodeEntity> Map(IMfaBackupCode domain, CancellationToken cancellationToken = default)
         => new MfaBackupCodeEntity
         {

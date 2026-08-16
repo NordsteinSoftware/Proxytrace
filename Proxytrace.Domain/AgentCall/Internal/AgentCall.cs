@@ -12,21 +12,66 @@ namespace Proxytrace.Domain.AgentCall.Internal;
 
 internal record AgentCall : DomainEntity<IAgentCall>, IAgentCall
 {
+    /// <summary>
+    /// Gets the agent.
+    /// </summary>
     public IAgent Agent { get; }
+    /// <summary>
+    /// Gets the version.
+    /// </summary>
     public IAgentVersion Version { get; }
+    /// <summary>
+    /// Gets the endpoint.
+    /// </summary>
     public IModelEndpoint Endpoint { get; }
+    /// <summary>
+    /// Gets the request.
+    /// </summary>
     public Conversation Request { get; }
+    /// <summary>
+    /// Gets the response.
+    /// </summary>
     public ICompletion? Response { get; }
+    /// <summary>
+    /// Gets the http status.
+    /// </summary>
     public HttpStatusCode HttpStatus { get; }
+    /// <summary>
+    /// Gets the finish reason.
+    /// </summary>
     public string? FinishReason { get; }
+    /// <summary>
+    /// Gets the error message.
+    /// </summary>
     public string? ErrorMessage { get; }
+    /// <summary>
+    /// Gets the model parameters.
+    /// </summary>
     public IModelParameters ModelParameters { get; }
+    /// <summary>
+    /// Gets the conversation id.
+    /// </summary>
     public Guid? ConversationId { get; }
+    /// <summary>
+    /// Gets the session id.
+    /// </summary>
     public Guid? SessionId { get; }
+    /// <summary>
+    /// Gets the outlier flags.
+    /// </summary>
     public OutlierFlags OutlierFlags { get; }
+    /// <summary>
+    /// Gets the api key id.
+    /// </summary>
     public Guid? ApiKeyId { get; }
+    /// <summary>
+    /// Gets the project.
+    /// </summary>
     public IProject Project => Agent.Project;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AgentCall"/> class.
+    /// </summary>
     public AgentCall(
         IAgent agent,
         IAgentVersion version,
@@ -58,6 +103,9 @@ internal record AgentCall : DomainEntity<IAgentCall>, IAgentCall
         ApiKeyId = apiKeyId;
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AgentCall"/> class.
+    /// </summary>
     public AgentCall(
         IAgent agent,
         IAgentVersion version,
@@ -90,6 +138,9 @@ internal record AgentCall : DomainEntity<IAgentCall>, IAgentCall
         ApiKeyId = apiKeyId;
     }
 
+    /// <summary>
+    /// Validates.
+    /// </summary>
     public override IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
         foreach (var result in base.Validate(validationContext))

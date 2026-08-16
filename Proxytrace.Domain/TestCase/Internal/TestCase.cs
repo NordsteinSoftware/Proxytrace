@@ -7,11 +7,23 @@ namespace Proxytrace.Domain.TestCase.Internal;
 
 internal record TestCase : DomainEntity<ITestCase>, ITestCase
 {
+    /// <summary>
+    /// Gets the input.
+    /// </summary>
     public Conversation Input { get; }
+    /// <summary>
+    /// Gets the expected output.
+    /// </summary>
     public AssistantMessage ExpectedOutput { get; }
+    /// <summary>
+    /// Gets the source agent call id.
+    /// </summary>
     public Guid? SourceAgentCallId { get; }
 
     // CreateNewFromCall: promote a trace as-is — expected output is the response the agent recorded.
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TestCase"/> class.
+    /// </summary>
     public TestCase(
         IAgentCall agentCall,
         IRepository<ITestCase> repository) : this(
@@ -26,6 +38,9 @@ internal record TestCase : DomainEntity<ITestCase>, ITestCase
     // CreateCorrection: record a human correction — the agent saw this input, and the right answer was
     // expectedOutput. Keeps the link back to the source trace so a rejected output becomes a regression
     // test with traceable provenance.
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TestCase"/> class.
+    /// </summary>
     public TestCase(
         IAgentCall agentCall,
         AssistantMessage expectedOutput,
@@ -42,6 +57,9 @@ internal record TestCase : DomainEntity<ITestCase>, ITestCase
     // than overloading on (Conversation, AssistantMessage): IAgentCall is a container-resolvable entity,
     // so a bare (Conversation, AssistantMessage) ctor would tie with the CreateCorrection ctor and make
     // the Autofac delegate factory ambiguous — the distinct arity keeps each delegate unambiguous.)
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TestCase"/> class.
+    /// </summary>
     public TestCase(
         Conversation input,
         AssistantMessage expectedOutput,
@@ -53,6 +71,9 @@ internal record TestCase : DomainEntity<ITestCase>, ITestCase
         SourceAgentCallId = sourceAgentCallId;
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TestCase"/> class.
+    /// </summary>
     public TestCase(
         Conversation input,
         AssistantMessage expectedOutput,
@@ -65,6 +86,9 @@ internal record TestCase : DomainEntity<ITestCase>, ITestCase
         SourceAgentCallId = sourceAgentCallId;
     }
 
+    /// <summary>
+    /// Gets the summary.
+    /// </summary>
     public string GetSummary(int maxLength = 77)
     {
         var firstUser = Input.Messages.OfType<UserMessage>().FirstOrDefault();
@@ -73,6 +97,9 @@ internal record TestCase : DomainEntity<ITestCase>, ITestCase
         return text.Length > maxLength + 3 ? text[..maxLength] + "…" : text;
     }
 
+    /// <summary>
+    /// Validates.
+    /// </summary>
     public override IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
         foreach (var result in base.Validate(validationContext))

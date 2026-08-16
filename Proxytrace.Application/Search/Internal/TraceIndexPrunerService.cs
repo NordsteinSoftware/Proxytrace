@@ -12,6 +12,9 @@ internal sealed class TraceIndexPrunerService : BackgroundService
     private readonly SearchConfiguration configuration;
     private readonly ILogger<TraceIndexPrunerService> logger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TraceIndexPrunerService"/> class.
+    /// </summary>
     public TraceIndexPrunerService(
         LuceneIndexWriter writer,
         SearchConfiguration configuration,

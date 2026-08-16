@@ -21,6 +21,9 @@ internal class CostLimitConfig
     private readonly IRepository<IApiKey> apiKeys;
     private readonly ICostLimit.CreateExisting factory;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CostLimitConfig"/> class.
+    /// </summary>
     public CostLimitConfig(
         IRepository<IProject> projects,
         IRepository<IAgent> agents,
@@ -33,6 +36,9 @@ internal class CostLimitConfig
         this.factory = factory;
     }
 
+    /// <summary>
+    /// Configures the application request pipeline.
+    /// </summary>
     public override void Configure(EntityTypeBuilder<CostLimitEntity> builder)
     {
         builder
@@ -84,6 +90,9 @@ internal class CostLimitConfig
         builder.HasIndex(e => e.Enabled);
     }
 
+    /// <summary>
+    /// Maps.
+    /// </summary>
     public async Task<ICostLimit> Map(CostLimitEntity storedEntity, CancellationToken cancellationToken = default)
     {
         // Sequential, NOT Task.WhenAll: inside a transaction every repository shares one
@@ -111,6 +120,9 @@ internal class CostLimitConfig
     private async Task<IApiKey?> LoadApiKeyAsync(Guid? apiKeyId, CancellationToken cancellationToken)
         => apiKeyId is { } id ? await apiKeys.GetAsync(id, cancellationToken) : null;
 
+    /// <summary>
+    /// Maps.
+    /// </summary>
     public Task<CostLimitEntity> Map(ICostLimit domainEntity, CancellationToken cancellationToken = default)
         => new CostLimitEntity
         {

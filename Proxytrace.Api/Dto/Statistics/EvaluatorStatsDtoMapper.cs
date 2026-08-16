@@ -8,12 +8,18 @@ namespace Proxytrace.Api.Dto.Statistics;
 /// </summary>
 internal static class EvaluatorStatsDtoMapper
 {
+    /// <summary>
+    /// To dto.
+    /// </summary>
     public static EvaluatorOverviewDto ToDto(EvaluatorOverviewStat result) => new(
         Summary: ToDto(result.Summary),
         PassRateTrend: result.PassRateTrend.Select(ToDto).ToArray(),
         ScoreDistribution: result.ScoreDistribution.Select(ToDto).ToArray(),
         CostTrend: result.CostTrend.Select(ToDto).ToArray());
 
+    /// <summary>
+    /// To dto.
+    /// </summary>
     public static EvaluatorSparklineDto ToDto(EvaluatorSparklineStat s) =>
         new(s.EvaluatorId, s.Points.Select(ToDto).ToArray());
 

@@ -21,6 +21,9 @@ public interface IApplicationError : IDomainEntity<IApplicationError>
     /// <summary>The full exception stacktrace, or <see langword="null"/> when no exception was logged.</summary>
     string? StackTrace { get; }
 
+    /// <summary>
+    /// Factory delegate for creating a new new instance.
+    /// </summary>
     public delegate IApplicationError CreateNew(
         string message,
         ApplicationErrorLevel level,
@@ -28,6 +31,9 @@ public interface IApplicationError : IDomainEntity<IApplicationError>
         string? exceptionType,
         string? stackTrace);
 
+    /// <summary>
+    /// Factory delegate for creating a new existing instance.
+    /// </summary>
     public delegate IApplicationError CreateExisting(
         string message,
         ApplicationErrorLevel level,

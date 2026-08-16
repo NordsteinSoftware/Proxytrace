@@ -8,11 +8,26 @@ namespace Proxytrace.Domain.UserTotpEnrollment.Internal;
 
 internal record UserTotpEnrollment : DomainEntity<IUserTotpEnrollment>, IUserTotpEnrollment
 {
+    /// <summary>
+    /// Gets the user.
+    /// </summary>
     public IUser User { get; }
+    /// <summary>
+    /// Gets the secret.
+    /// </summary>
     public string Secret { get; }
+    /// <summary>
+    /// Gets or sets the confirmed at.
+    /// </summary>
     public DateTimeOffset? ConfirmedAt { get; private init; }
+    /// <summary>
+    /// Gets or sets the last used step.
+    /// </summary>
     public long? LastUsedStep { get; private init; }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="UserTotpEnrollment"/> class.
+    /// </summary>
     public UserTotpEnrollment(
         IUser user,
         string secret,
@@ -22,6 +37,9 @@ internal record UserTotpEnrollment : DomainEntity<IUserTotpEnrollment>, IUserTot
         Secret = secret;
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="UserTotpEnrollment"/> class.
+    /// </summary>
     public UserTotpEnrollment(
         IUser user,
         string secret,
@@ -36,9 +54,15 @@ internal record UserTotpEnrollment : DomainEntity<IUserTotpEnrollment>, IUserTot
         LastUsedStep = lastUsedStep;
     }
 
+    /// <summary>
+    /// Confirm.
+    /// </summary>
     public Task<IUserTotpEnrollment> Confirm(long usedStep, CancellationToken cancellationToken = default)
         => ApplyAsync(this with { ConfirmedAt = DateTimeOffset.UtcNow, LastUsedStep = usedStep }, cancellationToken);
 
+    /// <summary>
+    /// Record used step.
+    /// </summary>
     public Task<IUserTotpEnrollment> RecordUsedStep(long step, CancellationToken cancellationToken = default)
     {
         // Single-use guard: a TOTP step may only ever move forward, so replaying a step at or
@@ -70,6 +94,9 @@ internal record UserTotpEnrollment : DomainEntity<IUserTotpEnrollment>, IUserTot
         return true;
     }
 
+    /// <summary>
+    /// Validates.
+    /// </summary>
     public override IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
         foreach (var result in base.Validate(validationContext))

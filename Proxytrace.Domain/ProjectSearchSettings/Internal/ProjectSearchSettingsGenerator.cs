@@ -10,6 +10,9 @@ internal class ProjectSearchSettingsGenerator : DomainEntityGenerator<IProjectSe
     private readonly IProjectSearchSettings.CreateNew factory;
     private readonly IDomainEntityGenerator<IProject> projectGenerator;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ProjectSearchSettingsGenerator"/> class.
+    /// </summary>
     public ProjectSearchSettingsGenerator(
         IProjectSearchSettings.CreateNew factory,
         IRepository<IProjectSearchSettings> repository,
@@ -20,6 +23,9 @@ internal class ProjectSearchSettingsGenerator : DomainEntityGenerator<IProjectSe
         this.projectGenerator = projectGenerator;
     }
 
+    /// <summary>
+    /// Generates asynchronously.
+    /// </summary>
     public override async Task<IProjectSearchSettings> GenerateAsync(CancellationToken cancellationToken = default)
     {
         var project = await projectGenerator.CreateAsync(cancellationToken);

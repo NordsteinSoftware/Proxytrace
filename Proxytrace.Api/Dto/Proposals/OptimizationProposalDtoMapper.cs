@@ -12,11 +12,17 @@ public sealed class OptimizationProposalDtoMapper
 {
     private readonly ToolDtoMapper toolDtoMapper;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="OptimizationProposalDtoMapper"/> class.
+    /// </summary>
     public OptimizationProposalDtoMapper(ToolDtoMapper toolDtoMapper)
     {
         this.toolDtoMapper = toolDtoMapper;
     }
 
+    /// <summary>
+    /// To dto.
+    /// </summary>
     public OptimizationProposalDto ToDto(IOptimizationProposal p)
         => new(
             p.Id,
@@ -41,6 +47,9 @@ public sealed class OptimizationProposalDtoMapper
 
     private const int ArtifactSchemaVersion = 1;
 
+    /// <summary>
+    /// To artifact dto.
+    /// </summary>
     public ProposalArtifactDto ToArtifactDto(IOptimizationProposal p)
         => new(
             ArtifactSchemaVersion,

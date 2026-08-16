@@ -1,5 +1,8 @@
 namespace Proxytrace.Domain.CostLimit;
 
+/// <summary>
+/// Repository for persisting and querying cost limit entities.
+/// </summary>
 public interface ICostLimitRepository : IRepository<ICostLimit>
 {
     /// <summary>The project's limits — the project-wide one plus every agent override.</summary>

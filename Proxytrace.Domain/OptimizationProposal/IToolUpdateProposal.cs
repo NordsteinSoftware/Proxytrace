@@ -13,6 +13,9 @@ public interface IToolUpdateProposal : IOptimizationProposal
     /// <summary>The proposed tool specifications, replacing the agent's current ones.</summary>
     IReadOnlyList<ToolSpecification> ProposedTools { get; }
 
+    /// <summary>
+    /// Factory delegate for creating a new new instance.
+    /// </summary>
     public delegate IToolUpdateProposal CreateNew(
         IAgent agent,
         Priority priority,
@@ -23,6 +26,9 @@ public interface IToolUpdateProposal : IOptimizationProposal
         IReadOnlyCollection<Guid> evidenceTestRunIds,
         ITestRun abTestRun);
 
+    /// <summary>
+    /// Factory delegate for creating a new existing instance.
+    /// </summary>
     public delegate IToolUpdateProposal CreateExisting(
         IAgent agent,
         ProposalStatus status,

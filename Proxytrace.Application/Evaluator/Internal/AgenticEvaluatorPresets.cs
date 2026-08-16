@@ -10,5 +10,8 @@ internal sealed class AgenticEvaluatorPresets : IAgenticEvaluatorPresets
         new("tool_usage", "Tool Usage", Prompts.tool_usage_evaluator),
     ];
 
+    /// <summary>
+    /// Gets the all.
+    /// </summary>
     public IReadOnlyList<AgenticEvaluatorPreset> GetAll() => Presets;
 }

@@ -13,6 +13,9 @@ internal sealed class ModelPriceRefresher : IModelPriceRefresher
     private readonly IModelEndpoint.CreateExisting updateEndpoint;
     private readonly ILogger<ModelPriceRefresher> logger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ModelPriceRefresher"/> class.
+    /// </summary>
     public ModelPriceRefresher(
         IRepository<IModelProvider> providerRepository,
         IModelEndpointRepository endpointRepository,
@@ -27,6 +30,9 @@ internal sealed class ModelPriceRefresher : IModelPriceRefresher
         this.logger = logger;
     }
 
+    /// <summary>
+    /// Refreshes the provider asynchronously.
+    /// </summary>
     public async Task RefreshProviderAsync(IModelProvider provider, CancellationToken cancellationToken = default)
     {
         IReadOnlyList<IModelEndpoint> existing = await endpointRepository.GetByProviderAsync(provider.Id, cancellationToken);
@@ -94,6 +100,9 @@ internal sealed class ModelPriceRefresher : IModelPriceRefresher
         return true;
     }
 
+    /// <summary>
+    /// Refreshes the all asynchronously.
+    /// </summary>
     public async Task RefreshAllAsync(CancellationToken cancellationToken = default)
     {
         IReadOnlyList<IModelProvider> providers = await providerRepository.GetAllAsync(cancellationToken);

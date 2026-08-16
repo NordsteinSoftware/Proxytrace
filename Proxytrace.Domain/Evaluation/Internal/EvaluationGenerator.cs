@@ -10,6 +10,9 @@ internal class EvaluationGenerator : DomainObjectGenerator<IEvaluation>
     private readonly IEvaluation.Create factory;
     private readonly IEvaluation.CreateErrored erroredFactory;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="EvaluationGenerator"/> class.
+    /// </summary>
     public EvaluationGenerator(
         IRandom random,
         IDomainEntityGenerator<IEvaluator> evaluatorGenerator,
@@ -21,6 +24,9 @@ internal class EvaluationGenerator : DomainObjectGenerator<IEvaluation>
         this.erroredFactory = erroredFactory;
     }
 
+    /// <summary>
+    /// Creates asynchronously.
+    /// </summary>
     public override async Task<IEvaluation> CreateAsync(CancellationToken cancellationToken = default)
     {
         IEvaluator evaluator = await evaluatorGenerator.GetOrCreateAsync(cancellationToken);
@@ -31,6 +37,9 @@ internal class EvaluationGenerator : DomainObjectGenerator<IEvaluation>
             reasoning: random.String());
     }
 
+    /// <summary>
+    /// Creates the errored asynchronously.
+    /// </summary>
     public async Task<IEvaluation> CreateErroredAsync(CancellationToken cancellationToken = default)
     {
         IEvaluator evaluator = await evaluatorGenerator.GetOrCreateAsync(cancellationToken);

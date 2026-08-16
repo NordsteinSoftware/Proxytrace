@@ -2,6 +2,9 @@ namespace Proxytrace.Application.Auth.Local.Internal;
 
 internal sealed class PasswordPolicy : IPasswordPolicy
 {
+    /// <summary>
+    /// Validates.
+    /// </summary>
     public PasswordValidationResult Validate(string password)
     {
         var errors = new List<string>();

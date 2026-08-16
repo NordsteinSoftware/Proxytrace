@@ -21,6 +21,9 @@ internal sealed class OrphanedTestRunReaperHostedService : IHostedService
     private readonly IServiceProvider rootServices;
     private readonly ILogger<OrphanedTestRunReaperHostedService> logger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="OrphanedTestRunReaperHostedService"/> class.
+    /// </summary>
     public OrphanedTestRunReaperHostedService(
         IServiceProvider rootServices,
         ILogger<OrphanedTestRunReaperHostedService> logger)
@@ -29,6 +32,9 @@ internal sealed class OrphanedTestRunReaperHostedService : IHostedService
         this.logger = logger;
     }
 
+    /// <summary>
+    /// Starts asynchronously.
+    /// </summary>
     public async Task StartAsync(CancellationToken cancellationToken)
     {
         using var scope = rootServices.CreateScope();
@@ -43,6 +49,9 @@ internal sealed class OrphanedTestRunReaperHostedService : IHostedService
             cancellationToken);
     }
 
+    /// <summary>
+    /// Stops asynchronously.
+    /// </summary>
     public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 
     /// <summary>

@@ -19,6 +19,9 @@ using Proxytrace.Licensing;
 
 namespace Proxytrace.Api.Controllers;
 
+/// <summary>
+/// API controller for proposals operations.
+/// </summary>
 [ApiController]
 [Authorize]
 [RequiresFeature(LicenseFeature.OptimizationProposals)]
@@ -42,6 +45,9 @@ public class ProposalsController : ControllerBase
     private readonly ILogger<Audit> audit;
     private readonly IProjectAccessGuard accessGuard;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ProposalsController"/> class.
+    /// </summary>
     public ProposalsController(
         IOptimizationProposalRepository repository,
         IModelSwitchProposal.CreateNew createModelSwitchNew,
@@ -98,6 +104,9 @@ public class ProposalsController : ControllerBase
         return scope;
     }
 
+    /// <summary>
+    /// Gets the all.
+    /// </summary>
     [HttpGet]
     public async Task<IReadOnlyList<OptimizationProposalDto>> GetAll(
         [FromQuery] Guid? agentId = null,
@@ -253,6 +262,9 @@ public class ProposalsController : ControllerBase
         return await testRuns.AddAsync(createRun(group, agent.Endpoint, sampleIndex: 0), cancellationToken);
     }
 
+    /// <summary>
+    /// Updates the status.
+    /// </summary>
     [HttpPatch("{id:guid}/status")]
     public async Task<ActionResult<OptimizationProposalDto>> UpdateStatus(
         Guid id,

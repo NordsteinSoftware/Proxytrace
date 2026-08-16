@@ -32,6 +32,9 @@ internal class ModelClient : IModelClient
     private readonly IChatClient chatClient;
     private bool disposed;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ModelClient"/> class.
+    /// </summary>
     public ModelClient(
         IAgent agent,
         IModelEndpoint? customEndpoint,
@@ -77,6 +80,9 @@ internal class ModelClient : IModelClient
     // owns the IChatClient it was built with — the OpenAI-backed transport behind it is disposable.
     // Disposing here releases that transport instead of abandoning it. Idempotent so the deterministic
     // using-disposal at the call site and any Autofac scope-end disposal can't double-free.
+    /// <summary>
+    /// Releases all resources used by the current instance.
+    /// </summary>
     public void Dispose()
     {
         if (disposed)
@@ -88,6 +94,9 @@ internal class ModelClient : IModelClient
         chatClient.Dispose();
     }
 
+    /// <summary>
+    /// Completes asynchronously.
+    /// </summary>
     public Task<ICompletion> CompleteAsync(
         Conversation conversation,
         ModelOptions? options = null,
@@ -98,6 +107,9 @@ internal class ModelClient : IModelClient
         return CompleteAsync(systemMessage, conversation, options, cancellationToken);
     }
 
+    /// <summary>
+    /// Completes asynchronously.
+    /// </summary>
     public async Task<TypedCompletion<TOutput>> CompleteAsync<TOutput>(
         Conversation conversation,
         ModelOptions? options = null,
@@ -126,6 +138,9 @@ internal class ModelClient : IModelClient
         return new TypedCompletion<TOutput>(output, completion.Usage, completion.Latency);
     }
 
+    /// <summary>
+    /// Builds the request preview.
+    /// </summary>
     public ModelRequestPreview BuildRequestPreview(
         Conversation conversation,
         ModelOptions? options = null,
@@ -301,6 +316,9 @@ internal class ModelClient : IModelClient
            && error.Status == (int)HttpStatusCode.BadRequest
            && error.Message.Contains("reasoning", StringComparison.OrdinalIgnoreCase);
 
+    /// <summary>
+    /// Stream asynchronously.
+    /// </summary>
     public async IAsyncEnumerable<ModelStreamUpdate> StreamAsync(
         SystemMessage systemMessage,
         Conversation conversation,

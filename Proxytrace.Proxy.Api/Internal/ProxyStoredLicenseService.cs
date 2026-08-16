@@ -24,6 +24,9 @@ internal sealed class ProxyStoredLicenseService : BackgroundService
 
     private string? appliedJwt;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ProxyStoredLicenseService"/> class.
+    /// </summary>
     public ProxyStoredLicenseService(
         ILifetimeScope rootScope,
         ILicenseActivator activator,

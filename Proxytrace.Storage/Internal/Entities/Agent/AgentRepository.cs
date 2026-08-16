@@ -30,6 +30,12 @@ internal class AgentRepository : ArchivableRepository<IAgent, AgentEntity>, IAge
     private readonly IAgentVersionFingerprinter fingerprinter;
     private readonly IEntityCache<IAgentVersion>? versionCache;
 
+    /// <summary>
+    /// Initializes the repository with all collaborators required for agent persistence: the base
+    /// mapper/context/event infrastructure, fingerprinting services for deduplication, a name
+    /// generator for auto-named agents, an async lock to serialize concurrent GetOrCreate races, and
+    /// optional caches for agents and versions.
+    /// </summary>
     public AgentRepository(
         IMapper<IAgent, AgentEntity> mapper,
         Func<StorageDbContext> contextFactory,
@@ -58,6 +64,11 @@ internal class AgentRepository : ArchivableRepository<IAgent, AgentEntity>, IAge
         this.versionCache = versionCache;
     }
 
+    /// <summary>
+    /// Persists an agent update if the agent already exists, or creates the agent together with its
+    /// initial version if it does not. Delegates to <c>PersistWithInitialVersionAsync</c> for new agents
+    /// to satisfy the storage invariant that every agent row has a corresponding version row.
+    /// </summary>
     public override async Task<IAgent> UpsertAsync(IAgent entity, CancellationToken cancellationToken = default)
     {
         if (await this.ContainsAsync(entity.Id, cancellationToken))
@@ -67,6 +78,12 @@ internal class AgentRepository : ArchivableRepository<IAgent, AgentEntity>, IAge
         return await PersistWithInitialVersionAsync(entity, cancellationToken);
     }
 
+    /// <summary>
+    /// Returns the agent whose current version matches the given system prompt and tool set within the project,
+    /// creating a new agent and version if no match exists. Uses an in-process async lock keyed by strict
+    /// fingerprint to serialize concurrent creation races; a DB-level unique constraint on the fingerprint
+    /// handles the remaining multi-instance race.
+    /// </summary>
     public async Task<IAgent> GetOrCreateAsync(
         IPromptTemplate systemPrompt,
         IReadOnlyList<ToolSpecification> tools,
@@ -125,6 +142,10 @@ internal class AgentRepository : ArchivableRepository<IAgent, AgentEntity>, IAge
         return await PersistWithInitialVersionAsync(entity, cancellationToken);
     }
 
+    /// <summary>
+    /// Creates a new agent with the given name, system prompt, tools, and endpoint, persisting the agent
+    /// and its initial version in a single transaction to satisfy the storage invariant.
+    /// </summary>
     public Task<IAgent> CreateWithInitialVersionAsync(
         string name,
         IPromptTemplate systemPrompt,
@@ -202,15 +223,30 @@ internal class AgentRepository : ArchivableRepository<IAgent, AgentEntity>, IAge
             InvalidateCacheEntry(agentId);
         });
 
+    /// <summary>
+    /// Computes the strict fingerprint (SHA-256 of system prompt plus sorted tools including descriptions)
+    /// for the given system prompt and tool set. Used as the deduplication key in GetOrCreate races.
+    /// </summary>
     public string GetAgentFingerprint(IPromptTemplate systemPrompt, IReadOnlyCollection<ToolSpecification> tools)
         => fingerprinter.Strict(systemPrompt, tools);
 
+    /// <summary>
+    /// Computes the strict fingerprint for the given agent's current system prompt and tool set.
+    /// </summary>
     public string GetAgentFingerprint(IAgent agent)
         => GetAgentFingerprint(agent.SystemPrompt, agent.Tools);
 
+    /// <summary>
+    /// Updates the CurrentVersionId column of the agent row to point to the given version, also advancing
+    /// UpdatedAt. Invalidates both the agent cache entry and the version cache.
+    /// </summary>
     public Task SetCurrentVersionAsync(Guid agentId, Guid versionId, CancellationToken cancellationToken = default)
         => SetCurrentVersionIdAsync(agentId, versionId, cancellationToken);
 
+    /// <summary>
+    /// Returns the total number of non-system, non-archived agents across all projects. Used by the
+    /// licensing layer to enforce the per-tier agent count limit.
+    /// </summary>
     public async Task<int> CountNonSystemAsync(CancellationToken cancellationToken = default)
         => await contextFactory()
             .Set<AgentEntity>()
@@ -218,6 +254,10 @@ internal class AgentRepository : ArchivableRepository<IAgent, AgentEntity>, IAge
             // Archived agents are soft-deleted — they must not consume a licensed agent slot.
             .CountAsync(e => !e.IsSystemAgent && !e.IsArchived, cancellationToken);
 
+    /// <summary>
+    /// Returns the agent in the given project with the exact display name, or null if no match exists.
+    /// Name uniqueness within a project is enforced by a database constraint.
+    /// </summary>
     public async Task<IAgent?> FindByNameAsync(IProject project, string name, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(project);
@@ -232,6 +272,9 @@ internal class AgentRepository : ArchivableRepository<IAgent, AgentEntity>, IAge
         return id is { } agentId ? await this.GetAsync(agentId, cancellationToken) : null;
     }
 
+    /// <summary>
+    /// Returns all non-archived agents belonging to the given project, in no particular order.
+    /// </summary>
     public async Task<IReadOnlyList<IAgent>> GetByProjectAsync(Guid projectId, CancellationToken cancellationToken = default)
     {
         var stored = await contextFactory()
@@ -244,6 +287,10 @@ internal class AgentRepository : ArchivableRepository<IAgent, AgentEntity>, IAge
         return await Map(stored, cancellationToken);
     }
 
+    /// <summary>
+    /// Returns the project ID for the given agent, or null if the agent does not exist.
+    /// Projects only the FK column — no full entity mapping.
+    /// </summary>
     public async Task<Guid?> GetProjectIdAsync(Guid agentId, CancellationToken cancellationToken = default)
         => await contextFactory()
             .Set<AgentEntity>()

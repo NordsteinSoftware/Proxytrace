@@ -35,6 +35,9 @@ internal sealed class SuiteTools
     private readonly ILicenseService license;
     private readonly ILogger<Audit> audit;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SuiteTools"/> class.
+    /// </summary>
     public SuiteTools(
         IMcpProjectAccessor project,
         ITestSuiteRepository suites,
@@ -67,6 +70,9 @@ internal sealed class SuiteTools
         this.audit = audit;
     }
 
+    /// <summary>
+    /// Lists the suites.
+    /// </summary>
     [McpServerTool(Name = "list_suites")]
     [Description("List the test suites in the current project, with each suite's test-case count.")]
     public async Task<IReadOnlyList<TestSuiteListItemDto>> ListSuites(
@@ -82,6 +88,9 @@ internal sealed class SuiteTools
     [McpServerTool(Name = "get_suite")]
     [Description("Get a single test suite by id, including its test cases and evaluators. " +
                  "The suite must belong to the current project.")]
+    /// <summary>
+    /// Gets the suite.
+    /// </summary>
     public async Task<TestSuiteDto> GetSuite(
         [Description("The suite id (GUID), as returned by list_suites.")] Guid suiteId,
         CancellationToken cancellationToken)
@@ -94,6 +103,9 @@ internal sealed class SuiteTools
     [Description("Create a benchmark test suite by promoting captured traces: each trace becomes a test " +
                  "case whose expected output is the response recorded during that call. The agent must " +
                  "belong to the current project. A default exact-match evaluator is attached.")]
+    /// <summary>
+    /// Creates the suite from traces.
+    /// </summary>
     public async Task<TestSuiteDto> CreateSuiteFromTraces(
         [Description("Name for the new suite.")] string name,
         [Description("The agent id (GUID) the suite benchmarks, from list_agents.")] Guid agentId,
@@ -146,6 +158,9 @@ internal sealed class SuiteTools
                  "output contradicting that result can never pass. Check the new case's " +
                  "resolvedToolCallCount in the returned suite — anything above 0 means you graded a " +
                  "summary; correct the earlier trace whose response contains the wrong tool call.")]
+    /// <summary>
+    /// Adds the trace to suite.
+    /// </summary>
     public async Task<TestSuiteDto> AddTraceToSuite(
         [Description("The suite id (GUID), from list_suites.")] Guid suiteId,
         [Description("The trace id (GUID) to add, from list_traces.")] Guid traceId,

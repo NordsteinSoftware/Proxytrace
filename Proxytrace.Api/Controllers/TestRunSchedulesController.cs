@@ -17,6 +17,9 @@ using Proxytrace.Licensing;
 
 namespace Proxytrace.Api.Controllers;
 
+/// <summary>
+/// API controller for test run schedules operations.
+/// </summary>
 [ApiController]
 [Authorize]
 [Route("api/test-run-schedules")]
@@ -34,6 +37,9 @@ public class TestRunSchedulesController : ControllerBase
     private readonly IProjectAccessGuard accessGuard;
     private readonly ILogger<Audit> audit;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TestRunSchedulesController"/> class.
+    /// </summary>
     public TestRunSchedulesController(
         ITestRunScheduleRepository scheduleRepository,
         ITestRunGroupRepository groupRepository,
@@ -108,6 +114,9 @@ public class TestRunSchedulesController : ControllerBase
         return await Task.WhenAll(schedules.Select(s => ToDtoAsync(s, cancellationToken)));
     }
 
+    /// <summary>
+    /// Gets.
+    /// </summary>
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<TestRunScheduleDto>> Get(Guid id, CancellationToken cancellationToken)
     {
@@ -119,6 +128,9 @@ public class TestRunSchedulesController : ControllerBase
         return await ToDtoAsync(schedule, cancellationToken);
     }
 
+    /// <summary>
+    /// Creates.
+    /// </summary>
     [HttpPost]
     [RequiresFeature(LicenseFeature.ScheduledTestRuns)]
     public async Task<ActionResult<TestRunScheduleDto>> Create(
@@ -155,6 +167,9 @@ public class TestRunSchedulesController : ControllerBase
         return CreatedAtAction(nameof(Get), new { id = schedule.Id }, await ToDtoAsync(schedule, cancellationToken));
     }
 
+    /// <summary>
+    /// Updates.
+    /// </summary>
     [HttpPatch("{id:guid}")]
     [RequiresFeature(LicenseFeature.ScheduledTestRuns)]
     public async Task<ActionResult<TestRunScheduleDto>> Update(
@@ -191,6 +206,9 @@ public class TestRunSchedulesController : ControllerBase
         return await ToDtoAsync(schedule, cancellationToken);
     }
 
+    /// <summary>
+    /// Deletes.
+    /// </summary>
     [HttpDelete("{id:guid}")]
     [RequiresFeature(LicenseFeature.ScheduledTestRuns)]
     public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
@@ -209,6 +227,9 @@ public class TestRunSchedulesController : ControllerBase
         return NoContent();
     }
 
+    /// <summary>
+    /// Runs the now.
+    /// </summary>
     [HttpPost("{id:guid}/run-now")]
     [RequiresFeature(LicenseFeature.ScheduledTestRuns)]
     public async Task<ActionResult<TestRunScheduleDto>> RunNow(Guid id, CancellationToken cancellationToken)

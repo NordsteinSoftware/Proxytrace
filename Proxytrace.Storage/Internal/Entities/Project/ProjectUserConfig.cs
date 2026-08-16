@@ -6,6 +6,9 @@ namespace Proxytrace.Storage.Internal.Entities.Project;
 
 internal class ProjectUserConfig : AbstractEntityConfiguration<ProjectUserEntity>
 {
+    /// <summary>
+    /// Configures the application request pipeline.
+    /// </summary>
     public override void Configure(EntityTypeBuilder<ProjectUserEntity> builder)
     {
         builder.HasKey(e => new { e.ProjectId, e.UserId });

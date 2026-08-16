@@ -11,6 +11,9 @@ using Proxytrace.Domain.AuditLog;
 
 namespace Proxytrace.Api.Controllers;
 
+/// <summary>
+/// API controller for agent versions operations.
+/// </summary>
 [ApiController]
 [Authorize]
 [Route("api/agent-versions")]
@@ -23,6 +26,9 @@ public class AgentVersionsController : ControllerBase
     private readonly IProjectAccessGuard accessGuard;
     private readonly ILogger<Audit> audit;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AgentVersionsController"/> class.
+    /// </summary>
     public AgentVersionsController(
         IAgentVersionRepository versions,
         IAgentRepository agents,
@@ -39,6 +45,9 @@ public class AgentVersionsController : ControllerBase
         this.audit = audit;
     }
 
+    /// <summary>
+    /// Gets.
+    /// </summary>
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<AgentVersionDto>> Get(Guid id, CancellationToken cancellationToken)
     {

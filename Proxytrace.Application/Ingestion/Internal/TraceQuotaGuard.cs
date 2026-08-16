@@ -59,6 +59,9 @@ internal sealed class TraceQuotaGuard : BackgroundService, ITraceQuotaGuard
     private readonly ConcurrentDictionary<Guid, string> reportedProjects = new();
     private string reportedMonth = string.Empty;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TraceQuotaGuard"/> class.
+    /// </summary>
     public TraceQuotaGuard(
         IAgentCallRepository agentCalls,
         IProjectRepository projects,
@@ -75,8 +78,14 @@ internal sealed class TraceQuotaGuard : BackgroundService, ITraceQuotaGuard
         this.logger = logger;
     }
 
+    /// <summary>
+    /// Gets the is current month over quota.
+    /// </summary>
     public bool IsCurrentMonthOverQuota => overQuota;
 
+    /// <summary>
+    /// Determines whether the over quota.
+    /// </summary>
     public bool IsOverQuota(Guid projectId)
     {
         if (!overQuota)

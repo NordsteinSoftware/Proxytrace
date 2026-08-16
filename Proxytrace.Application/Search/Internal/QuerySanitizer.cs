@@ -5,6 +5,9 @@ namespace Proxytrace.Application.Search.Internal;
 internal static class QuerySanitizer
 {
     private static readonly char[] Special =
+        /// <summary>
+        /// Escape.
+        /// </summary>
         ['+', '-', '&', '|', '!', '(', ')', '{', '}', '[', ']', '^', '"', '~', ':', '\\', '/', '?'];
 
     public static string Escape(string input)

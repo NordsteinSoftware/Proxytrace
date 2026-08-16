@@ -15,6 +15,9 @@ internal class OpenAiCallParser : IOpenAiCallParser
     private readonly IModelEndpointRepository endpointRepository;
     private readonly IModelParameters.Create modelParametersFactory;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="OpenAiCallParser"/> class.
+    /// </summary>
     public OpenAiCallParser(
         ICompletion.Create completionFactory,
         IModelEndpointRepository endpointRepository,
@@ -25,6 +28,9 @@ internal class OpenAiCallParser : IOpenAiCallParser
         this.modelParametersFactory = modelParametersFactory;
     }
     
+    /// <summary>
+    /// Tries to the parse.
+    /// </summary>
     public async Task<ParseResult?> TryParse(IModelProvider provider,
         string requestBody,
         string? responseBody,
@@ -512,8 +518,17 @@ internal class OpenAiCallParser : IOpenAiCallParser
     /// </summary>
     private sealed class StreamedToolCall
     {
+        /// <summary>
+        /// Gets or sets the id.
+        /// </summary>
         public string Id { get; set; } = "";
+        /// <summary>
+        /// Gets or sets the name.
+        /// </summary>
         public string Name { get; set; } = "";
+        /// <summary>
+        /// Gets the arguments.
+        /// </summary>
         public StringBuilder Arguments { get; } = new();
     }
 

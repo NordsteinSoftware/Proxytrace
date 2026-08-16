@@ -5,6 +5,9 @@ namespace Proxytrace.Storage.Internal.Entities.AgentCall;
 
 internal class AgentCallToolConfig : AbstractEntityConfiguration<AgentCallToolEntity>
 {
+    /// <summary>
+    /// Configures the application request pipeline.
+    /// </summary>
     public override void Configure(EntityTypeBuilder<AgentCallToolEntity> builder)
     {
         builder.Property(t => t.ToolName).HasMaxLength(256);

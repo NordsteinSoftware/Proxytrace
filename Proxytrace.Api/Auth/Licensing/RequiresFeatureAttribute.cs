@@ -10,6 +10,9 @@ namespace Proxytrace.Api.Auth.Licensing;
 [AttributeUsage(AttributeTargets.Class | AttributeTargets.Method, AllowMultiple = false, Inherited = true)]
 public sealed class RequiresFeatureAttribute : Attribute
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="RequiresFeatureAttribute"/> class.
+    /// </summary>
     public RequiresFeatureAttribute(LicenseFeature feature)
     {
         Feature = feature;

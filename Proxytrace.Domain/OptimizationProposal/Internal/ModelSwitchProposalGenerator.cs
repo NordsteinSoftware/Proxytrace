@@ -14,6 +14,9 @@ internal class ModelSwitchProposalGenerator : OptimizationProposalGeneratorBase<
     private readonly IDomainEntityGenerator<ITestRun> testRunGenerator;
     private readonly IRandom random;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ModelSwitchProposalGenerator"/> class.
+    /// </summary>
     public ModelSwitchProposalGenerator(
         IModelSwitchProposal.CreateNew factory,
         IDomainEntityGenerator<IAgent> agentGenerator,
@@ -29,6 +32,9 @@ internal class ModelSwitchProposalGenerator : OptimizationProposalGeneratorBase<
         this.random = random;
     }
 
+    /// <summary>
+    /// Generates asynchronously.
+    /// </summary>
     public override async Task<IModelSwitchProposal> GenerateAsync(CancellationToken cancellationToken = default)
     {
         var agent = await agentGenerator.GetOrCreateAsync(cancellationToken);

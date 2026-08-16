@@ -6,5 +6,8 @@ namespace Proxytrace.Storage.Internal.Entities.Licensing;
 /// </summary>
 internal record StoredLicenseEntity : Entity
 {
+    /// <summary>
+    /// Gets or sets the jwt.
+    /// </summary>
     public required string Jwt { get; init; }
 }

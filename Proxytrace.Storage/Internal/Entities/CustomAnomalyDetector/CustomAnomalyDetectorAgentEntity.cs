@@ -6,6 +6,12 @@ namespace Proxytrace.Storage.Internal.Entities.CustomAnomalyDetector;
 /// </summary>
 internal record CustomAnomalyDetectorAgentEntity
 {
+    /// <summary>
+    /// Gets or sets the detector id.
+    /// </summary>
     public required Guid DetectorId { get; init; }
+    /// <summary>
+    /// Gets or sets the agent id.
+    /// </summary>
     public required Guid AgentId { get; init; }
 }

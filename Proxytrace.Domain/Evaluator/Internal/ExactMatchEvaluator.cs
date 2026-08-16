@@ -14,14 +14,26 @@ internal record ExactMatchEvaluator : DomainEntity<IEvaluator>, IExactMatchEvalu
 {
     private readonly IEvaluation.Create evaluationFactory;
 
+    /// <summary>
+    /// Provides additional functionality.
+    /// </summary>
     public string Name 
         => "Exact Match";
 
+    /// <summary>
+    /// Provides additional functionality.
+    /// </summary>
     public EvaluatorKind Kind
         => EvaluatorKind.ExactMatch;
 
+    /// <summary>
+    /// Gets the project.
+    /// </summary>
     public IProject Project { get; }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ExactMatchEvaluator"/> class.
+    /// </summary>
     public ExactMatchEvaluator(
         IProject project,
         IEvaluation.Create evaluationFactory,
@@ -31,6 +43,9 @@ internal record ExactMatchEvaluator : DomainEntity<IEvaluator>, IExactMatchEvalu
         this.evaluationFactory = evaluationFactory;
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ExactMatchEvaluator"/> class.
+    /// </summary>
     public ExactMatchEvaluator(
         IProject project,
         IDomainEntityData existing,
@@ -88,6 +103,9 @@ internal record ExactMatchEvaluator : DomainEntity<IEvaluator>, IExactMatchEvalu
         return Task.FromResult<IEvaluation?>(evaluation);
     }
 
+    /// <summary>
+    /// Validates.
+    /// </summary>
     public override IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
         foreach (var result in base.Validate(validationContext))

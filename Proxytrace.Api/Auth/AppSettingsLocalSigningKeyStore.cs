@@ -15,6 +15,9 @@ internal sealed class AppSettingsLocalSigningKeyStore : ISigningKeyStore
 
     private readonly IHostEnvironment environment;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AppSettingsLocalSigningKeyStore"/> class.
+    /// </summary>
     public AppSettingsLocalSigningKeyStore(IHostEnvironment environment)
     {
         this.environment = environment;
@@ -26,6 +29,10 @@ internal sealed class AppSettingsLocalSigningKeyStore : ISigningKeyStore
         AllowTrailingCommas = true,
     };
 
+    /// <summary>
+    /// Reads <c>Authentication:Local:SigningKey</c> from <c>appsettings.local.json</c> in the
+    /// content root, returning <see langword="null"/> when the file is absent or unparseable.
+    /// </summary>
     public string? Load()
     {
         var path = Path.Combine(environment.ContentRootPath, FileName);
@@ -43,6 +50,11 @@ internal sealed class AppSettingsLocalSigningKeyStore : ISigningKeyStore
         }
     }
 
+    /// <summary>
+    /// Writes <paramref name="signingKey"/> into <c>appsettings.local.json</c> under
+    /// <c>Authentication:Local:SigningKey</c>, merging into the existing JSON so unrelated
+    /// configuration keys are not overwritten.
+    /// </summary>
     public void Persist(string signingKey)
     {
         var path = Path.Combine(environment.ContentRootPath, FileName);

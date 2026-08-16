@@ -13,11 +13,17 @@ internal class CustomAnomalyResultConfig
 {
     private readonly ICustomAnomalyResult.CreateExisting factory;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CustomAnomalyResultConfig"/> class.
+    /// </summary>
     public CustomAnomalyResultConfig(ICustomAnomalyResult.CreateExisting factory)
     {
         this.factory = factory;
     }
 
+    /// <summary>
+    /// Configures the application request pipeline.
+    /// </summary>
     public override void Configure(EntityTypeBuilder<CustomAnomalyResultEntity> builder)
     {
         // Results are owned attribution rows: they never outlive their detector or their call
@@ -39,6 +45,9 @@ internal class CustomAnomalyResultConfig
         builder.HasIndex(e => new { e.ProjectId, e.CreatedAt }).IsDescending(false, true);
     }
 
+    /// <summary>
+    /// Maps.
+    /// </summary>
     public Task<ICustomAnomalyResult> Map(
         CustomAnomalyResultEntity storedEntity,
         CancellationToken cancellationToken = default)
@@ -50,6 +59,9 @@ internal class CustomAnomalyResultConfig
             reasoning: storedEntity.Reasoning,
             existing: storedEntity).ToTaskResult();
 
+    /// <summary>
+    /// Maps.
+    /// </summary>
     public Task<CustomAnomalyResultEntity> Map(
         ICustomAnomalyResult domainEntity,
         CancellationToken cancellationToken = default)

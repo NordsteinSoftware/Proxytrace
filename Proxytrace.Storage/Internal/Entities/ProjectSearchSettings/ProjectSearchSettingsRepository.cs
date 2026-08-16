@@ -11,6 +11,9 @@ internal class ProjectSearchSettingsRepository
     : AbstractRepository<IProjectSearchSettings, ProjectSearchSettingsEntity>,
       IProjectSearchSettingsRepository
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ProjectSearchSettingsRepository"/> class.
+    /// </summary>
     public ProjectSearchSettingsRepository(
         IMapper<IProjectSearchSettings, ProjectSearchSettingsEntity> mapper,
         Func<StorageDbContext> contextFactory,
@@ -20,6 +23,9 @@ internal class ProjectSearchSettingsRepository
     {
     }
 
+    /// <summary>
+    /// Finds the by project asynchronously.
+    /// </summary>
     public async Task<IProjectSearchSettings?> FindByProjectAsync(Guid projectId, CancellationToken cancellationToken = default)
     {
         var stored = await contextFactory()

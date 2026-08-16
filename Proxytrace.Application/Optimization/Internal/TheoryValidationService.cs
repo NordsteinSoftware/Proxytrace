@@ -62,6 +62,9 @@ internal sealed class TheoryValidationService : BackgroundService, ITheoryValida
     /// </summary>
     private readonly ConcurrentDictionary<Guid, CancellationTokenSource> inFlightValidations = new();
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TheoryValidationService"/> class.
+    /// </summary>
     public TheoryValidationService(
         IOptimizationTheoryRepository theories,
         IOptimizationProposalRepository proposals,
@@ -88,6 +91,9 @@ internal sealed class TheoryValidationService : BackgroundService, ITheoryValida
         this.audit = audit;
     }
 
+    /// <summary>
+    /// Submit asynchronously.
+    /// </summary>
     public async Task<TheorySubmissionResult> SubmitAsync(IOptimizationTheory theory, CancellationToken cancellationToken = default)
     {
         // Serialize submissions per project: the quota and dedup checks below are check-then-act, and
@@ -116,6 +122,9 @@ internal sealed class TheoryValidationService : BackgroundService, ITheoryValida
         return new TheorySubmissionResult(TheorySubmissionOutcome.Accepted, persisted);
     }
 
+    /// <summary>
+    /// Reset to proposed asynchronously.
+    /// </summary>
     public async Task<TheoryResetResult> ResetToProposedAsync(Guid theoryId, CancellationToken cancellationToken = default)
     {
         var theory = await theories.FindAsync(theoryId, cancellationToken);
@@ -149,6 +158,9 @@ internal sealed class TheoryValidationService : BackgroundService, ITheoryValida
         return new TheoryResetResult(TheoryResetOutcome.Reset, reset);
     }
 
+    /// <summary>
+    /// Rejects asynchronously.
+    /// </summary>
     public async Task<TheoryRejectResult> RejectAsync(Guid theoryId, CancellationToken cancellationToken = default)
     {
         var theory = await theories.FindAsync(theoryId, cancellationToken);

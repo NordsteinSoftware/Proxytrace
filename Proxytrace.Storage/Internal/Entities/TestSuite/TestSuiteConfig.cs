@@ -20,6 +20,9 @@ internal class TestSuiteConfig : AbstractEntityConfiguration<TestSuiteEntity>, I
     private readonly ISerializer serializer;
     private readonly Func<StorageDbContext> contextFactory;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TestSuiteConfig"/> class.
+    /// </summary>
     public TestSuiteConfig(
         IRepository<IAgent> agents,
         IRepository<IEvaluator> evaluators,
@@ -36,6 +39,9 @@ internal class TestSuiteConfig : AbstractEntityConfiguration<TestSuiteEntity>, I
         this.contextFactory = contextFactory;
     }
 
+    /// <summary>
+    /// Configures the application request pipeline.
+    /// </summary>
     public override void Configure(EntityTypeBuilder<TestSuiteEntity> builder)
     {
         builder
@@ -52,6 +58,9 @@ internal class TestSuiteConfig : AbstractEntityConfiguration<TestSuiteEntity>, I
             );
     }
 
+    /// <summary>
+    /// Maps.
+    /// </summary>
     public async Task<ITestSuite> Map(TestSuiteEntity storedEntity, CancellationToken cancellationToken = default)
     {
         var context = contextFactory();
@@ -73,6 +82,9 @@ internal class TestSuiteConfig : AbstractEntityConfiguration<TestSuiteEntity>, I
             existing: storedEntity);
     }
 
+    /// <summary>
+    /// Maps.
+    /// </summary>
     public Task<TestSuiteEntity> Map(ITestSuite domainEntity, CancellationToken cancellationToken = default)
         => new TestSuiteEntity
         {

@@ -11,6 +11,9 @@ internal class ModelEndpointGenerator : DomainEntityGenerator<IModelEndpoint>
     private readonly IDomainEntityGenerator<IModel> modelGenerator;
     private readonly IDomainEntityGenerator<IModelProvider> providerGenerator;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ModelEndpointGenerator"/> class.
+    /// </summary>
     public ModelEndpointGenerator(
         IModelEndpoint.CreateNew factory,
         IRepository<IModelEndpoint> repository,
@@ -23,6 +26,9 @@ internal class ModelEndpointGenerator : DomainEntityGenerator<IModelEndpoint>
         this.providerGenerator = providerGenerator;
     }
 
+    /// <summary>
+    /// Generates asynchronously.
+    /// </summary>
     public override async Task<IModelEndpoint> GenerateAsync(CancellationToken cancellationToken = default)
     {
         var model = await modelGenerator.GetOrCreateAsync(cancellationToken);

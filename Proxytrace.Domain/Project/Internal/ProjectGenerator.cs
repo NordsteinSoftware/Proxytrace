@@ -9,6 +9,9 @@ internal class ProjectGenerator : DomainEntityGenerator<IProject>
     private readonly IProject.CreateNew factory;
     private readonly IDomainEntityGenerator<IModelEndpoint> endpointGenerator;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ProjectGenerator"/> class.
+    /// </summary>
     public ProjectGenerator(
         IProject.CreateNew factory,
         IRepository<IProject> repository,
@@ -19,6 +22,9 @@ internal class ProjectGenerator : DomainEntityGenerator<IProject>
         this.endpointGenerator = endpointGenerator;
     }
 
+    /// <summary>
+    /// Generates asynchronously.
+    /// </summary>
     public override async Task<IProject> GenerateAsync(CancellationToken cancellationToken = default)
     {
         var endpoint = await endpointGenerator.GetOrCreateAsync(cancellationToken);

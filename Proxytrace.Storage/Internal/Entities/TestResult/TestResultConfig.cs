@@ -23,6 +23,9 @@ internal class TestResultConfig : AbstractEntityConfiguration<TestResultEntity>,
     private readonly IEvaluation.CreateErrored createErroredEvaluation;
     private readonly ISerializer serializer;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TestResultConfig"/> class.
+    /// </summary>
     public TestResultConfig(
         IRepository<ITestCase> testCases,
         IRepository<IEvaluator> evaluators,
@@ -39,6 +42,9 @@ internal class TestResultConfig : AbstractEntityConfiguration<TestResultEntity>,
         this.serializer = serializer;
     }
 
+    /// <summary>
+    /// Configures the application request pipeline.
+    /// </summary>
     public override void Configure(EntityTypeBuilder<TestResultEntity> builder)
     {
         // The evaluator-history queries scan the most recent N results ordered by CreatedAt;
@@ -66,6 +72,9 @@ internal class TestResultConfig : AbstractEntityConfiguration<TestResultEntity>,
             );
     }
 
+    /// <summary>
+    /// Maps.
+    /// </summary>
     public async Task<ITestResult> Map(TestResultEntity stored, CancellationToken cancellationToken = default)
     {
         var evaluations = new List<IEvaluation>();
@@ -100,6 +109,9 @@ internal class TestResultConfig : AbstractEntityConfiguration<TestResultEntity>,
             existing: stored);
     }
 
+    /// <summary>
+    /// Maps.
+    /// </summary>
     public Task<TestResultEntity> Map(ITestResult domain, CancellationToken cancellationToken = default)
         => new TestResultEntity
         {

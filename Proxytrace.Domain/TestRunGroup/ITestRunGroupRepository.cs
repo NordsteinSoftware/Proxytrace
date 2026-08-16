@@ -3,6 +3,9 @@ using Proxytrace.Domain.TestRun;
 
 namespace Proxytrace.Domain.TestRunGroup;
 
+/// <summary>
+/// Repository for persisting and querying test run group entities.
+/// </summary>
 public interface ITestRunGroupRepository : IRepository<ITestRunGroup>
 {
     Task<IReadOnlyList<ITestRunGroup>> GetByAgentAsync(Guid agentId, CancellationToken cancellationToken = default);

@@ -20,6 +20,9 @@ internal class TestRunConfig : AbstractEntityConfiguration<TestRunEntity>, IMapp
     private readonly ITestRun.CreateExisting factory;
     private readonly ISerializer serializer;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TestRunConfig"/> class.
+    /// </summary>
     public TestRunConfig(
         IRepository<IModelEndpoint> endpoints,
         IRepository<ITestResult> testResults,
@@ -34,6 +37,9 @@ internal class TestRunConfig : AbstractEntityConfiguration<TestRunEntity>, IMapp
         this.serializer = serializer;
     }
 
+    /// <summary>
+    /// Configures the application request pipeline.
+    /// </summary>
     public override void Configure(EntityTypeBuilder<TestRunEntity> builder)
     {
         builder
@@ -56,6 +62,9 @@ internal class TestRunConfig : AbstractEntityConfiguration<TestRunEntity>, IMapp
             );
     }
 
+    /// <summary>
+    /// Maps.
+    /// </summary>
     public async Task<ITestRun> Map(TestRunEntity stored, CancellationToken cancellationToken = default)
     {
         // Sequential, not concurrent: these reads may share the ambient transaction context,
@@ -74,6 +83,9 @@ internal class TestRunConfig : AbstractEntityConfiguration<TestRunEntity>, IMapp
             existing: stored);
     }
 
+    /// <summary>
+    /// Maps.
+    /// </summary>
     public Task<TestRunEntity> Map(ITestRun domain, CancellationToken cancellationToken = default)
         => new TestRunEntity
         {

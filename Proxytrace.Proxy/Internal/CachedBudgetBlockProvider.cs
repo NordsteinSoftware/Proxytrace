@@ -33,6 +33,9 @@ internal sealed class CachedBudgetBlockProvider : IBudgetBlockProvider
     private readonly TimeSpan ttl;
     private readonly ILogger<CachedBudgetBlockProvider> logger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CachedBudgetBlockProvider"/> class.
+    /// </summary>
     public CachedBudgetBlockProvider(
         ICostLimitBreachRepository breaches,
         ILicenseService license,
@@ -49,6 +52,9 @@ internal sealed class CachedBudgetBlockProvider : IBudgetBlockProvider
         this.logger = logger;
     }
 
+    /// <summary>
+    /// Gets the blocks asynchronously.
+    /// </summary>
     public async Task<IReadOnlyList<BudgetHardBlock>> GetBlocksAsync(
         Guid projectId,
         CancellationToken cancellationToken)

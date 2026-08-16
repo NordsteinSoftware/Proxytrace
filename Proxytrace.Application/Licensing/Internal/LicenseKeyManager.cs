@@ -9,6 +9,9 @@ internal sealed class LicenseKeyManager : ILicenseKeyManager
     private readonly ILicenseActivator activator;
     private readonly ILicenseService licenseService;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="LicenseKeyManager"/> class.
+    /// </summary>
     public LicenseKeyManager(
         IStoredLicenseStore store,
         ILicenseActivator activator,
@@ -19,9 +22,15 @@ internal sealed class LicenseKeyManager : ILicenseKeyManager
         this.licenseService = licenseService;
     }
 
+    /// <summary>
+    /// Validates.
+    /// </summary>
     public LicenseSnapshot Validate(string licenseJwt)
         => activator.Validate(licenseJwt);
 
+    /// <summary>
+    /// Sets asynchronously.
+    /// </summary>
     public async Task<LicenseSnapshot> SetAsync(string licenseJwt, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(licenseJwt);
@@ -34,6 +43,9 @@ internal sealed class LicenseKeyManager : ILicenseKeyManager
         return activator.Activate(licenseJwt.Trim(), LicenseSource.Stored);
     }
 
+    /// <summary>
+    /// Removes asynchronously.
+    /// </summary>
     public async Task<LicenseSnapshot> RemoveAsync(CancellationToken cancellationToken = default)
     {
         EnsureManageable();

@@ -16,6 +16,10 @@ internal class AgentVersionRepository : AbstractRepository<IAgentVersion, AgentV
 {
     private readonly IAgentVersionFingerprinter fingerprinter;
 
+    /// <summary>
+    /// Initializes the repository with the fingerprinter used for strict and loose fingerprint
+    /// lookups, plus the version cache for fast repeated resolution.
+    /// </summary>
     public AgentVersionRepository(
         IMapper<IAgentVersion, AgentVersionEntity> mapper,
         Func<StorageDbContext> contextFactory,
@@ -28,6 +32,11 @@ internal class AgentVersionRepository : AbstractRepository<IAgentVersion, AgentV
         this.fingerprinter = fingerprinter;
     }
 
+    /// <summary>
+    /// Returns the agent version in the given project whose strict fingerprint (SHA-256 of system
+    /// prompt plus all tool specifications with descriptions) matches the given prompt and tools, or
+    /// null if no match exists. Used by GetOrCreateAsync to detect an exact duplicate before inserting.
+    /// </summary>
     public async Task<IAgentVersion?> FindByStrictFingerprintAsync(
         IProject project,
         IPromptTemplate systemPrompt,
@@ -42,6 +51,9 @@ internal class AgentVersionRepository : AbstractRepository<IAgentVersion, AgentV
         return existing is null ? null : await mapper.Map(existing, cancellationToken);
     }
 
+    /// <summary>
+    /// Gets the by loose fingerprint asynchronously.
+    /// </summary>
     public async Task<IReadOnlyList<IAgentVersion>> GetByLooseFingerprintAsync(
         IProject project,
         IPromptTemplate systemPrompt,
@@ -57,6 +69,9 @@ internal class AgentVersionRepository : AbstractRepository<IAgentVersion, AgentV
         return await Map(stored, cancellationToken);
     }
 
+    /// <summary>
+    /// Gets the by agent asynchronously.
+    /// </summary>
     public async Task<IReadOnlyList<IAgentVersion>> GetByAgentAsync(
         IAgent agent,
         CancellationToken cancellationToken = default)
@@ -70,6 +85,9 @@ internal class AgentVersionRepository : AbstractRepository<IAgentVersion, AgentV
         return await Map(stored, cancellationToken);
     }
 
+    /// <summary>
+    /// Gets the strict fingerprint.
+    /// </summary>
     public string GetStrictFingerprint(IPromptTemplate systemPrompt, IReadOnlyCollection<ToolSpecification> tools)
         => fingerprinter.Strict(systemPrompt, tools);
 }

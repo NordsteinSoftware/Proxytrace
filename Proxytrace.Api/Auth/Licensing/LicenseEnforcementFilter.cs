@@ -13,11 +13,17 @@ internal sealed class LicenseEnforcementFilter : IAsyncAuthorizationFilter
 {
     private readonly ILicenseService licenseService;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="LicenseEnforcementFilter"/> class.
+    /// </summary>
     public LicenseEnforcementFilter(ILicenseService licenseService)
     {
         this.licenseService = licenseService;
     }
 
+    /// <summary>
+    /// On authorization asynchronously.
+    /// </summary>
     public Task OnAuthorizationAsync(AuthorizationFilterContext context)
     {
         ArgumentNullException.ThrowIfNull(context);

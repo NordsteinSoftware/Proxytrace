@@ -15,6 +15,9 @@ internal sealed class OptimizationProposalSeedScenario : IDemoScenario
     private readonly IToolUpdateProposal.CreateNew createToolUpdate;
     private readonly IRepository<IOptimizationProposal> repo;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="OptimizationProposalSeedScenario"/> class.
+    /// </summary>
     public OptimizationProposalSeedScenario(
         DemoSeedContext ctx,
         IModelSwitchProposal.CreateNew createModelSwitch,
@@ -29,6 +32,9 @@ internal sealed class OptimizationProposalSeedScenario : IDemoScenario
         this.repo = repo;
     }
 
+    /// <summary>
+    /// Gets the order.
+    /// </summary>
     public int Order => 40;
 
     private sealed record ProposalSpec(
@@ -36,6 +42,9 @@ internal sealed class OptimizationProposalSeedScenario : IDemoScenario
         ProposalStatus Status,
         Func<DemoSeedContext, IAgent, IReadOnlyCollection<Guid>, ITestRun, IOptimizationProposal> BuildDraft);
 
+    /// <summary>
+    /// Seeds asynchronously.
+    /// </summary>
     public async Task SeedAsync(CancellationToken cancellationToken)
     {
         var specs = new ProposalSpec[]

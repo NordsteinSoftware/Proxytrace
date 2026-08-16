@@ -16,6 +16,9 @@ internal class ProjectSearchSettingsConfig
     private readonly IProjectSearchSettings.CreateExisting factory;
     private readonly IRepository<IProject> projects;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ProjectSearchSettingsConfig"/> class.
+    /// </summary>
     public ProjectSearchSettingsConfig(
         IProjectSearchSettings.CreateExisting factory,
         IRepository<IProject> projects)
@@ -24,6 +27,9 @@ internal class ProjectSearchSettingsConfig
         this.projects = projects;
     }
 
+    /// <summary>
+    /// Configures the application request pipeline.
+    /// </summary>
     public override void Configure(EntityTypeBuilder<ProjectSearchSettingsEntity> builder)
     {
         builder.HasIndex(e => e.Project).IsUnique();
@@ -37,6 +43,9 @@ internal class ProjectSearchSettingsConfig
         builder.Property(e => e.IndexedKinds).HasMaxLength(256);
     }
 
+    /// <summary>
+    /// Maps.
+    /// </summary>
     public async Task<IProjectSearchSettings> Map(ProjectSearchSettingsEntity stored, CancellationToken cancellationToken = default)
     {
         var project = await projects.GetAsync(stored.Project, cancellationToken);
@@ -50,6 +59,9 @@ internal class ProjectSearchSettingsConfig
             existing: stored);
     }
 
+    /// <summary>
+    /// Maps.
+    /// </summary>
     public Task<ProjectSearchSettingsEntity> Map(IProjectSearchSettings domain, CancellationToken cancellationToken = default)
         => new ProjectSearchSettingsEntity
         {

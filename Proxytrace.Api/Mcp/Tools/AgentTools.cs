@@ -18,6 +18,9 @@ internal sealed class AgentTools
     private readonly IAgentCallRepository agentCalls;
     private readonly AgentDtoMapper mapper;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AgentTools"/> class.
+    /// </summary>
     public AgentTools(
         IMcpProjectAccessor project,
         IAgentRepository agents,
@@ -33,6 +36,9 @@ internal sealed class AgentTools
     [McpServerTool(Name = "list_agents")]
     [Description("List the agents in the current project (the project the API key belongs to). " +
                  "Returns id, name, model endpoint and tool count for each, most recently used first.")]
+    /// <summary>
+    /// Lists the agents.
+    /// </summary>
     public async Task<IReadOnlyList<AgentListItemDto>> ListAgents(CancellationToken cancellationToken)
     {
         var p = await project.GetProjectAsync(cancellationToken);
@@ -49,6 +55,9 @@ internal sealed class AgentTools
     [McpServerTool(Name = "get_agent")]
     [Description("Get a single agent by id, including its full system prompt and tool specifications. " +
                  "The agent must belong to the current project.")]
+    /// <summary>
+    /// Gets the agent.
+    /// </summary>
     public async Task<AgentDto> GetAgent(
         [Description("The agent id (GUID), as returned by list_agents.")] Guid agentId,
         CancellationToken cancellationToken)

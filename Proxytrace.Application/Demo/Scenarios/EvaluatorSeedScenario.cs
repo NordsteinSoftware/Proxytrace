@@ -18,6 +18,9 @@ internal sealed class EvaluatorSeedScenario : IDemoScenario
     private readonly IAgenticEvaluator.CreateNew createAgentic;
     private readonly IRepository<IEvaluator> evaluatorRepo;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="EvaluatorSeedScenario"/> class.
+    /// </summary>
     public EvaluatorSeedScenario(
         DemoSeedContext ctx,
         IAgenticEvaluatorPresets presets,
@@ -36,8 +39,14 @@ internal sealed class EvaluatorSeedScenario : IDemoScenario
         this.evaluatorRepo = evaluatorRepo;
     }
 
+    /// <summary>
+    /// Gets the order.
+    /// </summary>
     public int Order => 10;
 
+    /// <summary>
+    /// Seeds asynchronously.
+    /// </summary>
     public async Task SeedAsync(CancellationToken cancellationToken)
     {
         var allPresets = presets.GetAll();

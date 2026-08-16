@@ -13,12 +13,18 @@ internal class InviteConfig : AbstractEntityConfiguration<InviteEntity>, IMapper
     private readonly IInvite.CreateExisting factory;
     private readonly IRepository<IUser> users;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="InviteConfig"/> class.
+    /// </summary>
     public InviteConfig(IInvite.CreateExisting factory, IRepository<IUser> users)
     {
         this.factory = factory;
         this.users = users;
     }
 
+    /// <summary>
+    /// Configures the application request pipeline.
+    /// </summary>
     public override void Configure(EntityTypeBuilder<InviteEntity> builder)
     {
         builder.HasIndex(e => e.TokenHash).IsUnique();
@@ -30,12 +36,18 @@ internal class InviteConfig : AbstractEntityConfiguration<InviteEntity>, IMapper
             .OnDelete(DeleteBehavior.Restrict);
     }
 
+    /// <summary>
+    /// Maps.
+    /// </summary>
     public async Task<IInvite> Map(InviteEntity stored, CancellationToken cancellationToken = default)
     {
         var inviter = await users.GetAsync(stored.InvitedBy, cancellationToken);
         return factory(stored.Email, stored.Role, stored.TokenHash, stored.ExpiresAt, stored.ConsumedAt, inviter, stored);
     }
 
+    /// <summary>
+    /// Maps.
+    /// </summary>
     public Task<InviteEntity> Map(IInvite domain, CancellationToken cancellationToken = default)
         => new InviteEntity
         {

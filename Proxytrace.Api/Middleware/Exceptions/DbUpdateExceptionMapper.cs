@@ -15,8 +15,14 @@ internal sealed class DbUpdateExceptionMapper : IExceptionMapper
     // PostgreSQL SQLSTATE class 23 = integrity constraint violation.
     private const string ForeignKeyViolation = "23503";
 
+    /// <summary>
+    /// Determines whether the map.
+    /// </summary>
     public bool CanMap(Exception exception) => exception is DbUpdateException;
 
+    /// <summary>
+    /// Maps.
+    /// </summary>
     public ExceptionMapping Map(Exception exception) => new()
     {
         StatusCode = StatusCodes.Status409Conflict,

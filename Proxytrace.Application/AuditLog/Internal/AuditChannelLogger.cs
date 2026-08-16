@@ -14,16 +14,28 @@ internal sealed class AuditChannelLogger : ILogger
     private readonly IAuditChannel channel;
     private readonly IAuditActorAccessor? actorAccessor;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AuditChannelLogger"/> class.
+    /// </summary>
     public AuditChannelLogger(IAuditChannel channel, IAuditActorAccessor? actorAccessor)
     {
         this.channel = channel;
         this.actorAccessor = actorAccessor;
     }
 
+    /// <summary>
+    /// Begins the scope.
+    /// </summary>
     public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
 
+    /// <summary>
+    /// Determines whether the enabled.
+    /// </summary>
     public bool IsEnabled(LogLevel logLevel) => true;
 
+    /// <summary>
+    /// Logs.
+    /// </summary>
     public void Log<TState>(
         LogLevel logLevel,
         EventId eventId,

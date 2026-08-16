@@ -6,15 +6,42 @@ namespace Proxytrace.Domain.Notification.Internal;
 
 internal record Notification : DomainEntity<INotification>, INotification
 {
+    /// <summary>
+    /// Gets the kind.
+    /// </summary>
     public NotificationKind Kind { get; }
+    /// <summary>
+    /// Gets the severity.
+    /// </summary>
     public NotificationSeverity Severity { get; }
+    /// <summary>
+    /// Gets the title.
+    /// </summary>
     public string Title { get; }
+    /// <summary>
+    /// Gets the message.
+    /// </summary>
     public string Message { get; }
+    /// <summary>
+    /// Gets or sets the status.
+    /// </summary>
     public NotificationStatus Status { get; private init; }
+    /// <summary>
+    /// Gets the project id.
+    /// </summary>
     public Guid? ProjectId { get; }
+    /// <summary>
+    /// Gets the target kind.
+    /// </summary>
     public NotificationTargetKind? TargetKind { get; }
+    /// <summary>
+    /// Gets the target id.
+    /// </summary>
     public Guid? TargetId { get; }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Notification"/> class.
+    /// </summary>
     public Notification(
         NotificationKind kind,
         NotificationSeverity severity,
@@ -35,6 +62,9 @@ internal record Notification : DomainEntity<INotification>, INotification
         TargetId = targetId;
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Notification"/> class.
+    /// </summary>
     public Notification(
         NotificationKind kind,
         NotificationSeverity severity,
@@ -57,6 +87,9 @@ internal record Notification : DomainEntity<INotification>, INotification
         TargetId = targetId;
     }
 
+    /// <summary>
+    /// Mark read.
+    /// </summary>
     public Task<INotification> MarkRead(CancellationToken cancellationToken = default)
     {
         if (Status == NotificationStatus.Read)
@@ -68,6 +101,9 @@ internal record Notification : DomainEntity<INotification>, INotification
         return ApplyAsync(this with { Status = NotificationStatus.Read }, cancellationToken);
     }
 
+    /// <summary>
+    /// Dismiss.
+    /// </summary>
     public Task<INotification> Dismiss(CancellationToken cancellationToken = default)
     {
         if (Status == NotificationStatus.Dismissed)
@@ -76,6 +112,9 @@ internal record Notification : DomainEntity<INotification>, INotification
         return ApplyAsync(this with { Status = NotificationStatus.Dismissed }, cancellationToken);
     }
 
+    /// <summary>
+    /// Validates.
+    /// </summary>
     public override IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
         foreach (var result in base.Validate(validationContext))

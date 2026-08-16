@@ -3,6 +3,9 @@ using Proxytrace.Api.Dto.Agents;
 
 namespace Proxytrace.Api.Dto.Proposals;
 
+/// <summary>
+/// Data transfer object representing a proposal details.
+/// </summary>
 [JsonPolymorphic(TypeDiscriminatorPropertyName = "kind")]
 [JsonDerivedType(typeof(ModelSwitchDetailsDto), "ModelSwitch")]
 [JsonDerivedType(typeof(SystemPromptDetailsDto), "SystemPrompt")]
@@ -11,6 +14,9 @@ namespace Proxytrace.Api.Dto.Proposals;
 [JsonDerivedType(typeof(ToolUpdateSeedDetailsDto), "ToolUpdateSeed")]
 public abstract record ProposalDetailsDto;
 
+/// <summary>
+/// Data transfer object representing a model switch details.
+/// </summary>
 public record ModelSwitchDetailsDto(
     Guid EndpointId,
     string CurrentModelName,
@@ -19,11 +25,17 @@ public record ModelSwitchDetailsDto(
     long? ExpectedLatencyMs
 ) : ProposalDetailsDto;
 
+/// <summary>
+/// Data transfer object representing a system prompt details.
+/// </summary>
 public record SystemPromptDetailsDto(
     string CurrentSystemMessage,
     string ProposedSystemMessage
 ) : ProposalDetailsDto;
 
+/// <summary>
+/// Data transfer object representing a tool details.
+/// </summary>
 public record ToolDetailsDto(
     IReadOnlyList<ToolSpecificationDto> CurrentTools,
     IReadOnlyList<ToolSpecificationDto> ProposedTools

@@ -7,6 +7,9 @@ namespace Proxytrace.Application.Auth;
 /// </summary>
 public sealed class UserAdministrationException : Exception
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="UserAdministrationException"/> class.
+    /// </summary>
     public UserAdministrationException(string message) : base(message)
     {
     }

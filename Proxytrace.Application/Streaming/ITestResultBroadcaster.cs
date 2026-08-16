@@ -7,6 +7,9 @@ using Proxytrace.Domain.TestRunGroup;
 
 namespace Proxytrace.Application.Streaming;
 
+/// <summary>
+/// Represents a evaluation event data.
+/// </summary>
 public record EvaluationEventData(
     Guid EvaluatorId,
     EvaluatorKind EvaluatorKind,
@@ -15,24 +18,39 @@ public record EvaluationEventData(
     string? Reasoning,
     string? ErrorMessage);
 
+/// <summary>
+/// Event raised when a test run occurs.
+/// </summary>
 public abstract record TestRunEvent(Guid RunId, Guid GroupId);
 
+/// <summary>
+/// Event raised when a test case started occurs.
+/// </summary>
 public record TestCaseStartedEvent(
     Guid RunId,
     Guid GroupId,
     Guid TestCaseId) : TestRunEvent(RunId, GroupId);
 
+/// <summary>
+/// Event raised when a inference done occurs.
+/// </summary>
 public record InferenceDoneEvent(
     Guid RunId,
     Guid GroupId,
     Guid TestCaseId) : TestRunEvent(RunId, GroupId);
 
+/// <summary>
+/// Event raised when a evaluation arrived occurs.
+/// </summary>
 public record EvaluationArrivedEvent(
     Guid RunId,
     Guid GroupId,
     Guid TestCaseId,
     EvaluationEventData Evaluation) : TestRunEvent(RunId, GroupId);
 
+/// <summary>
+/// Event raised when a test result arrived occurs.
+/// </summary>
 public record TestResultArrivedEvent(
     Guid RunId,
     Guid GroupId,
@@ -45,6 +63,9 @@ public record TestResultArrivedEvent(
     long? TokensOut,
     long? CachedTokensIn) : TestRunEvent(RunId, GroupId)
 {
+    /// <summary>
+    /// Creates.
+    /// </summary>
     public static TestResultArrivedEvent Create(ITestRun run, ITestResult result)
     {
         // Per-case cost/tokens ride along so the live run view can sum a running run's totals as each
@@ -71,12 +92,18 @@ public record TestResultArrivedEvent(
     }
 }
 
+/// <summary>
+/// Event raised when a run complete occurs.
+/// </summary>
 public record RunCompleteEvent(
     Guid RunId,
     Guid GroupId,
     TestRunStatus Status,
     DateTimeOffset? CompletedAt) : TestRunEvent(RunId, GroupId)
 {
+    /// <summary>
+    /// Creates.
+    /// </summary>
     public static RunCompleteEvent Create(ITestRun testRun)
         => new(testRun.Id, testRun.Group.Id, testRun.Status, testRun.CompletedAt);
 }
@@ -90,10 +117,16 @@ public record GroupRunCompleteEvent(
     TestRunStatus GroupStatus,
     DateTimeOffset? GroupCompletedAt) : TestRunEvent(Guid.Empty, GroupId)
 {
+    /// <summary>
+    /// Creates.
+    /// </summary>
     public static GroupRunCompleteEvent Create(ITestRunGroup group)
         => new(group.Id, group.Status, group.CompletedAt);
 }
 
+/// <summary>
+/// Broadcasts test result events.
+/// </summary>
 public interface ITestResultBroadcaster
 {
     /// <summary>Subscribe to real-time events for a single run.</summary>

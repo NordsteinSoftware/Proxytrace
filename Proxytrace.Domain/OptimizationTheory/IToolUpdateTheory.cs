@@ -13,6 +13,9 @@ public interface IToolUpdateTheory : IOptimizationTheory
     /// <summary>The proposed tool specifications, replacing the agent's current ones.</summary>
     IReadOnlyList<ToolSpecification> ProposedTools { get; }
 
+    /// <summary>
+    /// Factory delegate for creating a new new instance.
+    /// </summary>
     public delegate IToolUpdateTheory CreateNew(
         IAgent agent,
         ITestSuite suite,
@@ -22,6 +25,9 @@ public interface IToolUpdateTheory : IOptimizationTheory
         IReadOnlyList<ToolSpecification> proposedTools,
         IReadOnlyCollection<Guid> evidenceTestRunIds);
 
+    /// <summary>
+    /// Factory delegate for creating a new existing instance.
+    /// </summary>
     public delegate IToolUpdateTheory CreateExisting(
         IAgent agent,
         ITestSuite suite,

@@ -15,6 +15,9 @@ internal sealed class LuceneSearchService : ISearchService
     private readonly SearchConfiguration configuration;
     private readonly IProjectSearchSettingsResolver settingsResolver;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="LuceneSearchService"/> class.
+    /// </summary>
     public LuceneSearchService(
         LuceneIndexWriter writer,
         SearchConfiguration configuration,
@@ -25,6 +28,9 @@ internal sealed class LuceneSearchService : ISearchService
         this.settingsResolver = settingsResolver;
     }
 
+    /// <summary>
+    /// Searches asynchronously.
+    /// </summary>
     public async Task<SearchResults> SearchAsync(Guid projectId, string query, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(query))
@@ -154,6 +160,9 @@ internal sealed class LuceneSearchService : ISearchService
         return new SearchResults(ordered);
     }
 
+    /// <summary>
+    /// Searches the entity ids asynchronously.
+    /// </summary>
     public async Task<IReadOnlyList<Guid>> SearchEntityIdsAsync(
         Guid projectId,
         string query,
@@ -247,6 +256,9 @@ internal sealed class LuceneSearchService : ISearchService
         }
     }
 
+    /// <summary>
+    /// Gets the recent asynchronously.
+    /// </summary>
     public Task<SearchResults> GetRecentAsync(
         Guid projectId,
         IReadOnlyList<SearchKind> kinds,

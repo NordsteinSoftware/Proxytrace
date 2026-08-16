@@ -37,6 +37,9 @@ internal sealed class FrankfurterFxRateProvider : IFxRateProvider
     // Interlocked to keep the read atomic on 32-bit runtimes.
     private long retryNotBeforeTicks;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="FrankfurterFxRateProvider"/> class.
+    /// </summary>
     public FrankfurterFxRateProvider(HttpClient http, PricingOptions options, IAsyncLock asyncLock, IClock clock)
     {
         this.http = http;
@@ -45,6 +48,9 @@ internal sealed class FrankfurterFxRateProvider : IFxRateProvider
         this.clock = clock;
     }
 
+    /// <summary>
+    /// Gets the usd to eur asynchronously.
+    /// </summary>
     public async Task<decimal?> GetUsdToEurAsync(CancellationToken cancellationToken = default)
     {
         DateOnly today = DateOnly.FromDateTime(clock.UtcNow.UtcDateTime);

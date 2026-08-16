@@ -6,6 +6,9 @@ namespace Proxytrace.Storage.Internal.Entities.CustomAnomalyDetector;
 
 internal class CustomAnomalyDetectorAgentConfig : AbstractEntityConfiguration<CustomAnomalyDetectorAgentEntity>
 {
+    /// <summary>
+    /// Configures the application request pipeline.
+    /// </summary>
     public override void Configure(EntityTypeBuilder<CustomAnomalyDetectorAgentEntity> builder)
     {
         builder.HasKey(e => new { e.DetectorId, e.AgentId });

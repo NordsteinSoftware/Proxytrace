@@ -28,6 +28,9 @@ internal class OptimizerService : BackgroundService, IOptimizerService
             SingleWriter = false,
         });
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="OptimizerService"/> class.
+    /// </summary>
     public OptimizerService(
         IOptimizer optimizer,
         ITestRunGroupRepository testRunGroupRepository,
@@ -42,6 +45,9 @@ internal class OptimizerService : BackgroundService, IOptimizerService
         this.logger = logger;
     }
 
+    /// <summary>
+    /// Enqueues asynchronously.
+    /// </summary>
     public Task EnqueueAsync(ITestRunGroup testRunGroup, CancellationToken cancellationToken = default)
         => channel.Writer.WriteAsync(testRunGroup.Id, cancellationToken).AsTask();
 

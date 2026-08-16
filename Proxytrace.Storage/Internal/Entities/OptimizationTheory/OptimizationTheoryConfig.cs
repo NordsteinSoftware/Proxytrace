@@ -28,6 +28,9 @@ internal class OptimizationTheoryConfig :
     private readonly IRepository<ITestSuite> suites;
     private readonly IRepository<IModelEndpoint> endpoints;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="OptimizationTheoryConfig"/> class.
+    /// </summary>
     public OptimizationTheoryConfig(
         IModelSwitchTheory.CreateExisting createModelSwitch,
         ISystemPromptTheory.CreateExisting createSystemPrompt,
@@ -46,6 +49,9 @@ internal class OptimizationTheoryConfig :
         this.endpoints = endpoints;
     }
 
+    /// <summary>
+    /// Configures the application request pipeline.
+    /// </summary>
     public override void Configure(EntityTypeBuilder<OptimizationTheoryEntity> builder)
     {
         builder
@@ -82,6 +88,9 @@ internal class OptimizationTheoryConfig :
         builder.HasIndex(e => new { e.Agent, e.ContentHash });
     }
 
+    /// <summary>
+    /// Maps.
+    /// </summary>
     public async Task<IOptimizationTheory> Map(OptimizationTheoryEntity stored, CancellationToken cancellationToken = default)
     {
         var agent = await agents.GetAsync(stored.Agent, cancellationToken);
@@ -178,6 +187,9 @@ internal class OptimizationTheoryConfig :
             existing: stored);
     }
 
+    /// <summary>
+    /// Maps.
+    /// </summary>
     public Task<OptimizationTheoryEntity> Map(IOptimizationTheory domain, CancellationToken cancellationToken = default)
     {
         string data = domain switch

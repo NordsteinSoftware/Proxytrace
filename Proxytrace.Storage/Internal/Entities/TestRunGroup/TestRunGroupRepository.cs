@@ -13,6 +13,9 @@ namespace Proxytrace.Storage.Internal.Entities.TestRunGroup;
 [UsedImplicitly]
 internal class TestRunGroupRepository : AbstractRepository<ITestRunGroup, TestRunGroupEntity>, ITestRunGroupRepository
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TestRunGroupRepository"/> class.
+    /// </summary>
     public TestRunGroupRepository(
         IMapper<ITestRunGroup, TestRunGroupEntity> mapper,
         Func<StorageDbContext> contextFactory,
@@ -22,6 +25,9 @@ internal class TestRunGroupRepository : AbstractRepository<ITestRunGroup, TestRu
     {
     }
 
+    /// <summary>
+    /// Gets the by agent asynchronously.
+    /// </summary>
     public async Task<IReadOnlyList<ITestRunGroup>> GetByAgentAsync(Guid agentId, CancellationToken cancellationToken = default)
     {
         var context = contextFactory();
@@ -39,6 +45,9 @@ internal class TestRunGroupRepository : AbstractRepository<ITestRunGroup, TestRu
         return await Map(stored, cancellationToken);
     }
 
+    /// <summary>
+    /// Gets the by statuses asynchronously.
+    /// </summary>
     public async Task<IReadOnlyList<ITestRunGroup>> GetByStatusesAsync(
         IReadOnlyCollection<TestRunStatus> statuses,
         CancellationToken cancellationToken = default)
@@ -56,6 +65,9 @@ internal class TestRunGroupRepository : AbstractRepository<ITestRunGroup, TestRu
         return await Map(stored, cancellationToken);
     }
 
+    /// <summary>
+    /// Gets the pending optimization asynchronously.
+    /// </summary>
     public async Task<IReadOnlyList<ITestRunGroup>> GetPendingOptimizationAsync(
         int limit,
         CancellationToken cancellationToken = default)
@@ -82,6 +94,9 @@ internal class TestRunGroupRepository : AbstractRepository<ITestRunGroup, TestRu
         return await Map(stored, cancellationToken);
     }
 
+    /// <summary>
+    /// Gets the by project asynchronously.
+    /// </summary>
     public async Task<IReadOnlyList<ITestRunGroup>> GetByProjectAsync(Guid projectId, CancellationToken cancellationToken = default)
     {
         var context = contextFactory();
@@ -103,6 +118,9 @@ internal class TestRunGroupRepository : AbstractRepository<ITestRunGroup, TestRu
         return await Map(stored, cancellationToken);
     }
 
+    /// <summary>
+    /// Gets the by agent paged asynchronously.
+    /// </summary>
     public async Task<PagedResult<ITestRunGroup>> GetByAgentPagedAsync(
         Guid agentId,
         int page,
@@ -132,6 +150,9 @@ internal class TestRunGroupRepository : AbstractRepository<ITestRunGroup, TestRu
         return new PagedResult<ITestRunGroup>(await Map(stored, cancellationToken), total, page, pageSize);
     }
 
+    /// <summary>
+    /// Gets the by project paged asynchronously.
+    /// </summary>
     public Task<PagedResult<ITestRunGroup>> GetByProjectPagedAsync(
         Guid projectId,
         int page,
@@ -140,6 +161,9 @@ internal class TestRunGroupRepository : AbstractRepository<ITestRunGroup, TestRu
         CancellationToken cancellationToken = default) =>
         GetByProjectsPagedAsync([projectId], page, pageSize, includeSystem, cancellationToken);
 
+    /// <summary>
+    /// Gets the by projects paged asynchronously.
+    /// </summary>
     public async Task<PagedResult<ITestRunGroup>> GetByProjectsPagedAsync(
         IReadOnlyCollection<Guid> projectIds,
         int page,
@@ -173,6 +197,9 @@ internal class TestRunGroupRepository : AbstractRepository<ITestRunGroup, TestRu
         return new PagedResult<ITestRunGroup>(await Map(stored, cancellationToken), total, page, pageSize);
     }
 
+    /// <summary>
+    /// Gets the by suite paged asynchronously.
+    /// </summary>
     public async Task<PagedResult<ITestRunGroup>> GetBySuitePagedAsync(
         Guid suiteId,
         int page,
@@ -198,6 +225,9 @@ internal class TestRunGroupRepository : AbstractRepository<ITestRunGroup, TestRu
         return new PagedResult<ITestRunGroup>(await Map(stored, cancellationToken), total, page, pageSize);
     }
 
+    /// <summary>
+    /// Counts the completed since asynchronously.
+    /// </summary>
     public async Task<int> CountCompletedSinceAsync(
         Guid agentId,
         DateTimeOffset since,
@@ -219,6 +249,9 @@ internal class TestRunGroupRepository : AbstractRepository<ITestRunGroup, TestRu
             .CountAsync(cancellationToken);
     }
 
+    /// <summary>
+    /// Gets the by schedule asynchronously.
+    /// </summary>
     public async Task<IReadOnlyList<ITestRunGroup>> GetByScheduleAsync(Guid scheduleId, int take, CancellationToken cancellationToken = default)
     {
         var stored = await contextFactory()

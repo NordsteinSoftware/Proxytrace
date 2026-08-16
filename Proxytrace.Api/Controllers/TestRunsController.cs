@@ -14,6 +14,9 @@ using Proxytrace.Domain.TestRun;
 
 namespace Proxytrace.Api.Controllers;
 
+/// <summary>
+/// API controller for test runs operations.
+/// </summary>
 [ApiController]
 [Authorize]
 [Route("api/test-runs")]
@@ -26,6 +29,9 @@ public class TestRunsController : ControllerBase
     private readonly IProjectAccessGuard accessGuard;
     private readonly ILogger<Audit> audit;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TestRunsController"/> class.
+    /// </summary>
     public TestRunsController(
         ITestRunRepository repository,
         IAgentRepository agentRepository,
@@ -42,6 +48,9 @@ public class TestRunsController : ControllerBase
         this.audit = audit;
     }
 
+    /// <summary>
+    /// Gets the all.
+    /// </summary>
     [HttpGet]
     public async Task<PagedResult<TestRunDto>> GetAll(
         [FromQuery] Guid? agentId = null,
@@ -74,6 +83,9 @@ public class TestRunsController : ControllerBase
         return paged.Map(mapper.ToDto);
     }
 
+    /// <summary>
+    /// Gets.
+    /// </summary>
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<TestRunDto>> Get(Guid id, CancellationToken cancellationToken)
     {
@@ -85,6 +97,9 @@ public class TestRunsController : ControllerBase
         return mapper.ToDto(run);
     }
 
+    /// <summary>
+    /// Gets the case fixture.
+    /// </summary>
     [HttpGet("{id:guid}/cases/{caseId:guid}/fixture")]
     public async Task<ActionResult<TestCaseFixtureDto>> GetCaseFixture(
         Guid id, Guid caseId, CancellationToken cancellationToken)
@@ -100,6 +115,9 @@ public class TestRunsController : ControllerBase
         return mapper.ToFixtureDto(run, result);
     }
 
+    /// <summary>
+    /// Gets the case request.
+    /// </summary>
     [HttpGet("{id:guid}/cases/{caseId:guid}/request")]
     public async Task<ActionResult<ModelRequestPreviewDto>> GetCaseRequest(
         Guid id, Guid caseId, CancellationToken cancellationToken)
@@ -118,6 +136,9 @@ public class TestRunsController : ControllerBase
         return mapper.ToRequestDto(preview);
     }
 
+    /// <summary>
+    /// Stream.
+    /// </summary>
     [HttpGet("{id:guid}/stream")]
     public async Task Stream(Guid id, CancellationToken cancellationToken)
     {
@@ -167,6 +188,9 @@ public class TestRunsController : ControllerBase
         }
     }
 
+    /// <summary>
+    /// Deletes.
+    /// </summary>
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
     {

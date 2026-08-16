@@ -18,6 +18,9 @@ internal class AgentGenerator : DomainEntityGenerator<IAgent>, IAgentGenerator
     private readonly IPromptTemplate.Create createPrompt;
     private readonly IDomainObjectGenerator<IModelParameters> modelParametersGenerator;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AgentGenerator"/> class.
+    /// </summary>
     public AgentGenerator(
         IAgent.CreateNew factory,
         IRepository<IAgent> repository,
@@ -38,6 +41,9 @@ internal class AgentGenerator : DomainEntityGenerator<IAgent>, IAgentGenerator
         this.modelParametersGenerator = modelParametersGenerator;
     }
 
+    /// <summary>
+    /// Generates asynchronously.
+    /// </summary>
     public override async Task<IAgent> GenerateAsync(CancellationToken cancellationToken = default)
     {
         var project = await projectGenerator.GetOrCreateAsync(cancellationToken);
@@ -54,6 +60,9 @@ internal class AgentGenerator : DomainEntityGenerator<IAgent>, IAgentGenerator
             modelParameters: modelParameters);
     }
 
+    /// <summary>
+    /// Creates asynchronously.
+    /// </summary>
     public override async Task<IAgent> CreateAsync(CancellationToken cancellationToken = default)
     {
         var project = await projectGenerator.GetOrCreateAsync(cancellationToken);
@@ -72,6 +81,9 @@ internal class AgentGenerator : DomainEntityGenerator<IAgent>, IAgentGenerator
             cancellationToken: cancellationToken);
     }
 
+    /// <summary>
+    /// Creates asynchronously.
+    /// </summary>
     public async Task<IAgent> CreateAsync(
         string name,
         string? systemPrompt = null,

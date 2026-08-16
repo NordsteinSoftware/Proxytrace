@@ -30,6 +30,12 @@ public interface IPasswordResetToken : IDomainEntity<IPasswordResetToken>
     /// <summary>Marks the token as redeemed and persists.</summary>
     Task<IPasswordResetToken> MarkConsumedAsync(CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Factory delegate for creating a new new instance.
+    /// </summary>
     public delegate IPasswordResetToken CreateNew(IUser user, string tokenHash, DateTimeOffset expiresAt);
+    /// <summary>
+    /// Factory delegate for creating a new existing instance.
+    /// </summary>
     public delegate IPasswordResetToken CreateExisting(IUser user, string tokenHash, DateTimeOffset expiresAt, DateTimeOffset? consumedAt, IDomainEntityData existing);
 }

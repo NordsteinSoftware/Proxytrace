@@ -16,6 +16,9 @@ internal sealed class AuditWriter : BackgroundService
     private readonly IAuditLogEntry.CreateExisting createEntry;
     private readonly IAuditLogRepository repository;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AuditWriter"/> class.
+    /// </summary>
     public AuditWriter(
         IAuditChannel channel,
         IAuditLogEntry.CreateExisting createEntry,

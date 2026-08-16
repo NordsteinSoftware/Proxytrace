@@ -10,6 +10,9 @@ internal class CustomAnomalyResultGenerator : DomainEntityGenerator<ICustomAnoma
     private readonly IDomainEntityGenerator<ICustomAnomalyDetector> detectorGenerator;
     private readonly IDomainEntityGenerator<IAgentCall> callGenerator;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CustomAnomalyResultGenerator"/> class.
+    /// </summary>
     public CustomAnomalyResultGenerator(
         ICustomAnomalyResult.CreateNew factory,
         IRepository<ICustomAnomalyResult> repository,
@@ -22,6 +25,9 @@ internal class CustomAnomalyResultGenerator : DomainEntityGenerator<ICustomAnoma
         this.callGenerator = callGenerator;
     }
 
+    /// <summary>
+    /// Generates asynchronously.
+    /// </summary>
     public override async Task<ICustomAnomalyResult> GenerateAsync(CancellationToken cancellationToken = default)
     {
         var detector = await detectorGenerator.GetOrCreateAsync(cancellationToken);

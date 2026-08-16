@@ -2,6 +2,9 @@ using Proxytrace.Domain.TestRunGroup;
 
 namespace Proxytrace.Application.Optimization;
 
+/// <summary>
+/// Background queue that feeds completed test-run groups through the optimizer pipeline and broadcasts any discovered theories.
+/// </summary>
 public interface IOptimizerService
 {
     /// <summary>

@@ -23,6 +23,9 @@ public class AuditLogController : ControllerBase
     private readonly ICurrentUserAccessor currentUser;
     private readonly IProjectRepository projects;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AuditLogController"/> class.
+    /// </summary>
     public AuditLogController(
         IAuditLogRepository repository,
         ICurrentUserAccessor currentUser,
@@ -33,6 +36,11 @@ public class AuditLogController : ControllerBase
         this.projects = projects;
     }
 
+    /// <summary>
+    /// Returns a paginated, newest-first list of audit log entries scoped to the caller's
+    /// accessible projects. Admins see every entry including global rows; project members see only
+    /// their projects' rows and never global entries.
+    /// </summary>
     [HttpGet]
     public async Task<ActionResult<PagedResult<AuditLogEntryDto>>> GetAll(
         [FromQuery] int page = 1,
@@ -83,6 +91,10 @@ public class AuditLogController : ControllerBase
         return paged.Map(ToDto);
     }
 
+    /// <summary>
+    /// Returns a single audit log entry. Returns 404 when it does not exist or the caller cannot
+    /// access its project (existence is never disclosed to unauthorized callers).
+    /// </summary>
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<AuditLogEntryDto>> Get(Guid id, CancellationToken cancellationToken)
     {

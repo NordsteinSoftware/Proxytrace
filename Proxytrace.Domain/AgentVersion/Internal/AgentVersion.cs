@@ -15,12 +15,30 @@ internal record AgentVersion : DomainEntity<IAgentVersion>, IAgentVersion
     private readonly Lazy<IAgentVersionRepository> versionRepository;
     private readonly IAsyncLock locker;
 
+    /// <summary>
+    /// Gets or sets the project id.
+    /// </summary>
     public Guid ProjectId { get; private init; }
+    /// <summary>
+    /// Gets or sets the agent id.
+    /// </summary>
     public Guid AgentId { get; private init; }
+    /// <summary>
+    /// Gets or sets the version number.
+    /// </summary>
     public int VersionNumber { get; private init; }
+    /// <summary>
+    /// Gets the system prompt.
+    /// </summary>
     public IPromptTemplate SystemPrompt { get; }
+    /// <summary>
+    /// Gets the tools.
+    /// </summary>
     public IReadOnlyList<ToolSpecification> Tools { get; }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AgentVersion"/> class.
+    /// </summary>
     public AgentVersion(
         Guid projectId,
         Guid agentId,
@@ -42,6 +60,9 @@ internal record AgentVersion : DomainEntity<IAgentVersion>, IAgentVersion
         Tools = tools;
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AgentVersion"/> class.
+    /// </summary>
     public AgentVersion(
         Guid projectId,
         Guid agentId,
@@ -64,9 +85,15 @@ internal record AgentVersion : DomainEntity<IAgentVersion>, IAgentVersion
         Tools = tools;
     }
 
+    /// <summary>
+    /// Gets the agent asynchronously.
+    /// </summary>
     public Task<IAgent> GetAgentAsync(CancellationToken cancellationToken = default)
         => agentRepository.GetAsync(AgentId, cancellationToken);
 
+    /// <summary>
+    /// Moves the to agent asynchronously.
+    /// </summary>
     public async Task<IAgentVersion> MoveToAgentAsync(IAgent targetAgent, CancellationToken cancellationToken = default)
     {
         // Process-local lock — same caveat as Agent.CreateNewVersionAsync: in multi-replica
@@ -83,6 +110,9 @@ internal record AgentVersion : DomainEntity<IAgentVersion>, IAgentVersion
             cancellationToken);
     }
 
+    /// <summary>
+    /// Validates.
+    /// </summary>
     public override IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
         foreach (var result in base.Validate(validationContext))

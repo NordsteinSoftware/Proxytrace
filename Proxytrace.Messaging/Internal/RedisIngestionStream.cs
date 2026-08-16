@@ -26,6 +26,9 @@ internal sealed class RedisIngestionStream : IIngestionStream
     private readonly MessagingConfiguration configuration;
     private readonly ILogger<RedisIngestionStream> logger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="RedisIngestionStream"/> class.
+    /// </summary>
     public RedisIngestionStream(
         IConnectionMultiplexer connection,
         MessagingConfiguration configuration,
@@ -38,6 +41,9 @@ internal sealed class RedisIngestionStream : IIngestionStream
 
     private IDatabase Database => connection.GetDatabase();
 
+    /// <summary>
+    /// Publishes asynchronously.
+    /// </summary>
     public async Task PublishAsync(IngestMessage message, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -70,6 +76,9 @@ internal sealed class RedisIngestionStream : IIngestionStream
             flags: CommandFlags.None);
     }
 
+    /// <summary>
+    /// Consume asynchronously.
+    /// </summary>
     public async IAsyncEnumerable<IngestEnvelope> ConsumeAsync(
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
@@ -119,6 +128,9 @@ internal sealed class RedisIngestionStream : IIngestionStream
         }
     }
 
+    /// <summary>
+    /// Ack asynchronously.
+    /// </summary>
     public async Task AckAsync(string messageId, CancellationToken cancellationToken = default)
         => await Database.StreamAcknowledgeAsync(
             configuration.Stream,
@@ -127,8 +139,14 @@ internal sealed class RedisIngestionStream : IIngestionStream
             flags: CommandFlags.None);
 
     // Pending entries are reclaimed via XAUTOCLAIM and redelivered, so an unacked envelope reappears.
+    /// <summary>
+    /// Gets the redelivers unacknowledged.
+    /// </summary>
     public bool RedeliversUnacknowledged => true;
 
+    /// <summary>
+    /// Gets the queue depth asynchronously.
+    /// </summary>
     public async Task<long> GetQueueDepthAsync(CancellationToken cancellationToken = default)
     {
         // Depth is observability-only and runs on the hot dashboard path. The multiplexer is

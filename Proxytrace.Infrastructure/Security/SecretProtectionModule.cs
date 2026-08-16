@@ -113,12 +113,18 @@ internal sealed class KeyRingPersistenceCheck : IHostedService
     // proxy an ILogger<T> whose T is internal, which would make this unassertable in a test.
     private readonly ILogger<SecretProtectionModule> logger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="KeyRingPersistenceCheck"/> class.
+    /// </summary>
     public KeyRingPersistenceCheck(KeyRingLocation location, ILogger<SecretProtectionModule> logger)
     {
         this.location = location;
         this.logger = logger;
     }
 
+    /// <summary>
+    /// Starts asynchronously.
+    /// </summary>
     public Task StartAsync(CancellationToken cancellationToken)
     {
         if (location.KeyRingPath is null)
@@ -142,5 +148,8 @@ internal sealed class KeyRingPersistenceCheck : IHostedService
         return Task.CompletedTask;
     }
 
+    /// <summary>
+    /// Stops asynchronously.
+    /// </summary>
     public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 }

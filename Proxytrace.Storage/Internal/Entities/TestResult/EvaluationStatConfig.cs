@@ -5,6 +5,9 @@ namespace Proxytrace.Storage.Internal.Entities.TestResult;
 
 internal class EvaluationStatConfig : AbstractEntityConfiguration<EvaluationStatEntity>
 {
+    /// <summary>
+    /// Configures the application request pipeline.
+    /// </summary>
     public override void Configure(EntityTypeBuilder<EvaluationStatEntity> builder)
     {
         builder.HasKey(e => e.Id);

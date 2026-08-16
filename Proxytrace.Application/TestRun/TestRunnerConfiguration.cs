@@ -1,5 +1,8 @@
 namespace Proxytrace.Application.TestRun;
 
+/// <summary>
+/// Represents a test runner configuration.
+/// </summary>
 public sealed class TestRunnerConfiguration
 {
     /// <summary>

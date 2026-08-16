@@ -16,17 +16,35 @@ internal record NumericMatchEvaluator : DomainEntity<IEvaluator>, INumericMatchE
 {
     private readonly IEvaluation.Create evaluationFactory;
 
+    /// <summary>
+    /// Provides additional functionality.
+    /// </summary>
     public string Name
         => "Numeric Match";
 
+    /// <summary>
+    /// Provides additional functionality.
+    /// </summary>
     public EvaluatorKind Kind
         => EvaluatorKind.NumericMatch;
 
+    /// <summary>
+    /// Gets the project.
+    /// </summary>
     public IProject Project { get; }
 
+    /// <summary>
+    /// Gets the extraction pattern.
+    /// </summary>
     public Regex ExtractionPattern { get; }
+    /// <summary>
+    /// Gets the tolerance.
+    /// </summary>
     public decimal Tolerance { get; }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="NumericMatchEvaluator"/> class.
+    /// </summary>
     public NumericMatchEvaluator(
         Regex extractionPattern,
         decimal tolerance,
@@ -40,6 +58,9 @@ internal record NumericMatchEvaluator : DomainEntity<IEvaluator>, INumericMatchE
         this.evaluationFactory = evaluationFactory;
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="NumericMatchEvaluator"/> class.
+    /// </summary>
     public NumericMatchEvaluator(
         Regex extractionPattern,
         decimal tolerance,
@@ -54,6 +75,9 @@ internal record NumericMatchEvaluator : DomainEntity<IEvaluator>, INumericMatchE
         this.evaluationFactory = evaluationFactory;
     }
 
+    /// <summary>
+    /// Evaluates asynchronously.
+    /// </summary>
     public Task<IEvaluation?> EvaluateAsync(
         ITestResult testResult,
         CancellationToken cancellationToken = default)
@@ -108,6 +132,9 @@ internal record NumericMatchEvaluator : DomainEntity<IEvaluator>, INumericMatchE
             CultureInfo.InvariantCulture,
             out result);
 
+    /// <summary>
+    /// Validates.
+    /// </summary>
     public override IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
         foreach (var result in base.Validate(validationContext))

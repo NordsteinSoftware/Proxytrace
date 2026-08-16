@@ -9,6 +9,9 @@ namespace Proxytrace.Domain.ModelEndpoint;
 /// </summary>
 public static class ModelClientExtensions
 {
+    /// <summary>
+    /// Completes asynchronously.
+    /// </summary>
     public static Task<ICompletion> CompleteAsync(
         this IModelClient client,
         UserMessage userMessage,
@@ -24,6 +27,9 @@ public static class ModelClientExtensions
             cancellationToken);
     }
 
+    /// <summary>
+    /// Completes asynchronously.
+    /// </summary>
     public static async Task<TOutput?> CompleteAsync<TOutput>(
         this IModelClient client,
         UserMessage userMessage,

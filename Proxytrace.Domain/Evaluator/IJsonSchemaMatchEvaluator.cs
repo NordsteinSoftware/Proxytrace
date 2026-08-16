@@ -9,10 +9,16 @@ public interface IJsonSchemaMatchEvaluator : IEvaluator
 {
     string JsonSchema { get; }
     
+    /// <summary>
+    /// Factory delegate for creating a new new instance.
+    /// </summary>
     public delegate IJsonSchemaMatchEvaluator CreateNew(
         string jsonSchema,
         IProject project);
     
+    /// <summary>
+    /// Factory delegate for creating a new existing instance.
+    /// </summary>
     public delegate IJsonSchemaMatchEvaluator CreateExisting(
         string jsonSchema,
         IProject project,

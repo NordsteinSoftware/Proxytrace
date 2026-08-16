@@ -12,12 +12,19 @@ internal sealed class DataDirectorySigningKeyStore : ISigningKeyStore
 
     private readonly string directory;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DataDirectorySigningKeyStore"/> class.
+    /// </summary>
     public DataDirectorySigningKeyStore(string directory)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(directory);
         this.directory = directory;
     }
 
+    /// <summary>
+    /// Reads the signing key from the <c>signing-key</c> file in the data directory, returning
+    /// <see langword="null"/> when the file is absent or empty.
+    /// </summary>
     public string? Load()
     {
         var path = Path.Combine(directory, FileName);
@@ -28,6 +35,10 @@ internal sealed class DataDirectorySigningKeyStore : ISigningKeyStore
         return key.Length == 0 ? null : key;
     }
 
+    /// <summary>
+    /// Writes <paramref name="signingKey"/> to the <c>signing-key</c> file in the data directory,
+    /// creating the directory if it does not exist.
+    /// </summary>
     public void Persist(string signingKey)
     {
         Directory.CreateDirectory(directory);

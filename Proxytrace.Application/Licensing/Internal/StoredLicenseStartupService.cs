@@ -19,6 +19,9 @@ internal sealed class StoredLicenseStartupService : IHostedService
     private readonly ILicenseService licenseService;
     private readonly ILogger<StoredLicenseStartupService> logger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="StoredLicenseStartupService"/> class.
+    /// </summary>
     public StoredLicenseStartupService(
         IStoredLicenseStore store,
         ILicenseActivator activator,
@@ -31,6 +34,9 @@ internal sealed class StoredLicenseStartupService : IHostedService
         this.logger = logger;
     }
 
+    /// <summary>
+    /// Starts asynchronously.
+    /// </summary>
     public async Task StartAsync(CancellationToken cancellationToken)
     {
         // Kiosk/demo deployments run on a fixed override snapshot; never replace it.
@@ -54,6 +60,9 @@ internal sealed class StoredLicenseStartupService : IHostedService
         }
     }
 
+    /// <summary>
+    /// Stops asynchronously.
+    /// </summary>
     public Task StopAsync(CancellationToken cancellationToken)
         => Task.CompletedTask;
 }

@@ -20,6 +20,9 @@ namespace Proxytrace.Storage;
 [UsedImplicitly]
 internal class StorageDbContextFactory : IDesignTimeDbContextFactory<StorageDbContext>
 {
+    /// <summary>
+    /// Creates the db context.
+    /// </summary>
     public StorageDbContext CreateDbContext(string[] args)
     {
         // Environment variables are added LAST so they win over the JSON files — this is what makes
@@ -73,16 +76,34 @@ internal class StorageDbContextFactory : IDesignTimeDbContextFactory<StorageDbCo
     /// </summary>
     private sealed class DesignTimeSecretSeam : ISecretProtector, ISecretHasher, ISecretIndexer
     {
+        /// <summary>
+        /// Protect.
+        /// </summary>
         public string Protect(string plaintext) => plaintext;
 
+        /// <summary>
+        /// Unprotect.
+        /// </summary>
         public string Unprotect(string ciphertext) => ciphertext;
 
+        /// <summary>
+        /// Hashes.
+        /// </summary>
         public string Hash(string value) => value;
 
+        /// <summary>
+        /// Indexes.
+        /// </summary>
         public string Index(string value) => value;
 
+        /// <summary>
+        /// Legacy index.
+        /// </summary>
         public string LegacyIndex(string value) => value;
 
+        /// <summary>
+        /// Gets the is keyed.
+        /// </summary>
         public bool IsKeyed => false;
     }
 
@@ -93,6 +114,9 @@ internal class StorageDbContextFactory : IDesignTimeDbContextFactory<StorageDbCo
     /// </summary>
     private sealed class DesignTimeAgentNameGenerator : IAgentNameGenerator
     {
+        /// <summary>
+        /// Generates the name asynchronously.
+        /// </summary>
         public Task<string> GenerateNameAsync(
             IPromptTemplate systemPrompt,
             IProject project,
@@ -107,9 +131,15 @@ internal class StorageDbContextFactory : IDesignTimeDbContextFactory<StorageDbCo
     /// </summary>
     private sealed class DesignTimeProviderClient : IProviderClient
     {
+        /// <summary>
+        /// Verifies the connection asynchronously.
+        /// </summary>
         public Task<ProviderConnectionResult> VerifyConnectionAsync(CancellationToken cancellationToken = default)
             => throw new NotSupportedException("Provider client operations are not available at design time.");
 
+        /// <summary>
+        /// Gets the models asynchronously.
+        /// </summary>
         public Task<IReadOnlyList<PricedModel>> GetModelsAsync(CancellationToken cancellationToken = default)
             => throw new NotSupportedException("Provider client operations are not available at design time.");
     }

@@ -27,6 +27,9 @@ internal sealed class TraceyAgentProvisioner : ITraceyAgentProvisioner
     private readonly IPromptTemplate.Create createPrompt;
     private readonly IModelParameters.Create createParameters;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TraceyAgentProvisioner"/> class.
+    /// </summary>
     public TraceyAgentProvisioner(
         IAgentRepository agents,
         IAgent.CreateNew createAgent,
@@ -39,6 +42,9 @@ internal sealed class TraceyAgentProvisioner : ITraceyAgentProvisioner
         this.createParameters = createParameters;
     }
 
+    /// <summary>
+    /// Ensures the tracey agent asynchronously.
+    /// </summary>
     public async Task<IAgent> EnsureTraceyAgentAsync(IProject project, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(project);

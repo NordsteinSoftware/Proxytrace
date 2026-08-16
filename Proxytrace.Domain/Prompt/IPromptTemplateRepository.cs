@@ -18,8 +18,14 @@ public interface IPromptTemplateRepository
     Task<IPromptTemplate?> FindAsync(string name, CancellationToken cancellationToken = default);
 }
 
+/// <summary>
+/// The exception that is thrown when a prompt not found error occurs.
+/// </summary>
 public class PromptNotFoundException : Exception
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="PromptNotFoundException"/> class.
+    /// </summary>
     public PromptNotFoundException(string name) 
         : base($"Prompt with name '{name}' not found.") { }
 }

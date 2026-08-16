@@ -13,9 +13,18 @@ namespace Proxytrace.Domain.OptimizationTheory.Internal;
 [UsedImplicitly]
 internal record ModelSwitchTheory : OptimizationTheory, IModelSwitchTheory
 {
+    /// <summary>
+    /// Gets the kind.
+    /// </summary>
     public override ProposalKind Kind => ProposalKind.ModelSwitch;
+    /// <summary>
+    /// Gets or sets the proposed endpoint.
+    /// </summary>
     public IModelEndpoint ProposedEndpoint { get; private init; }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ModelSwitchTheory"/> class.
+    /// </summary>
     public ModelSwitchTheory(
         IAgent agent,
         ITestSuite suite,
@@ -32,6 +41,9 @@ internal record ModelSwitchTheory : OptimizationTheory, IModelSwitchTheory
         ProposedEndpoint = proposedEndpoint;
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ModelSwitchTheory"/> class.
+    /// </summary>
     public ModelSwitchTheory(
         IAgent agent,
         ITestSuite suite,
@@ -55,6 +67,9 @@ internal record ModelSwitchTheory : OptimizationTheory, IModelSwitchTheory
         ProposedEndpoint = proposedEndpoint;
     }
 
+    /// <summary>
+    /// Validates.
+    /// </summary>
     public override IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
         foreach (var result in base.Validate(validationContext))

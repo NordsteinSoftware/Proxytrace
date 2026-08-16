@@ -55,6 +55,9 @@ internal sealed class TestCaseSynthesisService : ITestCaseSynthesisService
     private readonly IPromptTemplateRepository prompts;
     private readonly IAgentRepository agents;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TestCaseSynthesisService"/> class.
+    /// </summary>
     public TestCaseSynthesisService(
         IAgentCallRepository calls,
         IPromptTemplateRepository prompts,
@@ -65,6 +68,9 @@ internal sealed class TestCaseSynthesisService : ITestCaseSynthesisService
         this.agents = agents;
     }
 
+    /// <summary>
+    /// Synthesize asynchronously.
+    /// </summary>
     public async Task<TestCaseProposalSet> SynthesizeAsync(
         IAgentCall origin,
         ITestSuite? destination,

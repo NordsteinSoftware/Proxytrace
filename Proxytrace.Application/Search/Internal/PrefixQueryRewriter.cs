@@ -6,6 +6,9 @@ internal static class PrefixQueryRewriter
 {
     private static readonly HashSet<string> ReservedWords = ["AND", "OR", "NOT", "TO"];
 
+    /// <summary>
+    /// Rewrite.
+    /// </summary>
     public static string Rewrite(string input)
     {
         if (string.IsNullOrWhiteSpace(input))

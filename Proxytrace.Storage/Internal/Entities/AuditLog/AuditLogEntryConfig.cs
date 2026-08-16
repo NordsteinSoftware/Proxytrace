@@ -11,11 +11,17 @@ internal class AuditLogEntryConfig
 {
     private readonly IAuditLogEntry.CreateExisting factory;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AuditLogEntryConfig"/> class.
+    /// </summary>
     public AuditLogEntryConfig(IAuditLogEntry.CreateExisting factory)
     {
         this.factory = factory;
     }
 
+    /// <summary>
+    /// Configures the application request pipeline.
+    /// </summary>
     public override void Configure(EntityTypeBuilder<AuditLogEntryEntity> builder)
     {
         // Audit entries are denormalized, immutable snapshots. ActorUserId / ActorApiKeyId /
@@ -31,6 +37,9 @@ internal class AuditLogEntryConfig
         // Details is intentionally unbounded (Postgres text) — pre-serialized JSON.
     }
 
+    /// <summary>
+    /// Maps.
+    /// </summary>
     public Task<IAuditLogEntry> Map(AuditLogEntryEntity stored, CancellationToken cancellationToken = default)
         => factory(
             stored.Action,
@@ -46,6 +55,9 @@ internal class AuditLogEntryConfig
             stored.Outcome,
             stored).ToTaskResult();
 
+    /// <summary>
+    /// Maps.
+    /// </summary>
     public Task<AuditLogEntryEntity> Map(IAuditLogEntry domain, CancellationToken cancellationToken = default)
         => new AuditLogEntryEntity
         {

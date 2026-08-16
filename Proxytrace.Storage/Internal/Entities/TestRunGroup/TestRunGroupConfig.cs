@@ -14,6 +14,9 @@ internal class TestRunGroupConfig : AbstractEntityConfiguration<TestRunGroupEnti
     private readonly IRepository<ITestSuite> suites;
     private readonly ITestRunGroup.CreateExisting factory;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TestRunGroupConfig"/> class.
+    /// </summary>
     public TestRunGroupConfig(
         IRepository<ITestSuite> suites,
         ITestRunGroup.CreateExisting factory)
@@ -22,6 +25,9 @@ internal class TestRunGroupConfig : AbstractEntityConfiguration<TestRunGroupEnti
         this.factory = factory;
     }
 
+    /// <summary>
+    /// Configures the application request pipeline.
+    /// </summary>
     public override void Configure(EntityTypeBuilder<TestRunGroupEntity> builder)
     {
         builder
@@ -47,6 +53,9 @@ internal class TestRunGroupConfig : AbstractEntityConfiguration<TestRunGroupEnti
         builder.HasIndex(e => new { e.OptimizationConsideredAt, e.IsSystemRun, e.Status });
     }
 
+    /// <summary>
+    /// Maps.
+    /// </summary>
     public async Task<ITestRunGroup> Map(TestRunGroupEntity stored, CancellationToken cancellationToken = default)
         => factory(
             suite: await suites.GetAsync(stored.Suite, cancellationToken),
@@ -58,6 +67,9 @@ internal class TestRunGroupConfig : AbstractEntityConfiguration<TestRunGroupEnti
             optimizationConsideredAt: stored.OptimizationConsideredAt,
             existing: stored);
 
+    /// <summary>
+    /// Maps.
+    /// </summary>
     public Task<TestRunGroupEntity> Map(ITestRunGroup domain, CancellationToken cancellationToken = default)
         => new TestRunGroupEntity
         {

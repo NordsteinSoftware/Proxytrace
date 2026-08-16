@@ -7,11 +7,26 @@ namespace Proxytrace.Domain.CostLimitBreach.Internal;
 
 internal record CostLimitBreach : DomainEntity<ICostLimitBreach>, ICostLimitBreach
 {
+    /// <summary>
+    /// Gets or sets the cost limit.
+    /// </summary>
     public ICostLimit CostLimit { get; private init; }
+    /// <summary>
+    /// Gets or sets the month start.
+    /// </summary>
     public DateTimeOffset MonthStart { get; private init; }
+    /// <summary>
+    /// Gets or sets the threshold.
+    /// </summary>
     public CostThreshold Threshold { get; private init; }
+    /// <summary>
+    /// Gets or sets the spend eur.
+    /// </summary>
     public decimal SpendEur { get; private init; }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CostLimitBreach"/> class.
+    /// </summary>
     public CostLimitBreach(
         ICostLimit costLimit,
         DateTimeOffset monthStart,
@@ -25,6 +40,9 @@ internal record CostLimitBreach : DomainEntity<ICostLimitBreach>, ICostLimitBrea
         SpendEur = spendEur;
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CostLimitBreach"/> class.
+    /// </summary>
     public CostLimitBreach(
         ICostLimit costLimit,
         DateTimeOffset monthStart,
@@ -39,6 +57,9 @@ internal record CostLimitBreach : DomainEntity<ICostLimitBreach>, ICostLimitBrea
         SpendEur = spendEur;
     }
 
+    /// <summary>
+    /// Validates.
+    /// </summary>
     public override IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
         foreach (var result in base.Validate(validationContext))

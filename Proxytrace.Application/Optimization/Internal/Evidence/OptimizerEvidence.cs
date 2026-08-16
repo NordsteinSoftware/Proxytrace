@@ -16,6 +16,9 @@ internal sealed record OptimizerEvidence(
         PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
     };
 
+    /// <summary>
+    /// To json.
+    /// </summary>
     public string ToJson()
     {
         var payload = new

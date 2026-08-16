@@ -3,8 +3,14 @@ using Proxytrace.Application.TestCase;
 
 namespace Proxytrace.Api.Dto.TestCases;
 
+/// <summary>
+/// Request payload for synthesize test cases operations.
+/// </summary>
 public record SynthesizeTestCasesRequest(
     Guid? SuiteId = null,
+    /// <summary>
+    /// Data transfer object representing a synthesis round.
+    /// </summary>
     [StringLength(2000)] string? Instruction = null,
     [MaxLength(TestCaseProposalSet.MaxRounds)] IReadOnlyList<SynthesisRoundDto>? Rounds = null);
 
@@ -12,10 +18,19 @@ public record SynthesisRoundDto(
     [StringLength(2000)] string? Instruction,
     TestCaseProposalSetDto Proposals);
 
+/// <summary>
+/// Data transfer object representing a proposed tool request.
+/// </summary>
 public record ProposedToolRequestDto(string Name, string Arguments);
 
+/// <summary>
+/// Data transfer object representing a proposed expected output.
+/// </summary>
 public record ProposedExpectedOutputDto(string Content, IReadOnlyList<ProposedToolRequestDto> ToolRequests);
 
+/// <summary>
+/// Data transfer object representing a test case proposal.
+/// </summary>
 public record TestCaseProposalDto(
     Guid AgentCallId,
     ProposalKind Kind,
@@ -25,14 +40,23 @@ public record TestCaseProposalDto(
     ProposedExpectedOutputDto? ExpectedOutput,
     IReadOnlyList<ProposalFlag> Flags);
 
+/// <summary>
+/// Data transfer object representing a skipped turn.
+/// </summary>
 public record SkippedTurnDto(Guid AgentCallId, string Reason);
 
+/// <summary>
+/// Data transfer object representing a evaluator suggestion.
+/// </summary>
 public record EvaluatorSuggestionDto(
     string Name,
     string Instructions,
     string Reason,
     EvaluatorSuggestionTarget Target);
 
+/// <summary>
+/// Data transfer object representing a test case proposal set.
+/// </summary>
 public record TestCaseProposalSetDto(
     string Summary,
     IReadOnlyList<TestCaseProposalDto> Proposals,
@@ -45,6 +69,9 @@ public record TestCaseProposalSetDto(
 /// </summary>
 public sealed class TestCaseProposalDtoMapper
 {
+    /// <summary>
+    /// To dto.
+    /// </summary>
     public TestCaseProposalSetDto ToDto(TestCaseProposalSet set)
         => new(
             set.Summary,
@@ -55,6 +82,9 @@ public sealed class TestCaseProposalDtoMapper
                     suggestion.Name, suggestion.Instructions, suggestion.Reason, suggestion.Target)
                 : null);
 
+    /// <summary>
+    /// To domain.
+    /// </summary>
     public SynthesisRound ToDomain(SynthesisRoundDto dto)
         => new(dto.Instruction, ToDomain(dto.Proposals));
 

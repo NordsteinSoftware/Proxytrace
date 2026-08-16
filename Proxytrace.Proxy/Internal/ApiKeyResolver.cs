@@ -11,6 +11,9 @@ internal sealed class ApiKeyResolver : IApiKeyResolver
     private readonly IModelProviderRepository providers;
     private readonly IProjectRepository projects;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ApiKeyResolver"/> class.
+    /// </summary>
     public ApiKeyResolver(
         IApiKeyRepository apiKeys,
         IModelProviderRepository providers,
@@ -28,6 +31,9 @@ internal sealed class ApiKeyResolver : IApiKeyResolver
     // effect on the next request; when the database is unreachable the proxy fails closed instead
     // of serving stale credentials. The per-request cost is a few indexed point lookups (guarded by
     // the proxyResolve* perf budgets), negligible next to an upstream LLM round trip.
+    /// <summary>
+    /// Resolves asynchronously.
+    /// </summary>
     public async Task<ResolvedApiKey?> ResolveAsync(string rawKey, string? projectSlug, CancellationToken cancellationToken)
     {
         // Proxytrace-issued key path wins on collisions. The key already carries its project, so the

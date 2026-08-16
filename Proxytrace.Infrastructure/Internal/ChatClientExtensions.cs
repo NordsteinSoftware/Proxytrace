@@ -13,9 +13,15 @@ namespace Proxytrace.Infrastructure.Internal;
 
 internal static class ChatClientExtensions
 {
+    /// <summary>
+    /// To chat messages.
+    /// </summary>
     public static IEnumerable<ChatMessage> ToChatMessages(this Conversation conversation)
         => conversation.Messages.Select(m => m.ToChatMessage());
 
+    /// <summary>
+    /// To chat message.
+    /// </summary>
     public static ChatMessage ToChatMessage(this Message message)
     {
         ChatRole role = message.Role switch
@@ -63,6 +69,9 @@ internal static class ChatClientExtensions
         return sb.ToString().Trim();
     }
 
+    /// <summary>
+    /// To chat options.
+    /// </summary>
     public static ChatOptions ToChatOptions(this ModelOptions options)
     {
         var chatOptions = new ChatOptions { ModelId = options.ModelName };

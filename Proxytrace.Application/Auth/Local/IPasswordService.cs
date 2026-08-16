@@ -2,9 +2,19 @@ using Proxytrace.Domain.User;
 
 namespace Proxytrace.Application.Auth.Local;
 
+/// <summary>
+/// Hashes passwords for storage and verifies them on login using PBKDF2.
+/// </summary>
 public interface IPasswordService
 {
+    /// <summary>
+    /// Computes the PBKDF2 hash of the given password, salted per user, for storage.
+    /// </summary>
     string Hash(IUser user, string password);
+
+    /// <summary>
+    /// Returns true when the supplied plain-text password matches the stored hash.
+    /// </summary>
     bool Verify(IUser user, string hash, string password);
 
     /// <summary>

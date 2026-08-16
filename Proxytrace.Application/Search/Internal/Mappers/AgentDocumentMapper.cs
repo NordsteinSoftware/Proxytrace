@@ -9,8 +9,14 @@ namespace Proxytrace.Application.Search.Internal.Mappers;
 
 internal sealed class AgentDocumentMapper : AbstractDocumentMapper<IAgent>
 {
+    /// <summary>
+    /// Gets the kind.
+    /// </summary>
     public override SearchKind Kind => SearchKind.Agent;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AgentDocumentMapper"/> class.
+    /// </summary>
     public AgentDocumentMapper(
         IRepository<IAgent> repository,
         ILogger<AgentCallDocumentMapper> logger) : base(repository, logger)

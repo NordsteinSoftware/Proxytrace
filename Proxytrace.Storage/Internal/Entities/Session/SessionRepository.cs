@@ -15,6 +15,9 @@ internal class SessionRepository
 {
     private readonly ILogger<SessionRepository> logger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SessionRepository"/> class.
+    /// </summary>
     public SessionRepository(
         IMapper<ISession, SessionEntity> mapper,
         Func<StorageDbContext> contextFactory,
@@ -26,6 +29,9 @@ internal class SessionRepository
         this.logger = logger;
     }
 
+    /// <summary>
+    /// Record activity asynchronously.
+    /// </summary>
     public async Task RecordActivityAsync(
         Guid sessionId,
         string externalKey,
@@ -86,6 +92,9 @@ internal class SessionRepository
         await context.SaveChangesAsync(cancellationToken);
     }
 
+    /// <summary>
+    /// Record trace removals asynchronously.
+    /// </summary>
     public async Task RecordTraceRemovalsAsync(
         IReadOnlyCollection<SessionTraceRemoval> removals,
         CancellationToken cancellationToken = default)
@@ -128,6 +137,9 @@ internal class SessionRepository
         }
     }
 
+    /// <summary>
+    /// Removes the older than asynchronously.
+    /// </summary>
     public async Task<int> RemoveOlderThanAsync(DateTimeOffset cutoff, CancellationToken cancellationToken = default)
     {
         var context = contextFactory();
@@ -177,6 +189,9 @@ internal class SessionRepository
             UpdatedAt = lastActivityAt,
         };
 
+    /// <summary>
+    /// Gets the recent asynchronously.
+    /// </summary>
     public async Task<(IReadOnlyList<ISession> Items, int Total)> GetRecentAsync(
         Guid projectId,
         int page,

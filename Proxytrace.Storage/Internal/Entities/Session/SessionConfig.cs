@@ -12,11 +12,17 @@ internal class SessionConfig
 {
     private readonly ISession.CreateExisting factory;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SessionConfig"/> class.
+    /// </summary>
     public SessionConfig(ISession.CreateExisting factory)
     {
         this.factory = factory;
     }
 
+    /// <summary>
+    /// Configures the application request pipeline.
+    /// </summary>
     public override void Configure(EntityTypeBuilder<SessionEntity> builder)
     {
         // Sessions are project-owned debugging groupings; they go away with their project. The
@@ -33,6 +39,9 @@ internal class SessionConfig
         builder.HasIndex(e => new { e.ProjectId, e.LastActivityAt }).IsDescending(false, true);
     }
 
+    /// <summary>
+    /// Maps.
+    /// </summary>
     public Task<ISession> Map(SessionEntity storedEntity, CancellationToken cancellationToken = default)
         => factory(
             externalKey: storedEntity.ExternalKey,
@@ -42,6 +51,9 @@ internal class SessionConfig
             totalTokens: storedEntity.TotalTokens,
             existing: storedEntity).ToTaskResult();
 
+    /// <summary>
+    /// Maps.
+    /// </summary>
     public Task<SessionEntity> Map(ISession domainEntity, CancellationToken cancellationToken = default)
         => new SessionEntity
         {

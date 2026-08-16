@@ -16,11 +16,17 @@ internal sealed class OutlierBaselineQueries : IOutlierBaselineReader
 {
     private readonly Func<StorageDbContext> contextFactory;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="OutlierBaselineQueries"/> class.
+    /// </summary>
     public OutlierBaselineQueries(Func<StorageDbContext> contextFactory)
     {
         this.contextFactory = contextFactory;
     }
 
+    /// <summary>
+    /// Gets the baseline asynchronously.
+    /// </summary>
     public async Task<OutlierBaseline> GetBaselineAsync(
         Guid agentId, int sampleWindow, CancellationToken cancellationToken = default)
     {

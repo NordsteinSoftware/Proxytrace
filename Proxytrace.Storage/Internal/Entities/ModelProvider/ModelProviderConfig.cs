@@ -23,6 +23,9 @@ internal class ModelProviderConfig : AbstractEntityConfiguration<ModelProviderEn
     private readonly ISecretIndexer indexer;
     private readonly ILogger<ModelProviderConfig> logger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ModelProviderConfig"/> class.
+    /// </summary>
     public ModelProviderConfig(
         IModelProvider.CreateExisting factory,
         Lazy<ISecretProtector> protector,
@@ -35,6 +38,9 @@ internal class ModelProviderConfig : AbstractEntityConfiguration<ModelProviderEn
         this.logger = logger;
     }
 
+    /// <summary>
+    /// Configures the application request pipeline.
+    /// </summary>
     public override void Configure(EntityTypeBuilder<ModelProviderEntity> builder)
     {
         builder.HasIndex(e => e.Name).IsUnique();
@@ -52,9 +58,15 @@ internal class ModelProviderConfig : AbstractEntityConfiguration<ModelProviderEn
         builder.HasIndex(e => e.IsArchived);
     }
 
+    /// <summary>
+    /// Maps.
+    /// </summary>
     public Task<IModelProvider> Map(ModelProviderEntity stored, CancellationToken cancellationToken = default)
         => factory(stored.Name, new Uri(stored.Endpoint), Decrypt(stored.ApiKey), stored.Kind, stored).ToTaskResult();
 
+    /// <summary>
+    /// Maps.
+    /// </summary>
     public Task<ModelProviderEntity> Map(IModelProvider domain, CancellationToken cancellationToken = default)
         => new ModelProviderEntity
         {

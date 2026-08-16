@@ -14,6 +14,9 @@ internal sealed class AgentVersionFingerprinter : IAgentVersionFingerprinter
     // parse+rewrite round-trip on hot ingestion paths. Bounded by the number of unique tool schemas
     // in the project, which is small in practice.
     private readonly ConcurrentDictionary<string, string> strippedSchemaCache = new();
+    /// <summary>
+    /// Strict.
+    /// </summary>
     public string Strict(IPromptTemplate systemPrompt, IReadOnlyCollection<ToolSpecification> tools)
     {
         var sb = new StringBuilder();
@@ -27,6 +30,9 @@ internal sealed class AgentVersionFingerprinter : IAgentVersionFingerprinter
         return Hash(sb);
     }
 
+    /// <summary>
+    /// Loose.
+    /// </summary>
     public string Loose(IPromptTemplate systemPrompt, IReadOnlyCollection<ToolSpecification> tools)
     {
         var sb = new StringBuilder();

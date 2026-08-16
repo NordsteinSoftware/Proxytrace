@@ -22,6 +22,9 @@ using Proxytrace.Application.Auth;
 
 namespace Proxytrace.Api.Controllers;
 
+/// <summary>
+/// API controller for model providers operations.
+/// </summary>
 [ApiController]
 [Authorize]
 [Route("api/providers")]
@@ -43,6 +46,9 @@ public class ModelProvidersController : ControllerBase
     private readonly IRepository<IUser> users;
     private readonly ILogger<Audit> audit;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ModelProvidersController"/> class.
+    /// </summary>
     public ModelProvidersController(
         IModelProviderRepository providerRepository,
         IApiKeyRepository apiKeyRepository,
@@ -77,6 +83,9 @@ public class ModelProvidersController : ControllerBase
         this.users = users;
     }
 
+    /// <summary>
+    /// Gets the all.
+    /// </summary>
     [HttpGet]
     [Authorize(Roles = nameof(UserRole.Admin))]
     public async Task<PagedResult<ModelProviderDto>> GetAll(
@@ -88,6 +97,9 @@ public class ModelProvidersController : ControllerBase
         return paged.Map(mapper.ToDto);
     }
 
+    /// <summary>
+    /// Gets.
+    /// </summary>
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<ModelProviderDto>> Get(Guid id, CancellationToken cancellationToken)
     {
@@ -122,6 +134,9 @@ public class ModelProvidersController : ControllerBase
         return new ModelProviderKeyDto(provider.ApiKey);
     }
 
+    /// <summary>
+    /// Gets the overview.
+    /// </summary>
     [HttpGet("overview")]
     [Authorize(Roles = nameof(UserRole.Admin))]
     public async Task<ProvidersOverviewDto> GetOverview(CancellationToken cancellationToken = default)
@@ -148,6 +163,9 @@ public class ModelProvidersController : ControllerBase
             projectsTask.Result.Select(ProjectDtoMapper.ToDto).ToArray());
     }
 
+    /// <summary>
+    /// Creates.
+    /// </summary>
     [HttpPost]
     [Authorize(Roles = nameof(UserRole.Admin))]
     public async Task<ActionResult<ModelProviderDto>> Create(
@@ -161,6 +179,9 @@ public class ModelProvidersController : ControllerBase
         return CreatedAtAction(nameof(Get), new { id = saved.Id }, mapper.ToDto(saved));
     }
 
+    /// <summary>
+    /// Updates.
+    /// </summary>
     [HttpPut("{id:guid}")]
     [Authorize(Roles = nameof(UserRole.Admin))]
     public async Task<ActionResult<ModelProviderDto>> Update(
@@ -191,6 +212,9 @@ public class ModelProvidersController : ControllerBase
         return mapper.ToDto(saved);
     }
 
+    /// <summary>
+    /// Deletes.
+    /// </summary>
     [HttpDelete("{id:guid}")]
     [Authorize(Roles = nameof(UserRole.Admin))]
     public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
@@ -212,6 +236,9 @@ public class ModelProvidersController : ControllerBase
 
     // ── Model Endpoints ───────────────────────────────────────────────────────
 
+    /// <summary>
+    /// Gets the all model endpoints.
+    /// </summary>
     [HttpGet("/api/model-endpoints")]
     public async Task<IReadOnlyList<ModelEndpointDto>> GetAllModelEndpoints(CancellationToken cancellationToken)
     {
@@ -221,6 +248,9 @@ public class ModelProvidersController : ControllerBase
 
     // ── Models ────────────────────────────────────────────────────────────────
 
+    /// <summary>
+    /// Reload.
+    /// </summary>
     [HttpPost("{providerId:guid}/reload")]
     [Authorize(Roles = nameof(UserRole.Admin))]
     public async Task<ActionResult<IReadOnlyList<ModelEndpointDto>>> Reload(
@@ -237,6 +267,9 @@ public class ModelProvidersController : ControllerBase
         return endpoints.Select(mapper.ToEndpointDto).ToArray();
     }
 
+    /// <summary>
+    /// Gets the available models.
+    /// </summary>
     [HttpGet("{providerId:guid}/available-models")]
     [Authorize(Roles = nameof(UserRole.Admin))]
     public async Task<ActionResult<IReadOnlyList<string>>> GetAvailableModels(Guid providerId, CancellationToken cancellationToken)
@@ -257,6 +290,9 @@ public class ModelProvidersController : ControllerBase
         }
     }
 
+    /// <summary>
+    /// Gets the models.
+    /// </summary>
     [HttpGet("{providerId:guid}/models")]
     [Authorize(Roles = nameof(UserRole.Admin))]
     public async Task<ActionResult<IReadOnlyList<ModelEndpointDto>>> GetModels(Guid providerId, CancellationToken cancellationToken)
@@ -267,6 +303,9 @@ public class ModelProvidersController : ControllerBase
         return endpoints.Select(mapper.ToEndpointDto).ToArray();
     }
 
+    /// <summary>
+    /// Creates the model.
+    /// </summary>
     [HttpPost("{providerId:guid}/models")]
     [Authorize(Roles = nameof(UserRole.Admin))]
     public async Task<ActionResult<ModelEndpointDto>> CreateModel(
@@ -290,6 +329,9 @@ public class ModelProvidersController : ControllerBase
         return CreatedAtAction(nameof(GetModels), new { providerId }, mapper.ToEndpointDto(saved));
     }
 
+    /// <summary>
+    /// Deletes the model.
+    /// </summary>
     [HttpDelete("endpoints/{endpointId:guid}")]
     [Authorize(Roles = nameof(UserRole.Admin))]
     public async Task<IActionResult> DeleteModel(Guid endpointId, CancellationToken cancellationToken)
@@ -308,6 +350,9 @@ public class ModelProvidersController : ControllerBase
         return NoContent();
     }
 
+    /// <summary>
+    /// Updates the model pricing.
+    /// </summary>
     [HttpPut("{providerId:guid}/models/{endpointId:guid}")]
     [Authorize(Roles = nameof(UserRole.Admin))]
     public async Task<ActionResult<ModelEndpointDto>> UpdateModelPricing(
@@ -338,6 +383,9 @@ public class ModelProvidersController : ControllerBase
 
     // ── API Keys ──────────────────────────────────────────────────────────────
 
+    /// <summary>
+    /// Gets the keys.
+    /// </summary>
     [HttpGet("{providerId:guid}/keys")]
     [Authorize(Roles = nameof(UserRole.Admin))]
     public async Task<IReadOnlyList<ApiKeyDto>> GetKeys(Guid providerId, CancellationToken cancellationToken)
@@ -346,6 +394,9 @@ public class ModelProvidersController : ControllerBase
         return keys.Select(mapper.ToKeyDto).ToArray();
     }
 
+    /// <summary>
+    /// Creates the key.
+    /// </summary>
     [HttpPost("{providerId:guid}/keys")]
     [Authorize(Roles = nameof(UserRole.Admin))]
     public async Task<ActionResult<ApiKeyDto>> CreateKey(
@@ -398,6 +449,9 @@ public class ModelProvidersController : ControllerBase
         return CreatedAtAction(nameof(GetKeys), new { providerId }, mapper.ToCreatedKeyDto(saved, keyValue));
     }
 
+    /// <summary>
+    /// Deletes the key.
+    /// </summary>
     [HttpDelete("{providerId:guid}/keys/{keyId:guid}")]
     [Authorize(Roles = nameof(UserRole.Admin))]
     public async Task<IActionResult> DeleteKey(Guid providerId, Guid keyId, CancellationToken cancellationToken)

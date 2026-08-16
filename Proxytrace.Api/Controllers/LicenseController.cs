@@ -13,6 +13,9 @@ using Proxytrace.Licensing.Exceptions;
 
 namespace Proxytrace.Api.Controllers;
 
+/// <summary>
+/// API controller for license operations.
+/// </summary>
 [ApiController]
 [Route("api/license")]
 public class LicenseController : ControllerBase
@@ -23,6 +26,9 @@ public class LicenseController : ControllerBase
     private readonly ITraceQuotaGuard quotaGuard;
     private readonly ILogger<Audit> audit;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="LicenseController"/> class.
+    /// </summary>
     public LicenseController(
         ILicenseService licenseService,
         ILicenseKeyManager keyManager,
@@ -129,6 +135,9 @@ public class LicenseController : ControllerBase
         return Map(licenseService.Current);
     }
 
+    /// <summary>
+    /// Refreshes.
+    /// </summary>
     [HttpPost("refresh")]
     [Authorize(Roles = nameof(UserRole.Admin))]
     public async Task<LicenseDto> Refresh(CancellationToken cancellationToken)

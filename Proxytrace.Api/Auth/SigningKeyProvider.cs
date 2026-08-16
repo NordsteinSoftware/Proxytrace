@@ -9,11 +9,20 @@ internal sealed class SigningKeyProvider : ISigningKeyProvider
 
     private readonly ISigningKeyStore store;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SigningKeyProvider"/> class.
+    /// </summary>
     public SigningKeyProvider(ISigningKeyStore store)
     {
         this.store = store;
     }
 
+    /// <summary>
+    /// Returns the JWT signing key to use for local-mode authentication. Prefers
+    /// <paramref name="configured"/> when set (must be at least 32 characters), then falls back to a
+    /// previously generated key from the store, and finally generates and persists a new key when none
+    /// exists.
+    /// </summary>
     public string EnsureSigningKey(string? configured)
     {
         if (!string.IsNullOrWhiteSpace(configured))

@@ -9,6 +9,9 @@ namespace Proxytrace.Api.Json;
 /// </summary>
 internal static class ApiJsonOptions
 {
+    /// <summary>
+    /// The sse.
+    /// </summary>
     public static readonly JsonSerializerOptions Sse = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,

@@ -7,6 +7,9 @@ internal class NotificationGenerator : DomainEntityGenerator<INotification>
 {
     private readonly INotification.CreateNew factory;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="NotificationGenerator"/> class.
+    /// </summary>
     public NotificationGenerator(
         INotification.CreateNew factory,
         IRepository<INotification> repository,
@@ -15,6 +18,9 @@ internal class NotificationGenerator : DomainEntityGenerator<INotification>
         this.factory = factory;
     }
 
+    /// <summary>
+    /// Generates asynchronously.
+    /// </summary>
     public override Task<INotification> GenerateAsync(CancellationToken cancellationToken = default)
         => Task.FromResult(factory(
             kind: random.Enum<NotificationKind>(),

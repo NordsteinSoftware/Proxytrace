@@ -15,6 +15,9 @@ namespace Proxytrace.Domain.Proposal;
 /// </summary>
 internal static class OptimizationContentHash
 {
+    /// <summary>
+    /// For system prompt.
+    /// </summary>
     public static string ForSystemPrompt(ISerializer serializer, Guid agentId, string proposedSystemMessage)
         => Hash(serializer, new
         {
@@ -23,6 +26,9 @@ internal static class OptimizationContentHash
             Payload = new { Message = NormalizeText(proposedSystemMessage) },
         });
 
+    /// <summary>
+    /// For model switch.
+    /// </summary>
     public static string ForModelSwitch(ISerializer serializer, Guid agentId, Guid proposedEndpointId)
         => Hash(serializer, new
         {
@@ -31,6 +37,9 @@ internal static class OptimizationContentHash
             Payload = new { EndpointId = proposedEndpointId },
         });
 
+    /// <summary>
+    /// For tools.
+    /// </summary>
     public static string ForTools(ISerializer serializer, Guid agentId, IReadOnlyList<ToolSpecification> proposedTools)
     {
         var orderedTools = proposedTools

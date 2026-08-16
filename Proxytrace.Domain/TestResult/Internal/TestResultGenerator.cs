@@ -14,6 +14,9 @@ internal class TestResultGenerator : DomainEntityGenerator<ITestResult>, ITestRe
     private readonly IDomainObjectGenerator<IEvaluation> evaluationGenerator;
     private readonly IDomainObjectGenerator<ICompletion> completionGenerator;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TestResultGenerator"/> class.
+    /// </summary>
     public TestResultGenerator(
         ITestResult.CreateNew factory,
         IRepository<ITestResult> repository,
@@ -28,6 +31,9 @@ internal class TestResultGenerator : DomainEntityGenerator<ITestResult>, ITestRe
         this.completionGenerator = completionGenerator;
     }
 
+    /// <summary>
+    /// Generates asynchronously.
+    /// </summary>
     public override async Task<ITestResult> GenerateAsync(CancellationToken cancellationToken = default)
     {
         IReadOnlyCollection<IEvaluation> evaluations = await Enumerable.Range(0, random.Int(1, 3))
@@ -40,6 +46,9 @@ internal class TestResultGenerator : DomainEntityGenerator<ITestResult>, ITestRe
             evaluations: evaluations);
     }
 
+    /// <summary>
+    /// Creates asynchronously.
+    /// </summary>
     public async Task<ITestResult> CreateAsync(ITestCase testCase, CancellationToken cancellationToken = default)
     {
         IReadOnlyCollection<IEvaluation> evaluations = await Enumerable.Range(0, random.Int(1, 3))

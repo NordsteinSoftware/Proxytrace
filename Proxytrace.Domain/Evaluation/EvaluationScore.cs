@@ -1,5 +1,8 @@
 namespace Proxytrace.Domain.Evaluation;
 
+/// <summary>
+/// Specifies the evaluation score.
+/// </summary>
 public enum EvaluationScore : byte
 {
     Terrible = 1,

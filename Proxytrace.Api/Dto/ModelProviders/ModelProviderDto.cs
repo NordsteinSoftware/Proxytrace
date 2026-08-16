@@ -23,6 +23,9 @@ public record ModelProviderDto(
 /// <summary>The cleartext upstream credential, returned only from the audited reveal endpoint.</summary>
 public record ModelProviderKeyDto(string UpstreamApiKey);
 
+/// <summary>
+/// Request payload for create model provider operations.
+/// </summary>
 public record CreateModelProviderRequest(string Name, string Endpoint, string UpstreamApiKey, ModelProviderKind Kind);
 
 /// <param name="UpstreamApiKey">

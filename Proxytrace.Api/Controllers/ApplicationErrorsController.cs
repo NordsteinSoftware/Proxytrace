@@ -18,11 +18,18 @@ public class ApplicationErrorsController : ControllerBase
 {
     private readonly IApplicationErrorRepository repository;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ApplicationErrorsController"/> class.
+    /// </summary>
     public ApplicationErrorsController(IApplicationErrorRepository repository)
     {
         this.repository = repository;
     }
 
+    /// <summary>
+    /// Returns a paginated, newest-first list of captured application errors. Supports filtering by
+    /// severity level, free-text search, and date range. Admin-only.
+    /// </summary>
     [HttpGet]
     public async Task<PagedResult<ApplicationErrorDto>> GetAll(
         [FromQuery] int page = 1,
@@ -37,6 +44,10 @@ public class ApplicationErrorsController : ControllerBase
         return paged.Map(ToDto);
     }
 
+    /// <summary>
+    /// Returns the full detail of a single application error including its stack trace. Admin-only;
+    /// returns 404 when the error does not exist.
+    /// </summary>
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<ApplicationErrorDto>> Get(Guid id, CancellationToken cancellationToken)
     {

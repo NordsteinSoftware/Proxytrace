@@ -17,6 +17,9 @@ using Proxytrace.Domain.User;
 
 namespace Proxytrace.Api.Controllers;
 
+/// <summary>
+/// API controller for projects operations.
+/// </summary>
 [ApiController]
 [Authorize]
 [Route("api/projects")]
@@ -33,6 +36,9 @@ public class ProjectsController : ControllerBase
     private readonly IProjectAccessGuard accessGuard;
     private readonly ILogger<Audit> audit;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ProjectsController"/> class.
+    /// </summary>
     public ProjectsController(
         IProjectRepository repository,
         IRepository<IModelEndpoint> endpointRepository,
@@ -57,6 +63,9 @@ public class ProjectsController : ControllerBase
         this.audit = audit;
     }
 
+    /// <summary>
+    /// Gets the all.
+    /// </summary>
     [HttpGet]
     public async Task<PagedResult<ProjectListItemDto>> GetAll(
         [FromQuery] int page = 1,
@@ -96,6 +105,9 @@ public class ProjectsController : ControllerBase
         return new PagedResult<ProjectListItemDto>(items, accessible.Count, page, pageSize);
     }
 
+    /// <summary>
+    /// Gets.
+    /// </summary>
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<ProjectDto>> Get(Guid id, CancellationToken cancellationToken)
     {
@@ -108,6 +120,9 @@ public class ProjectsController : ControllerBase
         return ToDto(project);
     }
 
+    /// <summary>
+    /// Creates.
+    /// </summary>
     [HttpPost]
     [Authorize(Roles = nameof(UserRole.Admin))]
     public async Task<ActionResult<ProjectDto>> Create(
@@ -130,6 +145,9 @@ public class ProjectsController : ControllerBase
         return CreatedAtAction(nameof(Get), new { id = saved.Id }, ToDto(saved));
     }
 
+    /// <summary>
+    /// Updates.
+    /// </summary>
     [HttpPut("{id:guid}")]
     [Authorize(Roles = nameof(UserRole.Admin))]
     public async Task<ActionResult<ProjectDto>> Update(
@@ -162,6 +180,9 @@ public class ProjectsController : ControllerBase
         return ToDto(saved);
     }
 
+    /// <summary>
+    /// Deletes.
+    /// </summary>
     [HttpDelete("{id:guid}")]
     [Authorize(Roles = nameof(UserRole.Admin))]
     public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
@@ -198,6 +219,9 @@ public class ProjectsController : ControllerBase
         }
     }
 
+    /// <summary>
+    /// Gets the members.
+    /// </summary>
     [HttpGet("{id:guid}/members")]
     public async Task<ActionResult<IReadOnlyList<ProjectMemberDto>>> GetMembers(
         Guid id,
@@ -213,6 +237,9 @@ public class ProjectsController : ControllerBase
         return project.Members.Select(ProjectDtoMapper.ToMemberDto).ToArray();
     }
 
+    /// <summary>
+    /// Adds the member.
+    /// </summary>
     [HttpPost("{id:guid}/members/{userId:guid}")]
     [Authorize(Roles = nameof(UserRole.Admin))]
     public async Task<ActionResult<ProjectDto>> AddMember(
@@ -237,6 +264,9 @@ public class ProjectsController : ControllerBase
         return ToDto(saved);
     }
 
+    /// <summary>
+    /// Removes the member.
+    /// </summary>
     [HttpDelete("{id:guid}/members/{userId:guid}")]
     [Authorize(Roles = nameof(UserRole.Admin))]
     public async Task<ActionResult<ProjectDto>> RemoveMember(

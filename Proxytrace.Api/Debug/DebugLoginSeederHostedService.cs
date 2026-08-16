@@ -37,6 +37,9 @@ internal sealed class DebugLoginSeederHostedService : IHostedService
     private readonly IServiceProvider rootServices;
     private readonly ILogger<DebugLoginSeederHostedService> logger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DebugLoginSeederHostedService"/> class.
+    /// </summary>
     public DebugLoginSeederHostedService(
         IServiceProvider rootServices,
         ILogger<DebugLoginSeederHostedService> logger)
@@ -45,6 +48,9 @@ internal sealed class DebugLoginSeederHostedService : IHostedService
         this.logger = logger;
     }
 
+    /// <summary>
+    /// Starts asynchronously.
+    /// </summary>
     public async Task StartAsync(CancellationToken cancellationToken)
     {
         using var scope = rootServices.CreateScope();
@@ -75,6 +81,9 @@ internal sealed class DebugLoginSeederHostedService : IHostedService
             Email);
     }
 
+    /// <summary>
+    /// Stops asynchronously.
+    /// </summary>
     public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 }
 #endif

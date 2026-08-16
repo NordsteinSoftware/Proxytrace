@@ -15,6 +15,9 @@ namespace Proxytrace.Api.Auth.Mcp;
 /// </summary>
 internal sealed class McpApiKeyAuthenticationHandler : AuthenticationHandler<AuthenticationSchemeOptions>
 {
+    /// <summary>
+    /// The scheme name constant value.
+    /// </summary>
     public const string SchemeName = "McpApiKey";
 
     /// <summary>Request-item key under which the authenticated API key's id is stashed (for audit attribution).</summary>
@@ -24,6 +27,9 @@ internal sealed class McpApiKeyAuthenticationHandler : AuthenticationHandler<Aut
 
     private readonly IApiKeyRepository apiKeys;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="McpApiKeyAuthenticationHandler"/> class.
+    /// </summary>
     public McpApiKeyAuthenticationHandler(
         IOptionsMonitor<AuthenticationSchemeOptions> options,
         ILoggerFactory logger,

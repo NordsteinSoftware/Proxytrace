@@ -5,6 +5,9 @@ using Proxytrace.Domain.Proposal;
 
 namespace Proxytrace.Application.Streaming;
 
+/// <summary>
+/// Event raised when a theory status changed occurs.
+/// </summary>
 public record TheoryStatusChangedEvent(
     Guid Id,
     Guid AgentId,
@@ -16,6 +19,9 @@ public record TheoryStatusChangedEvent(
     Guid? ResultingProposalId,
     DateTimeOffset UpdatedAt)
 {
+    /// <summary>
+    /// Creates.
+    /// </summary>
     public static TheoryStatusChangedEvent Create(IOptimizationTheory theory)
         => new(
             theory.Id,
@@ -29,6 +35,9 @@ public record TheoryStatusChangedEvent(
             theory.UpdatedAt);
 }
 
+/// <summary>
+/// Broadcasts theory events.
+/// </summary>
 public interface ITheoryBroadcaster
 {
     /// <summary>

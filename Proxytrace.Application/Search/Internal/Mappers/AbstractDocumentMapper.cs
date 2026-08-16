@@ -12,8 +12,14 @@ internal abstract class AbstractDocumentMapper<TDomainEntity> : IDocumentMapper
     private readonly IRepository<TDomainEntity> repository;
     private readonly ILogger logger;
 
+    /// <summary>
+    /// Gets the kind.
+    /// </summary>
     public abstract SearchKind Kind { get; }
 
+    /// <summary>
+    /// Gets the entity type.
+    /// </summary>
     public Type EntityType => typeof(TDomainEntity);
 
     protected AbstractDocumentMapper(
@@ -24,12 +30,18 @@ internal abstract class AbstractDocumentMapper<TDomainEntity> : IDocumentMapper
         this.logger = logger;
     }
     
+    /// <summary>
+    /// Builds asynchronously.
+    /// </summary>
     public async Task<Document?> BuildAsync(Guid entityId, CancellationToken cancellationToken)
     {
         var entity = await repository.FindAsync(entityId, cancellationToken);
         return entity is null ? null : GetDocument(entity);
     }
 
+    /// <summary>
+    /// Builds the all for project asynchronously.
+    /// </summary>
     public async IAsyncEnumerable<Document> BuildAllForProjectAsync(Guid projectId, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         IAsyncEnumerable<TDomainEntity> all = repository.EnumerateAsync(cancellationToken)

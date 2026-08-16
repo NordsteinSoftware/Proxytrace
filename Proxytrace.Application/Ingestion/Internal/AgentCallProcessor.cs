@@ -35,6 +35,9 @@ internal sealed class AgentCallProcessor : IAgentCallProcessor
     private readonly ISessionRepository sessionRepository;
     private readonly ILogger<AgentCallProcessor> logger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AgentCallProcessor"/> class.
+    /// </summary>
     public AgentCallProcessor(
         IAgentCallRepository agentCallRepository,
         IAgentCall.CreateNew createNewCall,
@@ -67,6 +70,9 @@ internal sealed class AgentCallProcessor : IAgentCallProcessor
         this.logger = logger;
     }
 
+    /// <summary>
+    /// Ingest asynchronously.
+    /// </summary>
     public async Task IngestAsync(
         IngestJob job,
         CancellationToken cancellationToken)

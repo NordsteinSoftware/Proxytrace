@@ -12,6 +12,9 @@ namespace Proxytrace.Domain.CustomAnomaly;
 /// </summary>
 public interface ICustomAnomalyDetector : IDomainEntity<ICustomAnomalyDetector>
 {
+    /// <summary>
+    /// The max triggers constant value.
+    /// </summary>
     public const int MaxTriggers = 20;
 
     string Name { get; }
@@ -43,6 +46,9 @@ public interface ICustomAnomalyDetector : IDomainEntity<ICustomAnomalyDetector>
     /// <summary>The owning project (the hidden agent's project).</summary>
     IProject Project { get; }
 
+    /// <summary>
+    /// Factory delegate for creating a new new instance.
+    /// </summary>
     public delegate ICustomAnomalyDetector CreateNew(
         string name,
         IAgent agent,
@@ -52,6 +58,9 @@ public interface ICustomAnomalyDetector : IDomainEntity<ICustomAnomalyDetector>
         bool isEnabled,
         bool blockUpstream);
 
+    /// <summary>
+    /// Factory delegate for creating a new existing instance.
+    /// </summary>
     public delegate ICustomAnomalyDetector CreateExisting(
         string name,
         IAgent agent,

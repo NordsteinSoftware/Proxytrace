@@ -12,6 +12,9 @@ internal class AuditLogRepository
     : AbstractRepository<IAuditLogEntry, AuditLogEntryEntity>,
       IAuditLogRepository
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AuditLogRepository"/> class.
+    /// </summary>
     public AuditLogRepository(
         IMapper<IAuditLogEntry, AuditLogEntryEntity> mapper,
         Func<StorageDbContext> contextFactory,
@@ -21,6 +24,9 @@ internal class AuditLogRepository
     {
     }
 
+    /// <summary>
+    /// Gets the paged newest first asynchronously.
+    /// </summary>
     public async Task<PagedResult<IAuditLogEntry>> GetPagedNewestFirstAsync(
         int page,
         int pageSize,
@@ -98,6 +104,9 @@ internal class AuditLogRepository
         return new PagedResult<IAuditLogEntry>(items, total, page, pageSize);
     }
 
+    /// <summary>
+    /// Removes the older than asynchronously.
+    /// </summary>
     public async Task<int> RemoveOlderThanAsync(DateTimeOffset cutoffDate, CancellationToken cancellationToken = default)
     {
         var context = contextFactory();

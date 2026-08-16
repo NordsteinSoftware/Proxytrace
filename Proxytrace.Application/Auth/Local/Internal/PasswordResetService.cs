@@ -37,6 +37,9 @@ internal sealed class PasswordResetService : IPasswordResetService
     private readonly AuthOptions authOptions;
     private readonly ILogger<PasswordResetService> logger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="PasswordResetService"/> class.
+    /// </summary>
     public PasswordResetService(
         IPasswordResetTokenRepository tokens,
         IUserRepository users,
@@ -67,6 +70,9 @@ internal sealed class PasswordResetService : IPasswordResetService
         this.logger = logger;
     }
 
+    /// <summary>
+    /// Requests the reset asynchronously.
+    /// </summary>
     public async Task RequestResetAsync(string email, Func<string, string> buildResetUrl, CancellationToken cancellationToken = default)
     {
         var user = await users.FindByEmailAsync(email, cancellationToken);
@@ -132,6 +138,9 @@ internal sealed class PasswordResetService : IPasswordResetService
             user.Email.ToSingleLogLine(), reason, minutes, TokenHint(issued.TokenHash));
     }
 
+    /// <summary>
+    /// Issue reset link asynchronously.
+    /// </summary>
     public async Task<PasswordResetLink?> IssueResetLinkAsync(Guid userId, Func<string, string> buildResetUrl, CancellationToken cancellationToken = default)
     {
         var user = await users.FindAsync(userId, cancellationToken);
@@ -143,6 +152,9 @@ internal sealed class PasswordResetService : IPasswordResetService
         return (await IssueAsync(user, buildResetUrl, cancellationToken)).ResetLink;
     }
 
+    /// <summary>
+    /// Completes the reset asynchronously.
+    /// </summary>
     public Task<LoginOutcome?> CompleteResetAsync(string token, string newPassword, CancellationToken cancellationToken = default)
         => transaction.InvokeAsync<LoginOutcome?>(async () =>
         {

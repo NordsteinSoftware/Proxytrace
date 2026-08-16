@@ -20,6 +20,11 @@ using Proxytrace.Domain.Prompt;
 
 namespace Proxytrace.Api.Controllers;
 
+/// <summary>
+/// CRUD and streaming endpoints for agents. Listing excludes archived (soft-deleted) agents;
+/// deletion soft-deletes user agents and rejects system agents; SSE streams push proposal and
+/// theory changes per agent.
+/// </summary>
 [ApiController]
 [Authorize]
 [Route("api/agents")]
@@ -39,6 +44,9 @@ public class AgentsController : ControllerBase
     private readonly ILogger<Audit> audit;
     private readonly IProjectAccessGuard accessGuard;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AgentsController"/> class.
+    /// </summary>
     public AgentsController(
         IAgentRepository repository,
         IRepository<IModelEndpoint> endpoints,
@@ -69,6 +77,11 @@ public class AgentsController : ControllerBase
         this.accessGuard = accessGuard;
     }
 
+    /// <summary>
+    /// Returns a paginated list of non-archived agents visible to the caller, sorted by last-call
+    /// time then by updated-at descending. Scoped to the optional <c>projectId</c> or to the
+    /// caller's accessible projects when omitted.
+    /// </summary>
     [HttpGet]
     public async Task<PagedResult<AgentListItemDto>> GetAll(
         [FromQuery] Guid? projectId = null,
@@ -105,6 +118,11 @@ public class AgentsController : ControllerBase
         return new PagedResult<AgentListItemDto>(items, sorted.Length, page, pageSize);
     }
 
+    /// <summary>
+    /// Returns the full detail of a single agent including its current prompt, tools, endpoint, and
+    /// last-call time. Returns 404 when the agent does not exist or the caller cannot access its
+    /// project.
+    /// </summary>
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<AgentDto>> Get(Guid id, CancellationToken cancellationToken)
     {
@@ -153,6 +171,11 @@ public class AgentsController : ControllerBase
         return Ok(agentDtoMapper.ToDto(agent, null));
     }
 
+    /// <summary>
+    /// SSE stream that emits <c>proposal-created</c> and <c>proposal-status-changed</c> events for
+    /// the specified agent. Returns 404 when the agent does not exist or the caller cannot access its
+    /// project.
+    /// </summary>
     [HttpGet("{id:guid}/proposals/stream")]
     public async Task StreamProposals(Guid id, CancellationToken cancellationToken)
     {
@@ -191,6 +214,10 @@ public class AgentsController : ControllerBase
         }
     }
 
+    /// <summary>
+    /// SSE stream that emits <c>theory-changed</c> events for the specified agent's optimization
+    /// theories. Returns 404 when the agent does not exist or the caller cannot access its project.
+    /// </summary>
     [HttpGet("{id:guid}/theories/stream")]
     public async Task StreamTheories(Guid id, CancellationToken cancellationToken)
     {
@@ -223,6 +250,11 @@ public class AgentsController : ControllerBase
         }
     }
 
+    /// <summary>
+    /// Soft-deletes (archives) a user agent, freeing its license slot while preserving its history.
+    /// Returns 404 when the agent does not exist or the caller cannot access its project, and 409
+    /// when the agent is a system agent that must not be removed.
+    /// </summary>
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
     {
@@ -247,6 +279,11 @@ public class AgentsController : ControllerBase
         return NoContent();
     }
 
+    /// <summary>
+    /// Replaces the model endpoint an agent proxies through. Records an audit event only when the
+    /// endpoint actually changes. Returns 404 when the agent or the new endpoint does not exist or
+    /// the caller cannot access the agent's project.
+    /// </summary>
     [HttpPatch("{id:guid}/endpoint")]
     public async Task<IActionResult> UpdateEndpoint(
         Guid id,
@@ -268,6 +305,11 @@ public class AgentsController : ControllerBase
         return NoContent();
     }
 
+    /// <summary>
+    /// Returns all prompt versions of an agent, sorted by version number descending. Each version
+    /// carries its system-prompt fingerprint so the UI can highlight which version is active.
+    /// Returns 404 when the agent does not exist or the caller cannot access its project.
+    /// </summary>
     [HttpGet("{id:guid}/versions")]
     public async Task<ActionResult<IReadOnlyList<AgentVersionDto>>> ListVersions(
         Guid id,

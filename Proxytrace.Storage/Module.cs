@@ -26,6 +26,9 @@ public sealed class Module : Autofac.Module
     private readonly Func<IServiceProvider, StorageConfiguration> configurationFactory;
     private readonly bool registerApplicationServices;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Module"/> class.
+    /// </summary>
     public Module(
         Func<IServiceProvider, StorageConfiguration> configurationFactory,
         bool registerApplicationServices = true)

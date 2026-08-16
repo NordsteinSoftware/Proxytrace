@@ -172,10 +172,16 @@ namespace Proxytrace.Api
     /// </summary>
     internal sealed class TrustedProxyConfiguration
     {
+        /// <summary>
+        /// The section name constant value.
+        /// </summary>
         public const string SectionName = "ForwardedHeaders";
 
         private readonly IConfiguration configuration;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="TrustedProxyConfiguration"/> class.
+        /// </summary>
         public TrustedProxyConfiguration(IConfiguration configuration)
         {
             this.configuration = configuration;
@@ -248,6 +254,9 @@ namespace Proxytrace.Api
     /// </summary>
     internal sealed class AuthRateLimiterConfigurator
     {
+        /// <summary>
+        /// The section name constant value.
+        /// </summary>
         public const string SectionName = "RateLimiting";
 
         /// <summary>
@@ -256,16 +265,28 @@ namespace Proxytrace.Api
         /// </summary>
         public const string LoginPolicy = "auth-login";
 
+        /// <summary>
+        /// The password reset policy constant value.
+        /// </summary>
         public const string PasswordResetPolicy = "auth-reset";
+        /// <summary>
+        /// The mfa policy constant value.
+        /// </summary>
         public const string MfaPolicy = "auth-mfa";
 
         private readonly IConfiguration configuration;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="AuthRateLimiterConfigurator"/> class.
+        /// </summary>
         public AuthRateLimiterConfigurator(IConfiguration configuration)
         {
             this.configuration = configuration;
         }
 
+        /// <summary>
+        /// Configures the application request pipeline.
+        /// </summary>
         public void Configure(RateLimiterOptions options)
         {
             options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;

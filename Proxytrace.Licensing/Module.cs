@@ -27,6 +27,9 @@ public sealed class Module : Autofac.Module
 
     private readonly LicensingConfiguration configuration;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Module"/> class.
+    /// </summary>
     public Module(LicensingConfiguration configuration)
     {
         this.configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));

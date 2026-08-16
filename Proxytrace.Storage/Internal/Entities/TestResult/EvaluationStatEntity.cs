@@ -18,11 +18,17 @@ namespace Proxytrace.Storage.Internal.Entities.TestResult;
 /// </summary>
 internal record EvaluationStatEntity
 {
+    /// <summary>
+    /// Gets or sets the id.
+    /// </summary>
     public required Guid Id { get; init; }
 
     /// <summary>The owning <see cref="TestResultEntity"/>.</summary>
     public required Guid TestResultId { get; init; }
 
+    /// <summary>
+    /// Gets or sets the evaluator id.
+    /// </summary>
     public required Guid EvaluatorId { get; init; }
 
     /// <summary>
@@ -31,15 +37,33 @@ internal record EvaluationStatEntity
     /// </summary>
     public required DateTimeOffset CreatedAt { get; init; }
 
+    /// <summary>
+    /// Gets or sets the score.
+    /// </summary>
     public EvaluationScore? Score { get; init; }
 
     /// <summary>True for an errored evaluation (no score); mirrors a non-null
     /// <c>StoredEvaluation.ErrorMessage</c>. The error text itself is not projected.</summary>
     public bool HasError { get; init; }
 
+    /// <summary>
+    /// Gets or sets the input tokens.
+    /// </summary>
     public long? InputTokens { get; init; }
+    /// <summary>
+    /// Gets or sets the output tokens.
+    /// </summary>
     public long? OutputTokens { get; init; }
+    /// <summary>
+    /// Gets or sets the cached input tokens.
+    /// </summary>
     public long? CachedInputTokens { get; init; }
+    /// <summary>
+    /// Gets or sets the latency microseconds.
+    /// </summary>
     public long LatencyMicroseconds { get; init; }
+    /// <summary>
+    /// Gets or sets the cost.
+    /// </summary>
     public decimal? Cost { get; init; }
 }

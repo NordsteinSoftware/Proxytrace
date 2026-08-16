@@ -20,6 +20,9 @@ internal abstract class AgentScopedBroadcaster<TEvent> : IDisposable
     /// <summary>Extracts the agent id an event should be delivered to.</summary>
     protected abstract Guid KeyOf(TEvent evt);
 
+    /// <summary>
+    /// Subscribes.
+    /// </summary>
     public ChannelReader<TEvent> Subscribe(Guid agentId, CancellationToken cancellationToken)
     {
         var channel = Channel.CreateBounded<TEvent>(new BoundedChannelOptions(100)
@@ -63,6 +66,9 @@ internal abstract class AgentScopedBroadcaster<TEvent> : IDisposable
         return total;
     }
 
+    /// <summary>
+    /// Publishes.
+    /// </summary>
     public void Publish(TEvent evt)
     {
         if (!subscribers.TryGetValue(KeyOf(evt), out var agentSubscribers))
@@ -75,6 +81,9 @@ internal abstract class AgentScopedBroadcaster<TEvent> : IDisposable
         }
     }
 
+    /// <summary>
+    /// Releases all resources used by the current instance.
+    /// </summary>
     public void Dispose()
     {
         foreach (var (_, agentSubscribers) in subscribers)

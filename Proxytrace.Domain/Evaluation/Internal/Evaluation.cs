@@ -7,19 +7,46 @@ namespace Proxytrace.Domain.Evaluation.Internal;
 
 internal sealed record Evaluation : IEvaluation
 {
+    /// <summary>
+    /// Gets the evaluator.
+    /// </summary>
     public IEvaluator Evaluator { get; }
+    /// <summary>
+    /// Gets the score.
+    /// </summary>
     public EvaluationScore? Score { get; }
 
+    /// <summary>
+    /// The passed.
+    /// </summary>
     public bool Passed =>
         string.IsNullOrWhiteSpace(ErrorMessage)
         && Score is >= EvaluationScore.Acceptable;
 
+    /// <summary>
+    /// Gets the reasoning.
+    /// </summary>
     public string? Reasoning { get; }
+    /// <summary>
+    /// Gets the error message.
+    /// </summary>
     public string? ErrorMessage { get; }
+    /// <summary>
+    /// Gets the latency.
+    /// </summary>
     public TimeSpan Latency { get; }
+    /// <summary>
+    /// Gets the token usage.
+    /// </summary>
     public TokenUsage? TokenUsage { get; }
+    /// <summary>
+    /// Gets the cost.
+    /// </summary>
     public decimal? Cost { get; }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Evaluation"/> class.
+    /// </summary>
     public Evaluation(
         IEvaluator evaluator,
         EvaluationScore score,
@@ -37,6 +64,9 @@ internal sealed record Evaluation : IEvaluation
         ErrorMessage = null;
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Evaluation"/> class.
+    /// </summary>
     public Evaluation(
         IEvaluator evaluator,
         TimeSpan latency,
@@ -53,6 +83,9 @@ internal sealed record Evaluation : IEvaluation
             : $"{exception.GetType().Name}: {exception.Message}";
     }
 
+    /// <summary>
+    /// Validates.
+    /// </summary>
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
         foreach (var validationResult in Evaluator.Validate(validationContext))

@@ -30,4 +30,7 @@ public interface IMfaChallengeService
     bool RegisterFailure(string token);
 }
 
+/// <summary>
+/// Represents a mfa challenge.
+/// </summary>
 public sealed record MfaChallenge(string Token, DateTimeOffset ExpiresAt);

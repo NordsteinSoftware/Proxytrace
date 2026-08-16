@@ -40,6 +40,9 @@ public class CostLimitsController : ControllerBase
     private readonly IProjectAccessGuard accessGuard;
     private readonly ILogger<Audit> audit;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CostLimitsController"/> class.
+    /// </summary>
     public CostLimitsController(
         ICostLimitRepository costLimits,
         ICostLimitBreachRepository breaches,
@@ -64,6 +67,10 @@ public class CostLimitsController : ControllerBase
         this.audit = audit;
     }
 
+    /// <summary>
+    /// Returns all cost budgets for the given project. Returns an empty list (not 404) when the
+    /// caller cannot access the project.
+    /// </summary>
     [HttpGet]
     public async Task<IReadOnlyList<CostLimitDto>> GetAll(
         [FromQuery] Guid projectId,
@@ -111,6 +118,10 @@ public class CostLimitsController : ControllerBase
             .ToArray();
     }
 
+    /// <summary>
+    /// Returns a single cost budget by id. Returns 404 when it does not exist or the caller cannot
+    /// access its project.
+    /// </summary>
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<CostLimitDto>> Get(Guid id, CancellationToken cancellationToken)
     {
@@ -123,6 +134,11 @@ public class CostLimitsController : ControllerBase
         return ToDto(limit);
     }
 
+    /// <summary>
+    /// Creates a monthly cost budget scoped to a project, agent, or API key. Admin-only; requires
+    /// the <c>CostControls</c> license feature. Returns 409 when a budget with the same scope
+    /// already exists, and 400 when thresholds are invalid.
+    /// </summary>
     [HttpPost]
     [Authorize(Roles = nameof(UserRole.Admin))]
     [RequiresFeature(LicenseFeature.CostControls)]
@@ -192,6 +208,11 @@ public class CostLimitsController : ControllerBase
         return result;
     }
 
+    /// <summary>
+    /// Updates the soft/hard limit amounts and enabled state for a budget. Clears any existing
+    /// breach records so the budget is re-armed after a threshold change. Admin-only; requires the
+    /// <c>CostControls</c> license feature. Returns 404 when the budget does not exist.
+    /// </summary>
     [HttpPut("{id:guid}")]
     [Authorize(Roles = nameof(UserRole.Admin))]
     [RequiresFeature(LicenseFeature.CostControls)]
@@ -232,6 +253,11 @@ public class CostLimitsController : ControllerBase
         return result;
     }
 
+    /// <summary>
+    /// Deletes a cost budget and clears its breach records, lifting any active hard-block on the
+    /// proxy. Admin-only; requires the <c>CostControls</c> license feature. Returns 404 when the
+    /// budget does not exist.
+    /// </summary>
     [HttpDelete("{id:guid}")]
     [Authorize(Roles = nameof(UserRole.Admin))]
     [RequiresFeature(LicenseFeature.CostControls)]

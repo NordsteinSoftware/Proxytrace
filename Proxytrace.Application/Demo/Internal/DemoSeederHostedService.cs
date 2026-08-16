@@ -10,6 +10,9 @@ internal sealed class DemoSeederHostedService : IHostedService
     private readonly IServiceProvider rootServices;
     private readonly ILogger<DemoSeederHostedService> logger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DemoSeederHostedService"/> class.
+    /// </summary>
     public DemoSeederHostedService(
         IServiceProvider rootServices,
         ILogger<DemoSeederHostedService> logger)
@@ -18,6 +21,9 @@ internal sealed class DemoSeederHostedService : IHostedService
         this.logger = logger;
     }
 
+    /// <summary>
+    /// Starts asynchronously.
+    /// </summary>
     public async Task StartAsync(CancellationToken cancellationToken)
     {
         using var scope = rootServices.CreateScope();
@@ -49,5 +55,8 @@ internal sealed class DemoSeederHostedService : IHostedService
         logger.LogInformation("Kiosk demo seeding complete");
     }
 
+    /// <summary>
+    /// Stops asynchronously.
+    /// </summary>
     public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 }

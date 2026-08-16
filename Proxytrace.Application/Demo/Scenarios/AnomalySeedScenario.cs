@@ -27,6 +27,9 @@ internal sealed class AnomalySeedScenario : IDemoScenario
     private readonly IRepository<ITestRunGroup> groupRepo;
     private readonly IReadOnlyList<IStatsProjector> runStatsProjectors;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AnomalySeedScenario"/> class.
+    /// </summary>
     public AnomalySeedScenario(
         DemoSeedContext ctx,
         IAnomalyInputFactory inputFactory,
@@ -50,8 +53,14 @@ internal sealed class AnomalySeedScenario : IDemoScenario
     // After the statistics backfill (40) has backdated the run history (baselines need a
     // time-ordered window) and after the notification scenario (50), so the detector's alerts land
     // newest in the inbox.
+    /// <summary>
+    /// Gets the order.
+    /// </summary>
     public int Order => 60;
 
+    /// <summary>
+    /// Seeds asynchronously.
+    /// </summary>
     public async Task SeedAsync(CancellationToken cancellationToken)
     {
         // Live stats projection runs debounced in a background worker, so at this point in the

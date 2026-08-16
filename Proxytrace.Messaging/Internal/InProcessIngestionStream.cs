@@ -21,6 +21,9 @@ internal sealed class InProcessIngestionStream : IIngestionStream
     // incremented on publish, decremented as each envelope is pulled by the consumer.
     private long depth;
 
+    /// <summary>
+    /// Publishes asynchronously.
+    /// </summary>
     public async Task PublishAsync(IngestMessage message, CancellationToken cancellationToken = default)
     {
         await channel.Writer.WriteAsync(
@@ -29,6 +32,9 @@ internal sealed class InProcessIngestionStream : IIngestionStream
         Interlocked.Increment(ref depth);
     }
 
+    /// <summary>
+    /// Consume asynchronously.
+    /// </summary>
     public async IAsyncEnumerable<IngestEnvelope> ConsumeAsync(
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
@@ -39,12 +45,21 @@ internal sealed class InProcessIngestionStream : IIngestionStream
         }
     }
 
+    /// <summary>
+    /// Ack asynchronously.
+    /// </summary>
     public Task AckAsync(string messageId, CancellationToken cancellationToken = default)
         => Task.CompletedTask;
 
     // The channel drops anything that is not pulled; an unacked envelope is never redelivered.
+    /// <summary>
+    /// Gets the redelivers unacknowledged.
+    /// </summary>
     public bool RedeliversUnacknowledged => false;
 
+    /// <summary>
+    /// Gets the queue depth asynchronously.
+    /// </summary>
     public Task<long> GetQueueDepthAsync(CancellationToken cancellationToken = default)
         => Task.FromResult(Math.Max(0L, Interlocked.Read(ref depth)));
 }

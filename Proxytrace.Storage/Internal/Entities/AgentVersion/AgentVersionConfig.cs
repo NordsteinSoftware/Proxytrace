@@ -17,6 +17,9 @@ internal class AgentVersionConfig : AbstractEntityConfiguration<AgentVersionEnti
     private readonly ISerializer serializer;
     private readonly IAgentVersionFingerprinter fingerprinter;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AgentVersionConfig"/> class.
+    /// </summary>
     public AgentVersionConfig(
         IAgentVersion.CreateExisting factory,
         IPromptTemplate.Create promptTemplateFactory,
@@ -29,6 +32,9 @@ internal class AgentVersionConfig : AbstractEntityConfiguration<AgentVersionEnti
         this.fingerprinter = fingerprinter;
     }
 
+    /// <summary>
+    /// Configures the application request pipeline.
+    /// </summary>
     public override void Configure(EntityTypeBuilder<AgentVersionEntity> builder)
     {
         builder.HasIndex(e => new { e.AgentId, e.VersionNumber }).IsUnique();
@@ -63,6 +69,9 @@ internal class AgentVersionConfig : AbstractEntityConfiguration<AgentVersionEnti
                 v => serializer.Deserialize<IReadOnlyList<ToolSpecification>>(v) ?? Array.Empty<ToolSpecification>());
     }
 
+    /// <summary>
+    /// Maps.
+    /// </summary>
     public Task<IAgentVersion> Map(AgentVersionEntity stored, CancellationToken cancellationToken = default)
     {
         var prompt = promptTemplateFactory(stored.SystemPrompt.Name, stored.SystemPrompt.Template);
@@ -75,6 +84,9 @@ internal class AgentVersionConfig : AbstractEntityConfiguration<AgentVersionEnti
             existing: stored));
     }
 
+    /// <summary>
+    /// Maps.
+    /// </summary>
     public Task<AgentVersionEntity> Map(IAgentVersion domain, CancellationToken cancellationToken = default)
         => Task.FromResult(new AgentVersionEntity
         {

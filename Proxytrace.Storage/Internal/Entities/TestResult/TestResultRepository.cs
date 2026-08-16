@@ -23,6 +23,9 @@ internal class TestResultRepository : AbstractRepository<ITestResult, TestResult
     private static int CandidateWindow(int count)
         => Math.Min(MaxCandidateWindow, Math.Max(count, count * CandidateWindowPerResult));
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TestResultRepository"/> class.
+    /// </summary>
     public TestResultRepository(
         IMapper<ITestResult, TestResultEntity> mapper,
         Func<StorageDbContext> contextFactory,
@@ -49,6 +52,9 @@ internal class TestResultRepository : AbstractRepository<ITestResult, TestResult
         context.Set<EvaluationStatEntity>().AddRange(storedEntity.EvaluationStats);
     }
 
+    /// <summary>
+    /// Gets the latest by test case asynchronously.
+    /// </summary>
     public async Task<ITestResult?> GetLatestByTestCaseAsync(Guid testCaseId, CancellationToken cancellationToken = default)
     {
         var context = contextFactory();
@@ -62,6 +68,9 @@ internal class TestResultRepository : AbstractRepository<ITestResult, TestResult
         return await Map(stored, cancellationToken);
     }
 
+    /// <summary>
+    /// Gets the latest by evaluator asynchronously.
+    /// </summary>
     public async Task<ITestResult?> GetLatestByEvaluatorAsync(Guid evaluatorId, CancellationToken cancellationToken = default)
     {
         var context = contextFactory();
@@ -83,6 +92,9 @@ internal class TestResultRepository : AbstractRepository<ITestResult, TestResult
         return await Map(entity, cancellationToken);
     }
 
+    /// <summary>
+    /// Gets the recent by evaluator asynchronously.
+    /// </summary>
     public async Task<IReadOnlyList<ITestResult>> GetRecentByEvaluatorAsync(
         Guid evaluatorId,
         int count,
@@ -98,6 +110,9 @@ internal class TestResultRepository : AbstractRepository<ITestResult, TestResult
         return await LoadFullInOrderAsync(context, matchingIds, cancellationToken);
     }
 
+    /// <summary>
+    /// Searches the by evaluator asynchronously.
+    /// </summary>
     public async Task<IReadOnlyList<ITestResult>> SearchByEvaluatorAsync(
         Guid evaluatorId,
         string query,

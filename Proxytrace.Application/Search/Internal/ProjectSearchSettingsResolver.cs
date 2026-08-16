@@ -13,6 +13,9 @@ internal sealed class ProjectSearchSettingsResolver : IProjectSearchSettingsReso
     private readonly IProjectSearchSettings.CreateExisting existingFactory;
     private readonly SearchConfiguration configuration;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ProjectSearchSettingsResolver"/> class.
+    /// </summary>
     public ProjectSearchSettingsResolver(
         IProjectSearchSettingsRepository repository,
         IRepository<IProject> projects,
@@ -27,6 +30,9 @@ internal sealed class ProjectSearchSettingsResolver : IProjectSearchSettingsReso
         this.configuration = configuration;
     }
 
+    /// <summary>
+    /// Gets the or defaults asynchronously.
+    /// </summary>
     public async Task<IProjectSearchSettings> GetOrDefaultsAsync(Guid projectId, CancellationToken cancellationToken = default)
     {
         var existing = await repository.FindByProjectAsync(projectId, cancellationToken);
@@ -44,6 +50,9 @@ internal sealed class ProjectSearchSettingsResolver : IProjectSearchSettingsReso
             snippetLength: configuration.SnippetMaxChars);
     }
 
+    /// <summary>
+    /// Upsert asynchronously.
+    /// </summary>
     public async Task<IProjectSearchSettings> UpsertAsync(IProjectSearchSettings settings, CancellationToken cancellationToken = default)
     {
         var existing = await repository.FindByProjectAsync(settings.Project.Id, cancellationToken);

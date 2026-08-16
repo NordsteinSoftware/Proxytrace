@@ -14,6 +14,9 @@ using Proxytrace.Domain.UserTotpEnrollment;
 
 namespace Proxytrace.Api.Controllers;
 
+/// <summary>
+/// API controller for users operations.
+/// </summary>
 [ApiController]
 [Authorize]
 [Route("api/users")]
@@ -29,6 +32,9 @@ public class UsersController : ControllerBase
     private readonly IConfiguration config;
     private readonly ILogger<Audit> audit;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="UsersController"/> class.
+    /// </summary>
     public UsersController(
         IRepository<IUser> repository,
         IProjectRepository projects,
@@ -51,6 +57,9 @@ public class UsersController : ControllerBase
         this.audit = audit;
     }
 
+    /// <summary>
+    /// Gets the all.
+    /// </summary>
     [HttpGet]
     [Authorize(Roles = nameof(UserRole.Admin))]
     public async Task<PagedResult<UserDto>> GetAll(
@@ -63,6 +72,9 @@ public class UsersController : ControllerBase
         return paged.Map(u => ToDto(u, mfaUsers.Contains(u.Id)));
     }
 
+    /// <summary>
+    /// Me.
+    /// </summary>
     [HttpGet("me")]
     public async Task<ActionResult<UserDto>> Me(CancellationToken cancellationToken)
     {
@@ -108,6 +120,9 @@ public class UsersController : ControllerBase
         return NoContent();
     }
 
+    /// <summary>
+    /// Gets.
+    /// </summary>
     [HttpGet("{id:guid}")]
     [Authorize(Roles = nameof(UserRole.Admin))]
     public async Task<ActionResult<UserDto>> Get(Guid id, CancellationToken cancellationToken)
@@ -118,6 +133,9 @@ public class UsersController : ControllerBase
         return ToDto(user, await mfa.IsEnabledAsync(user.Id, cancellationToken));
     }
 
+    /// <summary>
+    /// Gets the projects.
+    /// </summary>
     [HttpGet("{id:guid}/projects")]
     [Authorize(Roles = nameof(UserRole.Admin))]
     public async Task<ActionResult<IReadOnlyList<UserProjectDto>>> GetProjects(
@@ -130,6 +148,9 @@ public class UsersController : ControllerBase
         return memberships.Select(p => new UserProjectDto(p.Id, p.Name)).ToArray();
     }
 
+    /// <summary>
+    /// Updates the role.
+    /// </summary>
     [HttpPut("{id:guid}/role")]
     [Authorize(Roles = nameof(UserRole.Admin))]
     public async Task<ActionResult<UserDto>> UpdateRole(
@@ -147,6 +168,9 @@ public class UsersController : ControllerBase
         return ToDto(updated, await mfa.IsEnabledAsync(updated.Id, cancellationToken));
     }
 
+    /// <summary>
+    /// Deletes.
+    /// </summary>
     [HttpDelete("{id:guid}")]
     [Authorize(Roles = nameof(UserRole.Admin))]
     public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)

@@ -16,6 +16,9 @@ internal class DataCleanupService : IDataCleanupService
     private readonly IRepository<IAgentCall> agentCalls;
     private readonly ITransaction transaction;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DataCleanupService"/> class.
+    /// </summary>
     public DataCleanupService(
         IRepository<IOptimizationProposal> proposals,
         IRepository<ITestResult> testResults,
@@ -32,6 +35,9 @@ internal class DataCleanupService : IDataCleanupService
         this.transaction = transaction;
     }
 
+    /// <summary>
+    /// Deletes the all non model data asynchronously.
+    /// </summary>
     public Task DeleteAllNonModelDataAsync(CancellationToken cancellationToken = default)
         => transaction.InvokeAsync(async () =>
         {

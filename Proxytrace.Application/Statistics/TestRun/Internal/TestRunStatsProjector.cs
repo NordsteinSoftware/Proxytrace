@@ -10,6 +10,9 @@ namespace Proxytrace.Application.Statistics.TestRun.Internal;
 
 internal sealed class TestRunStatsProjector : AbstractStatsProjector<ITestRun, TestRunStats>
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TestRunStatsProjector"/> class.
+    /// </summary>
     public TestRunStatsProjector(IStatsWriter<TestRunStats> writer, IRepository<ITestRun> repository) :
         base(writer, repository)
     {

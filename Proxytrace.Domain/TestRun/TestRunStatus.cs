@@ -1,5 +1,8 @@
 namespace Proxytrace.Domain.TestRun;
 
+/// <summary>
+/// Specifies the test run status.
+/// </summary>
 public enum TestRunStatus
 {
     Pending = 0,

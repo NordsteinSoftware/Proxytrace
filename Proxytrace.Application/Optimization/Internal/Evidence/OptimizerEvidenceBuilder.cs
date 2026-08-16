@@ -8,6 +8,9 @@ internal class OptimizerEvidenceBuilder : IOptimizerEvidenceBuilder
     private const int MaxFailing = 20;
     private const int PassingSampleSize = 3;
 
+    /// <summary>
+    /// Builds.
+    /// </summary>
     public OptimizerEvidence Build(ITestRun run)
     {
         var failing = run.TestResults

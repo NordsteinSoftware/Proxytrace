@@ -8,6 +8,9 @@ namespace Proxytrace.Api.Dto.Evaluators;
 /// </summary>
 public sealed class EvaluatorDtoMapper
 {
+    /// <summary>
+    /// To dto.
+    /// </summary>
     public EvaluatorDetailDto ToDto(IEvaluator evaluator)
     {
         string? systemMessage = null;
@@ -50,6 +53,9 @@ public sealed class EvaluatorDtoMapper
             evaluator.UpdatedAt);
     }
 
+    /// <summary>
+    /// To recent dto.
+    /// </summary>
     public RecentEvaluationItemDto ToRecentDto(ITestResult r, Guid evaluatorId, Guid? runId)
     {
         var evaluation = r.Evaluations.FirstOrDefault(e => e.Evaluator.Id == evaluatorId);

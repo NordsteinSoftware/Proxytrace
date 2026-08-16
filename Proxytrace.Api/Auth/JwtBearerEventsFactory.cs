@@ -10,6 +10,11 @@ internal static class JwtBearerEventsFactory
 {
     private const string StreamTicketQueryKey = "stream_ticket";
 
+    /// <summary>
+    /// Builds the <see cref="JwtBearerEvents"/> that handle stream-ticket redemption, the SSE
+    /// <c>?access_token</c> fallback, the httpOnly session-cookie fallback, and live role-claim
+    /// overwriting so a demoted user loses privileges on their next request rather than at token expiry.
+    /// </summary>
     public static JwtBearerEvents Create() => new()
     {
         OnMessageReceived = async context =>

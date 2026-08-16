@@ -18,6 +18,9 @@ internal sealed class ProviderClient : IProviderClient
     private readonly HttpClient http;
     private readonly IPricingService pricingService;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ProviderClient"/> class.
+    /// </summary>
     public ProviderClient(
         IModelProvider provider,
         IModelRepository modelRepository,
@@ -30,6 +33,9 @@ internal sealed class ProviderClient : IProviderClient
         this.pricingService = pricingService;
     }
 
+    /// <summary>
+    /// Verifies the connection asynchronously.
+    /// </summary>
     public async Task<ProviderConnectionResult> VerifyConnectionAsync(CancellationToken cancellationToken = default)
     {
         try
@@ -56,6 +62,9 @@ internal sealed class ProviderClient : IProviderClient
         }
     }
 
+    /// <summary>
+    /// Gets the models asynchronously.
+    /// </summary>
     public async Task<IReadOnlyList<PricedModel>> GetModelsAsync(CancellationToken cancellationToken = default)
     {
         EnsureSupportedKind();

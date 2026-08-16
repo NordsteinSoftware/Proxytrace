@@ -10,6 +10,9 @@ internal class TestCaseGenerator : DomainEntityGenerator<ITestCase>
     private readonly IDomainObjectGenerator<Conversation> conversationGenerator;
     private readonly IDomainObjectGenerator<AssistantMessage> assistantMessageGenerator;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TestCaseGenerator"/> class.
+    /// </summary>
     public TestCaseGenerator(
         ITestCase.CreateNew factory,
         IRepository<ITestCase> repository,
@@ -22,6 +25,9 @@ internal class TestCaseGenerator : DomainEntityGenerator<ITestCase>
         this.assistantMessageGenerator = assistantMessageGenerator;
     }
 
+    /// <summary>
+    /// Generates asynchronously.
+    /// </summary>
     public override async Task<ITestCase> GenerateAsync(CancellationToken cancellationToken = default)
         => factory(
             input: await conversationGenerator.CreateAsync(cancellationToken),

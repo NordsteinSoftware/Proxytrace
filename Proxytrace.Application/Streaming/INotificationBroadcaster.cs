@@ -10,6 +10,9 @@ namespace Proxytrace.Application.Streaming;
 /// </summary>
 public abstract record NotificationEvent(Guid Id, Guid? ProjectId);
 
+/// <summary>
+/// Event raised when a notification created occurs.
+/// </summary>
 public record NotificationCreatedEvent(
     Guid Id,
     Guid? ProjectId,
@@ -22,6 +25,9 @@ public record NotificationCreatedEvent(
     Guid? TargetId,
     DateTimeOffset CreatedAt) : NotificationEvent(Id, ProjectId)
 {
+    /// <summary>
+    /// Creates.
+    /// </summary>
     public static NotificationCreatedEvent Create(INotification notification)
         => new(
             notification.Id,
@@ -43,6 +49,9 @@ public record NotificationStatusChangedEvent(
     NotificationStatus Status,
     DateTimeOffset UpdatedAt) : NotificationEvent(Id, ProjectId)
 {
+    /// <summary>
+    /// Creates.
+    /// </summary>
     public static NotificationStatusChangedEvent Create(INotification notification)
         => new(
             notification.Id,
@@ -51,6 +60,9 @@ public record NotificationStatusChangedEvent(
             notification.UpdatedAt);
 }
 
+/// <summary>
+/// Broadcasts notification events.
+/// </summary>
 public interface INotificationBroadcaster
 {
     /// <summary>

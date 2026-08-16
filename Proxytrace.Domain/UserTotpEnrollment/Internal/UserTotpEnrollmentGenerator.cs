@@ -9,6 +9,9 @@ internal class UserTotpEnrollmentGenerator : DomainEntityGenerator<IUserTotpEnro
     private readonly IUserTotpEnrollment.CreateNew factory;
     private readonly IDomainEntityGenerator<IUser> users;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="UserTotpEnrollmentGenerator"/> class.
+    /// </summary>
     public UserTotpEnrollmentGenerator(
         IUserTotpEnrollment.CreateNew factory,
         IDomainEntityGenerator<IUser> users,
@@ -19,6 +22,9 @@ internal class UserTotpEnrollmentGenerator : DomainEntityGenerator<IUserTotpEnro
         this.users = users;
     }
 
+    /// <summary>
+    /// Generates asynchronously.
+    /// </summary>
     public override async Task<IUserTotpEnrollment> GenerateAsync(CancellationToken cancellationToken = default)
     {
         var user = await users.GetOrCreateAsync(cancellationToken);

@@ -28,6 +28,9 @@ internal sealed class AnomalyDetectionService : BackgroundService, IAnomalyDetec
             SingleWriter = false,
         });
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AnomalyDetectionService"/> class.
+    /// </summary>
     public AnomalyDetectionService(
         IAnomalyDetector detector,
         IAnomalyInputFactory inputFactory,
@@ -42,6 +45,9 @@ internal sealed class AnomalyDetectionService : BackgroundService, IAnomalyDetec
         this.logger = logger;
     }
 
+    /// <summary>
+    /// Enqueues asynchronously.
+    /// </summary>
     public Task EnqueueAsync(ITestRunGroup testRunGroup, CancellationToken cancellationToken = default)
         => channel.Writer.WriteAsync(testRunGroup.Id, cancellationToken).AsTask();
 

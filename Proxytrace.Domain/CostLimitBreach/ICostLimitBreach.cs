@@ -29,12 +29,18 @@ public interface ICostLimitBreach : IDomainEntity<ICostLimitBreach>
     /// <summary>The month-to-date spend in EUR measured at the moment of the crossing.</summary>
     decimal SpendEur { get; }
 
+    /// <summary>
+    /// Factory delegate for creating a new new instance.
+    /// </summary>
     public delegate ICostLimitBreach CreateNew(
         ICostLimit costLimit,
         DateTimeOffset monthStart,
         CostThreshold threshold,
         decimal spendEur);
 
+    /// <summary>
+    /// Factory delegate for creating a new existing instance.
+    /// </summary>
     public delegate ICostLimitBreach CreateExisting(
         ICostLimit costLimit,
         DateTimeOffset monthStart,

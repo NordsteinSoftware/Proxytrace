@@ -38,8 +38,14 @@ internal abstract class TheoryValidatorBase : ITheoryValidator
     /// <summary>How hard a theory has to work to be believed — significance level and A/B samples.</summary>
     protected OptimizationOptions Options { get; }
 
+    /// <summary>
+    /// Determines whether the validate.
+    /// </summary>
     public abstract bool CanValidate(IOptimizationTheory theory);
 
+    /// <summary>
+    /// Validates asynchronously.
+    /// </summary>
     public abstract Task<TheoryValidationOutcome> ValidateAsync(
         IOptimizationTheory theory,
         CancellationToken cancellationToken = default,

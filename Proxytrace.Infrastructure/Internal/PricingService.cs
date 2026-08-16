@@ -11,11 +11,17 @@ internal sealed class PricingService : IPricingService
 {
     private readonly LiteLlmCatalogResolver liteLlmResolver;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="PricingService"/> class.
+    /// </summary>
     public PricingService(LiteLlmCatalogResolver liteLlmResolver)
     {
         this.liteLlmResolver = liteLlmResolver;
     }
 
+    /// <summary>
+    /// Resolves asynchronously.
+    /// </summary>
     public Task<ModelPrice> ResolveAsync(
         IModelProvider provider,
         DiscoveredModel model,

@@ -115,6 +115,9 @@ public sealed class TestSuiteDtoMapper
         DateTimeOffset? LastRunAt,
         Guid? LastRunGroupId)
     {
+        /// <summary>
+        /// From.
+        /// </summary>
         public static RunAggregates From(IReadOnlyList<TestRunStats> runRows)
         {
             // One point per (group, endpoint) cohort — a sampled run counts as one run, and its
@@ -130,6 +133,9 @@ public sealed class TestSuiteDtoMapper
         }
     }
 
+    /// <summary>
+    /// Builds the conversation.
+    /// </summary>
     public Conversation BuildConversation(IReadOnlyList<TestSuiteMessageDto> messages)
     {
         var msgs = new List<Message>();
@@ -147,6 +153,9 @@ public sealed class TestSuiteDtoMapper
         return new Conversation(msgs);
     }
 
+    /// <summary>
+    /// Builds the assistant message.
+    /// </summary>
     public AssistantMessage BuildAssistantMessage(TestSuiteMessageDto m)
     {
         IReadOnlyList<Content> contents = string.IsNullOrEmpty(m.Content)

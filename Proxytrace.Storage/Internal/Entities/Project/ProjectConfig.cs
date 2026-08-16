@@ -16,6 +16,9 @@ internal class ProjectConfig : AbstractEntityConfiguration<ProjectEntity>, IMapp
     private readonly IRepository<IUser> users;
     private readonly Func<StorageDbContext> contextFactory;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ProjectConfig"/> class.
+    /// </summary>
     public ProjectConfig(
         IProject.CreateExisting factory,
         IRepository<IModelEndpoint> endpoints,
@@ -28,6 +31,9 @@ internal class ProjectConfig : AbstractEntityConfiguration<ProjectEntity>, IMapp
         this.contextFactory = contextFactory;
     }
 
+    /// <summary>
+    /// Configures the application request pipeline.
+    /// </summary>
     public override void Configure(EntityTypeBuilder<ProjectEntity> builder)
     {
         builder.HasIndex(e => e.Name).IsUnique();
@@ -39,6 +45,9 @@ internal class ProjectConfig : AbstractEntityConfiguration<ProjectEntity>, IMapp
             .OnDelete(DeleteBehavior.Restrict);
     }
 
+    /// <summary>
+    /// Maps.
+    /// </summary>
     public async Task<IProject> Map(ProjectEntity stored, CancellationToken cancellationToken = default)
     {
         var endpoint = await endpoints.GetAsync(stored.SystemEndpoint, cancellationToken);
@@ -57,6 +66,9 @@ internal class ProjectConfig : AbstractEntityConfiguration<ProjectEntity>, IMapp
         return factory(stored.Name, endpoint, members, stored);
     }
 
+    /// <summary>
+    /// Maps.
+    /// </summary>
     public Task<ProjectEntity> Map(IProject domain, CancellationToken cancellationToken = default)
         => new ProjectEntity
         {

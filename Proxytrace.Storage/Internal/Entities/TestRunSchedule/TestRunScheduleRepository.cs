@@ -12,6 +12,9 @@ namespace Proxytrace.Storage.Internal.Entities.TestRunSchedule;
 [UsedImplicitly]
 internal class TestRunScheduleRepository : AbstractRepository<ITestRunSchedule, TestRunScheduleEntity>, ITestRunScheduleRepository
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TestRunScheduleRepository"/> class.
+    /// </summary>
     public TestRunScheduleRepository(
         IMapper<ITestRunSchedule, TestRunScheduleEntity> mapper,
         Func<StorageDbContext> contextFactory,
@@ -21,6 +24,9 @@ internal class TestRunScheduleRepository : AbstractRepository<ITestRunSchedule, 
     {
     }
 
+    /// <summary>
+    /// Gets the by agent asynchronously.
+    /// </summary>
     public async Task<IReadOnlyList<ITestRunSchedule>> GetByAgentAsync(Guid agentId, CancellationToken cancellationToken = default)
     {
         var context = contextFactory();
@@ -38,6 +44,9 @@ internal class TestRunScheduleRepository : AbstractRepository<ITestRunSchedule, 
         return await Map(stored, cancellationToken);
     }
 
+    /// <summary>
+    /// Gets the by project asynchronously.
+    /// </summary>
     public async Task<IReadOnlyList<ITestRunSchedule>> GetByProjectAsync(Guid projectId, CancellationToken cancellationToken = default)
     {
         var context = contextFactory();
@@ -59,6 +68,9 @@ internal class TestRunScheduleRepository : AbstractRepository<ITestRunSchedule, 
         return await Map(stored, cancellationToken);
     }
 
+    /// <summary>
+    /// Gets the due asynchronously.
+    /// </summary>
     public async Task<IReadOnlyList<ITestRunSchedule>> GetDueAsync(DateTimeOffset now, CancellationToken cancellationToken = default)
     {
         var stored = await contextFactory()

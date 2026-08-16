@@ -12,6 +12,9 @@ internal sealed class AnomalyInputFactory : IAnomalyInputFactory
     private readonly IStatsReader<TestRunStats, TestRunStats.Filter> runStats;
     private readonly AnomalyDetectionConfiguration configuration;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AnomalyInputFactory"/> class.
+    /// </summary>
     public AnomalyInputFactory(
         ITestRunRepository testRuns,
         IStatsReader<TestRunStats, TestRunStats.Filter> runStats,
@@ -22,6 +25,9 @@ internal sealed class AnomalyInputFactory : IAnomalyInputFactory
         this.configuration = configuration;
     }
 
+    /// <summary>
+    /// Builds asynchronously.
+    /// </summary>
     public async Task<AnomalyInput> BuildAsync(ITestRunGroup group, CancellationToken cancellationToken = default)
     {
         var runs = await testRuns.GetByGroupAsync(group.Id, cancellationToken);

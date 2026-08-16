@@ -43,15 +43,26 @@ public interface ISessionCookie
 /// </summary>
 internal sealed class SessionCookie : ISessionCookie
 {
+    /// <summary>
+    /// The cookie name used for the local-mode session JWT (<c>proxytrace_session</c>).
+    /// </summary>
     public const string Name = "proxytrace_session";
 
     private readonly SessionCookieOptions options;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SessionCookie"/> class.
+    /// </summary>
     public SessionCookie(SessionCookieOptions options)
     {
         this.options = options;
     }
 
+    /// <summary>
+    /// Sets the httpOnly session cookie on <paramref name="response"/> carrying <paramref name="token"/>,
+    /// expiring at <paramref name="expiresAt"/>. Applies <c>SameSite=Strict</c> and the configured
+    /// <c>Secure</c> flag.
+    /// </summary>
     public void Append(HttpResponse response, string token, DateTimeOffset expiresAt) =>
         response.Cookies.Append(Name, token, new CookieOptions
         {
@@ -62,6 +73,10 @@ internal sealed class SessionCookie : ISessionCookie
             Expires = expiresAt,
         });
 
+    /// <summary>
+    /// Expires the session cookie on <paramref name="response"/>, effectively logging the user out
+    /// on the browser side.
+    /// </summary>
     public void Delete(HttpResponse response) =>
         response.Cookies.Delete(Name, new CookieOptions
         {

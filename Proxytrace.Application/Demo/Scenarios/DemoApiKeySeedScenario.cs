@@ -28,6 +28,9 @@ internal sealed class DemoApiKeySeedScenario : IDemoScenario
     private readonly IApiKeyRepository apiKeys;
     private readonly ILogger<DemoApiKeySeedScenario> logger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DemoApiKeySeedScenario"/> class.
+    /// </summary>
     public DemoApiKeySeedScenario(
         KioskOptions kiosk,
         KioskEndpointOptions kioskEndpoint,
@@ -45,8 +48,14 @@ internal sealed class DemoApiKeySeedScenario : IDemoScenario
     }
 
     // After CoreSeedScenario (0), which creates the project, the demo user and the live provider.
+    /// <summary>
+    /// Gets the order.
+    /// </summary>
     public int Order => 5;
 
+    /// <summary>
+    /// Seeds asynchronously.
+    /// </summary>
     public async Task SeedAsync(CancellationToken cancellationToken)
     {
         if (!kioskEndpoint.IsConfigured)

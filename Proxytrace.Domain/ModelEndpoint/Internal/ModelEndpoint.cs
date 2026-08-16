@@ -9,12 +9,30 @@ namespace Proxytrace.Domain.ModelEndpoint.Internal;
 
 internal record ModelEndpoint : DomainEntity<IModelEndpoint>, IModelEndpoint
 {
+    /// <summary>
+    /// Gets the model.
+    /// </summary>
     public IModel Model { get; }
+    /// <summary>
+    /// Gets the provider.
+    /// </summary>
     public IModelProvider Provider { get; }
+    /// <summary>
+    /// Gets the input token cost.
+    /// </summary>
     public decimal? InputTokenCost { get; }
+    /// <summary>
+    /// Gets the output token cost.
+    /// </summary>
     public decimal? OutputTokenCost { get; }
+    /// <summary>
+    /// Gets the cached input token cost.
+    /// </summary>
     public decimal? CachedInputTokenCost { get; }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ModelEndpoint"/> class.
+    /// </summary>
     public ModelEndpoint(
         IModel model,
         IModelProvider provider,
@@ -30,6 +48,9 @@ internal record ModelEndpoint : DomainEntity<IModelEndpoint>, IModelEndpoint
         CachedInputTokenCost = cachedInputTokenCost;
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ModelEndpoint"/> class.
+    /// </summary>
     public ModelEndpoint(
         IModel model,
         IModelProvider provider,
@@ -66,6 +87,9 @@ internal record ModelEndpoint : DomainEntity<IModelEndpoint>, IModelEndpoint
                1_000_000m;
     }
 
+    /// <summary>
+    /// Validates.
+    /// </summary>
     public override IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
         foreach (var result in base.Validate(validationContext))

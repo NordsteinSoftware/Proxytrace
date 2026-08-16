@@ -3,6 +3,9 @@ using Proxytrace.Domain.AgentCall;
 
 namespace Proxytrace.Application.Streaming;
 
+/// <summary>
+/// Event raised when a trace created occurs.
+/// </summary>
 public record TraceCreatedEvent(
     Guid Id,
     Guid AgentId,
@@ -14,6 +17,9 @@ public record TraceCreatedEvent(
     Guid? ConversationId,
     Guid? SessionId)
 {
+    /// <summary>
+    /// Creates.
+    /// </summary>
     public static TraceCreatedEvent Create(IAgentCall call)
         => new(
             call.Id,
@@ -27,6 +33,9 @@ public record TraceCreatedEvent(
             call.SessionId);
 }
 
+/// <summary>
+/// Broadcasts trace events.
+/// </summary>
 public interface ITraceBroadcaster
 {
     ChannelReader<TraceCreatedEvent> Subscribe(CancellationToken cancellationToken);

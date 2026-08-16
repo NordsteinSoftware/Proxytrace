@@ -19,6 +19,9 @@ internal class AgentCallGenerator : DomainEntityGenerator<IAgentCall>, IAgentCal
     private readonly IDomainObjectGenerator<Conversation> conversationGenerator;
     private readonly IDomainObjectGenerator<ICompletion> completionGenerator;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AgentCallGenerator"/> class.
+    /// </summary>
     public AgentCallGenerator(
         IAgentCall.CreateNew factory,
         IAgentCall.CreateExisting createExisting,
@@ -39,6 +42,9 @@ internal class AgentCallGenerator : DomainEntityGenerator<IAgentCall>, IAgentCal
         this.completionGenerator = completionGenerator;
     }
 
+    /// <summary>
+    /// Generates asynchronously.
+    /// </summary>
     public override async Task<IAgentCall> GenerateAsync(CancellationToken cancellationToken = default)
     {
         var agent = await agentGenerator.CreateAsync(cancellationToken);
@@ -56,6 +62,9 @@ internal class AgentCallGenerator : DomainEntityGenerator<IAgentCall>, IAgentCal
             conversationId: null);
     }
 
+    /// <summary>
+    /// Creates asynchronously.
+    /// </summary>
     public async Task<IAgentCall> CreateAsync(DateTimeOffset createdAt, CancellationToken cancellationToken = default)
     {
         var agentCall = await CreateAsync(cancellationToken);

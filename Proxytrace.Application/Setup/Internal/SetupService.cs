@@ -34,6 +34,9 @@ internal class SetupService : ISetupService
     private readonly ILicenseService license;
     private readonly IModelPriceRefresher priceRefresher;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SetupService"/> class.
+    /// </summary>
     public SetupService(
         IRepository<IModelProvider> providers,
         IModelRepository models,
@@ -70,6 +73,9 @@ internal class SetupService : ISetupService
         this.priceRefresher = priceRefresher;
     }
 
+    /// <summary>
+    /// Any users exist asynchronously.
+    /// </summary>
     public async Task<bool> AnyUsersExistAsync(CancellationToken cancellationToken = default)
     {
         var count = await users.CountAsync(cancellationToken);
@@ -86,6 +92,9 @@ internal class SetupService : ISetupService
         return count > 0;
     }
 
+    /// <summary>
+    /// Creates the first admin asynchronously.
+    /// </summary>
     public async Task<FirstAdminResult> CreateFirstAdminAsync(string email, string password, CancellationToken cancellationToken = default)
     {
         if (await AnyUsersExistAsync(cancellationToken))
@@ -99,6 +108,9 @@ internal class SetupService : ISetupService
         return new FirstAdminResult(saved.Id, issued.Token, issued.ExpiresAt);
     }
 
+    /// <summary>
+    /// Completes asynchronously.
+    /// </summary>
     public async Task<SetupResult> CompleteAsync(SetupInput input, CancellationToken cancellationToken = default)
     {
         // Taken outside the transaction, and held for the whole of it: the "already completed" test
@@ -148,11 +160,17 @@ internal class SetupService : ISetupService
         return result;
     }
 
+    /// <summary>
+    /// Test provider connection asynchronously.
+    /// </summary>
     public Task<ProviderConnectionResult> TestProviderConnectionAsync(ProviderConnectionInput input, CancellationToken cancellationToken = default)
         => CreateProvider(input)
             .CreateClient()
             .VerifyConnectionAsync(cancellationToken);
 
+    /// <summary>
+    /// Lists the provider models asynchronously.
+    /// </summary>
     public async Task<IReadOnlyList<string>> ListProviderModelsAsync(ProviderConnectionInput input, CancellationToken cancellationToken = default)
     {
         IModelProvider provider = CreateProvider(input);

@@ -9,6 +9,9 @@ internal class UserGenerator : DomainEntityGenerator<IUser>
 {
     private readonly IUser.CreateNew factory;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="UserGenerator"/> class.
+    /// </summary>
     public UserGenerator(
         IUser.CreateNew factory,
         IRepository<IUser> repository,
@@ -17,6 +20,9 @@ internal class UserGenerator : DomainEntityGenerator<IUser>
         this.factory = factory;
     }
 
+    /// <summary>
+    /// Generates asynchronously.
+    /// </summary>
     public override Task<IUser> GenerateAsync(CancellationToken cancellationToken = default)
         => factory(
                 email: random.Email(),

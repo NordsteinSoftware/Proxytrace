@@ -14,12 +14,18 @@ internal class TestRunStatsStore : IStatsReader<TestRunStats, TestRunStats.Filte
     private readonly Func<StorageDbContext> contextFactory;
     private readonly ITransaction transaction;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TestRunStatsStore"/> class.
+    /// </summary>
     public TestRunStatsStore(Func<StorageDbContext> contextFactory, ITransaction transaction)
     {
         this.contextFactory = contextFactory;
         this.transaction = transaction;
     }
 
+    /// <summary>
+    /// Upsert asynchronously.
+    /// </summary>
     public Task UpsertAsync(TestRunStats stats, CancellationToken cancellationToken = default)
         => transaction.InvokeAsync(async () =>
         {
@@ -93,6 +99,9 @@ internal class TestRunStatsStore : IStatsReader<TestRunStats, TestRunStats.Filte
             .AsNoTracking()
             .AnyAsync(e => e.TestRunId == testRunId, cancellationToken);
 
+    /// <summary>
+    /// Removes asynchronously.
+    /// </summary>
     public Task RemoveAsync(Guid testRunId, CancellationToken cancellationToken = default)
         => transaction.InvokeAsync(async () =>
         {
@@ -108,6 +117,9 @@ internal class TestRunStatsStore : IStatsReader<TestRunStats, TestRunStats.Filte
             await context.SaveChangesAsync(cancellationToken);
         });
 
+    /// <summary>
+    /// Finds asynchronously.
+    /// </summary>
     public async Task<TestRunStats?> FindAsync(Guid testRunId, CancellationToken cancellationToken = default)
     {
         TestRunStatsEntity? entity = await contextFactory()
@@ -117,6 +129,9 @@ internal class TestRunStatsStore : IStatsReader<TestRunStats, TestRunStats.Filte
         return entity is null ? null : ToDto(entity);
     }
 
+    /// <summary>
+    /// Query asynchronously.
+    /// </summary>
     public async Task<IReadOnlyList<TestRunStats>> QueryAsync(TestRunStats.Filter filter, CancellationToken cancellationToken = default)
     {
         IQueryable<TestRunStatsEntity> q = Query(contextFactory(), filter);
@@ -125,6 +140,9 @@ internal class TestRunStatsStore : IStatsReader<TestRunStats, TestRunStats.Filte
         return rows.Select(ToDto).ToArray();
     }
 
+    /// <summary>
+    /// Gets the pass totals asynchronously.
+    /// </summary>
     public async Task<TestRunPassTotals> GetPassTotalsAsync(TestRunStats.Filter filter, CancellationToken cancellationToken = default)
     {
         // A single scalar aggregate row crosses the wire — never the O(all-history) row set the
@@ -141,6 +159,9 @@ internal class TestRunStatsStore : IStatsReader<TestRunStats, TestRunStats.Filte
         return new TestRunPassTotals(TotalCases: agg?.Cases ?? 0, TotalPassed: agg?.Passed ?? 0);
     }
 
+    /// <summary>
+    /// Gets the recent cohorts asynchronously.
+    /// </summary>
     public async Task<IReadOnlyList<TestRunCohort>> GetRecentCohortsAsync(TestRunStats.Filter filter, int limit, CancellationToken cancellationToken = default)
     {
         limit = Math.Max(limit, 1);

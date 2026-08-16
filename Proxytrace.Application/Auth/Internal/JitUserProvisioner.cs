@@ -12,6 +12,9 @@ internal class JitUserProvisioner : IJitUserProvisioner
     private readonly ITransaction transaction;
     private readonly ILogger<Audit> audit;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="JitUserProvisioner"/> class.
+    /// </summary>
     public JitUserProvisioner(
         IUserRepository users,
         IUser.CreateNew createUser,
@@ -24,6 +27,9 @@ internal class JitUserProvisioner : IJitUserProvisioner
         this.audit = audit;
     }
 
+    /// <summary>
+    /// Ensures the provisioned asynchronously.
+    /// </summary>
     public Task<IUser> EnsureProvisionedAsync(
         string externalSubject,
         string email,

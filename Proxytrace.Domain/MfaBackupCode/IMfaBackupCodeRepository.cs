@@ -1,5 +1,8 @@
 namespace Proxytrace.Domain.MfaBackupCode;
 
+/// <summary>
+/// Repository for persisting and querying mfa backup code entities.
+/// </summary>
 public interface IMfaBackupCodeRepository : IRepository<IMfaBackupCode>
 {
     /// <summary>All backup codes (used and unused) belonging to the user.</summary>

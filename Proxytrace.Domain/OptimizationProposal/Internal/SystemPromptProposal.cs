@@ -11,9 +11,18 @@ namespace Proxytrace.Domain.OptimizationProposal.Internal;
 [UsedImplicitly]
 internal record SystemPromptProposal : OptimizationProposal, ISystemPromptProposal
 {
+    /// <summary>
+    /// Gets the kind.
+    /// </summary>
     public override ProposalKind Kind => ProposalKind.SystemPrompt;
+    /// <summary>
+    /// Gets or sets the proposed system message.
+    /// </summary>
     public string ProposedSystemMessage { get; private init; }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SystemPromptProposal"/> class.
+    /// </summary>
     public SystemPromptProposal(
         IAgent agent,
         Priority priority,
@@ -31,6 +40,9 @@ internal record SystemPromptProposal : OptimizationProposal, ISystemPromptPropos
         ProposedSystemMessage = proposedSystemMessage;
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SystemPromptProposal"/> class.
+    /// </summary>
     public SystemPromptProposal(
         IAgent agent,
         ProposalStatus status,
@@ -54,6 +66,9 @@ internal record SystemPromptProposal : OptimizationProposal, ISystemPromptPropos
         ProposedSystemMessage = proposedSystemMessage;
     }
 
+    /// <summary>
+    /// Validates.
+    /// </summary>
     public override IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
         foreach (var result in base.Validate(validationContext))

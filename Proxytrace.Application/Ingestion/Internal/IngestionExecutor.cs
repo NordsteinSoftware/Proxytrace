@@ -20,6 +20,9 @@ internal sealed class IngestionExecutor : IIngestionExecutor
     private readonly ITraceQuotaGuard quotaGuard;
     private readonly ILogger<IngestionExecutor> logger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="IngestionExecutor"/> class.
+    /// </summary>
     public IngestionExecutor(
         IAgentCallProcessor processor,
         IRepository<IModelProvider> providerRepository,
@@ -34,6 +37,9 @@ internal sealed class IngestionExecutor : IIngestionExecutor
         this.logger = logger;
     }
 
+    /// <summary>
+    /// Ingest asynchronously.
+    /// </summary>
     public async Task IngestAsync(IngestMessage message, CancellationToken cancellationToken = default)
     {
         // Once the licensed monthly trace quota is reached, drop further captures rather than

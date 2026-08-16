@@ -15,11 +15,18 @@ internal class LocalUserResolver : IAuthUserResolver
 {
     private readonly IRepository<IUser> users;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="LocalUserResolver"/> class.
+    /// </summary>
     public LocalUserResolver(IRepository<IUser> users)
     {
         this.users = users;
     }
 
+    /// <summary>
+    /// Looks up the <see cref="IUser"/> by the <c>sub</c> claim GUID. Fails the token validation
+    /// context and returns <see langword="null"/> when the sub is unparseable or the user no longer exists.
+    /// </summary>
     public async Task<IUser?> Resolve(TokenValidatedContext context, ClaimsPrincipal principal)
     {
         var sub = principal.FindFirstValue("sub")
@@ -46,12 +53,19 @@ internal class JitUserResolver : IAuthUserResolver
     private readonly IJitUserProvisioner provisioner;
     private readonly AuthOptions options;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="JitUserResolver"/> class.
+    /// </summary>
     public JitUserResolver(IJitUserProvisioner provisioner, AuthOptions options)
     {
         this.provisioner = provisioner;
         this.options = options;
     }
 
+    /// <summary>
+    /// Derives an external subject identifier from the token's issuer and subject claims, then
+    /// JIT-provisions or retrieves the matching local user via <c>IJitUserProvisioner</c>.
+    /// </summary>
     public async Task<IUser?> Resolve(TokenValidatedContext context, ClaimsPrincipal principal)
     {
         var issuer = principal.FindFirstValue("iss")

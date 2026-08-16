@@ -17,6 +17,9 @@ internal sealed class ErrorLogWriter : BackgroundService
     private readonly IApplicationError.CreateExisting createErrorWithId;
     private readonly IApplicationErrorRepository repository;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ErrorLogWriter"/> class.
+    /// </summary>
     public ErrorLogWriter(
         IErrorLogChannel channel,
         IApplicationError.CreateNew createError,

@@ -24,8 +24,14 @@ internal abstract class AbTestTheoryValidator<TTheory> : TheoryValidatorBase
     {
     }
 
+    /// <summary>
+    /// Determines whether the validate.
+    /// </summary>
     public sealed override bool CanValidate(IOptimizationTheory theory) => theory is TTheory;
 
+    /// <summary>
+    /// Validates asynchronously.
+    /// </summary>
     public sealed override async Task<TheoryValidationOutcome> ValidateAsync(
         IOptimizationTheory theory,
         CancellationToken cancellationToken = default,

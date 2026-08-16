@@ -11,11 +11,17 @@ public sealed class TheoryDtoMapper
 {
     private readonly ToolDtoMapper toolDtoMapper;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TheoryDtoMapper"/> class.
+    /// </summary>
     public TheoryDtoMapper(ToolDtoMapper toolDtoMapper)
     {
         this.toolDtoMapper = toolDtoMapper;
     }
 
+    /// <summary>
+    /// To dto.
+    /// </summary>
     public TheoryDto ToDto(IOptimizationTheory t)
         => new(
             t.Id,

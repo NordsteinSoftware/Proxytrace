@@ -12,6 +12,9 @@ public interface ISystemPromptProposal : IOptimizationProposal
     /// <summary>The full proposed system prompt text.</summary>
     string ProposedSystemMessage { get; }
 
+    /// <summary>
+    /// Factory delegate for creating a new new instance.
+    /// </summary>
     public delegate ISystemPromptProposal CreateNew(
         IAgent agent,
         Priority priority,
@@ -22,6 +25,9 @@ public interface ISystemPromptProposal : IOptimizationProposal
         IReadOnlyCollection<Guid> evidenceTestRunIds,
         ITestRun abTestRun);
 
+    /// <summary>
+    /// Factory delegate for creating a new existing instance.
+    /// </summary>
     public delegate ISystemPromptProposal CreateExisting(
         IAgent agent,
         ProposalStatus status,

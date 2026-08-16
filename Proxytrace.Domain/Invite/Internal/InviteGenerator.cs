@@ -10,6 +10,9 @@ internal class InviteGenerator : DomainEntityGenerator<IInvite>
     private readonly IInvite.CreateNew factory;
     private readonly IDomainEntityGenerator<IUser> users;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="InviteGenerator"/> class.
+    /// </summary>
     public InviteGenerator(
         IInvite.CreateNew factory,
         IDomainEntityGenerator<IUser> users,
@@ -20,6 +23,9 @@ internal class InviteGenerator : DomainEntityGenerator<IInvite>
         this.users = users;
     }
 
+    /// <summary>
+    /// Generates asynchronously.
+    /// </summary>
     public override async Task<IInvite> GenerateAsync(CancellationToken cancellationToken = default)
     {
         var user = await users.CreateAsync(cancellationToken);

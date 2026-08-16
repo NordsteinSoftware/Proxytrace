@@ -26,10 +26,16 @@ public interface ITestRunSchedule : IDomainEntity<ITestRunSchedule>
     DateTimeOffset NextRunAt { get; }
     DateTimeOffset? LastRunAt { get; }
 
+    /// <summary>
+    /// Factory delegate for creating a new new instance.
+    /// </summary>
     public delegate ITestRunSchedule CreateNew(
         string name, ITestSuite suite, IReadOnlyCollection<IModelEndpoint> endpoints,
         TimeSpan interval, bool isEnabled, DateTimeOffset anchorAt);
 
+    /// <summary>
+    /// Factory delegate for creating a new existing instance.
+    /// </summary>
     public delegate ITestRunSchedule CreateExisting(
         string name, ITestSuite suite, IReadOnlyCollection<IModelEndpoint> endpoints,
         TimeSpan interval, bool isEnabled, DateTimeOffset anchorAt, DateTimeOffset nextRunAt,

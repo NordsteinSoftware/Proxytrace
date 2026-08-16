@@ -13,6 +13,9 @@ internal class StatisticsHostedService : BackgroundService
     private readonly IReadOnlyDictionary<Type, IReadOnlyList<IStatsProjector>> projectorsByType;
     private readonly ILogger<StatisticsHostedService> logger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="StatisticsHostedService"/> class.
+    /// </summary>
     public StatisticsHostedService(
         IEntityEventService entityEvents,
         IEnumerable<IStatsProjector> projectors,

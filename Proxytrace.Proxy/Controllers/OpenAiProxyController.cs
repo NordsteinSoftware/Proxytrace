@@ -38,6 +38,9 @@ public class OpenAiProxyController : ControllerBase
     // KestrelServerLimits.MaxRequestBodySize to the *same* number: Kestrel's 30 MB default rejects
     // first otherwise, and this cap — plus the 413 it produces — is unreachable dead code.
     // See Proxytrace.Proxy.Api/Program.cs.
+    /// <summary>
+    /// The max request body bytes constant value.
+    /// </summary>
     public const long MaxRequestBodyBytes = 64L * 1024 * 1024;
 
     private const int MaxCapturedResponseChars = 16 * 1024 * 1024;
@@ -116,6 +119,9 @@ public class OpenAiProxyController : ControllerBase
     private readonly KioskEndpointOptions kioskEndpoint;
     private readonly ILogger<OpenAiProxyController> logger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="OpenAiProxyController"/> class.
+    /// </summary>
     public OpenAiProxyController(
         IHttpClientFactory httpClientFactory,
         IIngestionStream stream,
@@ -140,6 +146,9 @@ public class OpenAiProxyController : ControllerBase
     // upstream-provider-key auth path) and the legacy `/openai/v1/…` form (project derived from a
     // Proxytrace-issued key). The literal `openai/v1/…` template is matched ahead of the
     // parameterised one, so `project` is only bound for the scoped form.
+    /// <summary>
+    /// Proxy.
+    /// </summary>
     [Route("openai/v1/{**path}")]
     [Route("{project}/openai/v1/{**path}")]
     [HttpGet, HttpPost, HttpPut, HttpDelete, HttpPatch, HttpHead, HttpOptions]
@@ -268,6 +277,9 @@ public class OpenAiProxyController : ControllerBase
     // calls are forwarded to the provider's host ORIGIN and are deliberately NOT ingested/traced.
     // The literal `{project}/openai/v1/…` route out-ranks this all-parameter catch-all, so LLM calls
     // never reach here.
+    /// <summary>
+    /// Passthrough.
+    /// </summary>
     [Route("{project}/{**rest}")]
     [HttpGet, HttpPost, HttpPut, HttpDelete, HttpPatch, HttpHead, HttpOptions]
     public async Task Passthrough(string project, string? rest, CancellationToken cancellationToken)

@@ -2,6 +2,9 @@ using Proxytrace.Api.Dto.Inference;
 
 namespace Proxytrace.Api.Dto.Agents;
 
+/// <summary>
+/// Data transfer object representing a agent.
+/// </summary>
 public record AgentDto(
     Guid Id,
     Guid ProjectId,
@@ -36,10 +39,19 @@ public record AgentListItemDto(
     DateTimeOffset UpdatedAt,
     DateTimeOffset? LastUsedAt);
 
+/// <summary>
+/// Request payload for update agent endpoint operations.
+/// </summary>
 public record UpdateAgentEndpointRequest(Guid EndpointId);
 
+/// <summary>
+/// Request payload for move version operations.
+/// </summary>
 public record MoveVersionRequest(Guid TargetAgentId);
 
+/// <summary>
+/// Data transfer object representing a agent version.
+/// </summary>
 public record AgentVersionDto(
     Guid Id,
     Guid AgentId,
@@ -49,11 +61,17 @@ public record AgentVersionDto(
     string Fingerprint,
     DateTimeOffset CreatedAt);
 
+/// <summary>
+/// Data transfer object representing a tool specification.
+/// </summary>
 public record ToolSpecificationDto(
     string Name,
     string Description,
     IReadOnlyList<ToolArgumentDto> Arguments);
 
+/// <summary>
+/// Data transfer object representing a tool argument.
+/// </summary>
 public record ToolArgumentDto(
     string Name,
     string? Description,

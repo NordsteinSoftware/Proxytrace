@@ -7,6 +7,9 @@ using Proxytrace.Domain.User;
 
 namespace Proxytrace.Api.Controllers;
 
+/// <summary>
+/// API controller for outlier settings operations.
+/// </summary>
 [ApiController]
 [Authorize(Roles = nameof(UserRole.Admin))]
 [Route("api/outlier-settings")]
@@ -16,6 +19,9 @@ public class OutlierSettingsController : ControllerBase
     private readonly OutlierSettingsDtoMapper mapper;
     private readonly ILogger<Audit> audit;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="OutlierSettingsController"/> class.
+    /// </summary>
     public OutlierSettingsController(
         IOutlierSettingsStore store,
         OutlierSettingsDtoMapper mapper,
@@ -34,6 +40,9 @@ public class OutlierSettingsController : ControllerBase
         return mapper.ToDto(settings);
     }
 
+    /// <summary>
+    /// Updates.
+    /// </summary>
     [HttpPut]
     public async Task<ActionResult<OutlierSettingsDto>> Update(
         [FromBody] UpdateOutlierSettingsRequest request,

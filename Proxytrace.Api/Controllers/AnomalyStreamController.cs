@@ -18,6 +18,9 @@ public class AnomalyStreamController : ControllerBase
     private readonly ICustomAnomalyBroadcaster broadcaster;
     private readonly IProjectAccessGuard accessGuard;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AnomalyStreamController"/> class.
+    /// </summary>
     public AnomalyStreamController(
         ICustomAnomalyBroadcaster broadcaster,
         IProjectAccessGuard accessGuard)
@@ -26,6 +29,11 @@ public class AnomalyStreamController : ControllerBase
         this.accessGuard = accessGuard;
     }
 
+    /// <summary>
+    /// SSE stream that emits <c>anomaly-flagged</c> events as custom anomaly detectors flag calls.
+    /// Non-admin callers receive only events belonging to their accessible projects; periodic
+    /// heartbeat comments detect half-open sockets.
+    /// </summary>
     [HttpGet("stream")]
     public async Task Stream(CancellationToken cancellationToken)
     {

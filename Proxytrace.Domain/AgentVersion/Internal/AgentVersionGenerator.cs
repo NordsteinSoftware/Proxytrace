@@ -13,6 +13,9 @@ internal class AgentVersionGenerator : DomainEntityGenerator<IAgentVersion>, IAg
     private readonly IAgentVersionRepository versionRepository;
     private readonly IDomainObjectGenerator<IPromptTemplate> promptTemplateGenerator;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AgentVersionGenerator"/> class.
+    /// </summary>
     public AgentVersionGenerator(
         IAgentVersion.CreateNew factory,
         IRepository<IAgentVersion> repository,
@@ -27,6 +30,9 @@ internal class AgentVersionGenerator : DomainEntityGenerator<IAgentVersion>, IAg
         this.promptTemplateGenerator = promptTemplateGenerator;
     }
 
+    /// <summary>
+    /// Generates asynchronously.
+    /// </summary>
     public override async Task<IAgentVersion> GenerateAsync(CancellationToken cancellationToken = default)
     {
         var agent = await agentGenerator.GetOrCreateAsync(cancellationToken);

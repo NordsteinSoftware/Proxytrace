@@ -11,6 +11,9 @@ using Proxytrace.Licensing;
 
 namespace Proxytrace.Api.Controllers;
 
+/// <summary>
+/// API controller for tracey operations.
+/// </summary>
 [ApiController]
 [Authorize]
 [RequiresFeature(LicenseFeature.Tracey)]
@@ -21,6 +24,9 @@ public class TraceyController : ControllerBase
     private readonly IRepository<IProject> projects;
     private readonly ICurrentUserAccessor currentUser;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TraceyController"/> class.
+    /// </summary>
     public TraceyController(
         ITraceySessionService sessionService,
         IRepository<IProject> projects,

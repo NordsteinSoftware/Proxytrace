@@ -18,6 +18,9 @@ internal sealed class DefaultEvaluatorSeederHostedService : IHostedService
     private readonly IServiceProvider rootServices;
     private readonly ILogger<DefaultEvaluatorSeederHostedService> logger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DefaultEvaluatorSeederHostedService"/> class.
+    /// </summary>
     public DefaultEvaluatorSeederHostedService(
         IServiceProvider rootServices,
         ILogger<DefaultEvaluatorSeederHostedService> logger)
@@ -26,6 +29,9 @@ internal sealed class DefaultEvaluatorSeederHostedService : IHostedService
         this.logger = logger;
     }
 
+    /// <summary>
+    /// Starts asynchronously.
+    /// </summary>
     public async Task StartAsync(CancellationToken cancellationToken)
     {
         using var scope = rootServices.CreateScope();
@@ -47,5 +53,8 @@ internal sealed class DefaultEvaluatorSeederHostedService : IHostedService
         logger.LogInformation("Default evaluator seeding complete");
     }
 
+    /// <summary>
+    /// Stops asynchronously.
+    /// </summary>
     public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 }

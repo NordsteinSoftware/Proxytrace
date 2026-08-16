@@ -11,6 +11,9 @@ internal class CostLimitRepository
     : AbstractRepository<ICostLimit, CostLimitEntity>,
       ICostLimitRepository
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CostLimitRepository"/> class.
+    /// </summary>
     public CostLimitRepository(
         IMapper<ICostLimit, CostLimitEntity> mapper,
         Func<StorageDbContext> contextFactory,
@@ -20,6 +23,9 @@ internal class CostLimitRepository
     {
     }
 
+    /// <summary>
+    /// Gets the by project asynchronously.
+    /// </summary>
     public async Task<IReadOnlyList<ICostLimit>> GetByProjectAsync(
         Guid projectId,
         CancellationToken cancellationToken = default)
@@ -33,6 +39,9 @@ internal class CostLimitRepository
         return await Map(stored, cancellationToken);
     }
 
+    /// <summary>
+    /// Gets the all enabled asynchronously.
+    /// </summary>
     public async Task<IReadOnlyList<ICostLimit>> GetAllEnabledAsync(CancellationToken cancellationToken = default)
     {
         var stored = await contextFactory()

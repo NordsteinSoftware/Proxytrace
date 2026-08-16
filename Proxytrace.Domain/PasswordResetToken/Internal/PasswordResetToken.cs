@@ -7,11 +7,26 @@ namespace Proxytrace.Domain.PasswordResetToken.Internal;
 
 internal record PasswordResetToken : DomainEntity<IPasswordResetToken>, IPasswordResetToken
 {
+    /// <summary>
+    /// Gets the user.
+    /// </summary>
     public IUser User { get; }
+    /// <summary>
+    /// Gets the token hash.
+    /// </summary>
     public string TokenHash { get; }
+    /// <summary>
+    /// Gets the expires at.
+    /// </summary>
     public DateTimeOffset ExpiresAt { get; }
+    /// <summary>
+    /// Gets or sets the consumed at.
+    /// </summary>
     public DateTimeOffset? ConsumedAt { get; private init; }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="PasswordResetToken"/> class.
+    /// </summary>
     public PasswordResetToken(
         IUser user,
         string tokenHash,
@@ -23,6 +38,9 @@ internal record PasswordResetToken : DomainEntity<IPasswordResetToken>, IPasswor
         ExpiresAt = expiresAt;
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="PasswordResetToken"/> class.
+    /// </summary>
     public PasswordResetToken(
         IUser user,
         string tokenHash,
@@ -37,6 +55,9 @@ internal record PasswordResetToken : DomainEntity<IPasswordResetToken>, IPasswor
         ConsumedAt = consumedAt;
     }
 
+    /// <summary>
+    /// Mark consumed asynchronously.
+    /// </summary>
     public Task<IPasswordResetToken> MarkConsumedAsync(CancellationToken cancellationToken = default)
     {
         if (ConsumedAt is not null)
@@ -46,6 +67,9 @@ internal record PasswordResetToken : DomainEntity<IPasswordResetToken>, IPasswor
         return ApplyAsync(this with { ConsumedAt = DateTimeOffset.UtcNow }, cancellationToken);
     }
 
+    /// <summary>
+    /// Validates.
+    /// </summary>
     public override IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
         foreach (var result in base.Validate(validationContext))

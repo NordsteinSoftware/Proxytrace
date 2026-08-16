@@ -11,6 +11,9 @@ using Proxytrace.Domain.TestSuite;
 
 namespace Proxytrace.Api.Controllers;
 
+/// <summary>
+/// API controller for test cases operations.
+/// </summary>
 [ApiController]
 [Authorize]
 [Route("api/test-cases")]
@@ -23,6 +26,9 @@ public class TestCasesController : ControllerBase
     private readonly IProjectAccessGuard accessGuard;
     private readonly ILogger<Audit> audit;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TestCasesController"/> class.
+    /// </summary>
     public TestCasesController(
         IRepository<ITestCase> repository,
         ITestSuiteRepository suiteRepository,
@@ -56,6 +62,9 @@ public class TestCasesController : ControllerBase
         return false;
     }
 
+    /// <summary>
+    /// Gets.
+    /// </summary>
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<TestCaseDto>> Get(Guid id, CancellationToken cancellationToken)
     {
@@ -65,6 +74,9 @@ public class TestCasesController : ControllerBase
         return ToDto(tc);
     }
 
+    /// <summary>
+    /// Updates.
+    /// </summary>
     [HttpPut("{id:guid}")]
     public async Task<ActionResult<TestCaseDto>> Update(
         Guid id,

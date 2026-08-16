@@ -9,6 +9,9 @@ using Proxytrace.Infrastructure.Internal;
 
 namespace Proxytrace.Infrastructure;
 
+/// <summary>
+/// Autofac module that registers  services.
+/// </summary>
 public class Module : Autofac.Module
 {
     protected override void Load(ContainerBuilder builder)

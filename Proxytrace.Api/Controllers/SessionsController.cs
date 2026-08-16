@@ -8,6 +8,9 @@ using ISession = Proxytrace.Domain.Session.ISession;
 
 namespace Proxytrace.Api.Controllers;
 
+/// <summary>
+/// API controller for sessions operations.
+/// </summary>
 [ApiController]
 [Authorize]
 [Route("api/sessions")]
@@ -16,12 +19,18 @@ public class SessionsController : ControllerBase
     private readonly ISessionRepository repository;
     private readonly IProjectAccessGuard accessGuard;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SessionsController"/> class.
+    /// </summary>
     public SessionsController(ISessionRepository repository, IProjectAccessGuard accessGuard)
     {
         this.repository = repository;
         this.accessGuard = accessGuard;
     }
 
+    /// <summary>
+    /// Gets the all.
+    /// </summary>
     [HttpGet]
     public async Task<PagedResult<SessionDto>> GetAll(
         [FromQuery] Guid projectId,
@@ -40,6 +49,9 @@ public class SessionsController : ControllerBase
         return new PagedResult<ISession>(items, total, page, pageSize).Map(SessionDto.From);
     }
 
+    /// <summary>
+    /// Gets.
+    /// </summary>
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<SessionDto>> Get(Guid id, CancellationToken cancellationToken)
     {

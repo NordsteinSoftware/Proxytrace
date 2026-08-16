@@ -14,6 +14,9 @@ public sealed record BlockingDetectorRule(
     bool AllAgents,
     IReadOnlyCollection<string> ScopedAgentNames);
 
+/// <summary>
+/// Repository for persisting and querying custom anomaly detector entities.
+/// </summary>
 public interface ICustomAnomalyDetectorRepository : IRepository<ICustomAnomalyDetector>
 {
     Task<IReadOnlyList<ICustomAnomalyDetector>> GetByProjectAsync(

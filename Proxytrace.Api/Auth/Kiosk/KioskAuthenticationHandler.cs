@@ -9,11 +9,17 @@ namespace Proxytrace.Api.Auth.Kiosk;
 
 internal sealed class KioskAuthenticationHandler : AuthenticationHandler<AuthenticationSchemeOptions>
 {
+    /// <summary>
+    /// The scheme name constant value.
+    /// </summary>
     public const string SchemeName = "Kiosk";
 
     private readonly IUserRepository users;
     private readonly KioskOptions kioskOptions;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="KioskAuthenticationHandler"/> class.
+    /// </summary>
     public KioskAuthenticationHandler(
         IOptionsMonitor<AuthenticationSchemeOptions> options,
         ILoggerFactory logger,

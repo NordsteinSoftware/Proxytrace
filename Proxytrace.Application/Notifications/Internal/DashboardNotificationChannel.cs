@@ -12,13 +12,22 @@ internal sealed class DashboardNotificationChannel : INotificationChannel
 {
     private readonly INotificationBroadcaster broadcaster;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DashboardNotificationChannel"/> class.
+    /// </summary>
     public DashboardNotificationChannel(INotificationBroadcaster broadcaster)
     {
         this.broadcaster = broadcaster;
     }
 
+    /// <summary>
+    /// Gets the name.
+    /// </summary>
     public string Name => "Dashboard";
 
+    /// <summary>
+    /// Deliver asynchronously.
+    /// </summary>
     public Task DeliverAsync(INotification notification, CancellationToken cancellationToken = default)
     {
         broadcaster.Publish(NotificationCreatedEvent.Create(notification));

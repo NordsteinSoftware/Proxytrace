@@ -40,6 +40,9 @@ internal sealed class LiteLlmCatalogResolver
     // Interlocked to keep the read atomic on 32-bit runtimes.
     private long retryNotBeforeTicks;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="LiteLlmCatalogResolver"/> class.
+    /// </summary>
     public LiteLlmCatalogResolver(
         HttpClient http,
         PricingOptions options,

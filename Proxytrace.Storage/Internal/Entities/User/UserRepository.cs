@@ -9,6 +9,9 @@ namespace Proxytrace.Storage.Internal.Entities.User;
 [UsedImplicitly]
 internal class UserRepository : AbstractRepository<IUser, UserEntity>, IUserRepository
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="UserRepository"/> class.
+    /// </summary>
     public UserRepository(
         IMapper<IUser, UserEntity> mapper,
         Func<StorageDbContext> context,
@@ -16,6 +19,9 @@ internal class UserRepository : AbstractRepository<IUser, UserEntity>, IUserRepo
         IEntityEventService entityEvents,
         AmbientDbContext ambient) : base(mapper, context, transaction, entityEvents, ambient) { }
 
+    /// <summary>
+    /// Finds the by external subject asynchronously.
+    /// </summary>
     public async Task<IUser?> FindByExternalSubjectAsync(string externalSubject, CancellationToken cancellationToken = default)
     {
         var entity = await contextFactory().Set<UserEntity>().AsNoTracking()
@@ -24,6 +30,9 @@ internal class UserRepository : AbstractRepository<IUser, UserEntity>, IUserRepo
         return await Map(entity, cancellationToken);
     }
 
+    /// <summary>
+    /// Finds the by email asynchronously.
+    /// </summary>
     public async Task<IUser?> FindByEmailAsync(string email, CancellationToken cancellationToken = default)
     {
         // Emails are normalized (trimmed, invariant-lowercase) at the write boundary (see User ctor),
@@ -37,6 +46,9 @@ internal class UserRepository : AbstractRepository<IUser, UserEntity>, IUserRepo
         return await Map(entity, cancellationToken);
     }
 
+    /// <summary>
+    /// Counts the by role asynchronously.
+    /// </summary>
     public async Task<int> CountByRoleAsync(UserRole role, CancellationToken cancellationToken = default)
         => await contextFactory().Set<UserEntity>().AsNoTracking()
             .CountAsync(x => x.Role == role, cancellationToken);

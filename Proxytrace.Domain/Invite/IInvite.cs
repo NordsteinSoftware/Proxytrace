@@ -35,6 +35,12 @@ public interface IInvite : IDomainEntity<IInvite>
     /// <summary>Marks the invite as redeemed and persists.</summary>
     Task<IInvite> MarkConsumedAsync(CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Factory delegate for creating a new new instance.
+    /// </summary>
     public delegate IInvite CreateNew(string email, UserRole role, string tokenHash, DateTimeOffset expiresAt, IUser invitedBy);
+    /// <summary>
+    /// Factory delegate for creating a new existing instance.
+    /// </summary>
     public delegate IInvite CreateExisting(string email, UserRole role, string tokenHash, DateTimeOffset expiresAt, DateTimeOffset? consumedAt, IUser invitedBy, IDomainEntityData existing);
 }

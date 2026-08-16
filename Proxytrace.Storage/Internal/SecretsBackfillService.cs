@@ -53,6 +53,9 @@ internal sealed class SecretsBackfillService : IHostedService
     private readonly ILogger<SecretsBackfillService> logger;
     private readonly ILogger<Audit> audit;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SecretsBackfillService"/> class.
+    /// </summary>
     public SecretsBackfillService(
         Func<Owned<StorageDbContext>> contextFactory,
         ISecretProtector protector,
@@ -70,6 +73,9 @@ internal sealed class SecretsBackfillService : IHostedService
     private const int MaxAttempts = 3;
     private static readonly TimeSpan RetryDelay = TimeSpan.FromSeconds(2);
 
+    /// <summary>
+    /// Starts asynchronously.
+    /// </summary>
     public async Task StartAsync(CancellationToken cancellationToken)
     {
         // Until a row is backfilled its lookup column still holds the pre-retrofit plaintext, so the
@@ -270,5 +276,8 @@ internal sealed class SecretsBackfillService : IHostedService
         return rows.Count;
     }
 
+    /// <summary>
+    /// Stops asynchronously.
+    /// </summary>
     public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 }

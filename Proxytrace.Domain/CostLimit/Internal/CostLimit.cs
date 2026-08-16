@@ -9,13 +9,34 @@ namespace Proxytrace.Domain.CostLimit.Internal;
 
 internal record CostLimit : DomainEntity<ICostLimit>, ICostLimit
 {
+    /// <summary>
+    /// Gets or sets the project.
+    /// </summary>
     public IProject Project { get; private init; }
+    /// <summary>
+    /// Gets or sets the agent.
+    /// </summary>
     public IAgent? Agent { get; private init; }
+    /// <summary>
+    /// Gets or sets the api key.
+    /// </summary>
     public IApiKey? ApiKey { get; private init; }
+    /// <summary>
+    /// Gets or sets the soft limit eur.
+    /// </summary>
     public decimal? SoftLimitEur { get; private init; }
+    /// <summary>
+    /// Gets or sets the hard limit eur.
+    /// </summary>
     public decimal? HardLimitEur { get; private init; }
+    /// <summary>
+    /// Gets or sets the enabled.
+    /// </summary>
     public bool Enabled { get; private init; }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CostLimit"/> class.
+    /// </summary>
     public CostLimit(
         IProject project,
         IAgent? agent,
@@ -33,6 +54,9 @@ internal record CostLimit : DomainEntity<ICostLimit>, ICostLimit
         Enabled = enabled;
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CostLimit"/> class.
+    /// </summary>
     public CostLimit(
         IProject project,
         IAgent? agent,
@@ -51,6 +75,9 @@ internal record CostLimit : DomainEntity<ICostLimit>, ICostLimit
         Enabled = enabled;
     }
 
+    /// <summary>
+    /// Updates.
+    /// </summary>
     public Task<ICostLimit> Update(
         decimal? softLimitEur,
         decimal? hardLimitEur,
@@ -63,6 +90,9 @@ internal record CostLimit : DomainEntity<ICostLimit>, ICostLimit
             Enabled = enabled,
         }, cancellationToken);
 
+    /// <summary>
+    /// Validates.
+    /// </summary>
     public override IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
         foreach (var result in base.Validate(validationContext))

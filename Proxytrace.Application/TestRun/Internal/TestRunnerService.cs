@@ -71,6 +71,9 @@ internal class TestRunnerService : BackgroundService, ITestRunnerService
             SingleWriter = false,
         });
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TestRunnerService"/> class.
+    /// </summary>
     public TestRunnerService(
         ITestResult.CreateNew createTestResult,
         ITestRun.CreateNew createTestRun,
@@ -124,6 +127,9 @@ internal class TestRunnerService : BackgroundService, ITestRunnerService
         }
     }
 
+    /// <summary>
+    /// Runs the in foreground asynchronously.
+    /// </summary>
     public async Task<ITestRunGroup> RunInForegroundAsync(
         ITestSuite suite,
         IReadOnlyList<IModelEndpoint> endpoints,
@@ -139,6 +145,9 @@ internal class TestRunnerService : BackgroundService, ITestRunnerService
         return await ExecuteGroupAsync(group, customAgent, isSystemTestRun, cancellationToken);
     }
 
+    /// <summary>
+    /// Runs the in background asynchronously.
+    /// </summary>
     public async Task<ITestRunGroup> RunInBackgroundAsync(
         ITestSuite suite,
         IReadOnlyList<IModelEndpoint> endpoints,
@@ -187,6 +196,9 @@ internal class TestRunnerService : BackgroundService, ITestRunnerService
         return group;
     }
 
+    /// <summary>
+    /// Cancels asynchronously.
+    /// </summary>
     public async Task<ITestRunGroup> CancelAsync(ITestRunGroup group, CancellationToken cancellationToken = default)
     {
         // The executing group registers its source under the *group* id (see ExecuteGroupAsync).

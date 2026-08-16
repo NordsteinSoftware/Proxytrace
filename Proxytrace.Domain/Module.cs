@@ -16,12 +16,17 @@ using Proxytrace.Domain.Prompt.Internal;
 
 namespace Proxytrace.Domain;
 
+/// <summary>
+/// Autofac module that wires up domain services: factory delegates for every entity, the DI-friendly
+/// evaluator and proposal generators, the agent-version fingerprinter, the prompt-template repository,
+/// and the two-phase <see cref="IAgent"/> construction that hides the shell + initial-version seam.
+/// </summary>
 public sealed class Module : Autofac.Module
 {
     private const string RegisteredKey = "Proxytrace.Domain.Module.Registered";
 
     /// <summary>
-    /// Adds Proxytrace domain services.
+    /// Registers all Proxytrace domain services into the Autofac container.
     /// </summary>
     protected override void Load(ContainerBuilder builder)
     {

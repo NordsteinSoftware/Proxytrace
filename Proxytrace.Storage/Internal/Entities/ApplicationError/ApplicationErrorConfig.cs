@@ -11,11 +11,17 @@ internal class ApplicationErrorConfig
 {
     private readonly IApplicationError.CreateExisting factory;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ApplicationErrorConfig"/> class.
+    /// </summary>
     public ApplicationErrorConfig(IApplicationError.CreateExisting factory)
     {
         this.factory = factory;
     }
 
+    /// <summary>
+    /// Configures the application request pipeline.
+    /// </summary>
     public override void Configure(EntityTypeBuilder<ApplicationErrorEntity> builder)
     {
         builder.HasIndex(e => e.CreatedAt);
@@ -25,6 +31,9 @@ internal class ApplicationErrorConfig
         // StackTrace is intentionally unbounded (Postgres text) — stacktraces are large.
     }
 
+    /// <summary>
+    /// Maps.
+    /// </summary>
     public Task<IApplicationError> Map(ApplicationErrorEntity stored, CancellationToken cancellationToken = default)
         => factory(
             stored.Message,
@@ -34,6 +43,9 @@ internal class ApplicationErrorConfig
             stored.StackTrace,
             stored).ToTaskResult();
 
+    /// <summary>
+    /// Maps.
+    /// </summary>
     public Task<ApplicationErrorEntity> Map(IApplicationError domain, CancellationToken cancellationToken = default)
         => new ApplicationErrorEntity
         {

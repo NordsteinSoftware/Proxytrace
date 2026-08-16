@@ -11,9 +11,15 @@ namespace Proxytrace.Proxy.Api.Internal;
 /// </summary>
 internal sealed class UnusedProviderClient : IProviderClient
 {
+    /// <summary>
+    /// Verifies the connection asynchronously.
+    /// </summary>
     public Task<ProviderConnectionResult> VerifyConnectionAsync(CancellationToken cancellationToken = default)
         => throw new NotSupportedException("Provider client operations are not available in the ingestion proxy.");
 
+    /// <summary>
+    /// Gets the models asynchronously.
+    /// </summary>
     public Task<IReadOnlyList<PricedModel>> GetModelsAsync(CancellationToken cancellationToken = default)
         => throw new NotSupportedException("Provider client operations are not available in the ingestion proxy.");
 }

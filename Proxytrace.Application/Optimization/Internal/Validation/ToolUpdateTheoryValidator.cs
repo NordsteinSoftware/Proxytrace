@@ -17,6 +17,9 @@ internal sealed class ToolUpdateTheoryValidator : AbTestTheoryValidator<IToolUpd
     private readonly IToolUpdateProposal.CreateNew proposalFactory;
     private readonly IAgent.CreateNew agentFactory;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ToolUpdateTheoryValidator"/> class.
+    /// </summary>
     public ToolUpdateTheoryValidator(
         IToolUpdateProposal.CreateNew proposalFactory,
         IAgent.CreateNew agentFactory,

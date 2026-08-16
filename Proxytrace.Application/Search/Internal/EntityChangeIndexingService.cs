@@ -25,6 +25,9 @@ internal sealed class EntityChangeIndexingService : BackgroundService
     private readonly IReadOnlyDictionary<Type, SearchKind> kindByEntityType;
     private readonly ILogger<EntityChangeIndexingService> logger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="EntityChangeIndexingService"/> class.
+    /// </summary>
     public EntityChangeIndexingService(
         IEntityEventService entityEvents,
         ISearchIndexer indexer,

@@ -26,6 +26,9 @@ internal sealed class UpdateToolDefinitionOptimizer : IOptimizerImplementation
     private readonly IAgentRepository agents;
     private readonly IOptimizerEvidenceBuilder evidenceBuilder;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="UpdateToolDefinitionOptimizer"/> class.
+    /// </summary>
     public UpdateToolDefinitionOptimizer(
         IToolUpdateTheory.CreateNew factory,
         IPromptTemplateRepository prompts,
@@ -38,6 +41,9 @@ internal sealed class UpdateToolDefinitionOptimizer : IOptimizerImplementation
         this.evidenceBuilder = evidenceBuilder;
     }
 
+    /// <summary>
+    /// Discover theories.
+    /// </summary>
     public async Task<IReadOnlyList<IOptimizationTheory>> DiscoverTheories(
         ITestRunGroup testRunGroup,
         IReadOnlyList<RunCohort> cohorts,
@@ -131,9 +137,15 @@ internal sealed class UpdateToolDefinitionOptimizer : IOptimizerImplementation
     [UsedImplicitly]
     private record ToolOptimizerOutput
     {
+        /// <summary>
+        /// Gets or sets the tools.
+        /// </summary>
         [Description("the tool definitions that should be changed")]
         public required IReadOnlyList<ProposedTool> Tools { get; [UsedImplicitly] init; }
 
+        /// <summary>
+        /// Gets or sets the rationale.
+        /// </summary>
         [Description("1-3 sentences explaining what changed and why")]
         public required string Rationale { get; [UsedImplicitly] init; }
     }
@@ -141,12 +153,21 @@ internal sealed class UpdateToolDefinitionOptimizer : IOptimizerImplementation
     [UsedImplicitly]
     private record ProposedTool
     {
+        /// <summary>
+        /// Gets or sets the name.
+        /// </summary>
         [Description("the tool name; must match an existing tool name on the agent")]
         public required string Name { get; [UsedImplicitly] init; }
 
+        /// <summary>
+        /// Gets or sets the description.
+        /// </summary>
         [Description("the proposed tool description")]
         public required string Description { get; [UsedImplicitly] init; }
 
+        /// <summary>
+        /// Gets or sets the json schema.
+        /// </summary>
         [Description("the proposed JSON schema for the tool's arguments, as a JSON-encoded string (a JSON object with 'type', 'properties', and 'required' fields)")]
         public required string JsonSchema { get; [UsedImplicitly] init; }
     }

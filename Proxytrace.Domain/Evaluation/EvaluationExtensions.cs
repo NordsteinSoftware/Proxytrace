@@ -13,6 +13,9 @@ internal static class EvaluationExtensions
     public static bool IsErrored(this IEvaluation evaluation)
         => !string.IsNullOrWhiteSpace(evaluation.ErrorMessage);
 
+    /// <summary>
+    /// Combines the scores.
+    /// </summary>
     public static EvaluationScore? CombineScores(this IReadOnlyCollection<IEvaluation> evaluations)
     {
         var scored = evaluations

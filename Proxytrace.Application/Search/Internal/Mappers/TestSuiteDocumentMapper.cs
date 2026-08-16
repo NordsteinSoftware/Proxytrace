@@ -9,8 +9,14 @@ namespace Proxytrace.Application.Search.Internal.Mappers;
 
 internal sealed class TestSuiteDocumentMapper : AbstractDocumentMapper<ITestSuite>
 {
+    /// <summary>
+    /// Gets the kind.
+    /// </summary>
     public override SearchKind Kind => SearchKind.TestSuite;
     
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TestSuiteDocumentMapper"/> class.
+    /// </summary>
     public TestSuiteDocumentMapper(
         IRepository<ITestSuite> repository,
         ILogger<TestSuiteDocumentMapper> logger) : base(repository, logger)

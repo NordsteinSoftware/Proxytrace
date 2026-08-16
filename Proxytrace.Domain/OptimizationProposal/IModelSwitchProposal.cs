@@ -19,6 +19,9 @@ public interface IModelSwitchProposal : IOptimizationProposal
     /// <summary>Observed latency delta (proposed - current) from the evidence runs.</summary>
     TimeSpan? ExpectedLatencyDelta { get; }
 
+    /// <summary>
+    /// Factory delegate for creating a new new instance.
+    /// </summary>
     public delegate IModelSwitchProposal CreateNew(
         IAgent agent,
         Priority priority,
@@ -31,6 +34,9 @@ public interface IModelSwitchProposal : IOptimizationProposal
         IReadOnlyCollection<Guid> evidenceTestRunIds,
         ITestRun abTestRun);
 
+    /// <summary>
+    /// Factory delegate for creating a new existing instance.
+    /// </summary>
     public delegate IModelSwitchProposal CreateExisting(
         IAgent agent,
         ProposalStatus status,

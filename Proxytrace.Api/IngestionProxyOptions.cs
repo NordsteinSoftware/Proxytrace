@@ -8,5 +8,8 @@ namespace Proxytrace.Api;
 /// </summary>
 public sealed record IngestionProxyOptions
 {
+    /// <summary>
+    /// Gets or sets the public base url.
+    /// </summary>
     public string? PublicBaseUrl { get; init; }
 }

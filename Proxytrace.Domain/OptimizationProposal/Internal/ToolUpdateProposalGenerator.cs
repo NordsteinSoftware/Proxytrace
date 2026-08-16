@@ -12,6 +12,9 @@ internal class ToolUpdateProposalGenerator : OptimizationProposalGeneratorBase<I
     private readonly IDomainEntityGenerator<ITestRun> testRunGenerator;
     private readonly IRandom random;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ToolUpdateProposalGenerator"/> class.
+    /// </summary>
     public ToolUpdateProposalGenerator(
         IToolUpdateProposal.CreateNew factory,
         IDomainEntityGenerator<IAgent> agentGenerator,
@@ -25,6 +28,9 @@ internal class ToolUpdateProposalGenerator : OptimizationProposalGeneratorBase<I
         this.random = random;
     }
 
+    /// <summary>
+    /// Generates asynchronously.
+    /// </summary>
     public override async Task<IToolUpdateProposal> GenerateAsync(CancellationToken cancellationToken = default)
     {
         var agent = await agentGenerator.GetOrCreateAsync(cancellationToken);

@@ -9,6 +9,9 @@ internal class TestRunGroupGenerator : DomainEntityGenerator<ITestRunGroup>
     private readonly ITestRunGroup.CreateNew factory;
     private readonly IDomainEntityGenerator<ITestSuite> suiteGenerator;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TestRunGroupGenerator"/> class.
+    /// </summary>
     public TestRunGroupGenerator(
         ITestRunGroup.CreateNew factory,
         IRepository<ITestRunGroup> repository,
@@ -19,6 +22,9 @@ internal class TestRunGroupGenerator : DomainEntityGenerator<ITestRunGroup>
         this.suiteGenerator = suiteGenerator;
     }
 
+    /// <summary>
+    /// Generates asynchronously.
+    /// </summary>
     public override async Task<ITestRunGroup> GenerateAsync(CancellationToken cancellationToken = default)
     {
         var suite = await suiteGenerator.GetOrCreateAsync(cancellationToken);

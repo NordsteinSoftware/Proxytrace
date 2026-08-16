@@ -18,6 +18,9 @@ internal class ModelGenerator : DomainEntityGenerator<IModel>
 
     private readonly IModel.CreateNew factory;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ModelGenerator"/> class.
+    /// </summary>
     public ModelGenerator(
         IModel.CreateNew factory,
         IRepository<IModel> repository,
@@ -26,6 +29,9 @@ internal class ModelGenerator : DomainEntityGenerator<IModel>
         this.factory = factory;
     }
 
+    /// <summary>
+    /// Generates asynchronously.
+    /// </summary>
     public override Task<IModel> GenerateAsync(CancellationToken cancellationToken = default)
         => factory(name: $"{random.Any(ModelNames)}-{random.UniqueString()}").ToTaskResult();
 }

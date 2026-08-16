@@ -5,6 +5,9 @@ using Proxytrace.Domain.TestSuite;
 
 namespace Proxytrace.Application.TestRun;
 
+/// <summary>
+/// Service that provides test runner functionality.
+/// </summary>
 public interface ITestRunnerService
 {
     /// <summary>

@@ -8,8 +8,20 @@ namespace Proxytrace.Api.Middleware.Exceptions;
 /// </summary>
 internal sealed record ExceptionMapping
 {
+    /// <summary>
+    /// Gets or sets the status code.
+    /// </summary>
     public required int StatusCode { get; init; }
+    /// <summary>
+    /// Gets or sets the type name.
+    /// </summary>
     public required string TypeName { get; init; }
+    /// <summary>
+    /// Gets or sets the message.
+    /// </summary>
     public string? Message { get; init; }
+    /// <summary>
+    /// Gets or sets the additional fields.
+    /// </summary>
     public IReadOnlyDictionary<string, object?>? AdditionalFields { get; init; }
 }

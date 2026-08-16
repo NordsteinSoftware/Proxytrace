@@ -9,6 +9,9 @@ internal class AuditLogEntryGenerator : DomainEntityGenerator<IAuditLogEntry>, I
     private readonly IAuditLogEntry.CreateNew factory;
     private readonly IAuditLogEntry.CreateExisting createExisting;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AuditLogEntryGenerator"/> class.
+    /// </summary>
     public AuditLogEntryGenerator(
         IAuditLogEntry.CreateNew factory,
         IAuditLogEntry.CreateExisting createExisting,
@@ -19,6 +22,9 @@ internal class AuditLogEntryGenerator : DomainEntityGenerator<IAuditLogEntry>, I
         this.createExisting = createExisting;
     }
 
+    /// <summary>
+    /// Generates asynchronously.
+    /// </summary>
     public override Task<IAuditLogEntry> GenerateAsync(CancellationToken cancellationToken = default)
         => factory(
                 action: random.Enum<AuditAction>(),
@@ -34,6 +40,9 @@ internal class AuditLogEntryGenerator : DomainEntityGenerator<IAuditLogEntry>, I
                 outcome: AuditOutcome.Success)
             .ToTaskResult();
 
+    /// <summary>
+    /// Creates asynchronously.
+    /// </summary>
     public async Task<IAuditLogEntry> CreateAsync(DateTimeOffset createdAt, CancellationToken cancellationToken = default)
     {
         var entry = await CreateAsync(cancellationToken);

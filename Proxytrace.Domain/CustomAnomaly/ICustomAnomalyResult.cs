@@ -18,6 +18,9 @@ public interface ICustomAnomalyResult : IDomainEntity<ICustomAnomalyResult>
     /// <summary>The judge's reasoning for the anomalous verdict, if it provided one.</summary>
     string? Reasoning { get; }
 
+    /// <summary>
+    /// Factory delegate for creating a new new instance.
+    /// </summary>
     public delegate ICustomAnomalyResult CreateNew(
         Guid detectorId,
         Guid agentCallId,
@@ -25,6 +28,9 @@ public interface ICustomAnomalyResult : IDomainEntity<ICustomAnomalyResult>
         string matchedTrigger,
         string? reasoning);
 
+    /// <summary>
+    /// Factory delegate for creating a new existing instance.
+    /// </summary>
     public delegate ICustomAnomalyResult CreateExisting(
         Guid detectorId,
         Guid agentCallId,

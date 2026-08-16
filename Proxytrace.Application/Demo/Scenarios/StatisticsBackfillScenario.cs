@@ -228,6 +228,9 @@ internal sealed class StatisticsBackfillScenario : IDemoScenario
     private readonly IRepository<ITestRunGroup> groupRepo;
     private readonly IRandom random;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="StatisticsBackfillScenario"/> class.
+    /// </summary>
     public StatisticsBackfillScenario(
         DemoSeedContext ctx,
         IAgentCall.CreateExisting agentCallExisting,
@@ -252,8 +255,14 @@ internal sealed class StatisticsBackfillScenario : IDemoScenario
         this.random = random;
     }
 
+    /// <summary>
+    /// Gets the order.
+    /// </summary>
     public int Order => 40;
 
+    /// <summary>
+    /// Seeds asynchronously.
+    /// </summary>
     public async Task SeedAsync(CancellationToken cancellationToken)
     {
         var now = DateTimeOffset.UtcNow;

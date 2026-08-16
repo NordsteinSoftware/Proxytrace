@@ -18,6 +18,9 @@ namespace Proxytrace.Domain.TestResult;
 /// </summary>
 public static class TestResultExtensions
 {
+    /// <summary>
+    /// Determines whether the pass.
+    /// </summary>
     public static bool IsPass(this ITestResult result)
     {
         var judged = result.Evaluations.Where(e => !e.IsErrored()).ToList();

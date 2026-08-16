@@ -13,6 +13,9 @@ internal class ModelProviderRepository : ArchivableRepository<IModelProvider, Mo
 {
     private readonly ISecretIndexer indexer;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ModelProviderRepository"/> class.
+    /// </summary>
     public ModelProviderRepository(
         IMapper<IModelProvider, ModelProviderEntity> mapper,
         Func<StorageDbContext> contextFactory,
@@ -30,6 +33,9 @@ internal class ModelProviderRepository : ArchivableRepository<IModelProvider, Mo
     // too); RemoveAsync is refused. The FK Restrict in ModelEndpointConfig is the DB-level backstop.
     protected override bool SupportsHardDelete => false;
 
+    /// <summary>
+    /// Finds the by api key asynchronously.
+    /// </summary>
     public async Task<IModelProvider?> FindByApiKeyAsync(string apiKey, CancellationToken cancellationToken = default)
     {
         // The plaintext key is encrypted (non-deterministic) at rest, so match on its deterministic

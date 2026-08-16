@@ -4,8 +4,14 @@ namespace Proxytrace.Api.Middleware.Exceptions;
 
 internal sealed class LicenseLimitExceededExceptionMapper : IExceptionMapper
 {
+    /// <summary>
+    /// Determines whether the map.
+    /// </summary>
     public bool CanMap(Exception exception) => exception is LicenseLimitExceededException;
 
+    /// <summary>
+    /// Maps.
+    /// </summary>
     public ExceptionMapping Map(Exception exception)
     {
         var limit = (LicenseLimitExceededException)exception;

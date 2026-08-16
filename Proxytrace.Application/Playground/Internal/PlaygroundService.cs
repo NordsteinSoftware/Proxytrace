@@ -21,6 +21,9 @@ internal sealed class PlaygroundService : IPlaygroundService
     private readonly ILogger<PlaygroundService> logger;
     private readonly bool isDevelopment;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="PlaygroundService"/> class.
+    /// </summary>
     public PlaygroundService(
         IRepository<IAgent> agentRepository,
         IRepository<IModelEndpoint> endpointRepository,
@@ -52,6 +55,9 @@ internal sealed class PlaygroundService : IPlaygroundService
             : $"An unexpected error occurred. (Error ID: {errorId})";
     }
 
+    /// <summary>
+    /// Completes the stream asynchronously.
+    /// </summary>
     public async IAsyncEnumerable<PlaygroundEvent> CompleteStreamAsync(
         PlaygroundCompleteRequest request,
         [EnumeratorCancellation] CancellationToken cancellationToken)
@@ -243,13 +249,28 @@ internal sealed class PlaygroundService : IPlaygroundService
 
     private sealed record OverriddenJsonArgument(string Name, bool IsRequired, JsonElement Json) : IToolArgument
     {
+        /// <summary>
+        /// Provides additional functionality.
+        /// </summary>
         public string? Description
             => Json.TryGetProperty("description", out var d) && d.ValueKind == JsonValueKind.String ? d.GetString() : null;
 
+        /// <summary>
+        /// Gets the type.
+        /// </summary>
         public Type Type => typeof(object);
+        /// <summary>
+        /// Gets the default value.
+        /// </summary>
         public object? DefaultValue => null;
+        /// <summary>
+        /// Gets the json schema.
+        /// </summary>
         public string JsonSchema => Json.GetRawText();
 
+        /// <summary>
+        /// Validates.
+        /// </summary>
         public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
             => [];
     }

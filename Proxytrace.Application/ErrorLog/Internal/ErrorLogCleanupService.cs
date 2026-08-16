@@ -14,6 +14,9 @@ internal sealed class ErrorLogCleanupService : BackgroundService
     private readonly ILogger<ErrorLogCleanupService> logger;
     private readonly IApplicationErrorRepository repository;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ErrorLogCleanupService"/> class.
+    /// </summary>
     public ErrorLogCleanupService(
         ErrorLogCleanupConfiguration configuration,
         ILogger<ErrorLogCleanupService> logger,
@@ -34,6 +37,9 @@ internal sealed class ErrorLogCleanupService : BackgroundService
         }
     }
 
+    /// <summary>
+    /// Cleans the once asynchronously.
+    /// </summary>
     public async Task CleanOnceAsync(CancellationToken cancellationToken)
     {
         try

@@ -10,6 +10,9 @@ internal sealed class NotificationService : INotificationService
     private readonly INotification.CreateNew createNotification;
     private readonly ILogger<NotificationService> logger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="NotificationService"/> class.
+    /// </summary>
     public NotificationService(
         IEnumerable<INotificationChannel> channels,
         INotificationRepository notifications,
@@ -22,6 +25,9 @@ internal sealed class NotificationService : INotificationService
         this.logger = logger;
     }
 
+    /// <summary>
+    /// Notifies asynchronously.
+    /// </summary>
     public async Task NotifyAsync(NotificationRequest request, CancellationToken cancellationToken = default)
     {
         if (request.TargetKind is { } targetKind && request.TargetId is { } targetId)

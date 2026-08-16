@@ -42,6 +42,9 @@ public interface IAuditLogEntry : IDomainEntity<IAuditLogEntry>
     /// <summary>Whether the action succeeded.</summary>
     AuditOutcome Outcome { get; }
 
+    /// <summary>
+    /// Factory delegate for creating a new new instance.
+    /// </summary>
     public delegate IAuditLogEntry CreateNew(
         AuditAction action,
         AuditActorType actorType,
@@ -55,6 +58,9 @@ public interface IAuditLogEntry : IDomainEntity<IAuditLogEntry>
         string? details,
         AuditOutcome outcome);
 
+    /// <summary>
+    /// Factory delegate for creating a new existing instance.
+    /// </summary>
     public delegate IAuditLogEntry CreateExisting(
         AuditAction action,
         AuditActorType actorType,

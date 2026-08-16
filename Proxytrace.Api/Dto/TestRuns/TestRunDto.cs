@@ -4,8 +4,14 @@ using Proxytrace.Domain.TestRun;
 
 namespace Proxytrace.Api.Dto.TestRuns;
 
+/// <summary>
+/// Data transfer object representing a run evaluator.
+/// </summary>
 public record RunEvaluatorDto(Guid Id, EvaluatorKind Kind, string Name);
 
+/// <summary>
+/// Data transfer object representing a evaluation result.
+/// </summary>
 public record EvaluationResultDto(
     Guid EvaluatorId,
     EvaluatorKind EvaluatorKind,
@@ -14,6 +20,9 @@ public record EvaluationResultDto(
     string? Reasoning,
     string? ErrorMessage);
 
+/// <summary>
+/// Data transfer object representing a test run.
+/// </summary>
 public record TestRunDto(
     Guid Id,
     Guid GroupId,
@@ -44,8 +53,14 @@ public record TestRunDto(
     DateTimeOffset CreatedAt,
     DateTimeOffset UpdatedAt);
 
+/// <summary>
+/// Data transfer object representing a test case row.
+/// </summary>
 public record TestCaseRowDto(Guid Id, string Summary);
 
+/// <summary>
+/// Data transfer object representing a test result.
+/// </summary>
 public record TestResultDto(
     Guid Id,
     Guid TestCaseId,
@@ -58,8 +73,14 @@ public record TestResultDto(
     long? TokensOut,
     long? CachedTokensIn);
 
+/// <summary>
+/// Data transfer object representing a test run message.
+/// </summary>
 public record TestRunMessageDto(string Role, string Content);
 
+/// <summary>
+/// Data transfer object representing a test run group.
+/// </summary>
 public record TestRunGroupDto(
     Guid Id,
     Guid SuiteId,
@@ -109,6 +130,9 @@ public record TestRunGroupListItemDto(
     DateTimeOffset CreatedAt,
     DateTimeOffset UpdatedAt);
 
+/// <summary>
+/// Request payload for create test run group operations.
+/// </summary>
 public record CreateTestRunGroupRequest(
     Guid TestSuiteId,
     IReadOnlyList<Guid> ModelEndpointIds,

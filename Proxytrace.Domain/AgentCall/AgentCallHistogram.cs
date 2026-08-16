@@ -1,5 +1,8 @@
 namespace Proxytrace.Domain.AgentCall;
 
+/// <summary>
+/// Represents a agent call histogram bucket.
+/// </summary>
 public record AgentCallHistogramBucket(DateTimeOffset Start, int Total, int Errors);
 
 /// <summary>
@@ -11,6 +14,9 @@ public record AgentCallHistogramBucket(DateTimeOffset Start, int Total, int Erro
 /// </summary>
 public static class AgentCallHistogram
 {
+    /// <summary>
+    /// The error status threshold constant value.
+    /// </summary>
     public const int ErrorStatusThreshold = 400;
 
     /// <summary>

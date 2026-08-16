@@ -14,6 +14,9 @@ internal sealed class AuditLogCleanupService : BackgroundService
     private readonly ILogger<AuditLogCleanupService> logger;
     private readonly IAuditLogRepository repository;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AuditLogCleanupService"/> class.
+    /// </summary>
     public AuditLogCleanupService(
         AuditLogCleanupConfiguration configuration,
         ILogger<AuditLogCleanupService> logger,
@@ -29,6 +32,9 @@ internal sealed class AuditLogCleanupService : BackgroundService
         }
     }
 
+    /// <summary>
+    /// Cleans the once asynchronously.
+    /// </summary>
     public async Task CleanOnceAsync(CancellationToken cancellationToken)
     {
         try

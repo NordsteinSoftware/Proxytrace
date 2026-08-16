@@ -25,6 +25,11 @@ using Proxytrace.Domain.Session;
 
 namespace Proxytrace.Api.Controllers;
 
+/// <summary>
+/// CRUD and streaming endpoints for agent calls (traces). Provides filtered, paginated trace
+/// listings; per-trace full detail; a histogram and KPI summary; a real-time SSE stream scoped
+/// to the caller's projects; and test-support seed/delete operations.
+/// </summary>
 [ApiController]
 [Authorize]
 [Route("api/agent-calls")]
@@ -45,6 +50,9 @@ public class AgentCallsController : ControllerBase
     private readonly ITestCaseSynthesisService synthesis;
     private readonly TestCaseProposalDtoMapper proposalMapper;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AgentCallsController"/> class.
+    /// </summary>
     public AgentCallsController(
         IAgentCallRepository repository,
         IAgentRepository agentRepository,
@@ -119,6 +127,11 @@ public class AgentCallsController : ControllerBase
         return (SessionIdDerivation.Derive(projectId, key), key);
     }
 
+    /// <summary>
+    /// Returns a paginated, sorted list of agent calls matching the supplied filter. Scoped to the
+    /// caller's accessible projects; returns an empty page when the caller has no access or the
+    /// scope resolves to nothing.
+    /// </summary>
     [HttpGet]
     public async Task<PagedResult<AgentCallListItemDto>> GetAll(
         [FromQuery] Guid? projectId = null,
@@ -228,6 +241,11 @@ public class AgentCallsController : ControllerBase
         return new PagedResult<IAgentCall>(items, total, page, pageSize).Map(agentCallDtoMapper.ToDto);
     }
 
+    /// <summary>
+    /// Returns the traces-page overview: agents sorted by last-call time, per-agent call-count
+    /// breakdowns, and latency percentiles (P50/P95/P99). Scoped to the caller's accessible
+    /// projects.
+    /// </summary>
     [HttpGet("overview")]
     public async Task<TracesOverviewDto> GetOverview(
         [FromQuery] Guid? projectId = null,
@@ -267,6 +285,11 @@ public class AgentCallsController : ControllerBase
             latencyTask.Result.Select(r => new LatencyDto(r.EndpointId, r.P50Ms, r.P95Ms, r.P99Ms, r.MinMs, r.MaxMs, r.SampleCount)).ToArray());
     }
 
+    /// <summary>
+    /// Returns a time-bucketed call-count histogram matching the same filters as
+    /// <see cref="GetAll"/>. The number of buckets can be specified (clamped to 1–240); each bucket
+    /// carries a start timestamp, total count, and error count.
+    /// </summary>
     [HttpGet("histogram")]
     public async Task<IReadOnlyList<TraceHistogramBucketDto>> GetHistogram(
         [FromQuery] Guid? projectId = null,
@@ -382,6 +405,10 @@ public class AgentCallsController : ControllerBase
         return agentCallDtoMapper.ToSummaryDto(await repository.GetSummaryAsync(filter, cancellationToken));
     }
 
+    /// <summary>
+    /// Returns the full detail of a single agent call including request, response, tool calls, and
+    /// usage. Returns 404 when the call does not exist or the caller cannot access its project.
+    /// </summary>
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<AgentCallDto>> Get(Guid id, CancellationToken cancellationToken)
     {
@@ -510,6 +537,11 @@ public class AgentCallsController : ControllerBase
         return Ok(agentCallDtoMapper.ToDto(call));
     }
 
+    /// <summary>
+    /// SSE stream that emits <c>trace-created</c> events as new agent calls arrive. Non-admin callers
+    /// receive only traces belonging to their accessible projects; global (admin) callers receive
+    /// all. Sends periodic heartbeat comments to detect half-open sockets.
+    /// </summary>
     [HttpGet("stream")]
     public async Task Stream(CancellationToken cancellationToken)
     {
@@ -543,6 +575,10 @@ public class AgentCallsController : ControllerBase
         }
     }
 
+    /// <summary>
+    /// Permanently deletes a trace and reverses its contribution to the owning session's token
+    /// counters. Returns 404 when the trace does not exist or the caller cannot access its project.
+    /// </summary>
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
     {

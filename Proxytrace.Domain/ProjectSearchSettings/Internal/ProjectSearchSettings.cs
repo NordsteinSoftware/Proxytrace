@@ -8,15 +8,39 @@ namespace Proxytrace.Domain.ProjectSearchSettings.Internal;
 
 internal record ProjectSearchSettings : DomainEntity<IProjectSearchSettings>, IProjectSearchSettings
 {
+    /// <summary>
+    /// The min snippet length constant value.
+    /// </summary>
     public const int MinSnippetLength = 20;
+    /// <summary>
+    /// The max snippet length constant value.
+    /// </summary>
     public const int MaxSnippetLength = 1000;
 
+    /// <summary>
+    /// Gets the project.
+    /// </summary>
     public IProject Project { get; }
+    /// <summary>
+    /// Gets the enabled.
+    /// </summary>
     public bool Enabled { get; }
+    /// <summary>
+    /// Gets the indexed kinds.
+    /// </summary>
     public IReadOnlyCollection<SearchKind> IndexedKinds { get; }
+    /// <summary>
+    /// Gets the auto reindex on change.
+    /// </summary>
     public bool AutoReindexOnChange { get; }
+    /// <summary>
+    /// Gets the snippet length.
+    /// </summary>
     public int SnippetLength { get; }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ProjectSearchSettings"/> class.
+    /// </summary>
     public ProjectSearchSettings(
         IProject project,
         bool enabled,
@@ -32,6 +56,9 @@ internal record ProjectSearchSettings : DomainEntity<IProjectSearchSettings>, IP
         SnippetLength = snippetLength;
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ProjectSearchSettings"/> class.
+    /// </summary>
     public ProjectSearchSettings(
         IProject project,
         bool enabled,
@@ -48,6 +75,9 @@ internal record ProjectSearchSettings : DomainEntity<IProjectSearchSettings>, IP
         SnippetLength = snippetLength;
     }
 
+    /// <summary>
+    /// Validates.
+    /// </summary>
     public override IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
         foreach (var result in base.Validate(validationContext))

@@ -18,6 +18,11 @@ using Proxytrace.Domain.TestSuite;
 
 namespace Proxytrace.Api.Controllers;
 
+/// <summary>
+/// CRUD and read endpoints for evaluators. Supports rule-based, LLM, and agentic evaluator kinds;
+/// an overview combining evaluators, suites, and per-evaluator sparklines; and a per-evaluator
+/// detail view with recent evaluation results.
+/// </summary>
 [ApiController]
 [Authorize]
 [Route("api/evaluators")]
@@ -36,6 +41,9 @@ public class EvaluatorsController : ControllerBase
     private readonly IProjectAccessGuard accessGuard;
     private readonly ILogger<Audit> audit;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="EvaluatorsController"/> class.
+    /// </summary>
     public EvaluatorsController(
         IEvaluatorRepository evaluatorRepository,
         IProjectRepository projectRepository,
@@ -97,12 +105,20 @@ public class EvaluatorsController : ControllerBase
         return scope is null ? all : all.Where(s => scope.Contains(s.Agent.Project.Id)).ToArray();
     }
 
+    /// <summary>
+    /// Returns the built-in agentic-evaluator presets (name, key, system-prompt) available to
+    /// pre-populate a new agentic evaluator.
+    /// </summary>
     [HttpGet("agentic-presets")]
     public IReadOnlyList<AgenticEvaluatorPresetDto> GetAgenticPresets()
         => agenticPresets.GetAll()
             .Select(p => new AgenticEvaluatorPresetDto(p.Key, p.Name, p.SystemPrompt))
             .ToArray();
 
+    /// <summary>
+    /// Returns the full detail of all evaluators visible to the caller, optionally scoped to a
+    /// project. Scoped to the caller's accessible projects when no project filter is given.
+    /// </summary>
     [HttpGet]
     public async Task<IReadOnlyList<EvaluatorDetailDto>> GetAll(
         [FromQuery] Guid? projectId = null,
@@ -113,6 +129,10 @@ public class EvaluatorsController : ControllerBase
         return all.Select(evaluatorMapper.ToDto).ToArray();
     }
 
+    /// <summary>
+    /// Returns lightweight summaries (id, kind, name) of all evaluators visible to the caller —
+    /// used to populate evaluator-picker drop-downs without fetching full detail.
+    /// </summary>
     [HttpGet("summaries")]
     public async Task<IReadOnlyList<EvaluatorListItemDto>> GetSummaries(
         [FromQuery] Guid? projectId = null,
@@ -123,6 +143,10 @@ public class EvaluatorsController : ControllerBase
         return all.Select(e => new EvaluatorListItemDto(e.Id, e.Kind, e.Name)).ToArray();
     }
 
+    /// <summary>
+    /// Returns the full detail of a single evaluator. Returns 404 when it does not exist or the
+    /// caller cannot access its project.
+    /// </summary>
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<EvaluatorDetailDto>> Get(Guid id, CancellationToken cancellationToken)
     {
@@ -134,6 +158,10 @@ public class EvaluatorsController : ControllerBase
         return evaluatorMapper.ToDto(evaluator);
     }
 
+    /// <summary>
+    /// Returns the evaluators overview: all evaluators, their test suites, and optional time-bucketed
+    /// pass-rate sparklines per evaluator scoped to the caller's accessible projects.
+    /// </summary>
     [HttpGet("overview")]
     public async Task<EvaluatorsOverviewDto> GetOverview(
         [FromQuery] Guid? projectId = null,
@@ -170,6 +198,11 @@ public class EvaluatorsController : ControllerBase
             Sparklines: sparklinesTask.Result.Select(EvaluatorStatsDtoMapper.ToDto).ToArray());
     }
 
+    /// <summary>
+    /// Returns the evaluator detail view: aggregate pass-rate statistics bucketed by time, plus the
+    /// most recent evaluation results with their linked test-run ids. Requires <c>from</c> and
+    /// <c>to</c> query parameters; returns 400 when either is missing.
+    /// </summary>
     [HttpGet("{id:guid}/detail")]
     public async Task<ActionResult<EvaluatorDetailViewDto>> GetDetailView(
         Guid id,
@@ -203,6 +236,10 @@ public class EvaluatorsController : ControllerBase
                 .ToArray());
     }
 
+    /// <summary>
+    /// Creates a new evaluator (rule-based, LLM-judge, or agentic) for the specified project.
+    /// Returns 400 when the project is not found and 404 when the caller cannot access it.
+    /// </summary>
     [HttpPost]
     public async Task<ActionResult<EvaluatorDetailDto>> Create(
         [FromBody] CreateEvaluatorRequest request,
@@ -231,6 +268,10 @@ public class EvaluatorsController : ControllerBase
         return result;
     }
 
+    /// <summary>
+    /// Replaces all mutable fields of an evaluator. Returns 404 when it does not exist or the
+    /// caller cannot access its project.
+    /// </summary>
     [HttpPut("{id:guid}")]
     public async Task<ActionResult<EvaluatorDetailDto>> Update(
         Guid id,
@@ -257,6 +298,11 @@ public class EvaluatorsController : ControllerBase
         return result;
     }
 
+    /// <summary>
+    /// Soft-deletes (archives) an evaluator, detaching it from test suites while preserving
+    /// historical test results. Returns 404 when it does not exist or the caller cannot access its
+    /// project.
+    /// </summary>
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
     {
@@ -277,6 +323,11 @@ public class EvaluatorsController : ControllerBase
         return NoContent();
     }
 
+    /// <summary>
+    /// Returns the most recent evaluation results for an evaluator, optionally filtered by score,
+    /// each annotated with its test-run id. Returns 404 when the evaluator does not exist or the
+    /// caller cannot access its project.
+    /// </summary>
     [HttpGet("{id:guid}/recent-evaluations")]
     public async Task<ActionResult<IReadOnlyList<RecentEvaluationItemDto>>> RecentEvaluations(
         Guid id,

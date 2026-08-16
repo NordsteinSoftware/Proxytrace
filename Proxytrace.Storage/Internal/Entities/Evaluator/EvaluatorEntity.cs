@@ -11,6 +11,9 @@ internal record EvaluatorEntity : Entity, IArchivableEntity
     /// </summary>
     public required EvaluatorKind Kind { get; init; }
 
+    /// <summary>
+    /// Gets or sets the project.
+    /// </summary>
     public required Guid Project { get; init; }
 
     /// <summary>

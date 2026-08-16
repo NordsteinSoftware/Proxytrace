@@ -57,6 +57,9 @@ public class TraceyChatController : ControllerBase
     private readonly ICurrentUserAccessor currentUser;
     private readonly ILogger<TraceyChatController> logger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TraceyChatController"/> class.
+    /// </summary>
     public TraceyChatController(
         IHttpClientFactory httpClientFactory,
         IIngestionExecutor ingestion,
@@ -73,6 +76,9 @@ public class TraceyChatController : ControllerBase
         this.logger = logger;
     }
 
+    /// <summary>
+    /// Forwards.
+    /// </summary>
     [Route("api/tracey/{projectId:guid}/openai/v1/{**path}")]
     [HttpPost]
     public async Task Forward(Guid projectId, string path, CancellationToken cancellationToken)

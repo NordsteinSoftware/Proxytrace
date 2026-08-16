@@ -10,8 +10,14 @@ namespace Proxytrace.Licensing.Internal;
 /// </summary>
 internal sealed class ProxytraceLicenseTierPolicy : Core.ILicenseTierPolicy
 {
+    /// <summary>
+    /// Gets the fallback tier.
+    /// </summary>
     public string FallbackTier => nameof(LicenseTier.Free);
 
+    /// <summary>
+    /// Gets the definition.
+    /// </summary>
     public Core.TierDefinition GetDefinition(string tier)
     {
         var resolved = Enum.TryParse<LicenseTier>(tier, ignoreCase: true, out var parsed)
@@ -24,12 +30,21 @@ internal sealed class ProxytraceLicenseTierPolicy : Core.ILicenseTierPolicy
             definition.Limits.ToDictionary(pair => pair.Key.ToString(), pair => pair.Value));
     }
 
+    /// <summary>
+    /// Tries to the resolve tier.
+    /// </summary>
     public bool TryResolveTier(string? value, out string tier)
         => TryResolve<LicenseTier>(value, out tier);
 
+    /// <summary>
+    /// Tries to the resolve feature.
+    /// </summary>
     public bool TryResolveFeature(string value, out string feature)
         => TryResolve<LicenseFeature>(value, out feature);
 
+    /// <summary>
+    /// Tries to the resolve limit.
+    /// </summary>
     public bool TryResolveLimit(string value, out string limit)
         => TryResolve<LicenseLimit>(value, out limit);
 

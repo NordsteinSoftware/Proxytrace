@@ -3,8 +3,14 @@ using Nordstein.Core.AI.Completions;
 
 namespace Proxytrace.Domain.Evaluation;
 
+/// <summary>
+/// Represents a evaluation.
+/// </summary>
 public interface IEvaluation : IDomainObject
 {
+    /// <summary>
+    /// Factory delegate for creating a new instance.
+    /// </summary>
     public delegate IEvaluation Create(
         IEvaluator evaluator,
         EvaluationScore score,
@@ -13,6 +19,9 @@ public interface IEvaluation : IDomainObject
         decimal? cost = null,
         string? reasoning = null);
 
+    /// <summary>
+    /// Factory delegate for creating a new errored instance.
+    /// </summary>
     public delegate IEvaluation CreateErrored(
         IEvaluator evaluator,
         TimeSpan latency,

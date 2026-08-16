@@ -10,6 +10,9 @@ internal class PasswordResetTokenGenerator : DomainEntityGenerator<IPasswordRese
     private readonly IPasswordResetToken.CreateNew factory;
     private readonly IDomainEntityGenerator<IUser> users;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="PasswordResetTokenGenerator"/> class.
+    /// </summary>
     public PasswordResetTokenGenerator(
         IPasswordResetToken.CreateNew factory,
         IDomainEntityGenerator<IUser> users,
@@ -20,6 +23,9 @@ internal class PasswordResetTokenGenerator : DomainEntityGenerator<IPasswordRese
         this.users = users;
     }
 
+    /// <summary>
+    /// Generates asynchronously.
+    /// </summary>
     public override async Task<IPasswordResetToken> GenerateAsync(CancellationToken cancellationToken = default)
     {
         var user = await users.GetOrCreateAsync(cancellationToken);

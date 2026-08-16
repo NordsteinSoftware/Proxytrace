@@ -21,6 +21,9 @@ internal sealed class TestRunSeedScenario : IDemoScenario
     private readonly ITestResult.CreateExisting resultExisting;
     private readonly IEvaluation.Create createEvaluation;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TestRunSeedScenario"/> class.
+    /// </summary>
     public TestRunSeedScenario(
         DemoSeedContext ctx,
         ITestRunGroup.CreateExisting groupExisting,
@@ -35,6 +38,9 @@ internal sealed class TestRunSeedScenario : IDemoScenario
         this.createEvaluation = createEvaluation;
     }
 
+    /// <summary>
+    /// Gets the order.
+    /// </summary>
     public int Order => 30;
 
     private sealed record RunSpec(
@@ -49,6 +55,9 @@ internal sealed class TestRunSeedScenario : IDemoScenario
         double PassRate,
         int LatencyBaseMs = 720);
 
+    /// <summary>
+    /// Seeds asynchronously.
+    /// </summary>
     public async Task SeedAsync(CancellationToken cancellationToken)
     {
         var specs = new RunSpec[]

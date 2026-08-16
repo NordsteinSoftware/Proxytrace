@@ -32,6 +32,9 @@ internal sealed class BlindIndexKey
     private const string KeyFileName = "blind-index.key";
     private const int KeyLengthBytes = 32;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="BlindIndexKey"/> class.
+    /// </summary>
     public BlindIndexKey(KeyRingLocation location, ILogger<BlindIndexKey> logger)
     {
         if (location.KeyRingPath is not { } keyRingPath)
@@ -61,6 +64,9 @@ internal sealed class BlindIndexKey
     /// <summary>The key bytes, or <see langword="null"/> when no persisted key is available.</summary>
     public byte[]? Material { get; }
 
+    /// <summary>
+    /// Gets the is available.
+    /// </summary>
     public bool IsAvailable => Material is not null;
 
     private static byte[] LoadOrCreate(string path)

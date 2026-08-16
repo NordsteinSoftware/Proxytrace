@@ -14,6 +14,9 @@ internal class ProjectRepository : AbstractRepository<IProject, ProjectEntity>, 
 {
     private readonly ILogger<ProjectRepository> logger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ProjectRepository"/> class.
+    /// </summary>
     public ProjectRepository(
         IMapper<IProject, ProjectEntity> mapper,
         Func<StorageDbContext> contextFactory,
@@ -25,6 +28,9 @@ internal class ProjectRepository : AbstractRepository<IProject, ProjectEntity>, 
         this.logger = logger;
     }
 
+    /// <summary>
+    /// Finds the by name asynchronously.
+    /// </summary>
     public async Task<IProject?> FindByNameAsync(
         string name,
         CancellationToken cancellationToken = default)
@@ -36,6 +42,9 @@ internal class ProjectRepository : AbstractRepository<IProject, ProjectEntity>, 
         return await Map(entity, cancellationToken);
     }
 
+    /// <summary>
+    /// Finds the by slug asynchronously.
+    /// </summary>
     public async Task<IProject?> FindBySlugAsync(
         string slug,
         CancellationToken cancellationToken = default)
@@ -78,6 +87,9 @@ internal class ProjectRepository : AbstractRepository<IProject, ProjectEntity>, 
         return await this.GetAsync(matches[0].Id, cancellationToken);
     }
 
+    /// <summary>
+    /// Gets the by member asynchronously.
+    /// </summary>
     public async Task<IReadOnlyList<IProject>> GetByMemberAsync(
         Guid userId,
         CancellationToken cancellationToken = default)

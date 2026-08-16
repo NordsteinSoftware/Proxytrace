@@ -12,6 +12,9 @@ internal class CustomAnomalyBroadcaster : ICustomAnomalyBroadcaster, IDisposable
 
     private readonly ConcurrentDictionary<Guid, ChannelWriter<AnomalyFlaggedEvent>> subscribers = new();
 
+    /// <summary>
+    /// Subscribes.
+    /// </summary>
     public ChannelReader<AnomalyFlaggedEvent> Subscribe(CancellationToken cancellationToken)
     {
         if (!cancellationToken.CanBeCanceled)
@@ -44,6 +47,9 @@ internal class CustomAnomalyBroadcaster : ICustomAnomalyBroadcaster, IDisposable
         return channel.Reader;
     }
 
+    /// <summary>
+    /// Publishes.
+    /// </summary>
     public void Publish(AnomalyFlaggedEvent evt)
     {
         foreach (var kvp in subscribers)
@@ -53,6 +59,9 @@ internal class CustomAnomalyBroadcaster : ICustomAnomalyBroadcaster, IDisposable
         }
     }
 
+    /// <summary>
+    /// Releases all resources used by the current instance.
+    /// </summary>
     public void Dispose()
     {
         var writers = subscribers.Values.ToList();

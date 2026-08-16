@@ -23,6 +23,9 @@ internal class UserTotpEnrollmentConfig
     private readonly Lazy<ISecretProtector> protector;
     private readonly ILogger<UserTotpEnrollmentConfig> logger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="UserTotpEnrollmentConfig"/> class.
+    /// </summary>
     public UserTotpEnrollmentConfig(
         IUserTotpEnrollment.CreateExisting factory,
         IRepository<IUser> users,
@@ -35,6 +38,9 @@ internal class UserTotpEnrollmentConfig
         this.logger = logger;
     }
 
+    /// <summary>
+    /// Configures the application request pipeline.
+    /// </summary>
     public override void Configure(EntityTypeBuilder<UserTotpEnrollmentEntity> builder)
     {
         // One enrollment per user — re-running setup replaces the row, never accumulates.
@@ -47,12 +53,18 @@ internal class UserTotpEnrollmentConfig
             .OnDelete(DeleteBehavior.Cascade);
     }
 
+    /// <summary>
+    /// Maps.
+    /// </summary>
     public async Task<IUserTotpEnrollment> Map(UserTotpEnrollmentEntity stored, CancellationToken cancellationToken = default)
     {
         var user = await users.GetAsync(stored.User, cancellationToken);
         return factory(user, Decrypt(stored.Secret), stored.ConfirmedAt, stored.LastUsedStep, stored);
     }
 
+    /// <summary>
+    /// Maps.
+    /// </summary>
     public Task<UserTotpEnrollmentEntity> Map(IUserTotpEnrollment domain, CancellationToken cancellationToken = default)
         => new UserTotpEnrollmentEntity
         {

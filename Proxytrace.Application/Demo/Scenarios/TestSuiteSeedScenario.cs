@@ -15,6 +15,9 @@ internal sealed class TestSuiteSeedScenario : IDemoScenario
     private readonly IRepository<ITestCase> caseRepo;
     private readonly IRepository<ITestSuite> suiteRepo;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TestSuiteSeedScenario"/> class.
+    /// </summary>
     public TestSuiteSeedScenario(
         DemoSeedContext ctx,
         ITestCase.CreateNew createTestCase,
@@ -29,6 +32,9 @@ internal sealed class TestSuiteSeedScenario : IDemoScenario
         this.suiteRepo = suiteRepo;
     }
 
+    /// <summary>
+    /// Gets the order.
+    /// </summary>
     public int Order => 20;
 
     private sealed record CaseSpec(
@@ -44,6 +50,9 @@ internal sealed class TestSuiteSeedScenario : IDemoScenario
         IReadOnlyCollection<IEvaluator> Evaluators,
         IReadOnlyCollection<CaseSpec> Cases);
 
+    /// <summary>
+    /// Seeds asynchronously.
+    /// </summary>
     public async Task SeedAsync(CancellationToken cancellationToken)
     {
         var support = ctx.RequireCustomerSupportAgent();

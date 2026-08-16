@@ -13,6 +13,9 @@ internal class EvaluatorGenerator : DomainEntityGenerator<IEvaluator>, IEvaluato
     private readonly IDomainEntityGenerator<INumericMatchEvaluator> numericMatchGenerator;
     private readonly IDomainEntityGenerator<IJsonSchemaMatchEvaluator> jsonSchemaMatchGenerator;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="EvaluatorGenerator"/> class.
+    /// </summary>
     public EvaluatorGenerator(
         IExactMatchEvaluator.CreateNew factory,
         IRepository<IEvaluator> repository,
@@ -31,12 +34,18 @@ internal class EvaluatorGenerator : DomainEntityGenerator<IEvaluator>, IEvaluato
         this.jsonSchemaMatchGenerator = jsonSchemaMatchGenerator;
     }
 
+    /// <summary>
+    /// Generates asynchronously.
+    /// </summary>
     public override async Task<IEvaluator> GenerateAsync(CancellationToken cancellationToken = default)
     {
         var project = await projectGenerator.GetOrCreateAsync(cancellationToken);
         return factory(project);
     }
 
+    /// <summary>
+    /// Creates asynchronously.
+    /// </summary>
     public async Task<IEvaluator> CreateAsync(EvaluatorKind kind, CancellationToken cancellationToken = default) 
         => kind switch
         {

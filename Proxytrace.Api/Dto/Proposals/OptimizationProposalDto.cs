@@ -3,6 +3,9 @@ using Proxytrace.Domain.Proposal;
 
 namespace Proxytrace.Api.Dto.Proposals;
 
+/// <summary>
+/// Data transfer object representing a optimization proposal.
+/// </summary>
 public record OptimizationProposalDto(
     Guid Id,
     ProposalKind Kind,
@@ -25,4 +28,7 @@ public record OptimizationProposalDto(
     DateTimeOffset UpdatedAt
 );
 
+/// <summary>
+/// Request payload for update proposal status operations.
+/// </summary>
 public record UpdateProposalStatusRequest(ProposalStatus Status);

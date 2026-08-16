@@ -13,11 +13,17 @@ public sealed class AgentDtoMapper
 {
     private readonly ToolDtoMapper toolDtoMapper;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AgentDtoMapper"/> class.
+    /// </summary>
     public AgentDtoMapper(ToolDtoMapper toolDtoMapper)
     {
         this.toolDtoMapper = toolDtoMapper;
     }
 
+    /// <summary>
+    /// To dto.
+    /// </summary>
     public AgentDto ToDto(IAgent a, DateTimeOffset? lastUsedAt) => new(
         a.Id,
         a.Project.Id,
@@ -50,6 +56,9 @@ public sealed class AgentDtoMapper
         a.UpdatedAt,
         lastUsedAt);
 
+    /// <summary>
+    /// To dto.
+    /// </summary>
     public AgentVersionDto ToDto(IAgentVersion v, string fingerprint) => new(
         v.Id,
         v.AgentId,

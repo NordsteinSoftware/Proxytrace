@@ -9,15 +9,42 @@ namespace Proxytrace.Domain.TestRunSchedule.Internal;
 
 internal record TestRunSchedule : DomainEntity<ITestRunSchedule>, ITestRunSchedule
 {
+    /// <summary>
+    /// Gets or sets the name.
+    /// </summary>
     public string Name { get; private init; }
+    /// <summary>
+    /// Gets or sets the suite.
+    /// </summary>
     public ITestSuite Suite { get; private init; }
+    /// <summary>
+    /// Gets or sets the endpoints.
+    /// </summary>
     public IReadOnlyCollection<IModelEndpoint> Endpoints { get; private init; }
+    /// <summary>
+    /// Gets or sets the interval.
+    /// </summary>
     public TimeSpan Interval { get; private init; }
+    /// <summary>
+    /// Gets or sets the is enabled.
+    /// </summary>
     public bool IsEnabled { get; private init; }
+    /// <summary>
+    /// Gets or sets the anchor at.
+    /// </summary>
     public DateTimeOffset AnchorAt { get; private init; }
+    /// <summary>
+    /// Gets or sets the next run at.
+    /// </summary>
     public DateTimeOffset NextRunAt { get; private init; }
+    /// <summary>
+    /// Gets or sets the last run at.
+    /// </summary>
     public DateTimeOffset? LastRunAt { get; private init; }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TestRunSchedule"/> class.
+    /// </summary>
     public TestRunSchedule(
         string name, ITestSuite suite, IReadOnlyCollection<IModelEndpoint> endpoints,
         TimeSpan interval, bool isEnabled, DateTimeOffset anchorAt,
@@ -34,6 +61,9 @@ internal record TestRunSchedule : DomainEntity<ITestRunSchedule>, ITestRunSchedu
         LastRunAt = null;
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TestRunSchedule"/> class.
+    /// </summary>
     public TestRunSchedule(
         string name, ITestSuite suite, IReadOnlyCollection<IModelEndpoint> endpoints,
         TimeSpan interval, bool isEnabled, DateTimeOffset anchorAt, DateTimeOffset nextRunAt,
@@ -70,12 +100,21 @@ internal record TestRunSchedule : DomainEntity<ITestRunSchedule>, ITestRunSchedu
         return anchor + TimeSpan.FromTicks(interval.Ticks * steps);
     }
 
+    /// <summary>
+    /// Disables.
+    /// </summary>
     public Task<ITestRunSchedule> Disable(CancellationToken cancellationToken = default)
         => ApplyAsync(this with { IsEnabled = false }, cancellationToken);
 
+    /// <summary>
+    /// Enables.
+    /// </summary>
     public Task<ITestRunSchedule> Enable(CancellationToken cancellationToken = default)
         => ApplyAsync(this with { IsEnabled = true }, cancellationToken);
 
+    /// <summary>
+    /// Record fired.
+    /// </summary>
     public Task<ITestRunSchedule> RecordFired(DateTimeOffset now, CancellationToken cancellationToken = default)
         => ApplyAsync(this with
         {
@@ -83,6 +122,9 @@ internal record TestRunSchedule : DomainEntity<ITestRunSchedule>, ITestRunSchedu
             NextRunAt = AlignForward(AnchorAt, Interval, now),
         }, cancellationToken);
 
+    /// <summary>
+    /// Updates.
+    /// </summary>
     public Task<ITestRunSchedule> Update(
         string name, IReadOnlyCollection<IModelEndpoint> endpoints,
         TimeSpan interval, bool isEnabled, DateTimeOffset anchorAt, DateTimeOffset now,
@@ -102,6 +144,9 @@ internal record TestRunSchedule : DomainEntity<ITestRunSchedule>, ITestRunSchedu
                 : NextRunAt,
         }, cancellationToken);
 
+    /// <summary>
+    /// Validates.
+    /// </summary>
     public override IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
         foreach (var result in base.Validate(validationContext))

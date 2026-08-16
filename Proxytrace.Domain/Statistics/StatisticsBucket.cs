@@ -1,5 +1,8 @@
 namespace Proxytrace.Domain.Statistics;
 
+/// <summary>
+/// Specifies the statistics bucket.
+/// </summary>
 public enum StatisticsBucket
 {
     FiveMinutes,
@@ -7,6 +10,9 @@ public enum StatisticsBucket
     Daily,
 }
 
+/// <summary>
+/// Represents a statistics time.
+/// </summary>
 public static class StatisticsTime
 {
     /// <summary>

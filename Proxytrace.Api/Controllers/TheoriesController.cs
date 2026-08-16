@@ -19,6 +19,9 @@ using Proxytrace.Licensing;
 
 namespace Proxytrace.Api.Controllers;
 
+/// <summary>
+/// API controller for theories operations.
+/// </summary>
 [ApiController]
 [Authorize]
 [RequiresFeature(LicenseFeature.OptimizationProposals)]
@@ -38,6 +41,9 @@ public class TheoriesController : ControllerBase
     private readonly IProjectAccessGuard accessGuard;
     private readonly ILogger<Audit> audit;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TheoriesController"/> class.
+    /// </summary>
     public TheoriesController(
         IOptimizationTheoryRepository repository,
         ITheoryValidationService validationService,
@@ -99,6 +105,9 @@ public class TheoriesController : ControllerBase
         return scope is null ? all : all.Where(t => scope.Contains(t.Agent.Project.Id)).ToArray();
     }
 
+    /// <summary>
+    /// Gets the all.
+    /// </summary>
     [HttpGet]
     public async Task<IReadOnlyList<TheoryDto>> GetAll(
         [FromQuery] Guid? agentId = null,
@@ -114,6 +123,9 @@ public class TheoriesController : ControllerBase
         return theories.Select(mapper.ToDto).ToList();
     }
 
+    /// <summary>
+    /// Gets.
+    /// </summary>
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<TheoryDto>> Get(Guid id, CancellationToken cancellationToken)
     {
