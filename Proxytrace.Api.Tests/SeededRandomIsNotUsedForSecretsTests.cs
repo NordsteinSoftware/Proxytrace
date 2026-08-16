@@ -38,6 +38,14 @@ public sealed class SeededRandomIsNotUsedForSecretsTests : BaseTest<Module>
         // on every boot. Produces trace statistics, never a credential.
         ["Proxytrace.Application.Demo.Scenarios.StatisticsBackfillScenario"] =
             "demo data seeding — deterministic by design, mints no credential",
+        // Samples the demo traffic's content/token/latency shape for the backfill scenario above
+        // and the kiosk live feed. Same surface, same rationale: statistics, never a credential.
+        ["Proxytrace.Application.Demo.Internal.DemoCallPlanner"] =
+            "demo traffic sampling — deterministic by design, mints no credential",
+        // Paces and profiles the kiosk's simulated live traffic (delays, agent/endpoint picks).
+        // Kiosk-only fabricated telemetry, never a credential.
+        ["Proxytrace.Application.Demo.Internal.KioskLiveTrafficService"] =
+            "kiosk live traffic pacing — fabricated demo telemetry, mints no credential",
     };
 
     [TestMethod]

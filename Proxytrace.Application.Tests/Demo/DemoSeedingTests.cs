@@ -119,6 +119,42 @@ public class DemoSeedingTests : BaseTest<Module>
     }
 
     [TestMethod]
+    public async Task Seed_Backfill_Produces_Business_Scale_Call_Volume()
+    {
+        var calls = await services.GetRequiredService<IRepository<IAgentCall>>()
+            .GetAllAsync(CancellationToken);
+
+        // The 14-day backfill runs at per-agent business volumes (DemoTrafficCatalog: ~1,300–1,700
+        // interactions/day across the four agents, tool round-trips adding a second call). The
+        // floor is deliberately below the expected ~30k so random volume draws never flake it,
+        // while still failing hard if the volumes regress to toy scale.
+        calls.Count.Should().BeGreaterThan(15_000,
+            "the kiosk dashboard must show business-scale traffic, not a handful of demo rows");
+
+        // Throughput on the default 24h dashboard window: the trailing day must carry a full
+        // business day of calls (minimum daily volume across agents is ~1,270 interactions).
+        var dayWindowStart = DateTimeOffset.UtcNow.AddHours(-24);
+        calls.Count(c => c.CreatedAt >= dayWindowStart).Should().BeGreaterThan(700,
+            "the default dashboard window must read as an active business day");
+    }
+
+    [TestMethod]
+    public async Task Seed_Backfill_Carries_A_Meaningful_Total_Spend()
+    {
+        var calls = await services.GetRequiredService<IRepository<IAgentCall>>()
+            .GetAllAsync(CancellationToken);
+
+        decimal total = calls
+            .Select(c => c.Response?.Usage is { } usage ? c.Endpoint.CalculateCost(usage) ?? 0m : 0m)
+            .Sum();
+
+        // ~€20–30/day at the catalog's volumes and token weights → several hundred euros across
+        // the window. The floor is far below the expectation but far above what toy data produces.
+        total.Should().BeGreaterThan(100m,
+            "the seeded window must carry a spend that reads like a real deployment's LLM bill");
+    }
+
+    [TestMethod]
     public async Task Seed_Flags_Outlier_Calls_With_Every_Flag_Kind()
     {
         var calls = await services.GetRequiredService<IRepository<IAgentCall>>()

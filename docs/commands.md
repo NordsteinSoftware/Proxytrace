@@ -120,6 +120,15 @@ Ports:
 The frontend is fully browsable; the OpenAI proxy route is not mounted (`/openai/v1/*` returns 404)
 and the sample client idles.
 
+**Demo data.** Seeding paints a business-scale deployment: a 14-day traffic backfill at per-agent
+daily volumes (~1,300–1,700 interactions/day across the four demo agents, with production-sized
+token counts, so cost/throughput cards read like a real installation), plus a continuous
+**simulated live traffic feed** (`KioskLiveTrafficService`) that keeps fabricating agent calls
+after boot — the dashboard's pulse band, live telemetry and recent-traces feed stay in motion
+without a real LLM endpoint. Content, rates and volumes live in
+`Proxytrace.Application/Demo/Internal/DemoTrafficCatalog.cs`, shared by the backfill and the live
+feed so both describe the same business.
+
 **Live demo mode:** copy `kiosk.env.example` to `.env` and fill in your LLM credentials:
 
 ```bash

@@ -56,6 +56,11 @@ docker compose -f docker-compose.kiosk.yml up --build   # API :5200, UI :5201, s
 Locally, `./dev.sh` runs the kiosk shape by default; `SPLIT=1 ./dev.sh` runs the split
 shape with a throwaway Redis.
 
+Kiosk mode self-seeds a full demo dataset on boot: four showcase agents with two weeks of
+business-scale traffic history (hundreds to thousands of calls per agent per day, realistic
+token volumes and costs), plus a continuously simulated live traffic feed — new traces keep
+arriving on the dashboard and in the traces list even without a real LLM endpoint configured.
+
 ### Live showcase stack
 
 The compose file ships a bundled **sample chat client** (`:5202`) and supports a **live LLM
