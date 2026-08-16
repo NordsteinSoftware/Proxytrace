@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1
 # Proxytrace — all-in-one image.
 #
 # The single released image: the whole product in one container.
@@ -48,13 +49,15 @@ ARG APP_VERSION=0.0.0-dev
 # production key. The dev/e2e/perf composes pass the test key; official images pass nothing.
 ARG LICENSE_PUBLIC_KEY=
 WORKDIR /src
-# The Nordstein.Core reference expansion lives in these files, so restore needs them
-# before the project files. Nordstein.Core.sln is what selects source mode (see
-# Directory.Build.props); without it the image would silently restore package mode.
+# Warm the restore cache from just the project files, then bring in the rest of the tree
+# below. Every core/*/*.csproj is copied via a glob (COPY --parents preserves the per-project
+# directories) so the source-mode reference expansion resolves for all core packages and a
+# newly added Nordstein.Core package is picked up automatically instead of silently drifting
+# out of this layer. Nordstein.Core.sln is what selects source mode (see Directory.Build.props);
+# without it the image would silently restore package mode.
 COPY ["Directory.Build.props", "Directory.Build.targets", "nuget.config", "./"]
 COPY ["core/Directory.Build.props", "core/Nordstein.Core.sln", "core/"]
-COPY ["core/Nordstein.Core.Common/Nordstein.Core.Common.csproj", "core/Nordstein.Core.Common/"]
-COPY ["core/Nordstein.Core.Domain/Nordstein.Core.Domain.csproj", "core/Nordstein.Core.Domain/"]
+COPY --parents core/*/*.csproj ./
 COPY ["Proxytrace.Api/Proxytrace.Api.csproj", "Proxytrace.Api/"]
 COPY ["Proxytrace.Proxy.Api/Proxytrace.Proxy.Api.csproj", "Proxytrace.Proxy.Api/"]
 COPY ["Proxytrace.Proxy/Proxytrace.Proxy.csproj", "Proxytrace.Proxy/"]
