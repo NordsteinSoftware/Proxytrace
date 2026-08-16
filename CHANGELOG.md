@@ -9,6 +9,8 @@ follow [Semantic Versioning](https://semver.org). Ongoing work is collected unde
 
 ## [Unreleased]
 
+## [1.11.0] - 2026-08-16
+
 ### Added
 
 - **Kiosk demo shows a business-scale deployment.** The kiosk's seeded history now runs at
