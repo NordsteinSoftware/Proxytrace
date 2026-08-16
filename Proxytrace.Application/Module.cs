@@ -598,6 +598,10 @@ public sealed class Module : Autofac.Module
             .AsSelf()
             .SingleInstance();
 
+        builder.RegisterType<DemoCallPlanner>()
+            .AsSelf()
+            .SingleInstance();
+
         var scenarioTypes = typeof(Module).Assembly.GetTypes()
             .Where(t => t is { IsClass: true, IsAbstract: false }
                         && typeof(IDemoScenario).IsAssignableFrom(t));
@@ -688,6 +692,34 @@ public sealed class Module : Autofac.Module
                     }
 
                     return sp.GetRequiredService<DemoSeederHostedService>();
+                });
+            });
+        }
+
+        builder.RegisterType<KioskLiveTrafficService>()
+            .AsSelf()
+            .SingleInstance()
+            .IfNotRegistered(typeof(KioskLiveTrafficService));
+
+        // Registered after the demo seeder so its StartAsync (and thus the traffic loop) begins
+        // only once seeding has completed and the DemoSeedContext is populated.
+        const string kioskLiveTrafficHostedServiceKey = "Proxytrace.Application.KioskLiveTrafficService.Registered";
+        if (!builder.Properties.ContainsKey(kioskLiveTrafficHostedServiceKey))
+        {
+            builder.Properties[kioskLiveTrafficHostedServiceKey] = true;
+            builder.RegisterServiceCollection(services =>
+            {
+                services.AddSingleton<IHostedService>(sp =>
+                {
+                    // The live feed runs in every kiosk (read-only or with a live endpoint) — it
+                    // is what keeps the dashboard moving; outside kiosk mode it must never run.
+                    var kiosk = sp.GetRequiredService<KioskOptions>();
+                    if (!kiosk.Enabled)
+                    {
+                        return new NullHostedService();
+                    }
+
+                    return sp.GetRequiredService<KioskLiveTrafficService>();
                 });
             });
         }

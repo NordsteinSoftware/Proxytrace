@@ -11,6 +11,14 @@ follow [Semantic Versioning](https://semver.org). Ongoing work is collected unde
 
 ### Added
 
+- **Kiosk demo shows a business-scale deployment.** The kiosk's seeded history now runs at
+  per-agent business volumes — roughly 1,300–1,700 interactions a day across the four showcase
+  agents over the 14-day window, with production-sized token counts — so the dashboard's cost,
+  throughput and token cards read like a real installation instead of a toy. A new simulated
+  **live traffic feed** keeps fabricating agent calls after boot (paced along the same day/night
+  curve as the history), so the pulse band, live telemetry and recent-traces feed stay in motion
+  during a demo even without a real LLM endpoint configured.
+
 - **Agent-proposed test cases.** The trace detail panel gains a **Generate tests** action: an agent
   reads the trace's *whole* conversation and proposes the test cases actually worth building —
   the turns where the agent decided something, not every turn — as GREEN promotions (lock in what it
