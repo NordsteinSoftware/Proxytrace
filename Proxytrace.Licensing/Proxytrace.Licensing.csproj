@@ -12,6 +12,8 @@
 
     <ItemGroup>
         <PackageReference Include="Autofac" Version="9.3.2" />
+        <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="10.0.12" />
+        <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="10.0.12" />
     </ItemGroup>
 
     <!-- Compile-time license public-key override: bakes the value into assembly metadata so
