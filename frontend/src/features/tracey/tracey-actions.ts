@@ -15,7 +15,6 @@ export const TraceyActionsProvider = TraceyActionsContext.Provider;
 
 export function useTraceyActions(): TraceyActions {
   const ctx = useContext(TraceyActionsContext);
-  // eslint-disable-next-line lingui/no-unlocalized-strings -- thrown developer error, not UI copy
   if (!ctx) throw new Error('useTraceyActions must be used within a TraceyActionsProvider');
   return ctx;
 }
