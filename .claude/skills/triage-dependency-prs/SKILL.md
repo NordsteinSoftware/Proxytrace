@@ -93,7 +93,7 @@ Gather, in this order (cheap → expensive):
    |---|---|
    | nuget | `dotnet restore && dotnet build Proxytrace.sln && dotnet test Proxytrace.sln`. Also `dotnet list package --vulnerable`. Tests hit the shared Postgres test DB — never run two test sessions concurrently. |
    | npm `/frontend` | `cd frontend && npm ci && npm run build && npm test && npm run lint`. Also `npm audit --omit=dev`. |
-   | npm `/e2e` | `cd e2e && npm ci && npx tsc --noEmit`. Full Playwright run is covered by the PR's E2E workflow; don't repeat it locally unless CI was inconclusive. |
+   | npm `/e2e` | `cd e2e && npm ci && npx playwright test --list`. This loads every spec through Playwright's own transform (217 tests in 44 files on this repo). Full Playwright run is covered by the PR's E2E workflow; don't repeat it locally unless CI was inconclusive. |
    | npm `/manual` | `cd manual && npm ci && npm run docs:build`. |
    | docker | If a Docker daemon is available, build the affected Dockerfile (e.g. `docker build -f frontend/Dockerfile frontend/`). For base-image major bumps (node N→N+2 etc.) also check engine/runtime compatibility claims in the image's release notes against what the Dockerfile actually runs. |
    | github-actions | No local run possible — rely on CI plus the action's release notes (majors here usually mean a runner/node version floor or renamed inputs; check our workflow files use the inputs the new major expects). |
