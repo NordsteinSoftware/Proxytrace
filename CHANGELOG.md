@@ -9,6 +9,12 @@ follow [Semantic Versioning](https://semver.org). Ongoing work is collected unde
 
 ## [Unreleased]
 
+## [1.11.1] - 2026-09-15
+
+### Changed
+
+- Updated application, frontend, and build dependencies.
+
 ## [1.11.0] - 2026-08-16
 
 ### Added
