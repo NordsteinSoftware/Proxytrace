@@ -16,6 +16,7 @@
 
   /* Border colors */
   --color-border: var(--border-color);
+  --color-border-control: var(--border-control);
   --color-border-subtle: var(--border-subtle);
   --color-hairline: var(--hairline);
 
@@ -49,17 +50,17 @@
   --radius-xl: 0px;
 
   /* Type scale (font-size utilities: text-caption / text-body-sm / …) */
-  --text-caption: 10px;
-  --text-body-sm: 11px;
-  --text-body: 12px;
-  --text-title: 13px;
-  --text-h2: 14px;
-  --text-h1: 18px;
+  --text-caption: 11px;
+  --text-body-sm: 12px;
+  --text-body: 13px;
+  --text-title: 14px;
+  --text-h2: 16px;
+  --text-h1: 20px;
   --text-display-sm: 22px;
   --text-display: 28px;
-  /* Reading tier — Tracey chat prose only (see DESIGN.md "Tracey exception") */
-  --text-chat: 15px;
-  --text-chat-title: 16px;
+  /* Reading tier — conversations and other long-form prose */
+  --text-reading: 15px;
+  --text-reading-title: 16px;
 
   /* Font stacks (text uses the bundled @fontsource-variable faces) */
   --font-sans: 'Inter Variable', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
@@ -80,13 +81,14 @@
 
   /* Borders — opaque steel rules (panes are divided, not floated) */
   --border-color: #1e2b38;
+  --border-control: #566e83;
   --border-subtle: #16212c;
   --hairline: #182430;
 
   /* Text */
   --text-primary: #d5e1ea;
   --text-secondary: #8ba0b2;
-  --text-muted: #5d7488;
+  --text-muted: #7a91a2;
 
   /* Accent (signal cyan) */
   --accent-primary: #57c4d3;
@@ -129,17 +131,17 @@
   --space-12: 48px;
 
   /* Type scale */
-  --text-caption: 10px;
-  --text-body-sm: 11px;
-  --text-body: 12px;
-  --text-title: 13px;
-  --text-h2: 14px;
-  --text-h1: 18px;
+  --text-caption: 11px;
+  --text-body-sm: 12px;
+  --text-body: 13px;
+  --text-title: 14px;
+  --text-h2: 16px;
+  --text-h1: 20px;
   --text-display-sm: 22px;
   --text-display: 28px;
-  /* Reading tier — Tracey chat prose only (see DESIGN.md "Tracey exception") */
-  --text-chat: 15px;
-  --text-chat-title: 16px;
+  /* Reading tier — conversations and other long-form prose */
+  --text-reading: 15px;
+  --text-reading-title: 16px;
 
   /* Border-tint percentages (used with color-mix) */
   --border-tint-weak: 0.14;
@@ -417,7 +419,7 @@ html, body, #root {
   gap: 10px;
   padding: 8px 10px;
   border-radius: 0;
-  font-size: 13px;
+  font-size: var(--text-title);
   font-weight: 500;
   color: var(--text-secondary);
   transition: background 0.15s, color 0.15s;
@@ -477,13 +479,13 @@ html, body, #root {
 }
 
 .card-header h3 {
-  font-size: 14px;
+  font-size: var(--text-h2);
   font-weight: 600;
   margin: 0 0 2px;
 }
 
 .card-header p {
-  font-size: 11px;
+  font-size: var(--text-body-sm);
   color: var(--text-muted);
   margin: 0;
 }
@@ -540,7 +542,7 @@ html, body, #root {
   align-items: center;
   padding: 10px 0;
   border-bottom: 1px solid var(--border-subtle);
-  font-size: 13px;
+  font-size: var(--text-title);
   cursor: pointer;
   transition: background 0.1s;
 }
@@ -605,7 +607,7 @@ html, body, #root {
   align-items: center;
   padding: 1px 5px;
   border-radius: 0;
-  font-size: 10px;
+  font-size: var(--text-caption);
   font-family: 'JetBrains Mono Variable', 'JetBrains Mono', 'Fira Code', monospace;
   background: var(--bg-card-2);
   color: var(--text-secondary);

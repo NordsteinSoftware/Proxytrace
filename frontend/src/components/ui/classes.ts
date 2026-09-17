@@ -35,7 +35,7 @@ export const fieldInvalidCls = cn(
 );
 
 export const formInputCls = cn(
-  'w-full px-3 py-2 bg-card-2 border border-border rounded-md',
+  'w-full px-3 py-2 bg-card-2 border border-border-control rounded-md',
   'text-title text-primary font-[inherit] outline-none',
   'transition-[border-color,box-shadow] duration-[var(--motion-fast)] ease-[var(--ease-standard)]',
   fieldFocusCls,
@@ -50,7 +50,7 @@ export const formInputCls = cn(
  * of copy saying *why* it is fixed.
  */
 export const readonlyFieldCls = cn(
-  'w-full px-3 py-2 bg-card-2 border border-border rounded-md text-title text-primary truncate',
+  'w-full px-3 py-2 bg-card-2 border border-border-control rounded-md text-title text-primary truncate',
 );
 
 /**

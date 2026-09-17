@@ -10,7 +10,7 @@ import { markdownComponents } from './markdown-components';
  */
 export function Markdown({ content }: { content: string }) {
   return (
-    <div className="text-title leading-relaxed text-primary">
+    <div className="text-reading leading-relaxed text-primary">
       <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents} skipHtml>
         {content}
       </ReactMarkdown>

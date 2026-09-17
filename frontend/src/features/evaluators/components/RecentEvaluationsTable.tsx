@@ -87,7 +87,7 @@ export function RecentEvaluationsTable({ rows, isLoading, scoreFilter, onClearFi
                     {clickable && <ExternalLinkIcon size={10} className="text-muted opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />}
                   </div>
                   {s.reasoning && (
-                    <div className="text-caption text-muted overflow-hidden text-ellipsis whitespace-nowrap">{s.reasoning}</div>
+                    <div className="text-body-sm text-secondary overflow-hidden text-ellipsis whitespace-nowrap">{s.reasoning}</div>
                   )}
                 </div>
                 <span className="text-right font-mono text-muted text-body-sm">{s.latencyMs ? fmtLatency(s.latencyMs) : '—'}</span>

@@ -45,7 +45,7 @@ function PromptDiffView({ before, after }: PromptDiffProps) {
           const sigil = r.kind === 'add' ? '+' : r.kind === 'del' ? '−' : ' ';
           return (
             <div key={i} className={cn('flex py-px', LINE_BG[r.kind])}>
-              <span className="text-caption text-right select-none shrink-0 text-muted opacity-50 w-9 pl-3.5 pr-2">{i + 1}</span>
+              <span className="text-caption text-right select-none shrink-0 text-muted w-9 pl-3.5 pr-2">{i + 1}</span>
               <span className={cn('font-bold shrink-0 text-center w-[18px]', SIGIL_TEXT[r.kind])}>{sigil}</span>
               <span className={cn('flex-1 whitespace-pre-wrap break-words pr-3.5', LINE_TEXT[r.kind])}>{r.text || ' '}</span>
             </div>

@@ -135,7 +135,7 @@ export function MessageBubble({ msg, defaultOpen = true, label, actions, streami
         <div className="border-t border-t-border-subtle">
           <div className={cn('px-3.5 py-3', role.bodyBg)}>
             {streaming ? (
-              <div className="text-title leading-[1.65] whitespace-pre-wrap text-primary">
+              <div className="text-reading leading-[1.65] whitespace-pre-wrap text-primary">
                 {msg.content}
                 <span
                   aria-hidden

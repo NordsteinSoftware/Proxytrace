@@ -3,8 +3,8 @@ import { clean, markdownComponents } from '../../../components/markdown/markdown
 
 /**
  * Chat-scale overrides of the shared markdown element map. Tracey's thread is a reading surface,
- * not a data grid, so prose renders at the reading tier (`text-chat`, 15px — DESIGN.md "Tracey
- * exception") and headings/code step up with it; everything not overridden here inherits the
+ * not a data grid, so prose renders at the shared reading tier (`text-reading`, 15px) and
+ * headings/code step up with it; everything not overridden here inherits the
  * shared {@link markdownComponents} treatment.
  */
 export const chatMarkdownComponents: Components = {
@@ -13,10 +13,10 @@ export const chatMarkdownComponents: Components = {
     <h1 className="mb-2 mt-4 text-h1 font-semibold text-primary first:mt-0" {...clean(props)} />
   ),
   h2: (props) => (
-    <h2 className="mb-2 mt-3.5 text-chat-title font-semibold text-primary first:mt-0" {...clean(props)} />
+    <h2 className="mb-2 mt-3.5 text-reading-title font-semibold text-primary first:mt-0" {...clean(props)} />
   ),
   h3: (props) => (
-    <h3 className="mb-1.5 mt-3 text-chat font-semibold text-primary first:mt-0" {...clean(props)} />
+    <h3 className="mb-1.5 mt-3 text-reading font-semibold text-primary first:mt-0" {...clean(props)} />
   ),
   code: (props) => (
     <code

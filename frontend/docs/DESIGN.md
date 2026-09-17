@@ -12,7 +12,7 @@ The system has a name: **Signal Desk ("Wire")** — a flat, ruled instrument sur
 
 Proxytrace is an AI-agent observability + benchmarking platform. The user is a developer or ML engineer staring at traces, test runs, evaluations, and proposals — often for long stretches. That dictates everything below:
 
-- **Information density over whitespace luxury.** Body text is 12px, not 16px. Panes stack tightly. Whitespace earns its place.
+- **Information density over whitespace luxury.** Body text is 13px, not 16px. Panes stack tightly. Whitespace earns its place.
 - **Flat instrument, not floating cards.** The lineage is a terminal / an instrument panel, not a marketing surface. Structure comes from **1px rules**, not from shadows, gutters, or rounded floating panels. Corners are square. Fills are one flat color. The accent is **cyan**, not gold.
 - **Code-adjacent feel.** Mono is structural, not decorative: IDs, payloads, model names, JSON, the topbar breadcrumb, nav page codes, table headers, KPI labels. Inter for prose.
 - **Trust signals matter.** Status colors must be unambiguous. Number formatting must be consistent. Streaming/live state must be visible without being noisy.
@@ -37,11 +37,12 @@ Dark-only — blue-petrol ink panes divided by opaque steel rules, with a single
 | Card | `bg-card` | `#101a23` | Default card / pane |
 | Card raised | `bg-card-2` | `#152230` | Nested panel, input field, hovered list row |
 | Border | `border-border` | `#1e2b38` | Default rule — pane dividers, masthead/rail edges |
+| Control border | `border-border-control` | `#566e83` | Inputs, secondary buttons, checkbox/radio outlines — 3:1 on `bg-card-2` |
 | Border subtle | `border-border-subtle` | `#16212c` | Row dividers |
 | Hairline | `border-hairline` | `#182430` | Internal card splits |
 | Text primary | `text-primary` | `#d5e1ea` | Headings, key values |
 | Text secondary | `text-secondary` | `#8ba0b2` | Labels, eyebrows, body prose |
-| Text muted | `text-muted` | `#5d7488` | Captions, placeholders, inactive glyphs |
+| Text muted | `text-muted` | `#7a91a2` | Captions, placeholders, inactive glyphs |
 | Accent | `text-accent`, `bg-accent` | `#57c4d3` | Primary CTAs, active nav, focus ring |
 | Accent hover | `accent-hover` | `#7dd3e0` | Hover only |
 | Accent press | `var(--accent-press)` | `#45aebc` | Pressed/active cyan fill |
@@ -81,20 +82,20 @@ hold that pairing.
 - Both faces are **bundled** via `@fontsource-variable/inter` and `@fontsource-variable/jetbrains-mono` (imported in `main.tsx`; family names `'Inter Variable'` / `'JetBrains Mono Variable'`). Never add a Google Fonts `<link>` — CSP allows `font-src 'self'` only.
 - **Heading font ≠ body font** is *not* our pattern. We use Inter for prose everywhere; rhythm comes from the type scale and from the Inter/mono contrast, not from a third face.
 
-Type scale (data-dense — do not enlarge without a strong reason):
+Type scale (data-dense without dropping below 11px):
 
 | Token | Size | Use |
 |-------|------|-----|
-| `text-caption` | 10px | Eyebrow labels, nav page codes, kbd, axis ticks |
-| `text-body-sm` | 11px | Tags, chips, secondary labels, metadata |
-| `text-body` | 12px | Default body, table cells, descriptions |
-| `text-title` | 13px | Card section labels, button labels, nav items, breadcrumb |
-| `text-h2` | 14px | Card titles, rail titles |
-| `text-h1` | 18px | Page titles, drawer headers |
+| `text-caption` | 11px | Eyebrow labels, nav page codes, kbd, axis ticks |
+| `text-body-sm` | 12px | Tags, chips, secondary labels, metadata |
+| `text-body` | 13px | Default body, table cells, descriptions |
+| `text-title` | 14px | Card section labels, button labels, nav items, breadcrumb |
+| `text-h2` | 16px | Card titles, rail titles |
+| `text-h1` | 20px | Page titles, drawer headers |
 | `text-display-sm` | 22px | Secondary KPI figures (stat cells/tiles), setup wizard step headings |
 | `text-display` | 28px | Hero KPI numbers |
-| `text-chat` | 15px | **Tracey chat prose only** (§8.2) — messages, composer, in-chat h3 |
-| `text-chat-title` | 16px | **Tracey chat only** (§8.2) — in-chat markdown h2 |
+| `text-reading` | 15px | Conversations and other long-form prose; never dense rows or metadata |
+| `text-reading-title` | 16px | Headings inside reading surfaces |
 
 Weights: 400 (default), 500 (nav, secondary buttons), 600 (titles, primary buttons, KPI), 700 (rare — model tags already at 600). Never use 800/900.
 
@@ -110,7 +111,7 @@ Use it for **table/column headers** (`DataTable` already applies it), **KPI card
 
 Two rules about it, both load-bearing:
 
-- **It is `text-secondary`, not `text-muted`.** `text-muted` measures ~3.6:1 on `bg-card` and fails WCAG AA for this size; `text-secondary` measures ~6.5:1. Do not "tone it down".
+- **It is `text-secondary`, not `text-muted`.** `text-secondary` measures ~6.5:1 on `bg-card` and keeps structural labels stronger than the ~5.4:1 muted tier. Do not "tone it down".
 - **Import it, don't copy it.** It is `SCREAMING_CASE` where its neighbours in `classes.ts` are `camelCase` (`fieldLabelCls`, `kbdCls`) — that is the name the system uses; don't rename it. And don't add a third copy: the dashboard tier already carries its own local `EYEBROW_CLS` / `COL_HEADER_CLS` in `features/dashboard/dashboardMeta.ts`. New and shared code imports the one from `components/ui/classes.ts`.
 
 `fieldLabelCls` (also in `classes.ts`) stays the **form-field** label — Inter, uppercase, semibold, `text-secondary`, applied by `Label`/`FormField`. It lands on `text-secondary` for the same contrast reason as the eyebrow; don't tone it to `text-muted` either. Eyebrow ≠ field label; don't swap them.
@@ -315,10 +316,10 @@ Inline `style={{ ... }}` is acceptable **only** for genuinely runtime-computed v
 - **Hover:** color/background change only. Never a `scale()` transform on elements that share layout flow — it shifts neighbors. A bg wash (`--bg-wash-hover`, `hoverAccentWashCls`) or a ring-color change is the pattern; a blurred halo is not.
 - **Focus:** every interactive element gets a visible focus ring. The canonical string is `FOCUS_RING` in `lib/constants.ts` — `focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color-mix(in_srgb,var(--accent-primary)_60%,transparent)]`. `Button` already applies it — import it in custom controls instead of retyping it.
   - **Composite text fields ring their frame, not their input.** When the wrapper draws the frame and the input inside it is deliberately borderless (the Tracey composer; `Input`'s addon branch frames the same way with its own recipe, below), the ring goes on the wrapper — a second rectangle floating inside the frame reads as a rendering bug. Use `FOCUS_RING_FIELD` (`lib/constants.ts`): the same 2px/60% ring, scoped with `has-[textarea:focus]:` rather than bare `focus-within:`, because `focus-within:` also fires for focusable *siblings* inside the frame (a Send button) — and a lit frame must keep meaning "typing lands here", not "focus is somewhere in this box". A wrapper ring needs `transition-[border-color,box-shadow]`: a ring is a box-shadow, and `transition-colors` does not animate it.
-  - The input family's own treatment (`formInputCls`, `Input`'s addon branch — `border-accent` + `ring-1` at 45%) is **not** a second canonical ring; the contrast there is carried by the solid border, with the 1px ring as a halo around it. Don't copy the 45% ring onto a surface that has no `border-accent` to sit against, and don't "harmonize" a `FOCUS_RING` control down to it.
+  - The input family's own treatment (`formInputCls`, `Input`'s addon branch) combines the AA-visible `border-border-control` resting outline with the same accent border + 2px/60% ring on focus. Don't weaken it for visual subtlety.
 - **Keyboard:** Tab order = visual order. Modal/drawer trap focus and close on Esc (the existing components do; new ones must).
 - **Labels:** every form input pairs with a `<label>` (use `FormField`). Icon-only buttons get `aria-label`. Decorative glyphs (nav page codes, status dots) are `aria-hidden` and must have a real text label or `title` beside them.
-- **Contrast:** on `bg-card`, `text-primary` measures ~13:1, `text-secondary` ~6.5:1, `text-muted` ~3.6:1. So: `text-primary` anywhere; `text-secondary` for any label or prose, **including every eyebrow**; `text-muted` for captions/placeholders/inactive glyphs only — never for body content, never for an eyebrow, never for a value the user has to read. Pair a `*-subtle` background only with its matching solid text color.
+- **Contrast:** on `bg-card`, `text-primary` measures ~13:1, `text-secondary` ~6.5:1, and `text-muted` ~5.4:1. So: `text-primary` anywhere; `text-secondary` for any label or prose, **including every eyebrow**; `text-muted` for captions/placeholders/inactive glyphs only — never for body content, never for an eyebrow, never for a value the user has to read. Never reduce the opacity of already-muted text. Pair a `*-subtle` background only with its matching solid text color.
 - **Status by color is never the only signal.** Pair with an icon, label, or shape (a green dot beside the word "Passed", not a green dot alone).
 - **Reduced motion:** if you add a keyframe animation, also add a `@media (prefers-reduced-motion: reduce)` rule that disables it.
 
@@ -362,12 +363,12 @@ semi-transparent fills (§8.3). `prefers-reduced-motion` guards every keyframe a
 ## 8.2 Tracey tier — reading surface
 
 Tracey AI (`features/tracey/`, route `/tracey-ai`) is a prose-reading surface rather than a data
-grid, which earns it two type tokens and one identity treatment — and nothing else:
+grid, so it uses the shared reading tier plus one identity treatment — and nothing else:
 
-- **Reading-tier type**: message text, the composer, and the user bubble sit at `text-chat` (15px)
-  with in-chat markdown headings at `text-chat-title` (16px) / `text-h1` — see `chat-markdown.tsx`.
-  The empty-thread hero line uses `text-display`. `text-chat` / `text-chat-title` are
-  **Tracey-only**; do not use them on data-dense views.
+- **Reading-tier type**: message text, the composer, and the user bubble sit at `text-reading` (15px)
+  with in-chat markdown headings at `text-reading-title` (16px) / `text-h1` — see
+  `chat-markdown.tsx`. The empty-thread hero line uses `text-display`. The shared reading tokens
+  also serve trace conversations and long-form output; never use them on data-dense rows or metadata.
 - **Tracey tier CSS** (`index.css`, "Tracey assistant tier" block), all flat:
   - `tracey-halo` / `tracey-halo-active` — a **static 1px accent rule** around Tracey's avatar that
     brightens to `--accent-hover` while a turn runs. It does not rotate, spin, or blur; the class

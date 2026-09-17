@@ -10,7 +10,7 @@ export const TONE_TEXT: Record<DisplayTone, string> = {
   success: 'text-[var(--success)]',
   danger: 'text-[var(--danger)]',
   muted: 'text-[var(--text-muted)]',
-  neutral: 'text-[color-mix(in_srgb,var(--text-muted)_60%,transparent)]',
+  neutral: 'text-[var(--text-muted)]',
   secondary: 'text-[var(--text-secondary)]',
   teal: 'text-[var(--teal)]',
 };

@@ -46,7 +46,7 @@ export function StackedBar({ data, width = 640, height = 200, formatValue, forma
         <path d={chart.solidGridPath} stroke="var(--border-color)" strokeWidth="1" fill="none" />
         <path d={chart.dashedGridPath} stroke="var(--border-color)" strokeWidth="1" strokeDasharray="3 4" fill="none" />
         {chart.grid.map((g, i) => (
-          <text key={i} x={chart.plotL - 8} y={g.y + 4} textAnchor="end" fill="var(--text-muted)" fontSize="10" fontFamily="JetBrains Mono, monospace">{g.val}</text>
+          <text key={i} x={chart.plotL - 8} y={g.y + 4} textAnchor="end" fill="var(--text-muted)" fontSize="var(--text-caption)" fontFamily="JetBrains Mono, monospace">{g.val}</text>
         ))}
         {chart.bars.map((bar, i) => (
           <g key={i}>
@@ -56,7 +56,7 @@ export function StackedBar({ data, width = 640, height = 200, formatValue, forma
               return <rect key={j} x={r.x} y={r.y} width={r.w} height={r.h} fill={r.color} opacity={dim ? 0.5 : 1} />;
             })}
             {i % chart.labelStep === 0 && (
-              <text x={bar.centerX} y={height - 10} textAnchor="middle" fill="var(--text-muted)" fontSize="10" fontFamily="JetBrains Mono, monospace">{bar.label}</text>
+              <text x={bar.centerX} y={height - 10} textAnchor="middle" fill="var(--text-muted)" fontSize="var(--text-caption)" fontFamily="JetBrains Mono, monospace">{bar.label}</text>
             )}
           </g>
         ))}
