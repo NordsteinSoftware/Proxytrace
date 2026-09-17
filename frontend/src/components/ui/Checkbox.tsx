@@ -35,7 +35,7 @@ export const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(function Che
         />
         <span
           className={cn(
-            'pointer-events-none absolute inset-0 rounded-sm border border-border bg-card-2',
+            'pointer-events-none absolute inset-0 rounded-sm border border-border-control bg-card-2',
             'transition-colors duration-[var(--motion-fast)] ease-[var(--ease-standard)]',
             'peer-checked:border-transparent peer-checked:bg-accent',
             'peer-focus-visible:ring-2 peer-focus-visible:ring-[color-mix(in_srgb,var(--accent-primary)_60%,transparent)]',

@@ -108,7 +108,7 @@ export function TraceyComposer({ onNewConversation, showStarters }: TraceyCompos
             <div className="tracey-gradient-text text-display font-semibold leading-tight">
               <Trans>How can I help?</Trans>
             </div>
-            <div className="max-w-md text-chat text-secondary">
+            <div className="max-w-md text-reading text-secondary">
               <Trans>
                 Ask about your agents, suites, runs, or proposals — or have me run a suite, review a
                 proposal, or plot your data.
@@ -150,7 +150,7 @@ export function TraceyComposer({ onNewConversation, showStarters }: TraceyCompos
             // eslint-disable-next-line lingui/no-unlocalized-strings -- DOM element id, not UI copy
             aria-controls={open ? 'tracey-slash-menu' : undefined}
             placeholder={t`Ask Tracey…  (/ for tools)`}
-            className="max-h-48 min-h-16 w-full resize-none bg-transparent px-1 pt-1 text-chat text-primary outline-none placeholder:text-muted"
+            className="max-h-48 min-h-16 w-full resize-none bg-transparent px-1 pt-1 text-reading text-primary outline-none placeholder:text-muted"
           />
           <div className="flex items-center justify-end gap-2">
             <div className="flex items-center gap-1">

@@ -911,7 +911,7 @@ a `.tsx` that also exports a component, or you break the fast-refresh lint rule)
   presentational. Data fetching goes through TanStack Query — no raw `useEffect`/`fetch`.
 - Styling follows DESIGN.md tokens, including the restyled assistant-ui primitives. The chat is
   the scoped **Tracey assistant tier** (DESIGN.md §8.2): prose renders at the reading tier
-  (`text-chat`, via `components/chat-markdown.tsx`), and the `tracey-halo` /
+  (`text-reading`, via `components/chat-markdown.tsx`), and the `tracey-halo` /
   `tracey-halo-active` / `tracey-gradient-text` / `tracey-thinking-text` / `tracey-bolt` classes
   are Tracey-only. All five are flat — there is no `tracey-aurora` and no shimmer wash; see
   DESIGN.md §8.2 for what each one actually draws. File-size and

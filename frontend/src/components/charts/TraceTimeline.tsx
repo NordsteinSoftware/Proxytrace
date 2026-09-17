@@ -143,7 +143,7 @@ export function TraceTimeline({ buckets, from, to, onZoom, onZoomOut, canZoomOut
           x={geo.plotL + 4}
           y={(geo.baselineY + geo.plotB) / 2 + 3}
           fill="var(--text-muted)"
-          fontSize="9"
+          fontSize="var(--text-caption)"
           fontFamily="JetBrains Mono, monospace"
           letterSpacing="0.6"
         >
@@ -179,7 +179,7 @@ export function TraceTimeline({ buckets, from, to, onZoom, onZoomOut, canZoomOut
               y={height - 4}
               textAnchor={tick.anchor}
               fill="var(--text-muted)"
-              fontSize="9"
+              fontSize="var(--text-caption)"
               fontFamily="JetBrains Mono, monospace"
             >
               {tick.label}

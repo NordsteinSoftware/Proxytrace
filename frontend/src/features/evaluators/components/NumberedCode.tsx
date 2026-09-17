@@ -17,7 +17,7 @@ export function NumberedCode({ text, category, highlightVars = false }: Props) {
     <div data-testid="evaluator-numbered-code" className="grid grid-cols-[36px_1fr] font-mono text-body-sm leading-[1.65]">
       {lines.map((ln, i) => (
         <div key={i} className="contents">
-          <span className="text-muted text-right pr-3 text-caption opacity-55 select-none">{i + 1}</span>
+          <span className="text-muted text-right pr-3 text-caption select-none">{i + 1}</span>
           <span className="text-secondary whitespace-pre-wrap break-words">
             {highlightVars
               ? ln.split(/(\{\{[a-z_]+\}\})/gi).map((part, j) =>

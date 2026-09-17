@@ -30,7 +30,7 @@ const VARIANT_CLS: Record<ButtonVariant, string> = {
     'bg-accent text-accent-ink hover:bg-[var(--accent-hover)] active:bg-[var(--accent-press)] disabled:opacity-40 disabled:cursor-not-allowed',
   ),
   secondary: cn(
-    'bg-card-2 text-secondary border border-border hover:text-primary hover:bg-[var(--bg-wash-active)] disabled:opacity-40 disabled:cursor-not-allowed',
+    'bg-card-2 text-secondary border border-border-control hover:text-primary hover:bg-[var(--bg-wash-active)] disabled:opacity-40 disabled:cursor-not-allowed',
   ),
   ghost: cn(
     'text-secondary hover:text-primary hover:bg-[var(--bg-wash-hover)] border border-transparent disabled:opacity-40 disabled:cursor-not-allowed',

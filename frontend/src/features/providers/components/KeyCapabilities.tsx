@@ -12,7 +12,7 @@ const GRANTED: Record<ApiKeyScope, string> = {
   ApiWrite: cn('border-[color-mix(in_srgb,var(--success)_30%,transparent)] bg-[var(--success-subtle)] text-[var(--success)]'),
 };
 
-const GHOST = cn('border-hairline bg-transparent text-muted opacity-55');
+const GHOST = cn('border-hairline bg-transparent text-muted');
 
 /**
  * Compact, fixed-width permission triplet for an API key — Proxy / MCP read / MCP write as monospace

@@ -25,7 +25,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(function Inp
     return (
       <div
         className={cn(
-          'relative flex items-center w-full bg-card-2 border border-border rounded-md',
+          'relative flex items-center w-full bg-card-2 border border-border-control rounded-md',
           'transition-[border-color,box-shadow] duration-[var(--motion-fast)] ease-[var(--ease-standard)]',
           fieldFocusWithinCls,
           invalid && 'border-danger focus-within:border-danger focus-within:ring-danger',

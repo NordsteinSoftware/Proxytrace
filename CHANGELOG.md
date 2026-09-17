@@ -9,6 +9,13 @@ follow [Semantic Versioning](https://semver.org). Ongoing work is collected unde
 
 ## [Unreleased]
 
+### Changed
+
+- **The interface is easier to read during long sessions.** Muted text now clears normal-text
+  contrast requirements across every dark surface, the compact type scale starts at 11px instead
+  of 10px, form controls have visible resting outlines, and conversation content uses the larger
+  reading tier while data tables retain their compact spacing.
+
 ## [1.11.1] - 2026-09-15
 
 ### Changed

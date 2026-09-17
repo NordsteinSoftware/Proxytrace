@@ -14,7 +14,7 @@ export function AssistantMessage() {
   // anyway, so a root-level entrance buys nothing).
   return (
     <MessagePrimitive.Root className="flex justify-start">
-      <div className="flex min-w-0 flex-1 flex-col gap-3 text-chat text-primary">
+      <div className="flex min-w-0 flex-1 flex-col gap-3 text-reading text-primary">
         <MessagePrimitive.Parts components={assistantParts} />
         {/* Once the turn finishes, usage/duration/correlation-id land on the message metadata and
             the status row renders; while streaming the metadata is absent, so it stays hidden. */}

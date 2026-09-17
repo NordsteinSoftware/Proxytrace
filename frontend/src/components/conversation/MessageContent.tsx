@@ -29,7 +29,7 @@ function RawText({ content, isSystem }: { content: string; isSystem?: boolean })
   return (
     <div
       className={cn(
-        'text-title leading-[1.65] whitespace-pre-wrap',
+        'text-reading leading-[1.65] whitespace-pre-wrap',
         isSystem ? 'text-secondary italic' : 'text-primary',
       )}
     >
@@ -69,7 +69,7 @@ export function MessageContent({ content, view, isSystem }: Props) {
           {sanitized.modified && <WarningBanner>{t`Some HTML was removed for safety`}</WarningBanner>}
           {/* DOMPurify-sanitized markup — see lib/sanitize.ts sanitizeHtml. */}
           <div
-            className="text-title leading-relaxed text-primary"
+            className="text-reading leading-relaxed text-primary"
             dangerouslySetInnerHTML={{ __html: sanitized.html }}
           />
         </>

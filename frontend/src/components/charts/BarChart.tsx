@@ -63,7 +63,7 @@ export function BarChart({
           <rect x={hoverRect.x} y={hoverRect.y} width={hoverRect.w} height={hoverRect.h} fill={color} />
         )}
         {bars.rects.map((r, i) => (
-          <text key={i} x={r.labelX} y={bars.baselineY + 14} textAnchor="middle" fill="var(--text-muted)" fontSize="10" fontFamily="JetBrains Mono, monospace">{r.label}</text>
+          <text key={i} x={r.labelX} y={bars.baselineY + 14} textAnchor="middle" fill="var(--text-muted)" fontSize="var(--text-caption)" fontFamily="JetBrains Mono, monospace">{r.label}</text>
         ))}
       </svg>
       {hoverRect && (
