@@ -71,13 +71,25 @@ Then prove the workflow's guard will pass:
 
 It must print the section and exit 0 — this exact script gates the release workflow.
 
-Commit (this is the release commit) and push:
+Commit (this is the release commit) and land it on `master`. **`master` is protected** — the
+ruleset requires a pull request, so a direct `git push origin master` is rejected. Open the
+release commit as its own PR and merge it; with zero required approvals you can merge it
+yourself once its checks settle (a changelog-only PR mostly skips CI jobs and only runs the
+CodeQL analyses, so expect a few minutes, not a full gate).
 
 ```bash
+git checkout -b release/vX.Y.Z
 git add CHANGELOG.md
 git commit -m "Release X.Y.Z"
-git push origin master
+git push -u origin release/vX.Y.Z
+gh pr create --title "Release X.Y.Z" --body "…"
+gh pr checks --watch          # wait for the CodeQL analyses
+gh pr merge --squash --delete-branch
+git checkout master && git pull --ff-only   # the tag must point at this commit
 ```
+
+The tag goes on the merged commit, never on the PR branch — which is also why nothing
+in-flight on `master` after the merge can end up in the release.
 
 ## 4. Tag and push
 
@@ -108,11 +120,11 @@ when the `OPENAI_API_KEY` secret is absent — that is normal, not a failure.
 
 `gh run view <run-id> --log-failed` and triage by job:
 
-- **meta** — bad tag format or missing changelog section. Fix on master, then delete and
-  re-push the tag (safe: nothing was published yet):
+- **meta** — bad tag format or missing changelog section. Fix on `master` (via PR, see step 3),
+  then delete and re-push the tag (safe: nothing was published yet):
   `git push origin :refs/tags/vX.Y.Z && git tag -d vX.Y.Z` → fix → re-tag.
 - **ci / e2e** — a real regression or a flaky e2e spec (consult the `run-e2e-tests` skill
-  to triage). Fix forward on master, delete the tag, re-tag the fixed commit.
+  to triage). Fix forward on `master` (via PR), delete the tag, re-tag the fixed commit.
 - **publish-image** — usually registry permissions: GHCR (org must allow `GITHUB_TOKEN`
   package creation; packages must exist/be linked) or Docker Hub (`DOCKER_HUB_PAT` expired /
   lacks *Read & Write*, or is not an owner of the `proxytrace` org) — see `docs/releasing.md`
