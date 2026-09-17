@@ -16,7 +16,8 @@ internal sealed record ParseResult(
     string? ErrorMessage,
     SystemMessage SystemMessage,
     IReadOnlyList<ToolSpecification> Tools,
-    IModelParameters ModelParameters);
+    IModelParameters ModelParameters,
+    bool SupportsAutomaticGrouping);
 
 
 internal interface IOpenAiCallParser

@@ -72,6 +72,13 @@ internal record AgentCallEntity : Entity
     /// </summary>
     public required Guid? ConversationId { get; init; }
     /// <summary>
+    /// SHA-256 of the request history plus this call's assistant response. Indexed for exact
+    /// headerless-conversation continuation matching; null when matching cannot be lossless.
+    /// </summary>
+    public string? ContinuationHash { get; init; }
+    /// <summary>The completed-history fingerprint this automatically grouped call continues.</summary>
+    public string? ParentContinuationHash { get; init; }
+    /// <summary>
     /// Groups this call with others originating from the same proxy session (identified by the
     /// caller-supplied external key). Nullable and FK-free — session deletion never cascades away telemetry.
     /// </summary>

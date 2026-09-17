@@ -53,6 +53,14 @@ internal record AgentCall : DomainEntity<IAgentCall>, IAgentCall
     /// </summary>
     public Guid? ConversationId { get; }
     /// <summary>
+    /// Gets the completed-history fingerprint of the call this request continues.
+    /// </summary>
+    public string? ParentContinuationHash { get; }
+    /// <summary>
+    /// Gets whether this call can participate in automatic grouping.
+    /// </summary>
+    public bool SupportsAutomaticGrouping { get; }
+    /// <summary>
     /// Gets the session id.
     /// </summary>
     public Guid? SessionId { get; }
@@ -86,6 +94,8 @@ internal record AgentCall : DomainEntity<IAgentCall>, IAgentCall
         Guid? sessionId,
         OutlierFlags outlierFlags,
         Guid? apiKeyId,
+        string? parentContinuationHash,
+        bool supportsAutomaticGrouping,
         IRepository<IAgentCall> repository) : base(repository)
     {
         Agent = agent;
@@ -98,6 +108,8 @@ internal record AgentCall : DomainEntity<IAgentCall>, IAgentCall
         ErrorMessage = errorMessage;
         ModelParameters = modelParameters ?? IModelParameters.Empty;
         ConversationId = conversationId;
+        ParentContinuationHash = parentContinuationHash;
+        SupportsAutomaticGrouping = supportsAutomaticGrouping;
         SessionId = sessionId;
         OutlierFlags = outlierFlags;
         ApiKeyId = apiKeyId;
@@ -121,6 +133,8 @@ internal record AgentCall : DomainEntity<IAgentCall>, IAgentCall
         Guid? sessionId,
         OutlierFlags outlierFlags,
         Guid? apiKeyId,
+        string? parentContinuationHash,
+        bool supportsAutomaticGrouping,
         IRepository<IAgentCall> repository) : base(existing, repository)
     {
         Agent = agent;
@@ -133,6 +147,8 @@ internal record AgentCall : DomainEntity<IAgentCall>, IAgentCall
         ErrorMessage = errorMessage;
         ModelParameters = modelParameters;
         ConversationId = conversationId;
+        ParentContinuationHash = parentContinuationHash;
+        SupportsAutomaticGrouping = supportsAutomaticGrouping;
         SessionId = sessionId;
         OutlierFlags = outlierFlags;
         ApiKeyId = apiKeyId;

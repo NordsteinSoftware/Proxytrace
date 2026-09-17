@@ -80,6 +80,8 @@ internal class AgentCallGenerator : DomainEntityGenerator<IAgentCall>, IAgentCal
             modelParameters: agentCall.ModelParameters,
             conversationId: agentCall.ConversationId,
             outlierFlags: agentCall.OutlierFlags,
+            parentContinuationHash: agentCall.ParentContinuationHash,
+            supportsAutomaticGrouping: agentCall.SupportsAutomaticGrouping,
             existing: new ModifiedDomainEntityData(agentCall.Id, CreatedAt: createdAt, agentCall.UpdatedAt));
         return await modified.UpdateAsync(cancellationToken);
     }
