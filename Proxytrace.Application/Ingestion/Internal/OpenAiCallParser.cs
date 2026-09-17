@@ -38,13 +38,14 @@ internal class OpenAiCallParser : IOpenAiCallParser
         HttpStatusCode httpStatus,
         CancellationToken cancellationToken = default)
     {
-        var conversation = ParseConversation(requestBody);
+        var (conversation, supportsAutomaticGrouping) = ParseConversation(requestBody);
         if (conversation is null)
         {
             return null;
         }
 
         var agentMessage = ParseAgentMessage(responseBody);
+        supportsAutomaticGrouping &= HasOnlySupportedResponseContent(responseBody);
         if (agentMessage is null && httpStatus is >= (HttpStatusCode)200 and < (HttpStatusCode)300)
         {
             return null;
@@ -74,7 +75,8 @@ internal class OpenAiCallParser : IOpenAiCallParser
             ErrorMessage: errorMessage,
             SystemMessage: systemMessage,
             Tools: tools,
-            ModelParameters: modelParameters);
+            ModelParameters: modelParameters,
+            SupportsAutomaticGrouping: supportsAutomaticGrouping);
     }
 
     private static IModelParameters ParseModelParameters(string requestBody, IModelParameters.Create factory)
@@ -161,33 +163,71 @@ internal class OpenAiCallParser : IOpenAiCallParser
 
     // ── OpenAI request → Conversation ────────────────────────────────────────
 
-    private static Conversation? ParseConversation(string requestBody)
+    private static (Conversation? Conversation, bool SupportsAutomaticGrouping) ParseConversation(string requestBody)
     {
         try
         {
             using var doc = JsonDocument.Parse(requestBody);
             if (!doc.RootElement.TryGetProperty("messages", out var messagesEl))
             {
-                return null;
+                return (null, false);
             }
 
             var conversation = Conversation.Create();
+            var supportsAutomaticGrouping = true;
             foreach (var msgEl in messagesEl.EnumerateArray())
             {
+                supportsAutomaticGrouping &= HasOnlySupportedContent(msgEl);
                 var role = msgEl.TryGetProperty("role", out var rp) ? rp.GetString() : null;
                 var message = ParseMessage(role, msgEl);
                 if (message is null)
                 {
-                    return null;
+                    return (null, false);
                 }
 
                 conversation = message is SystemMessage sys
                     ? conversation.WithSystemMessage(sys)
                     : conversation.With(message);
             }
-            return conversation;
+            return (conversation, supportsAutomaticGrouping);
         }
-        catch { return null; }
+        catch { return (null, false); }
+    }
+
+    private static bool HasOnlySupportedContent(JsonElement message)
+    {
+        if (!message.TryGetProperty("content", out var content)
+            || content.ValueKind is JsonValueKind.Null or JsonValueKind.String)
+        {
+            return true;
+        }
+
+        return content.ValueKind == JsonValueKind.Array
+               && content.EnumerateArray().All(part =>
+                   part.TryGetProperty("type", out var type)
+                   && type.GetString() == "text"
+                   && part.TryGetProperty("text", out var text)
+                   && text.ValueKind == JsonValueKind.String);
+    }
+
+    private static bool HasOnlySupportedResponseContent(string? responseBody)
+    {
+        if (responseBody is null)
+            return false;
+
+        try
+        {
+            using var doc = JsonDocument.Parse(responseBody);
+            return doc.RootElement.TryGetProperty("choices", out var choices)
+                   && choices.ValueKind == JsonValueKind.Array
+                   && choices.GetArrayLength() > 0
+                   && choices[0].TryGetProperty("message", out var message)
+                   && HasOnlySupportedContent(message);
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     private static Message? ParseMessage(string? role, JsonElement el) => role switch

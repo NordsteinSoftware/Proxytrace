@@ -52,6 +52,15 @@ public interface IAgentCall : IDomainEntity<IAgentCall>, ISearchable
     Guid? ConversationId { get; }
 
     /// <summary>
+    /// Fingerprint of the completed call this headerless request continues. Null for explicitly
+    /// grouped calls, roots, and requests whose content cannot be matched losslessly.
+    /// </summary>
+    string? ParentContinuationHash { get; }
+
+    /// <summary>Whether this call was parsed without losing content needed for exact matching.</summary>
+    bool SupportsAutomaticGrouping { get; }
+
+    /// <summary>
     /// Groups this call with all calls of the same debugging session (one app run / user
     /// session, possibly spanning multiple agents and conversations). Derived from the
     /// <c>x-proxytrace-session-id</c> header; null when the client sent none. FK-free correlation id —
@@ -92,7 +101,9 @@ public interface IAgentCall : IDomainEntity<IAgentCall>, ISearchable
         Guid? conversationId = null,
         Guid? sessionId = null,
         OutlierFlags outlierFlags = OutlierFlags.None,
-        Guid? apiKeyId = null);
+        Guid? apiKeyId = null,
+        string? parentContinuationHash = null,
+        bool supportsAutomaticGrouping = true);
 
     /// <summary>
     /// Factory delegate for creating a new existing instance.
@@ -111,5 +122,7 @@ public interface IAgentCall : IDomainEntity<IAgentCall>, ISearchable
         Guid? conversationId = null,
         Guid? sessionId = null,
         OutlierFlags outlierFlags = OutlierFlags.None,
-        Guid? apiKeyId = null);
+        Guid? apiKeyId = null,
+        string? parentContinuationHash = null,
+        bool supportsAutomaticGrouping = true);
 }

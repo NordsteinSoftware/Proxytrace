@@ -77,6 +77,26 @@ public sealed class AgentCallIngestorTests : BaseTest<Module>
                                                }
                                                """;
 
+    private const string ToolTurn2RequestBody = $$"""
+                                                  {
+                                                      "model": "{{Model}}",
+                                                      "messages": [
+                                                          {"role": "system", "content": "{{SystemPrompt}}"},
+                                                          {"role": "user", "content": "{{UserPrompt}}"},
+                                                          {
+                                                              "role": "assistant",
+                                                              "content": null,
+                                                              "tool_calls": [{
+                                                                  "id": "{{ToolCallId}}",
+                                                                  "type": "function",
+                                                                  "function": {"name": "{{ToolName}}", "arguments": "{}"}
+                                                              }]
+                                                          },
+                                                          {"role": "tool", "tool_call_id": "{{ToolCallId}}", "content": "Sunny"}
+                                                      ]
+                                                  }
+                                                  """;
+
     // Plain multi-turn chat (no tools) — used for conversation grouping tests
     private const string ChatTurn1RequestBody = $$"""
                                                   {
@@ -136,6 +156,22 @@ public sealed class AgentCallIngestorTests : BaseTest<Module>
                                                        "usage": {"prompt_tokens": 20, "completion_tokens": 5, "total_tokens": 25}
                                                    }
                                                    """;
+
+    private const string MultimodalChatTurn1RequestBody = $$"""
+                                                            {
+                                                                "model": "{{Model}}",
+                                                                "messages": [
+                                                                    {"role": "system", "content": "{{SystemPrompt}}"},
+                                                                    {"role": "user", "content": [
+                                                                        {"type": "text", "text": "What is 2+2?"},
+                                                                        {
+                                                                            "type": "image_url",
+                                                                            "image_url": {"url": "https://example.test/image.png"}
+                                                                        }
+                                                                    ]}
+                                                                ]
+                                                            }
+                                                            """;
 
     private const string UnrelatedRequestBody = $$"""
                                                   {
@@ -353,6 +389,227 @@ public sealed class AgentCallIngestorTests : BaseTest<Module>
         var sharedConversationId = calls[0].ConversationId;
         sharedConversationId.Should().NotBeNull();
         calls[1].ConversationId.Should().Be(sharedConversationId);
+    }
+
+    [TestMethod]
+    public async Task IngestAsync_WithoutCorrelationHeaders_GroupsExactMessageHistory()
+    {
+        var services = GetServices();
+        var ingestion = services.GetRequiredService<AgentCallProcessor>();
+        var callRepo = services.GetRequiredService<IAgentCallRepository>();
+        var (provider, project) = await GetProviderAndProjectAsync(services);
+
+        await ingestion.IngestAsync(
+            new IngestJob(provider, project, ChatTurn1RequestBody, ChatTurn1ResponseBody,
+                TimeSpan.FromMilliseconds(100), HttpStatusCode.OK, SessionId: null),
+            CancellationToken);
+        await ingestion.IngestAsync(
+            new IngestJob(provider, project, ChatTurn2RequestBodyNoTools, ChatTurn2ResponseBody,
+                TimeSpan.FromMilliseconds(100), HttpStatusCode.OK, SessionId: null),
+            CancellationToken);
+
+        var calls = (await callRepo.GetFilteredAsync(
+            new AgentCallFilter { ProjectId = project.Id }, 1, 10, CancellationToken)).Items;
+
+        calls.Should().HaveCount(2);
+        calls[0].ConversationId.Should().NotBeNull();
+        calls.Should().OnlyContain(c => c.ConversationId == calls[0].ConversationId);
+        calls[0].Agent.Id.Should().Be(calls[1].Agent.Id);
+    }
+
+    [TestMethod]
+    public async Task IngestAsync_WithoutCorrelationHeaders_GroupsToolLoop()
+    {
+        var services = GetServices();
+        var ingestion = services.GetRequiredService<AgentCallProcessor>();
+        var callRepo = services.GetRequiredService<IAgentCallRepository>();
+        var (provider, project) = await GetProviderAndProjectAsync(services);
+
+        await ingestion.IngestAsync(
+            new IngestJob(provider, project, FirstRequestBody, FirstResponseBody,
+                TimeSpan.FromMilliseconds(100), HttpStatusCode.OK, SessionId: null),
+            CancellationToken);
+        await ingestion.IngestAsync(
+            new IngestJob(provider, project, ToolTurn2RequestBody, ChatTurn2ResponseBody,
+                TimeSpan.FromMilliseconds(100), HttpStatusCode.OK, SessionId: null),
+            CancellationToken);
+
+        var calls = (await callRepo.GetFilteredAsync(
+            new AgentCallFilter { ProjectId = project.Id }, 1, 10, CancellationToken)).Items;
+
+        calls.Should().HaveCount(2);
+        calls[0].ConversationId.Should().NotBeNull();
+        calls.Should().OnlyContain(c => c.ConversationId == calls[0].ConversationId);
+    }
+
+    [TestMethod]
+    public async Task IngestAsync_AmbiguousMessageHistory_StartsNewConversation()
+    {
+        var services = GetServices();
+        var ingestion = services.GetRequiredService<AgentCallProcessor>();
+        var callRepo = services.GetRequiredService<IAgentCallRepository>();
+        var (provider, project) = await GetProviderAndProjectAsync(services);
+
+        for (var i = 0; i < 2; i++)
+        {
+            await ingestion.IngestAsync(
+                new IngestJob(provider, project, ChatTurn1RequestBody, ChatTurn1ResponseBody,
+                    TimeSpan.FromMilliseconds(100), HttpStatusCode.OK, SessionId: null),
+                CancellationToken);
+        }
+
+        await ingestion.IngestAsync(
+            new IngestJob(provider, project, ChatTurn2RequestBodyNoTools, ChatTurn2ResponseBody,
+                TimeSpan.FromMilliseconds(100), HttpStatusCode.OK, SessionId: null),
+            CancellationToken);
+
+        var calls = (await callRepo.GetFilteredAsync(
+            new AgentCallFilter { ProjectId = project.Id }, 1, 10, CancellationToken)).Items;
+        var roots = calls.Where(c => c.Request.Messages.Count == 2).Select(c => c.ConversationId).ToArray();
+        var continuation = calls.Single(c => c.Request.Messages.Count == 4);
+
+        roots.Should().OnlyHaveUniqueItems();
+        roots.Should().NotContain(continuation.ConversationId);
+    }
+
+    [TestMethod]
+    public async Task IngestAsync_ExplicitConversationHeader_OverridesMessageHistory()
+    {
+        var services = GetServices();
+        var ingestion = services.GetRequiredService<AgentCallProcessor>();
+        var callRepo = services.GetRequiredService<IAgentCallRepository>();
+        var (provider, project) = await GetProviderAndProjectAsync(services);
+
+        await ingestion.IngestAsync(
+            new IngestJob(provider, project, ChatTurn1RequestBody, ChatTurn1ResponseBody,
+                TimeSpan.FromMilliseconds(100), HttpStatusCode.OK, SessionId: null),
+            CancellationToken);
+        await ingestion.IngestAsync(
+            new IngestJob(provider, project, ChatTurn2RequestBodyNoTools, ChatTurn2ResponseBody,
+                TimeSpan.FromMilliseconds(100), HttpStatusCode.OK, SessionId: null,
+                ConversationId: "explicit-thread"),
+            CancellationToken);
+
+        var calls = (await callRepo.GetFilteredAsync(
+            new AgentCallFilter { ProjectId = project.Id }, 1, 10, CancellationToken)).Items;
+        var continuation = calls.Single(c => c.Request.Messages.Count == 4);
+
+        continuation.ConversationId.Should().Be(ParseLegacyKey("explicit-thread"));
+        calls.Single(c => c.Request.Messages.Count == 2).ConversationId
+            .Should().NotBe(ParseLegacyKey("explicit-thread"));
+    }
+
+    [TestMethod]
+    public async Task IngestAsync_ExplicitAgentName_OverridesInferredParentAgent()
+    {
+        var services = GetServices();
+        var ingestion = services.GetRequiredService<AgentCallProcessor>();
+        var callRepo = services.GetRequiredService<IAgentCallRepository>();
+        var (provider, project) = await GetProviderAndProjectAsync(services);
+
+        await ingestion.IngestAsync(
+            new IngestJob(provider, project, ChatTurn1RequestBody, ChatTurn1ResponseBody,
+                TimeSpan.FromMilliseconds(100), HttpStatusCode.OK, SessionId: null),
+            CancellationToken);
+        await ingestion.IngestAsync(
+            new IngestJob(provider, project, ChatTurn2RequestBodyNoTools, ChatTurn2ResponseBody,
+                TimeSpan.FromMilliseconds(100), HttpStatusCode.OK, SessionId: null, AgentName: "Tracey"),
+            CancellationToken);
+
+        var calls = (await callRepo.GetFilteredAsync(
+            new AgentCallFilter { ProjectId = project.Id }, 1, 10, CancellationToken)).Items;
+        var continuation = calls.Single(c => c.Request.Messages.Count == 4);
+
+        continuation.Agent.Name.Should().Be("Tracey");
+        calls.Should().OnlyContain(c => c.ConversationId == continuation.ConversationId);
+    }
+
+    [TestMethod]
+    public async Task IngestAsync_WhenChildArrivesFirst_ReconcilesConversation()
+    {
+        var services = GetServices();
+        var ingestion = services.GetRequiredService<AgentCallProcessor>();
+        var callRepo = services.GetRequiredService<IAgentCallRepository>();
+        var (provider, project) = await GetProviderAndProjectAsync(services);
+
+        await ingestion.IngestAsync(
+            new IngestJob(provider, project, ChatTurn2RequestBodyNoTools, ChatTurn2ResponseBody,
+                TimeSpan.FromMilliseconds(100), HttpStatusCode.OK, SessionId: null),
+            CancellationToken);
+        await ingestion.IngestAsync(
+            new IngestJob(provider, project, ChatTurn1RequestBody, ChatTurn1ResponseBody,
+                TimeSpan.FromMilliseconds(100), HttpStatusCode.OK, SessionId: null),
+            CancellationToken);
+
+        var calls = (await callRepo.GetFilteredAsync(
+            new AgentCallFilter { ProjectId = project.Id }, 1, 10, CancellationToken)).Items;
+
+        calls.Should().HaveCount(2);
+        calls.Should().OnlyContain(c => c.ConversationId == calls[0].ConversationId);
+    }
+
+    [TestMethod]
+    public async Task IngestAsync_WithUnsupportedMultimodalContent_DoesNotAutoGroup()
+    {
+        var services = GetServices();
+        var ingestion = services.GetRequiredService<AgentCallProcessor>();
+        var callRepo = services.GetRequiredService<IAgentCallRepository>();
+        var (provider, project) = await GetProviderAndProjectAsync(services);
+
+        await ingestion.IngestAsync(
+            new IngestJob(provider, project, MultimodalChatTurn1RequestBody, ChatTurn1ResponseBody,
+                TimeSpan.FromMilliseconds(100), HttpStatusCode.OK, SessionId: null),
+            CancellationToken);
+        await ingestion.IngestAsync(
+            new IngestJob(provider, project, ChatTurn2RequestBodyNoTools, ChatTurn2ResponseBody,
+                TimeSpan.FromMilliseconds(100), HttpStatusCode.OK, SessionId: null),
+            CancellationToken);
+
+        var calls = (await callRepo.GetFilteredAsync(
+            new AgentCallFilter { ProjectId = project.Id }, 1, 10, CancellationToken)).Items;
+
+        calls.Should().HaveCount(2);
+        calls.Select(c => c.ConversationId).Should().OnlyHaveUniqueItems();
+    }
+
+    [TestMethod]
+    public async Task IngestAsync_NullConversationCandidate_DoesNotMakeParentAmbiguous()
+    {
+        var services = GetServices();
+        var ingestion = services.GetRequiredService<AgentCallProcessor>();
+        var callRepo = services.GetRequiredService<IAgentCallRepository>();
+        var createCall = services.GetRequiredService<IAgentCall.CreateNew>();
+        var (provider, project) = await GetProviderAndProjectAsync(services);
+
+        await ingestion.IngestAsync(
+            new IngestJob(provider, project, ChatTurn1RequestBody, ChatTurn1ResponseBody,
+                TimeSpan.FromMilliseconds(100), HttpStatusCode.OK, SessionId: null),
+            CancellationToken);
+        var parent = (await callRepo.GetFilteredAsync(
+            new AgentCallFilter { ProjectId = project.Id }, 1, 10, CancellationToken)).Items.Single();
+        var nullConversationDuplicate = createCall(
+            parent.Agent,
+            parent.Version,
+            parent.Endpoint,
+            parent.Request,
+            parent.Response,
+            parent.HttpStatus,
+            parent.FinishReason,
+            parent.ErrorMessage,
+            parent.ModelParameters);
+        await callRepo.AddAsync(nullConversationDuplicate, CancellationToken);
+
+        await ingestion.IngestAsync(
+            new IngestJob(provider, project, ChatTurn2RequestBodyNoTools, ChatTurn2ResponseBody,
+                TimeSpan.FromMilliseconds(100), HttpStatusCode.OK, SessionId: null),
+            CancellationToken);
+
+        var calls = (await callRepo.GetFilteredAsync(
+            new AgentCallFilter { ProjectId = project.Id }, 1, 10, CancellationToken)).Items;
+        var continuation = calls.Single(c => c.Request.Messages.Count == 4);
+
+        continuation.ConversationId.Should().Be(parent.ConversationId);
+        calls.Single(c => c.Id == nullConversationDuplicate.Id).ConversationId.Should().BeNull();
     }
 
     [TestMethod]

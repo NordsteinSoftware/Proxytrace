@@ -84,6 +84,27 @@ public interface IAgentCallRepository : IRepository<IAgentCall>
         IProject project,
         CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Returns the call when exactly one call in the project since <paramref name="createdAfter"/>
+    /// has the given completed-history fingerprint; returns null when no match or multiple matches
+    /// make the parent ambiguous.
+    /// </summary>
+    Task<IAgentCall?> FindUniqueByContinuationHashAsync(
+        string continuationHash,
+        IProject project,
+        DateTimeOffset createdAfter,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Repairs out-of-order automatic grouping in both directions: attaches this call to its parent
+    /// when the parent committed concurrently, then attaches any already-persisted children to it.
+    /// </summary>
+    Task<IAgentCall> ReconcileConversationAsync(
+        Guid callId,
+        IProject project,
+        DateTimeOffset createdAfter,
+        CancellationToken cancellationToken = default);
+
     Task<int> RemoveOlderThanAsync(DateTimeOffset cutoffDate, CancellationToken cancellationToken);
 
     /// <summary>

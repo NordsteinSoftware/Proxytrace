@@ -10,6 +10,7 @@ using Proxytrace.Domain.Agent;
 using Proxytrace.Domain.AgentCall;
 using Proxytrace.Domain.AgentVersion;
 using Nordstein.Core.AI.Completions;
+using Nordstein.Core.AI.Messages;
 using Nordstein.Core.Domain.Exceptions;
 using Nordstein.Core.AI.Prompts;
 using Proxytrace.Domain.Prompt;
@@ -20,6 +21,8 @@ namespace Proxytrace.Application.Ingestion.Internal;
 
 internal sealed class AgentCallProcessor : IAgentCallProcessor
 {
+    private static readonly TimeSpan AutoGroupWindow = TimeSpan.FromHours(24);
+
     private readonly IAgentCallRepository agentCallRepository;
     private readonly IAgentCall.CreateNew createNewCall;
     private readonly IPromptTemplate.Create createPromptTemplate;
@@ -93,8 +96,8 @@ internal sealed class AgentCallProcessor : IAgentCallProcessor
             }
 
             // ── Resolve conversation context ───────────────────────────────────
-            var (conversationId, priorConversationCall) = await ResolveConversationAsync(
-                job, cancellationToken);
+            var (conversationId, priorConversationCall, parentContinuationHash) = await ResolveConversationAsync(
+                job, parsed.Request, parsed.SupportsAutomaticGrouping, cancellationToken);
 
             // ── Resolve version ────────────────────────────────────────────────
             // GetText(), never ToString(): Message.ToString() renders "{Role}: {text}", so the
@@ -105,7 +108,11 @@ internal sealed class AgentCallProcessor : IAgentCallProcessor
             var promptTemplate = createPromptTemplate("unknown", parsed.SystemMessage.GetText());
 
             IAgentVersion? version;
-            if (priorConversationCall is not null
+            if (job.AgentName is { Length: > 0 } agentName)
+            {
+                version = await ResolveVersionForNamedAgentAsync(job, agentName, promptTemplate, parsed, cancellationToken);
+            }
+            else if (priorConversationCall is not null
                 && parsed.Tools.Count == 0
                 && string.Equals(
                     priorConversationCall.Version.SystemPrompt.Template,
@@ -115,13 +122,6 @@ internal sealed class AgentCallProcessor : IAgentCallProcessor
                 // Continuation call without re-sent tools *and* identical system prompt: inherit
                 // prior call's version verbatim.
                 version = priorConversationCall.Version;
-            }
-            else if (job.AgentName is { Length: > 0 } agentName)
-            {
-                // Explicit attribution: the caller named the owning agent (same-origin client like
-                // Tracey, or the X-Proxytrace-Agent header). Attribute directly, skipping the
-                // prompt/tool similarity matcher entirely.
-                version = await ResolveVersionForNamedAgentAsync(job, agentName, promptTemplate, parsed, cancellationToken);
             }
             else
             {
@@ -176,9 +176,21 @@ internal sealed class AgentCallProcessor : IAgentCallProcessor
                 conversationId: conversationId,
                 sessionId: session?.Id,
                 outlierFlags: outlierFlags,
-                apiKeyId: job.ApiKeyId);
+                apiKeyId: job.ApiKeyId,
+                parentContinuationHash: parentContinuationHash,
+                supportsAutomaticGrouping: parsed.SupportsAutomaticGrouping);
 
             call = await agentCallRepository.AddAsync(call, cancellationToken);
+
+            try
+            {
+                call = await agentCallRepository.ReconcileConversationAsync(
+                    call.Id, job.Project, DateTimeOffset.UtcNow - AutoGroupWindow, cancellationToken);
+            }
+            catch (Exception e)
+            {
+                logger.LogWarning(e, "Conversation reconciliation failed for call {CallId}", call.Id);
+            }
 
             // Upsert the session AFTER the call persists: the trace is the source of truth, so this is
             // best-effort — a failure here logs and is swallowed, never failing or duplicating ingestion
@@ -430,22 +442,32 @@ internal sealed class AgentCallProcessor : IAgentCallProcessor
         return await outlierDetector.EvaluateAsync(agent.Id, metrics, cancellationToken);
     }
 
-    private async Task<(Guid? conversationId, IAgentCall? priorCall)> ResolveConversationAsync(
+    private async Task<(Guid? conversationId, IAgentCall? priorCall, string? parentContinuationHash)> ResolveConversationAsync(
         IngestJob job,
+        Conversation request,
+        bool supportsAutomaticGrouping,
         CancellationToken cancellationToken)
     {
         // Explicit thread key wins; fall back to the session key so clients from before the
         // session/conversation split keep byte-identical conversation grouping.
         var conversationKey = job.ConversationId ?? job.SessionId;
-        if (conversationKey is null)
+        if (conversationKey is not null)
         {
-            return (null, null);
+            var conversationGuid = ParseCorrelationKey(conversationKey);
+            var explicitPrior = await agentCallRepository
+                .FindLatestByConversationIdAsync(conversationGuid, job.Project, cancellationToken);
+            return (conversationGuid, explicitPrior, null);
         }
 
-        var conversationGuid = ParseCorrelationKey(conversationKey);
-        var prior = await agentCallRepository
-            .FindLatestByConversationIdAsync(conversationGuid, job.Project, cancellationToken);
-        return (conversationGuid, prior);
+        var parentHash = supportsAutomaticGrouping ? ConversationFingerprint.Parent(request) : null;
+        var prior = parentHash is null
+            ? null
+            : await agentCallRepository.FindUniqueByContinuationHashAsync(
+                parentHash, job.Project, DateTimeOffset.UtcNow - AutoGroupWindow, cancellationToken);
+
+        return prior?.ConversationId is { } inferred
+            ? (inferred, prior, parentHash)
+            : (Guid.NewGuid(), null, parentHash);
     }
 
     private static Guid ParseCorrelationKey(string key)

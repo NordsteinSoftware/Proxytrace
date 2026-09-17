@@ -69,6 +69,10 @@ internal class AgentCallConfig : AbstractEntityConfiguration<AgentCallEntity>, I
         builder.Property(e => e.ErrorMessage).HasMaxLength(2048);
         builder.Property(e => e.RequestPreview).HasMaxLength(AgentCallPreview.MaxLength);
         builder.HasIndex(e => e.ConversationId);
+        builder.Property(e => e.ContinuationHash).HasMaxLength(64);
+        builder.HasIndex(e => e.ContinuationHash);
+        builder.Property(e => e.ParentContinuationHash).HasMaxLength(64);
+        builder.HasIndex(e => e.ParentContinuationHash);
 
         // Composite (SessionId, CreatedAt): the session detail page pages one session's traces
         // chronologically; the leading column alone also serves the traces-list session filter.
@@ -154,7 +158,9 @@ internal class AgentCallConfig : AbstractEntityConfiguration<AgentCallEntity>, I
             conversationId: stored.ConversationId,
             sessionId: stored.SessionId,
             outlierFlags: stored.OutlierFlags,
-            apiKeyId: stored.ApiKeyId);
+            apiKeyId: stored.ApiKeyId,
+            parentContinuationHash: stored.ParentContinuationHash,
+            supportsAutomaticGrouping: stored.ContinuationHash is not null);
     }
 
     /// <summary>
@@ -177,6 +183,10 @@ internal class AgentCallConfig : AbstractEntityConfiguration<AgentCallEntity>, I
             ErrorMessage = domain.ErrorMessage,
             ModelParameters = AgentConfig.ToData(domain.ModelParameters),
             ConversationId = domain.ConversationId,
+            ContinuationHash = domain.SupportsAutomaticGrouping
+                ? ConversationFingerprint.Completed(domain.Request, domain.Response?.Response)
+                : null,
+            ParentContinuationHash = domain.ParentContinuationHash,
             SessionId = domain.SessionId,
             OutlierFlags = domain.OutlierFlags,
             ApiKeyId = domain.ApiKeyId,
