@@ -616,6 +616,125 @@ internal class AgentCallRepository : AbstractRepository<IAgentCall, AgentCallEnt
             : await mapper.Map(stored, cancellationToken);
     }
 
+    /// <inheritdoc />
+    public async Task<IAgentCall?> FindUniqueByContinuationHashAsync(
+        string continuationHash,
+        IProject project,
+        DateTimeOffset createdAfter,
+        CancellationToken cancellationToken = default)
+    {
+        var context = contextFactory();
+        var projectId = project.Id;
+        var versionIdsForProject = context.Set<AgentVersionEntity>()
+            .Where(v => v.Project == projectId)
+            .Select(v => v.Id);
+        var matches = await context.Set<AgentCallEntity>()
+            .AsNoTracking()
+            .Where(e => e.ContinuationHash == continuationHash)
+            .Where(e => e.ConversationId != null)
+            .Where(e => e.CreatedAt >= createdAfter)
+            .Where(e => versionIdsForProject.Contains(e.AgentVersionId))
+            .Take(2)
+            .ToListAsync(cancellationToken);
+
+        return matches.Count == 1
+            ? await mapper.Map(matches[0], cancellationToken)
+            : null;
+    }
+
+    /// <inheritdoc />
+    public Task<IAgentCall> ReconcileConversationAsync(
+        Guid callId,
+        IProject project,
+        DateTimeOffset createdAfter,
+        CancellationToken cancellationToken = default)
+        => transaction.InvokeAsync(async () =>
+        {
+            var context = contextFactory();
+            var projectId = project.Id;
+            var versionIdsForProject = context.Set<AgentVersionEntity>()
+                .Where(v => v.Project == projectId)
+                .Select(v => v.Id);
+            var projectCalls = context.Set<AgentCallEntity>()
+                .Where(e => versionIdsForProject.Contains(e.AgentVersionId));
+            var current = await projectCalls
+                .AsNoTracking()
+                .SingleAsync(e => e.Id == callId, cancellationToken);
+            var targetConversationId = current.ConversationId
+                ?? throw new InvalidOperationException($"Call {callId} has no conversation id.");
+
+            if (current.ParentContinuationHash is { } parentHash)
+            {
+                var parents = await projectCalls
+                    .AsNoTracking()
+                    .Where(e => e.Id != callId)
+                    .Where(e => e.ContinuationHash == parentHash)
+                    .Where(e => e.ConversationId != null)
+                    .Where(e => e.CreatedAt >= createdAfter)
+                    .Select(e => e.ConversationId!.Value)
+                    .Take(2)
+                    .ToListAsync(cancellationToken);
+
+                if (parents.Count == 1)
+                    targetConversationId = parents[0];
+            }
+
+            var sourceConversationIds = new HashSet<Guid>();
+            if (current.ConversationId != targetConversationId)
+                sourceConversationIds.Add(current.ConversationId.Value);
+
+            if (current.ContinuationHash is { } continuationHash)
+            {
+                var parentCount = await projectCalls
+                    .AsNoTracking()
+                    .Where(e => e.ContinuationHash == continuationHash)
+                    .Where(e => e.ConversationId != null)
+                    .Where(e => e.CreatedAt >= createdAfter)
+                    .Take(2)
+                    .CountAsync(cancellationToken);
+
+                if (parentCount == 1)
+                {
+                    var children = await projectCalls
+                        .AsNoTracking()
+                        .Where(e => e.Id != callId)
+                        .Where(e => e.ParentContinuationHash == continuationHash)
+                        .Where(e => e.ConversationId != null)
+                        .Where(e => e.CreatedAt >= createdAfter)
+                        .Select(e => e.ConversationId!.Value)
+                        .Distinct()
+                        .ToListAsync(cancellationToken);
+                    sourceConversationIds.UnionWith(children);
+                }
+            }
+
+            sourceConversationIds.Remove(targetConversationId);
+            if (sourceConversationIds.Count > 0)
+            {
+                var toMove = projectCalls
+                    .Where(e => e.ConversationId != null
+                                && sourceConversationIds.Contains(e.ConversationId.Value));
+
+                if (context.Database.IsRelational())
+                {
+                    await toMove.ExecuteUpdateAsync(
+                        setters => setters.SetProperty(e => e.ConversationId, targetConversationId),
+                        cancellationToken);
+                }
+                else
+                {
+                    foreach (var row in await toMove.ToListAsync(cancellationToken))
+                        context.Entry(row).Property(e => e.ConversationId).CurrentValue = targetConversationId;
+                    await context.SaveChangesAsync(cancellationToken);
+                }
+            }
+
+            var reconciled = await projectCalls
+                .AsNoTracking()
+                .SingleAsync(e => e.Id == callId, cancellationToken);
+            return await mapper.Map(reconciled, cancellationToken);
+        }, cancellationToken);
+
     /// <summary>
     /// Deletes all agent calls created on or before the cutoff date. Executes as a server-side DELETE
     /// on relational providers to avoid materializing rows; falls back to load-then-remove on the
