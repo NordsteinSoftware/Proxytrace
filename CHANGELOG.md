@@ -9,6 +9,22 @@ follow [Semantic Versioning](https://semver.org). Ongoing work is collected unde
 
 ## [Unreleased]
 
+## [1.12.0] - 2026-09-17
+
+### Added
+
+- **Conversations assemble themselves when your client sends no conversation id.** Ingestion used
+  to group a trace only when the caller sent `x-proxytrace-conversation-id` (or the session key it
+  falls back to), so a client that sent just its messages arrived as a wall of unrelated single-turn
+  traces. Each headerless request is now matched against what has already been ingested: the request
+  carries a fingerprint of the message history it continues, and when exactly one call in the last
+  24 hours answers that fingerprint, the trace lands in that call's conversation. Ambiguous matches
+  — the same history replayed twice, for instance — deliberately start a fresh conversation instead
+  of guessing. Only requests parsed without losing content take part: an unsupported message or
+  response field marks the call as not groupable, so a fingerprint is never taken over a lossy
+  history. Calls that reach the database out of order are reconciled afterwards, so a child that beat
+  its parent to persistence still ends up in the right conversation.
+
 ### Changed
 
 - **The interface is easier to read during long sessions.** Muted text now clears normal-text
