@@ -66,8 +66,10 @@ session.
 -H "x-proxytrace-session-id: checkout-run-42" -H "x-proxytrace-conversation-id: payment"
 ```
 
-Send only the session key and Proxytrace still detects conversations on its own, exactly as it
-always has.
+Conversation grouping has two mechanisms. An explicit key wins: the
+`x-proxytrace-conversation-id` header takes precedence, and when it is absent the
+`x-proxytrace-session-id` key also becomes the conversation key. The message-history fingerprint
+fallback applies only when neither key is sent.
 
 ::: warning Behavior change for existing `x-proxytrace-session-id` users
 `x-proxytrace-session-id` **used to set the conversation (thread) key**. It now names the
