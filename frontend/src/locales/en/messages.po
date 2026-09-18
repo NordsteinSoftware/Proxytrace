@@ -3659,6 +3659,9 @@ msgstr "Notifications ({unreadCount} unread)"
 msgid "now"
 msgstr "now"
 
+msgid "NOW"
+msgstr "NOW"
+
 msgid "Num"
 msgstr "Num"
 

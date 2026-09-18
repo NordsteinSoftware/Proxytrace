@@ -3659,6 +3659,9 @@ msgstr "Benachrichtigungen ({unreadCount} ungelesen)"
 msgid "now"
 msgstr "jetzt"
 
+msgid "NOW"
+msgstr "JETZT"
+
 msgid "Num"
 msgstr "Nr."
 

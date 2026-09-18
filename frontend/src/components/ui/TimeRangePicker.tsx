@@ -147,6 +147,27 @@ export function TimeRangePicker({
                 onChange={e => setDraft(d => ({ ...d, from: e.target.value }))}
                 invalid={invalid}
                 leftAddon={<ClockIcon size={12} />}
+                rightAddon={(
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="link"
+                      className="text-caption"
+                      onClick={() => setDraft(d => ({ ...d, from: isoToLocalInput(new Date().toISOString()) }))}
+                      data-testid={`${testId}-from-now`}
+                    >
+                      <Trans>NOW</Trans>
+                    </Button>
+                    <Button
+                      variant="link"
+                      className="text-caption"
+                      onClick={() => setDraft(d => ({ ...d, from: '' }))}
+                      disabled={!draft.from}
+                      data-testid={`${testId}-from-clear`}
+                    >
+                      <Trans>Clear</Trans>
+                    </Button>
+                  </div>
+                )}
                 data-testid={`${testId}-from`}
               />
             </FormField>
@@ -160,6 +181,27 @@ export function TimeRangePicker({
                 onChange={e => setDraft(d => ({ ...d, to: e.target.value }))}
                 invalid={invalid}
                 leftAddon={<ClockIcon size={12} />}
+                rightAddon={(
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="link"
+                      className="text-caption"
+                      onClick={() => setDraft(d => ({ ...d, to: isoToLocalInput(new Date().toISOString()) }))}
+                      data-testid={`${testId}-to-now`}
+                    >
+                      <Trans>NOW</Trans>
+                    </Button>
+                    <Button
+                      variant="link"
+                      className="text-caption"
+                      onClick={() => setDraft(d => ({ ...d, to: '' }))}
+                      disabled={!draft.to}
+                      data-testid={`${testId}-to-clear`}
+                    >
+                      <Trans>Clear</Trans>
+                    </Button>
+                  </div>
+                )}
                 data-testid={`${testId}-to`}
               />
             </FormField>
