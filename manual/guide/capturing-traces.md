@@ -203,6 +203,17 @@ individual turns. The group's status column shows the exact code (e.g. `200`) wh
 turn shares it, `2xx` when all turns succeeded with differing 2xx codes, and `mixed` when
 the turns disagree.
 
+When you send an `x-proxytrace-conversation-id` header — or a session key when no
+conversation header is present — that explicit key groups the calls. When neither is sent,
+Proxytrace can still group a continuation automatically. It fingerprints the request's message
+history through its last assistant message (`ParentContinuationHash`) and looks for an
+`AgentCallEntity.ContinuationHash` with the same value from the previous 24 hours. Exactly one
+match joins that conversation; no match, or more than one match, starts a new conversation.
+
+Automatic grouping only uses calls parsed without losing content
+(`SupportsAutomaticGrouping`); lossily parsed calls are excluded. After each call is stored,
+`ReconcileConversationAsync` also repairs parent/child links that arrived out of order.
+
 ## From traces to everything else
 
 Traces are the raw material for the rest of Proxytrace:
