@@ -1,3 +1,4 @@
+import { useRef } from 'react';
 import { Trans, useLingui } from '@lingui/react/macro';
 import { cn } from '../../../lib/cn';
 import { Tooltip } from '../../../components/ui/Tooltip';
@@ -13,6 +14,51 @@ import type { TraceSort, TraceSortField } from '../tracesMeta';
 
 // eslint-disable-next-line lingui/no-unlocalized-strings -- CSS utility classes, not UI copy
 const HEADER_TEXT_CLS = 'text-body-sm font-semibold text-secondary uppercase tracking-[0.06em]';
+
+function ColumnResizeHandle({ label, onResize }: { label: string; onResize: (width: number, widths: number[]) => void }) {
+  const { t } = useLingui();
+  const drag = useRef<{ x: number; width: number; widths: number[] } | null>(null);
+  const resizeLabel = t`Resize ${label} column`;
+  // Freeze the visible tracks so the flexible Message column cannot absorb the drag.
+  const measureWidths = (handle: HTMLButtonElement) =>
+    Array.from(handle.parentElement!.parentElement!.children, cell => cell.getBoundingClientRect().width);
+
+  return (
+    // eslint-disable-next-line no-restricted-syntax -- narrow drag handle needs its own geometry and pointer/keyboard interaction
+    <button
+      type="button"
+      aria-label={resizeLabel}
+      title={resizeLabel}
+      className="absolute -right-1 top-0 bottom-0 z-10 w-2 cursor-col-resize touch-none select-none border-0 border-r border-hairline bg-transparent hover:border-accent focus-visible:outline-2 focus-visible:outline-accent"
+      onPointerDown={event => {
+        if (event.button !== 0) return;
+        event.preventDefault();
+        event.currentTarget.focus();
+        event.currentTarget.setPointerCapture(event.pointerId);
+        drag.current = {
+          x: event.clientX,
+          width: event.currentTarget.parentElement!.getBoundingClientRect().width,
+          widths: measureWidths(event.currentTarget),
+        };
+      }}
+      onPointerMove={event => {
+        if (drag.current) onResize(drag.current.width + event.clientX - drag.current.x, drag.current.widths);
+      }}
+      onPointerUp={event => {
+        drag.current = null;
+        if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+      }}
+      onPointerCancel={() => { drag.current = null; }}
+      onLostPointerCapture={() => { drag.current = null; }}
+      onKeyDown={event => {
+        if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+        event.preventDefault();
+        const width = event.currentTarget.parentElement!.getBoundingClientRect().width;
+        onResize(width + (event.key === 'ArrowRight' ? 10 : -10), measureWidths(event.currentTarget));
+      }}
+    />
+  );
+}
 
 function SortableHeader({ label, field, sort, onSortChange, alignRight }: {
   label: string;
@@ -83,10 +129,11 @@ interface Props {
   sort: TraceSort;
   onSortChange: (field: TraceSortField) => void;
   position: PositionProps;
+  onColumnResize: (index: number, width: number, widths: number[]) => void;
 }
 
 /** Sticky column header for the trace list. Sits outside the virtualized area so it never scrolls. */
-export function TraceTableHeader({ sort, onSortChange, position }: Props) {
+export function TraceTableHeader({ sort, onSortChange, position, onColumnResize }: Props) {
   const { i18n } = useLingui();
 
   return (
@@ -98,9 +145,18 @@ export function TraceTableHeader({ sort, onSortChange, position }: Props) {
           const sortField = SORT_FIELD_BY_COL[i];
           const alignRight = i === COL_HEADERS.length - 1;
 
-          if (sortField) {
-            return (
-              <span key={i} className={cn(alignRight && 'text-right', COL_VIS_CLS[i])}>
+          return (
+            <span
+              key={i}
+              className={cn(
+                HEADER_TEXT_CLS,
+                'relative min-w-0 pr-2',
+                isAnomaly && 'flex items-center justify-center',
+                alignRight && 'text-right',
+                COL_VIS_CLS[i],
+              )}
+            >
+              {sortField ? (
                 <SortableHeader
                   label={headerLabel}
                   field={sortField}
@@ -108,21 +164,7 @@ export function TraceTableHeader({ sort, onSortChange, position }: Props) {
                   onSortChange={onSortChange}
                   alignRight={alignRight}
                 />
-              </span>
-            );
-          }
-
-          return (
-            <span
-              key={i}
-              className={cn(
-                HEADER_TEXT_CLS,
-                isAnomaly && 'flex items-center justify-center',
-                alignRight && 'text-right',
-                COL_VIS_CLS[i],
-              )}
-            >
-              {isAnomaly ? (
+              ) : isAnomaly ? (
                 <Tooltip content={headerLabel}>
                   <span aria-label={headerLabel} className="inline-flex text-muted">
                     <AlertTriangleIcon size={13} />
@@ -131,6 +173,7 @@ export function TraceTableHeader({ sort, onSortChange, position }: Props) {
               ) : (
                 headerLabel
               )}
+              <ColumnResizeHandle label={headerLabel} onResize={(width, widths) => onColumnResize(i, width, widths)} />
             </span>
           );
         })}

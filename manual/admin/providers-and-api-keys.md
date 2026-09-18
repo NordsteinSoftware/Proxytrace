@@ -14,7 +14,7 @@ users with the **Admin** role.
 - **Model Provider** — an upstream OpenAI-compatible API such as OpenAI.
 - **Model** — a specific model offered by a provider.
 - **Model Endpoint** — a **model paired with a provider**, plus per-token costs
-  (`InputTokenCost`, `OutputTokenCost`). Endpoints can calculate the cost of a call's token
+  (`InputTokenCost`, `OutputTokenCost`, `CachedInputTokenCost`). Endpoints can calculate the cost of a call's token
   usage, which feeds the cost figures shown on traces and runs.
 
 Manage these from the **Providers** area of the UI.
@@ -28,11 +28,19 @@ still removes its endpoints and their data.)
 When you add a provider, Proxytrace **discovers its models and fetches their prices
 automatically**, so you usually start with a populated, priced model list. Each provider's
 detail view shows its **Models** section (above its **API keys** section) with a per-model
-input/output price. The **Reload models & prices** button re-runs discovery and **refreshes the
-price of every model** (new and existing) from the catalogue, and a background service does the
-same automatically on a configurable interval (default hourly — see
-[Configuration](/admin/configuration)). Prices are managed entirely by Proxytrace — there is no
-manual price entry.
+input, output, and cached-input price. The **Reload models & prices** button re-runs discovery
+and refreshes automatic prices from the catalogue. A background service does the same on a
+configurable interval (default hourly — see [Configuration](/admin/configuration)).
+
+Choose **Edit prices** on a model to set all three prices in **EUR per 1M tokens**. Zero means
+free; blank means unknown. An unknown cached-input price uses the input price. Prices cannot
+be negative, and a cached-input price cannot exceed a known input price.
+
+Saving marks that provider/model endpoint **Manual**. Its prices survive reloads and scheduled
+refreshes while other models continue to update. **Use automatic pricing** returns it to catalogue
+pricing and refreshes immediately. If model discovery fails, the last prices remain and later
+refreshes retry automatically. Historical views that use current endpoint prices also reflect
+price edits; no price history is stored.
 
 The **Endpoint URL** accepts a plain host too — `https://` is assumed when you omit the
 scheme, so `api.openai.com/v1` and `https://api.openai.com/v1` are equivalent (use an
@@ -87,8 +95,8 @@ using **European Central Bank (ECB)** exchange rates. Azure providers prefer the
 `azure/<model>` entry, falling back to the bare model name. A model that isn't in the catalogue
 loads without a price (shown as `—`).
 
-Every stored price is normalised to **EUR per 1M tokens** and is refreshed from the catalogue on
-each reload.
+Every stored price is normalised to **EUR per 1M tokens**. Automatic prices are refreshed from
+the catalogue on each reload; manual prices are preserved.
 
 If either feed is unreachable — the catalogue **or** the exchange-rate feed — models still load, they
 simply load without prices. Proxytrace makes **one** attempt against the failing feed and then pauses

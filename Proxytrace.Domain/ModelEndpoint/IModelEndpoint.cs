@@ -36,13 +36,17 @@ public interface IModelEndpoint : IDomainEntity, IArchivable
     /// </summary>
     decimal? CachedInputTokenCost { get; }
 
+    /// <summary>Whether all three prices are managed manually instead of refreshed.</summary>
+    bool ManualPricing { get; }
+
     /// <summary>Factory delegate for creating a new model endpoint.</summary>
     public delegate IModelEndpoint CreateNew(
         IModel model,
         IModelProvider provider,
         decimal? inputTokenCost,
         decimal? outputTokenCost,
-        decimal? cachedInputTokenCost);
+        decimal? cachedInputTokenCost,
+        bool manualPricing = false);
 
     /// <summary>Factory delegate for reconstituting an existing model endpoint from persistence.</summary>
     public delegate IModelEndpoint CreateExisting(
@@ -51,7 +55,8 @@ public interface IModelEndpoint : IDomainEntity, IArchivable
         decimal? inputTokenCost,
         decimal? outputTokenCost,
         decimal? cachedInputTokenCost,
-        IDomainEntityData existing);
+        IDomainEntityData existing,
+        bool manualPricing = false);
 
     /// <summary>
     /// Calculates cost associated with this endpoint for a given usage

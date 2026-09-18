@@ -94,6 +94,7 @@ export function useTraceQueries(args: TraceQueryArgs) {
     traces: dedupeById(tracesQuery.data?.pages.flatMap(page => page.items) ?? []),
     total: tracesQuery.data?.pages[0]?.total ?? 0,
     isFetching: tracesQuery.isFetching,
+    isPlaceholderData: tracesQuery.isPlaceholderData,
     isFetchingNextPage: tracesQuery.isFetchingNextPage,
     hasNextPage: tracesQuery.hasNextPage,
     fetchNextPage: () => { void tracesQuery.fetchNextPage(); },

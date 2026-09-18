@@ -1294,6 +1294,12 @@ msgstr "Mis en cache"
 msgid "Cached / 1M €"
 msgstr "En cache / 1M €"
 
+msgid "Cached-input price"
+msgstr "Prix des entrées en cache"
+
+msgid "Cached-input price cannot exceed the input price."
+msgstr "Le prix des entrées en cache ne peut pas dépasser le prix des entrées."
+
 #. placeholder {0}: index + 1
 msgid "Call {0}"
 msgstr "Appel {0}"
@@ -1395,6 +1401,9 @@ msgstr "Effacer le filtre"
 
 msgid "Clear search"
 msgstr "Effacer la recherche"
+
+msgid "Clear selection"
+msgstr "Effacer la sélection"
 
 msgid "Clear the filters to see all evaluators."
 msgstr "Effacez les filtres pour voir tous les Evaluators."
@@ -1623,6 +1632,12 @@ msgstr "Impossible de lire l'API key amont."
 
 msgid "Could not reset your password. Please try again."
 msgstr "Impossible de réinitialiser votre mot de passe. Veuillez réessayer."
+
+msgid "Could not restore automatic pricing. Please try again."
+msgstr "Impossible de rétablir les prix automatiques. Veuillez réessayer."
+
+msgid "Could not save prices. Please try again."
+msgstr "Impossible d’enregistrer les prix. Veuillez réessayer."
 
 msgid "Could not start setup. Please try again."
 msgstr "Impossible de démarrer la configuration. Veuillez réessayer."
@@ -2051,6 +2066,9 @@ msgstr "Modifier le budget mensuel"
 msgid "Edit name"
 msgstr "Modifier le nom"
 
+msgid "Edit prices"
+msgstr "Modifier les prix"
+
 msgid "Edit schedule"
 msgstr "Modifier le planning"
 
@@ -2120,6 +2138,9 @@ msgstr "URL de l'Endpoint"
 msgid "Enter a number, or leave the field empty to unset the threshold."
 msgstr "Saisissez un nombre, ou laissez le champ vide pour désactiver le seuil."
 
+msgid "Enter prices from 0 to below 1,000,000,000,000 with up to 6 decimal places. Leave blank for unknown."
+msgstr "Saisissez des prix de 0 à moins de 1 000 000 000 000 avec un maximum de 6 décimales. Laissez vide si le prix est inconnu."
+
 msgid "Enter the 6-digit code from your authenticator app, or one of your backup codes."
 msgstr "Saisissez le code à 6 chiffres de votre application d'authentification, ou l'un de vos codes de secours."
 
@@ -2158,6 +2179,9 @@ msgstr "Erreurs"
 
 msgid "Estimated cost in EUR"
 msgstr "Coût estimé en EUR"
+
+msgid "EUR per 1M tokens. Leave blank for unknown. An unknown cached-input price uses the input price."
+msgstr "EUR par million de tokens. Laissez vide si le prix est inconnu. Si le prix des entrées en cache est inconnu, le prix des entrées est utilisé."
 
 msgid "Evaluation pass rate"
 msgstr "Taux de réussite de l'évaluation"
@@ -2605,6 +2629,9 @@ msgstr "Entrée / 1M €"
 msgid "Input conversation"
 msgstr "Conversation en entrée"
 
+msgid "Input price"
+msgstr "Prix des entrées"
+
 msgid "Input tokens"
 msgstr "Tokens d’entrée"
 
@@ -2949,6 +2976,9 @@ msgstr "Gérer"
 msgid "Manage this installation's license key."
 msgstr "Gérez la clé de licence de cette installation."
 
+msgid "Manual"
+msgstr "Manuel"
+
 msgid "Many tool calls"
 msgstr "Nombreux Tool calls"
 
@@ -3109,6 +3139,9 @@ msgstr "Changement de modèle"
 
 msgid "Models"
 msgstr "Modèles"
+
+msgid "Models and automatic prices reload from the provider. Manual prices are preserved."
+msgstr "Les modèles et les prix automatiques sont rechargés depuis le fournisseur. Les prix manuels sont conservés."
 
 msgid "Models are discovered from your provider automatically; prices load from the catalogue."
 msgstr "Les Modèles sont détectés automatiquement depuis votre provider ; les prix se chargent depuis le catalogue."
@@ -3659,6 +3692,9 @@ msgstr "Notifications ({unreadCount} non lues)"
 msgid "now"
 msgstr "maintenant"
 
+msgid "NOW"
+msgstr "MAINTENANT"
+
 msgid "Num"
 msgstr "Num"
 
@@ -3808,6 +3844,9 @@ msgstr "Sortie / 1M €"
 
 msgid "Output contract"
 msgstr "Contrat de sortie"
+
+msgid "Output price"
+msgstr "Prix des sorties"
 
 msgid "Output tokens"
 msgstr "Tokens de sortie"
@@ -4189,9 +4228,6 @@ msgstr "Proxytrace parle le protocole OpenAI — pointez-le vers OpenAI ou vers 
 msgid "pt"
 msgstr "pt"
 
-msgid "Pulled from the provider; prices load automatically."
-msgstr "Récupéré auprès du provider ; les prix se chargent automatiquement."
-
 msgid "Put the cases in a new suite"
 msgstr "Mettre les cas dans une nouvelle suite"
 
@@ -4437,6 +4473,9 @@ msgstr "Réinitialiser l'authentification à deux facteurs"
 msgid "Reset your password"
 msgstr "Réinitialisez votre mot de passe"
 
+msgid "Resize {label} column"
+msgstr "Redimensionner la colonne {label}"
+
 msgid "Response time"
 msgstr "Temps de réponse"
 
@@ -4636,6 +4675,9 @@ msgstr "Enregistrer vos codes de secours"
 msgid "Saving clears this budget's alert state, so the next check re-evaluates against the new thresholds."
 msgstr "La sauvegarde efface l'état d'alerte de ce budget, donc la prochaine vérification réévalue par rapport aux nouveaux seuils."
 
+msgid "Saving makes all three prices manual. Manual prices are preserved when models and prices reload."
+msgstr "L’enregistrement rend les trois prix manuels. Les prix manuels sont conservés lors du rechargement des modèles et des prix."
+
 msgid "Saving…"
 msgstr "Enregistrement…"
 
@@ -4808,6 +4850,10 @@ msgstr "Semez une conversation à partir d’une trace passée ou d’un cas de 
 msgid "select"
 msgstr "sélectionner"
 
+#. placeholder {0}: traces.length
+msgid "Select {0} traces in this group"
+msgstr "Sélectionner les {0} Traces de ce groupe"
+
 msgid "Select a case or trace"
 msgstr "Sélectionnez un cas ou une trace"
 
@@ -4872,6 +4918,10 @@ msgstr "Ne rien sélectionner"
 msgid "Select suite {0}"
 msgstr "Sélectionner la suite {0}"
 
+#. placeholder {0}: traces[0].id
+msgid "Select trace {0}"
+msgstr "Sélectionner la Trace {0}"
+
 msgid "Select traces"
 msgstr "Sélectionner des Traces"
 
@@ -4884,8 +4934,14 @@ msgstr "Sélectionner…"
 msgid "selected model"
 msgstr "modèle sélectionné"
 
+msgid "selected traces"
+msgstr "Traces sélectionnées"
+
 msgid "Selected window"
 msgstr "Fenêtre sélectionnée"
+
+msgid "Selection stats"
+msgstr "Statistiques de la sélection"
 
 msgid "Send"
 msgstr "Envoyer"
@@ -5718,6 +5774,9 @@ msgstr "Limite de Traces atteinte"
 msgid "Trace preview · {0}"
 msgstr "Aperçu de Trace · {0}"
 
+msgid "Trace stats"
+msgstr "Statistiques des Traces"
+
 msgid "traces"
 msgstr "traces"
 
@@ -5895,6 +5954,9 @@ msgstr "Relais direct amont"
 
 msgid "Upstream pass-through — forward non-inference paths (such as /health) to the provider using its own credential. Not traced, and not checked by detectors."
 msgstr "Relais direct amont — transmet les chemins hors inférence (comme /health) au Provider avec ses propres identifiants. Non enregistré comme Trace et non contrôlé par les détecteurs."
+
+msgid "Use automatic pricing"
+msgstr "Utiliser les prix automatiques"
 
 msgid "Use your resource’s OpenAI-compatible v1 endpoint. Model discovery lists the models you have deployed."
 msgstr "Utilisez le endpoint v1 OpenAI-compatible de votre ressource. La découverte de modèle liste les modèles que vous avez déployés."

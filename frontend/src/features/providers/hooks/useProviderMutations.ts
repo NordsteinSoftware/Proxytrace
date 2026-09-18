@@ -6,7 +6,7 @@ import { setupApi } from '../../../api/setup';
 import { QUERY_KEYS } from '../../../api/query-keys';
 import type {
   CreateApiKeyRequest, CreateProviderRequest,
-  ModelProviderKind, ProviderDto,
+  ModelProviderKind, ProviderDto, UpdateModelPricingRequest,
 } from '../../../api/models';
 import useToast from '../../../hooks/useToast';
 import { normalizeProviderConnectionError, ProviderConnectionTestError } from '../../../lib/providerConnection';
@@ -129,11 +129,26 @@ export function useDeleteKey(providerId: string) {
   });
 }
 
+/** Saves all three endpoint prices together, or restores automatic pricing. */
+export function useUpdateModelPricing(providerId: string, endpointId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (req: UpdateModelPricingRequest) => providersApi.updateModelPricing(providerId, endpointId, req),
+    onSuccess: () => Promise.all([
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.providersOverview }),
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.modelEndpoints }),
+    ]),
+  });
+}
+
 /** Re-discovers a provider's models and refreshes pricing; invalidates the overview. */
 export function useReloadProvider(providerId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: () => providersApi.reload(providerId),
-    onSuccess: () => qc.invalidateQueries({ queryKey: QUERY_KEYS.providersOverview }),
+    onSuccess: () => Promise.all([
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.providersOverview }),
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.modelEndpoints }),
+    ]),
   });
 }

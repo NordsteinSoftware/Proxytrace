@@ -1,7 +1,7 @@
 import { api, type RequestOptions } from './client';
 import type {
   ApiKeyDto, CreateApiKeyRequest, CreateProviderRequest,
-  ModelEndpointDto, ModelProviderKind,
+  ModelEndpointDto, ModelProviderKind, UpdateModelPricingRequest,
   ProviderDto, ProviderKeyDto, ProvidersOverviewDto,
 } from './models';
 
@@ -21,6 +21,8 @@ export const providersApi = {
     api.put<ProviderDto>(`/api/providers/${id}`, req),
   delete: (id: string) => api.del(`/api/providers/${id}`),
 
+  updateModelPricing: (providerId: string, endpointId: string, req: UpdateModelPricingRequest) =>
+    api.put<ModelEndpointDto>(`/api/providers/${providerId}/models/${endpointId}`, req),
   getAllModels: () => api.get<ModelEndpointDto[]>('/api/model-endpoints'),
   deleteModel: (endpointId: string) =>
     api.del(`/api/providers/endpoints/${endpointId}`),

@@ -2,7 +2,7 @@ import { useCallback, useMemo, useRef } from 'react';
 import { Trans } from '@lingui/react/macro';
 import { SkeletonList } from '../../../components/ui/Skeleton';
 import type { AgentCallListItemDto } from '../../../api/models';
-import { GRID_TEMPLATE, GRID_TEMPLATE_NARROW, traceListView } from '../tracesMeta';
+import { traceListView } from '../tracesMeta';
 import type { TraceRow, TraceSort, TraceSortField } from '../tracesMeta';
 import { listRowKey, type TraceListRow } from '../traceDayDividers';
 import { FlatTraceRow } from './FlatTraceRow';
@@ -13,6 +13,8 @@ import { TraceDayDivider } from './TraceDayDivider';
 import { TraceListFooter } from './TraceListFooter';
 import { useTraceVirtualizer } from '../hooks/useTraceVirtualizer';
 import { useScrollToTrace } from '../hooks/useScrollToTrace';
+import { useTraceColumnWidths } from '../hooks/useTraceColumnWidths';
+import type { TraceStatsSelection } from '../hooks/useTraceSelection';
 
 /** Scroll offset under which the list counts as "at the top" for live-arrival purposes. */
 const AT_TOP_THRESHOLD_PX = 4;
@@ -37,6 +39,7 @@ export interface TraceLiveProps {
 }
 
 export interface TraceSelectionProps {
+  stats?: TraceStatsSelection;
   selectedId: string | null;
   expandedConvs: Set<string>;
   onSelectTrace: (trace: AgentCallListItemDto) => void;
@@ -72,6 +75,7 @@ function renderRow(row: TraceRow, selection: TraceSelectionProps, freshIds: Read
     return (
       <FlatTraceRow
         trace={row.trace}
+        statsSelection={selection.stats}
         selected={row.trace.id === selection.selectedId}
         fresh={freshIds.has(row.trace.id)}
         onClick={() => selection.onSelectTrace(row.trace)}
@@ -81,6 +85,7 @@ function renderRow(row: TraceRow, selection: TraceSelectionProps, freshIds: Read
   return (
     <ConversationGroupRow
       group={row}
+      statsSelection={selection.stats}
       expanded={selection.expandedConvs.has(row.conversationId)}
       onToggle={() => selection.onToggleConv(row.conversationId)}
       selectedId={selection.selectedId}
@@ -107,6 +112,7 @@ export function TraceTable({
   onScrolledToTrace,
 }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const { style, resizeColumn } = useTraceColumnWidths();
   const { total, isFetching, isFetchingNextPage, hasNextPage, onLoadMore } = paging;
   const { freshIds, pendingRefresh, onAtTopChange } = live ?? NO_LIVE_ARRIVALS;
 
@@ -152,67 +158,70 @@ export function TraceTable({
       // which permanently satisfies the load-more trigger and walks the whole result set. A fixed
       // viewport-relative height keeps it a real scroller there. (Amends DESIGN.md §4.)
       className="fade-up bg-card rounded-lg overflow-hidden flex-1 min-h-0 max-md:flex-none max-md:h-[60svh] flex flex-col shadow-[var(--shadow-card)] [animation-delay:120ms] @container"
-      style={{ '--trace-grid': GRID_TEMPLATE, '--trace-grid-narrow': GRID_TEMPLATE_NARROW } as React.CSSProperties}
+      style={style}
     >
       <div
         ref={scrollRef}
         data-testid="trace-scroll"
         onScroll={handleScroll}
         aria-rowcount={total}
-        className="flex-1 min-h-0 overflow-y-auto [scrollbar-gutter:stable]"
+        className="flex-1 min-h-0 overflow-auto [scrollbar-gutter:stable]"
       >
-        <TraceTableHeader
-          sort={sort}
-          onSortChange={onSortChange}
-          position={{ first, last, total, pendingRefresh }}
-        />
-
-        {/* Test id is load-bearing: a live arrival must patch the list in place, and the e2e spec
-            proves that by watching for this skeleton and failing if it ever reappears. */}
-        {view === 'loading' && (
-          <div data-testid="trace-list-loading" className="p-3">
-            <SkeletonList rows={10} height={36} gap={4} />
-          </div>
-        )}
-
-        {view === 'empty-filtered' && (
-          <div data-testid="traces-empty-state" className="py-12 flex flex-col items-center gap-1 text-center">
-            <span className="text-secondary text-body"><Trans>No traces match your filters.</Trans></span>
-            <span className="text-muted text-body-sm"><Trans>Try widening the time range, agent, or search.</Trans></span>
-          </div>
-        )}
-
-        {view === 'empty-setup' && <TracesEmptyState />}
-
-        {view === 'rows' && (
-          <div className="relative w-full" style={{ height: virtualizer.getTotalSize() }}>
-            {virtualItems.map(virtualItem => {
-              const item = items[virtualItem.index];
-              if (!item) return null;
-              return (
-                <div
-                  key={listRowKey(item)}
-                  data-index={virtualItem.index}
-                  ref={virtualizer.measureElement}
-                  className="absolute top-0 left-0 w-full"
-                  style={{ transform: `translateY(${virtualItem.start}px)` }}
-                >
-                  {item.kind === 'divider'
-                    ? <TraceDayDivider timestamp={item.timestamp} />
-                    : renderRow(item.row, selection, freshIds)}
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-        {view === 'rows' && (
-          <TraceListFooter
-            isFetchingNextPage={isFetchingNextPage}
-            hasNextPage={hasNextPage}
-            hasRows={traceIndices.length > 0}
+        <div className="min-w-[var(--trace-min-width)] @max-2xl:min-w-[var(--trace-min-width-narrow)]">
+          <TraceTableHeader
+            sort={sort}
+            onSortChange={onSortChange}
+            position={{ first, last, total, pendingRefresh }}
+            onColumnResize={resizeColumn}
           />
-        )}
+
+          {/* Test id is load-bearing: a live arrival must patch the list in place, and the e2e spec
+              proves that by watching for this skeleton and failing if it ever reappears. */}
+          {view === 'loading' && (
+            <div data-testid="trace-list-loading" className="p-3">
+              <SkeletonList rows={10} height={36} gap={4} />
+            </div>
+          )}
+
+          {view === 'empty-filtered' && (
+            <div data-testid="traces-empty-state" className="py-12 flex flex-col items-center gap-1 text-center">
+              <span className="text-secondary text-body"><Trans>No traces match your filters.</Trans></span>
+              <span className="text-muted text-body-sm"><Trans>Try widening the time range, agent, or search.</Trans></span>
+            </div>
+          )}
+
+          {view === 'empty-setup' && <TracesEmptyState />}
+
+          {view === 'rows' && (
+            <div className="relative w-full" style={{ height: virtualizer.getTotalSize() }}>
+              {virtualItems.map(virtualItem => {
+                const item = items[virtualItem.index];
+                if (!item) return null;
+                return (
+                  <div
+                    key={listRowKey(item)}
+                    data-index={virtualItem.index}
+                    ref={virtualizer.measureElement}
+                    className="absolute top-0 left-0 w-full"
+                    style={{ transform: `translateY(${virtualItem.start}px)` }}
+                  >
+                    {item.kind === 'divider'
+                      ? <TraceDayDivider timestamp={item.timestamp} />
+                      : renderRow(item.row, selection, freshIds)}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {view === 'rows' && (
+            <TraceListFooter
+              isFetchingNextPage={isFetchingNextPage}
+              hasNextPage={hasNextPage}
+              hasRows={traceIndices.length > 0}
+            />
+          )}
+        </div>
       </div>
     </div>
   );

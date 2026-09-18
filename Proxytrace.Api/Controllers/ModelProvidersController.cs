@@ -371,13 +371,19 @@ public class ModelProvidersController : ControllerBase
         if (existing.Provider.Id != providerId)
             return NotFound("Model endpoint not found.");
 
-        // Cached-input price is auto-fetched only (not user-editable) — preserve the existing value
-        // so a manual input/output edit never wipes it.
         var updated = updateEndpoint(
-            existing.Model, existing.Provider, request.InputTokenCost, request.OutputTokenCost,
-            existing.CachedInputTokenCost, existing);
+            existing.Model, existing.Provider,
+            request.ManualPricing ? request.InputTokenCost : existing.InputTokenCost,
+            request.ManualPricing ? request.OutputTokenCost : existing.OutputTokenCost,
+            request.ManualPricing ? request.CachedInputTokenCost : existing.CachedInputTokenCost,
+            existing, request.ManualPricing);
         var saved = await endpointRepository.UpdateAsync(updated, cancellationToken);
         audit.LogAudit(AuditAction.EndpointConfigUpdated, nameof(IModelEndpoint), saved.Id, saved.Model.Name);
+        if (!request.ManualPricing)
+        {
+            await priceRefresher.RefreshProviderAsync(existing.Provider, cancellationToken);
+            saved = await endpointRepository.GetAsync(saved.Id, cancellationToken);
+        }
         return mapper.ToEndpointDto(saved);
     }
 

@@ -31,18 +31,18 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(function Inp
           invalid && 'border-danger focus-within:border-danger focus-within:ring-danger',
         )}
       >
-        {leftAddon && <span className="pl-3 text-secondary flex items-center text-body-sm">{leftAddon}</span>}
+        {leftAddon && <span className="pl-3 text-secondary flex shrink-0 items-center text-body-sm">{leftAddon}</span>}
         <input
           ref={ref}
           data-invalid={invalid || undefined}
           className={cn(
-            'flex-1 bg-transparent border-none outline-none text-primary font-[inherit]',
+            'min-w-0 flex-1 bg-transparent border-none outline-none text-primary font-[inherit]',
             SIZE_CLS[inputSize],
             className,
           )}
           {...rest}
         />
-        {rightAddon && <span className="pr-3 text-secondary flex items-center text-body-sm">{rightAddon}</span>}
+        {rightAddon && <span className="pr-3 text-secondary flex shrink-0 items-center text-body-sm">{rightAddon}</span>}
       </div>
     );
   }

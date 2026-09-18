@@ -6,6 +6,8 @@ import { cn } from '../../../lib/cn';
 import type { AgentCallListItemDto } from '../../../api/models';
 import { TRACE_GRID_CLS, toolCount } from '../tracesMeta';
 import { MessagePreviewCell, OutlierCell, TokenCell, CachedCell, ToolsCell, LatencyCell } from './TraceTableCells';
+import { TraceSelectionCheckbox } from './TraceSelectionCheckbox';
+import type { TraceStatsSelection } from '../hooks/useTraceSelection';
 
 interface Props {
   trace: AgentCallListItemDto;
@@ -13,24 +15,30 @@ interface Props {
   /** Arrived over the live stream moments ago — flashes the arrival wash once. */
   fresh: boolean;
   onClick: () => void;
+  statsSelection?: TraceStatsSelection;
 }
 
-export function FlatTraceRow({ trace, selected, fresh, onClick }: Props) {
+export function FlatTraceRow({ trace, selected, fresh, onClick, statsSelection }: Props) {
+  const checked = statsSelection?.ids.has(trace.id);
   return (
     <div
       role="row"
+      aria-selected={checked}
       data-trace-id={trace.id}
       data-testid={`trace-row-${trace.id}`}
       onClick={onClick}
       className={cn(
         'grid items-center px-4 py-2.5 min-h-[44px] cursor-pointer transition-colors duration-[100ms]',
         'border-b border-border-subtle hover:bg-white/[0.025]',
-        selected && 'bg-white/[0.04]',
+        checked ? 'bg-accent-subtle' : selected && 'bg-white/[0.04]',
         fresh && 'arrival-flash',
         TRACE_GRID_CLS,
       )}
     >
-      <MessagePreviewCell trace={trace} />
+      <span className="flex items-center gap-2 min-w-0">
+        {statsSelection && <TraceSelectionCheckbox traces={[trace]} selection={statsSelection} />}
+        <MessagePreviewCell trace={trace} />
+      </span>
       <span className="text-body text-secondary overflow-hidden text-ellipsis whitespace-nowrap pr-3 @max-2xl:hidden">
         {trace.agentName ?? <span className="text-muted">—</span>}
       </span>

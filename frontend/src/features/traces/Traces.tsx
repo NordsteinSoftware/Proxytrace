@@ -7,7 +7,8 @@ import { useTraceAdvancedFilters } from './hooks/useTraceAdvancedFilters';
 import { TraceFilterBar } from './components/TraceFilterBar';
 import { TraceFilterPicker } from './components/TraceFilterPicker';
 import { ALL_TIME, resolveRange, nowMs, type TimeRange } from '../../lib/timeRange';
-import { useTraceQueries } from './hooks/useTraceQueries';
+import { buildTraceFilter, useTraceQueries } from './hooks/useTraceQueries';
+import { useTraceSelection } from './hooks/useTraceSelection';
 import { useTraceSummary } from './hooks/useTraceSummary';
 import { useTraceFilters } from './hooks/useTraceFilters';
 import { useFocusTrace } from './hooks/useFocusTrace';
@@ -56,8 +57,9 @@ export default function Traces() {
     [advanced, debouncedSearch, showSystem, from, to, sort],
   );
 
-  const { traces, total, isFetching, isFetchingNextPage, hasNextPage, fetchNextPage, allAgents, agentBreakdown } =
+  const { traces, total, isFetching, isPlaceholderData, isFetchingNextPage, hasNextPage, fetchNextPage, allAgents, agentBreakdown } =
     useTraceQueries(traceQueryArgs);
+  const statsSelection = useTraceSelection(traces, JSON.stringify(buildTraceFilter(traceQueryArgs, currentProjectId ?? undefined)));
   // Whole filtered set, aggregated server-side — the list scrolls, so there is no page to summarize.
   const { summary } = useTraceSummary(traceQueryArgs);
 
@@ -200,6 +202,7 @@ export default function Traces() {
         timeRange={timeRange}
         onSearchChange={handleSearchChange}
         onTimeRangeChange={handleTimeRangeChange}
+        onClearSelection={statsSelection.summary ? statsSelection.clear : undefined}
         trailing={
           <TraceFilterPicker
             agents={agents}
@@ -233,7 +236,7 @@ export default function Traces() {
         />
       )}
 
-      <TraceSummary stats={summary} />
+      <TraceSummary stats={statsSelection.summary ?? summary} selectionOnly={statsSelection.summary !== null} />
 
       <TraceTable
         items={items}
@@ -246,6 +249,7 @@ export default function Traces() {
         }}
         live={{ freshIds, pendingRefresh, onAtTopChange: markAtTop }}
         selection={{
+          stats: isPlaceholderData ? undefined : statsSelection.selection,
           selectedId: selectedTrace?.id ?? null,
           expandedConvs,
           onSelectTrace: t => selectTrace(t.id),
