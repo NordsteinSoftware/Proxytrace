@@ -196,6 +196,7 @@ export function traceListView(rowCount: number, isFetching: boolean, filtered: b
 // its old 140px cap. Capping both puts every spare pixel into Message, which is the one column that
 // always has more to show.
 export const COL_WIDTHS = ['minmax(170px,1fr)', 'minmax(96px,180px)', 'minmax(104px,200px)', '64px', '56px', 'minmax(96px,130px)', 'minmax(64px,84px)', 'minmax(88px,120px)', '36px', '72px'] as const;
+export const COL_MIN_WIDTHS = [170, 96, 104, 64, 56, 96, 64, 88, 36, 72] as const;
 export const GRID_TEMPLATE = COL_WIDTHS.join(' ');
 
 // The '' entry is the anomaly column — its header is an icon, not text (see TraceTable), so the

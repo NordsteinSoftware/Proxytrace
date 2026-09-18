@@ -135,7 +135,7 @@ export function TimeRangePicker({
             })}
           </div>
 
-          <div className="flex flex-col gap-3 p-3 sm:w-[272px]">
+          <div className="flex w-[360px] max-w-[calc(100vw-26px)] flex-col gap-3 p-3">
             <span className="text-caption font-medium uppercase tracking-wide text-secondary"><Trans>Custom range</Trans></span>
             <FormField label={t`From`} htmlFor={`${testId}-from`}>
               <Input
@@ -146,9 +146,8 @@ export function TimeRangePicker({
                 value={draft.from}
                 onChange={e => setDraft(d => ({ ...d, from: e.target.value }))}
                 invalid={invalid}
-                leftAddon={<ClockIcon size={12} />}
                 rightAddon={(
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1">
                     <Button
                       variant="link"
                       className="text-caption"
@@ -157,15 +156,17 @@ export function TimeRangePicker({
                     >
                       <Trans>NOW</Trans>
                     </Button>
-                    <Button
-                      variant="link"
-                      className="text-caption"
+                    <IconButton
+                      size="sm"
+                      aria-label={`${t`Clear`} (${t`From`})`}
+                      title={t`Clear`}
+                      className="disabled:opacity-40 disabled:cursor-not-allowed"
                       onClick={() => setDraft(d => ({ ...d, from: '' }))}
                       disabled={!draft.from}
                       data-testid={`${testId}-from-clear`}
                     >
-                      <Trans>Clear</Trans>
-                    </Button>
+                      <XIcon size={13} />
+                    </IconButton>
                   </div>
                 )}
                 data-testid={`${testId}-from`}
@@ -180,9 +181,8 @@ export function TimeRangePicker({
                 value={draft.to}
                 onChange={e => setDraft(d => ({ ...d, to: e.target.value }))}
                 invalid={invalid}
-                leftAddon={<ClockIcon size={12} />}
                 rightAddon={(
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1">
                     <Button
                       variant="link"
                       className="text-caption"
@@ -191,15 +191,17 @@ export function TimeRangePicker({
                     >
                       <Trans>NOW</Trans>
                     </Button>
-                    <Button
-                      variant="link"
-                      className="text-caption"
+                    <IconButton
+                      size="sm"
+                      aria-label={`${t`Clear`} (${t`To`})`}
+                      title={t`Clear`}
+                      className="disabled:opacity-40 disabled:cursor-not-allowed"
                       onClick={() => setDraft(d => ({ ...d, to: '' }))}
                       disabled={!draft.to}
                       data-testid={`${testId}-to-clear`}
                     >
-                      <Trans>Clear</Trans>
-                    </Button>
+                      <XIcon size={13} />
+                    </IconButton>
                   </div>
                 )}
                 data-testid={`${testId}-to`}

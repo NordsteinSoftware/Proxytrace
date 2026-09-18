@@ -111,15 +111,15 @@ export function ConversationGroupRow({ group, expanded, onToggle, selectedId, fr
           data-testid={`conversation-turn-${turn.id}`}
           onClick={() => onSelectTrace(turn)}
           className={cn(
-            'grid items-center pl-8 pr-4 py-2.5 min-h-[44px] cursor-pointer transition-colors duration-[100ms]',
+            'grid items-center px-4 py-2.5 min-h-[44px] cursor-pointer transition-colors duration-[100ms]',
             'border-b border-border-subtle hover:bg-white/[0.025]',
             turn.id === selectedId && 'bg-white/[0.04]',
             freshIds.has(turn.id) && 'arrival-flash',
             TRACE_GRID_CLS,
           )}
-          style={{ borderLeft: `2px solid color-mix(in srgb, ${c} 38%, transparent)` }}
+          style={{ boxShadow: `inset 2px 0 color-mix(in srgb, ${c} 38%, transparent)` }}
         >
-          <span className="flex items-center gap-2 min-w-0 pr-3">
+          <span className="flex items-center gap-2 min-w-0 pl-4 pr-3">
             <span className="mono text-caption text-muted shrink-0"><Trans>Turn {turns.length - i}</Trans></span>
             <span className="text-body-sm text-secondary overflow-hidden text-ellipsis whitespace-nowrap min-w-0">
               {tracePreview(turn) ?? <span className="text-muted">—</span>}
