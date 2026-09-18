@@ -38,6 +38,13 @@ Typical things you can do:
   rate (share of non-2xx calls). It describes **every trace matching your current filters** — not
   just the ones on screen — so the numbers hold still while you scroll and change only when you
   change a filter, the search, or the time range.
+- **Selection stats.** Check one or more rows to make the summary describe only those traces.
+  A conversation group's checkbox selects the calls currently loaded in that group; expand it
+  to select individual turns. The summary shows the selected count, tokens, cost, average latency
+  and spread, and error rate. **Clear selection** in the filter toolbar returns to the full filtered
+  summary; it stays in place and is disabled when nothing is selected. Scrolling
+  and live arrivals keep your selection; changing the project, filters, time range, or sort clears it.
+  Clicking the rest of a trace row still opens its details.
 - **Cached input.** Many providers serve part of a prompt from cache at a much lower rate.
   Wherever input tokens are shown — the summary, each row's token cell, and the trace
   detail panel — Proxytrace adds a muted **"(N% cached)"** hint showing what share of the input

@@ -1396,6 +1396,9 @@ msgstr "Borrar filtro"
 msgid "Clear search"
 msgstr "Borrar búsqueda"
 
+msgid "Clear selection"
+msgstr "Borrar selección"
+
 msgid "Clear the filters to see all evaluators."
 msgstr "Borra los filtros para ver todos los evaluators."
 
@@ -4814,6 +4817,10 @@ msgstr "Sembrar conversación a partir de un Trace o case anterior"
 msgid "select"
 msgstr "seleccionar"
 
+#. placeholder {0}: traces.length
+msgid "Select {0} traces in this group"
+msgstr "Seleccionar {0} Traces de este grupo"
+
 msgid "Select a case or trace"
 msgstr "Selecciona un case o Trace"
 
@@ -4878,6 +4885,10 @@ msgstr "No seleccionar ninguno"
 msgid "Select suite {0}"
 msgstr "Seleccionar suite {0}"
 
+#. placeholder {0}: traces[0].id
+msgid "Select trace {0}"
+msgstr "Seleccionar Trace {0}"
+
 msgid "Select traces"
 msgstr "Seleccionar traces"
 
@@ -4890,8 +4901,14 @@ msgstr "Seleccionar…"
 msgid "selected model"
 msgstr "modelo seleccionado"
 
+msgid "selected traces"
+msgstr "Traces seleccionadas"
+
 msgid "Selected window"
 msgstr "Ventana seleccionada"
+
+msgid "Selection stats"
+msgstr "Estadísticas de la selección"
 
 msgid "Send"
 msgstr "Enviar"
@@ -5723,6 +5740,9 @@ msgstr "Límite de Traces alcanzado"
 #. placeholder {0}: trace.model
 msgid "Trace preview · {0}"
 msgstr "Vista previa de Trace · {0}"
+
+msgid "Trace stats"
+msgstr "Estadísticas de Traces"
 
 msgid "traces"
 msgstr "traces"

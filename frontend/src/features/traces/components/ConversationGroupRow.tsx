@@ -9,6 +9,8 @@ import { TRACE_GRID_CLS, toolCount } from '../tracesMeta';
 import type { ConversationGroup } from '../tracesMeta';
 import { OutlierCell, TokenCell, CachedCell, ToolsCell, LatencyCell } from './TraceTableCells';
 import { Trans, Plural } from '@lingui/react/macro';
+import { TraceSelectionCheckbox } from './TraceSelectionCheckbox';
+import type { TraceStatsSelection } from '../hooks/useTraceSelection';
 
 interface Props {
   group: ConversationGroup;
@@ -18,9 +20,10 @@ interface Props {
   /** Turns that arrived over the live stream moments ago — they flash the arrival wash once. */
   freshIds: ReadonlySet<string>;
   onSelectTrace: (trace: AgentCallListItemDto) => void;
+  statsSelection?: TraceStatsSelection;
 }
 
-export function ConversationGroupRow({ group, expanded, onToggle, selectedId, freshIds, onSelectTrace }: Props) {
+export function ConversationGroupRow({ group, expanded, onToggle, selectedId, freshIds, onSelectTrace, statsSelection }: Props) {
   const { turns, conversationId } = group;
   const totalTokens = turns.reduce((n, t) => n + t.inputTokens + t.outputTokens, 0);
   const totalInput = turns.reduce((n, t) => n + t.inputTokens, 0);
@@ -40,6 +43,7 @@ export function ConversationGroupRow({ group, expanded, onToggle, selectedId, fr
   // A live turn joining an existing conversation grows this group rather than adding a row, so the
   // header carries the arrival wash on the group's behalf — collapsed, it is the only thing on screen.
   const groupFresh = turns.some(t => freshIds.has(t.id));
+  const groupChecked = statsSelection && turns.every(turn => statsSelection.ids.has(turn.id));
 
   return (
     // One wrapping element, not a fragment: the list virtualizer measures a single node per item,
@@ -49,15 +53,18 @@ export function ConversationGroupRow({ group, expanded, onToggle, selectedId, fr
       {/* Header row */}
       <div
         role="row"
+        aria-selected={groupChecked}
         data-testid={`conversation-group-row-${conversationId}`}
         onClick={onToggle}
         className={cn(
-          'grid items-center px-4 py-2.5 min-h-[44px] cursor-pointer transition-colors duration-[100ms] border-b border-border-subtle hover:bg-white/[0.025] bg-white/[0.015]',
+          'grid items-center px-4 py-2.5 min-h-[44px] cursor-pointer transition-colors duration-[100ms] border-b border-border-subtle hover:bg-white/[0.025]',
           groupFresh && 'arrival-flash',
+          groupChecked ? 'bg-accent-subtle' : 'bg-white/[0.015]',
           TRACE_GRID_CLS,
         )}
       >
         <span className="flex items-center gap-2 min-w-0 pr-3">
+          {statsSelection && <TraceSelectionCheckbox traces={turns} selection={statsSelection} />}
           <span className="w-[3px] h-[18px] shrink-0" style={{ background: c }} />
           <span
             className="inline-flex items-center text-caption font-semibold px-1.5 py-0.5 rounded-none shrink-0"
@@ -107,19 +114,21 @@ export function ConversationGroupRow({ group, expanded, onToggle, selectedId, fr
         <div
           key={turn.id}
           role="row"
+          aria-selected={statsSelection?.ids.has(turn.id)}
           data-trace-id={turn.id}
           data-testid={`conversation-turn-${turn.id}`}
           onClick={() => onSelectTrace(turn)}
           className={cn(
             'grid items-center px-4 py-2.5 min-h-[44px] cursor-pointer transition-colors duration-[100ms]',
             'border-b border-border-subtle hover:bg-white/[0.025]',
-            turn.id === selectedId && 'bg-white/[0.04]',
+            statsSelection?.ids.has(turn.id) ? 'bg-accent-subtle' : turn.id === selectedId && 'bg-white/[0.04]',
             freshIds.has(turn.id) && 'arrival-flash',
             TRACE_GRID_CLS,
           )}
           style={{ boxShadow: `inset 2px 0 color-mix(in srgb, ${c} 38%, transparent)` }}
         >
           <span className="flex items-center gap-2 min-w-0 pl-4 pr-3">
+            {statsSelection && <TraceSelectionCheckbox traces={[turn]} selection={statsSelection} />}
             <span className="mono text-caption text-muted shrink-0"><Trans>Turn {turns.length - i}</Trans></span>
             <span className="text-body-sm text-secondary overflow-hidden text-ellipsis whitespace-nowrap min-w-0">
               {tracePreview(turn) ?? <span className="text-muted">—</span>}

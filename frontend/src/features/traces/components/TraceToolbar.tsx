@@ -2,8 +2,9 @@ import type { ReactNode } from 'react';
 import { SearchIcon } from '../../../components/icons';
 import { TimeRangePicker } from '../../../components/ui/TimeRangePicker';
 import { Input } from '../../../components/ui/Input';
+import { Button } from '../../../components/ui/Button';
 import type { TimeRange } from '../../../lib/timeRange';
-import { useLingui } from '@lingui/react/macro';
+import { Trans, useLingui } from '@lingui/react/macro';
 
 interface Props {
   search: string;
@@ -12,6 +13,7 @@ interface Props {
   onTimeRangeChange: (r: TimeRange) => void;
   /** Trailing controls on the same line — the "+ Filter" picker sits here (see TraceFilterPicker). */
   trailing?: ReactNode;
+  onClearSelection?: () => void;
 }
 
 /**
@@ -19,7 +21,7 @@ interface Props {
  * `trailing`). Active filters — agent, tool, model, status, numeric ranges, and the system-traces
  * view toggle — compose through that picker and surface as chips in TraceFilterBar below.
  */
-export function TraceToolbar({ search, timeRange, onSearchChange, onTimeRangeChange, trailing }: Props) {
+export function TraceToolbar({ search, timeRange, onSearchChange, onTimeRangeChange, trailing, onClearSelection }: Props) {
   const { t } = useLingui();
   return (
     <div className="fade-up relative z-20 flex items-center gap-2 flex-wrap shrink-0 [animation-delay:80ms]">
@@ -36,6 +38,16 @@ export function TraceToolbar({ search, timeRange, onSearchChange, onTimeRangeCha
       <TimeRangePicker value={timeRange} onChange={onTimeRangeChange} testId="traces-time" />
 
       {trailing}
+      <Button
+        variant="ghost"
+        size="sm"
+        className="ml-auto"
+        data-testid="traces-clear-selection"
+        disabled={!onClearSelection}
+        onClick={onClearSelection}
+      >
+        <Trans>Clear selection</Trans>
+      </Button>
     </div>
   );
 }

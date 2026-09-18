@@ -9,6 +9,12 @@ follow [Semantic Versioning](https://semver.org). Ongoing work is collected unde
 
 ## [Unreleased]
 
+### Added
+
+- **Selection stats in Traces.** Check individual calls or conversation groups to see their
+  combined token usage, cost, average latency and spread, and error rate. Use **Clear selection**
+  in the filter toolbar to return to stats for all matching traces without shifting the page layout.
+
 ## [1.12.0] - 2026-09-17
 
 ### Added

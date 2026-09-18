@@ -14,6 +14,7 @@ import { TraceListFooter } from './TraceListFooter';
 import { useTraceVirtualizer } from '../hooks/useTraceVirtualizer';
 import { useScrollToTrace } from '../hooks/useScrollToTrace';
 import { useTraceColumnWidths } from '../hooks/useTraceColumnWidths';
+import type { TraceStatsSelection } from '../hooks/useTraceSelection';
 
 /** Scroll offset under which the list counts as "at the top" for live-arrival purposes. */
 const AT_TOP_THRESHOLD_PX = 4;
@@ -38,6 +39,7 @@ export interface TraceLiveProps {
 }
 
 export interface TraceSelectionProps {
+  stats?: TraceStatsSelection;
   selectedId: string | null;
   expandedConvs: Set<string>;
   onSelectTrace: (trace: AgentCallListItemDto) => void;
@@ -73,6 +75,7 @@ function renderRow(row: TraceRow, selection: TraceSelectionProps, freshIds: Read
     return (
       <FlatTraceRow
         trace={row.trace}
+        statsSelection={selection.stats}
         selected={row.trace.id === selection.selectedId}
         fresh={freshIds.has(row.trace.id)}
         onClick={() => selection.onSelectTrace(row.trace)}
@@ -82,6 +85,7 @@ function renderRow(row: TraceRow, selection: TraceSelectionProps, freshIds: Read
   return (
     <ConversationGroupRow
       group={row}
+      statsSelection={selection.stats}
       expanded={selection.expandedConvs.has(row.conversationId)}
       onToggle={() => selection.onToggleConv(row.conversationId)}
       selectedId={selection.selectedId}

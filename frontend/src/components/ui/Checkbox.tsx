@@ -38,10 +38,12 @@ export const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(function Che
             'pointer-events-none absolute inset-0 rounded-sm border border-border-control bg-card-2',
             'transition-colors duration-[var(--motion-fast)] ease-[var(--ease-standard)]',
             'peer-checked:border-transparent peer-checked:bg-accent',
+            'peer-indeterminate:border-accent peer-indeterminate:bg-accent-subtle',
             'peer-focus-visible:ring-2 peer-focus-visible:ring-[color-mix(in_srgb,var(--accent-primary)_60%,transparent)]',
             'peer-data-[invalid=true]:border-danger',
           )}
         />
+        <span className="pointer-events-none absolute inset-x-1 top-1/2 h-px bg-accent opacity-0 peer-indeterminate:opacity-100" />
         <CheckIcon
           size={11}
           strokeWidth={3}
