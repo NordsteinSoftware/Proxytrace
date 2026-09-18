@@ -31,6 +31,9 @@ internal record ModelEndpointEntity : Entity, IArchivableEntity
     /// </summary>
     public required decimal? CachedInputTokenCost { get; init; }
 
+    /// <summary>Whether automatic price refresh is disabled.</summary>
+    public bool ManualPricing { get; init; }
+
     /// <inheritdoc />
     public bool IsArchived { get; init; }
 }

@@ -1294,6 +1294,12 @@ msgstr "In cache"
 msgid "Cached / 1M €"
 msgstr "In cache / 1M €"
 
+msgid "Cached-input price"
+msgstr "Prezzo input in cache"
+
+msgid "Cached-input price cannot exceed the input price."
+msgstr "Il prezzo degli input in cache non può superare il prezzo degli input."
+
 #. placeholder {0}: index + 1
 msgid "Call {0}"
 msgstr "Chiamata {0}"
@@ -1626,6 +1632,12 @@ msgstr "Impossibile leggere l'API key upstream."
 
 msgid "Could not reset your password. Please try again."
 msgstr "Impossibile reimpostare la password. Riprova."
+
+msgid "Could not restore automatic pricing. Please try again."
+msgstr "Impossibile ripristinare i prezzi automatici. Riprova."
+
+msgid "Could not save prices. Please try again."
+msgstr "Impossibile salvare i prezzi. Riprova."
 
 msgid "Could not start setup. Please try again."
 msgstr "Impossibile avviare la configurazione. Riprova."
@@ -2054,6 +2066,9 @@ msgstr "Modifica budget mensile"
 msgid "Edit name"
 msgstr "Modifica nome"
 
+msgid "Edit prices"
+msgstr "Modifica prezzi"
+
 msgid "Edit schedule"
 msgstr "Modifica pianificazione"
 
@@ -2123,6 +2138,9 @@ msgstr "URL dell'Endpoint"
 msgid "Enter a number, or leave the field empty to unset the threshold."
 msgstr "Inserisci un numero, o lascia il campo vuoto per rimuovere la soglia."
 
+msgid "Enter prices from 0 to below 1,000,000,000,000 with up to 6 decimal places. Leave blank for unknown."
+msgstr "Inserisci prezzi da 0 a meno di 1.000.000.000.000 con un massimo di 6 decimali. Lascia vuoto se sconosciuto."
+
 msgid "Enter the 6-digit code from your authenticator app, or one of your backup codes."
 msgstr "Inserisci il codice a 6 cifre della tua app di autenticazione, oppure uno dei tuoi codici di backup."
 
@@ -2161,6 +2179,9 @@ msgstr "Errori"
 
 msgid "Estimated cost in EUR"
 msgstr "Costo stimato in EUR"
+
+msgid "EUR per 1M tokens. Leave blank for unknown. An unknown cached-input price uses the input price."
+msgstr "EUR per 1 milione di token. Lascia vuoto se sconosciuto. Se il prezzo degli input in cache è sconosciuto, viene usato il prezzo degli input."
 
 msgid "Evaluation pass rate"
 msgstr "Tasso di superamento della valutazione"
@@ -2608,6 +2629,9 @@ msgstr "Input / 1M €"
 msgid "Input conversation"
 msgstr "Conversazione di input"
 
+msgid "Input price"
+msgstr "Prezzo input"
+
 msgid "Input tokens"
 msgstr "Token di input"
 
@@ -2952,6 +2976,9 @@ msgstr "Gestisci"
 msgid "Manage this installation's license key."
 msgstr "Gestisci la chiave di licenza di questa installazione."
 
+msgid "Manual"
+msgstr "Manuale"
+
 msgid "Many tool calls"
 msgstr "Molte chiamate Tool"
 
@@ -3112,6 +3139,9 @@ msgstr "switch di modello"
 
 msgid "Models"
 msgstr "Modelli"
+
+msgid "Models and automatic prices reload from the provider. Manual prices are preserved."
+msgstr "I modelli e i prezzi automatici vengono ricaricati dal provider. I prezzi manuali vengono mantenuti."
 
 msgid "Models are discovered from your provider automatically; prices load from the catalogue."
 msgstr "I Modelli vengono rilevati automaticamente dal tuo provider; i prezzi vengono caricati dal catalogo."
@@ -3815,6 +3845,9 @@ msgstr "Output / 1M €"
 msgid "Output contract"
 msgstr "Contratto di output"
 
+msgid "Output price"
+msgstr "Prezzo output"
+
 msgid "Output tokens"
 msgstr "Token di output"
 
@@ -4194,9 +4227,6 @@ msgstr "Proxytrace parla il protocollo OpenAI — puntalo a OpenAI o a qualsiasi
 
 msgid "pt"
 msgstr "pt"
-
-msgid "Pulled from the provider; prices load automatically."
-msgstr "Recuperati dal provider; i prezzi si caricano automaticamente."
 
 msgid "Put the cases in a new suite"
 msgstr "Metti i casi in una nuova suite"
@@ -4644,6 +4674,9 @@ msgstr "Salva i tuoi codici di backup"
 
 msgid "Saving clears this budget's alert state, so the next check re-evaluates against the new thresholds."
 msgstr "Il salvataggio cancella lo stato di avviso di questo budget, in modo che il prossimo controllo rivaluti le nuove soglie."
+
+msgid "Saving makes all three prices manual. Manual prices are preserved when models and prices reload."
+msgstr "Il salvataggio rende manuali tutti e tre i prezzi. I prezzi manuali vengono mantenuti quando si ricaricano modelli e prezzi."
 
 msgid "Saving…"
 msgstr "Salvataggio…"
@@ -5921,6 +5954,9 @@ msgstr "Pass-through upstream"
 
 msgid "Upstream pass-through — forward non-inference paths (such as /health) to the provider using its own credential. Not traced, and not checked by detectors."
 msgstr "Pass-through upstream — inoltra i percorsi non di inferenza (come /health) al Provider usando le sue credenziali. Non registrato come Trace e non controllato dai detector."
+
+msgid "Use automatic pricing"
+msgstr "Usa prezzi automatici"
 
 msgid "Use your resource’s OpenAI-compatible v1 endpoint. Model discovery lists the models you have deployed."
 msgstr "Usa l'endpoint v1 OpenAI-compatible della tua risorsa. La discovery dei modelli elenca i modelli che hai distribuito."

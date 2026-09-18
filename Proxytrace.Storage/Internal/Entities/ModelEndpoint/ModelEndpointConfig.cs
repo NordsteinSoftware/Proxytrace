@@ -34,6 +34,7 @@ internal class ModelEndpointConfig : AbstractEntityConfiguration<ModelEndpointEn
     /// </summary>
     public override void Configure(EntityTypeBuilder<ModelEndpointEntity> builder)
     {
+        builder.Property(e => e.ManualPricing).HasDefaultValue(false);
         builder.Property(e => e.InputTokenCost).HasPrecision(18, 6).IsRequired(false);
         builder.Property(e => e.OutputTokenCost).HasPrecision(18, 6).IsRequired(false);
         builder.Property(e => e.CachedInputTokenCost).HasPrecision(18, 6).IsRequired(false);
@@ -67,7 +68,7 @@ internal class ModelEndpointConfig : AbstractEntityConfiguration<ModelEndpointEn
     {
         var model = await models.GetAsync(stored.Model, cancellationToken);
         var provider = await providers.GetAsync(stored.Provider, cancellationToken);
-        return factory(model, provider, stored.InputTokenCost, stored.OutputTokenCost, stored.CachedInputTokenCost, stored);
+        return factory(model, provider, stored.InputTokenCost, stored.OutputTokenCost, stored.CachedInputTokenCost, stored, stored.ManualPricing);
     }
 
     /// <summary>
@@ -82,6 +83,7 @@ internal class ModelEndpointConfig : AbstractEntityConfiguration<ModelEndpointEn
             InputTokenCost = domain.InputTokenCost,
             OutputTokenCost = domain.OutputTokenCost,
             CachedInputTokenCost = domain.CachedInputTokenCost,
+            ManualPricing = domain.ManualPricing,
             IsArchived = domain.IsArchived,
             CreatedAt = domain.CreatedAt,
             UpdatedAt = domain.UpdatedAt,

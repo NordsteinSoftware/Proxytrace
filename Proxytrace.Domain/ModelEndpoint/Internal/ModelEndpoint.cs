@@ -30,6 +30,9 @@ internal record ModelEndpoint : DomainEntity<IModelEndpoint>, IModelEndpoint
     /// </summary>
     public decimal? CachedInputTokenCost { get; }
 
+    /// <inheritdoc />
+    public bool ManualPricing { get; }
+
     /// <summary>
     /// Initializes a new instance of the <see cref="ModelEndpoint"/> class.
     /// </summary>
@@ -39,6 +42,7 @@ internal record ModelEndpoint : DomainEntity<IModelEndpoint>, IModelEndpoint
         decimal? inputTokenCost,
         decimal? outputTokenCost,
         decimal? cachedInputTokenCost,
+        bool manualPricing,
         IRepository<IModelEndpoint> repository) : base(repository)
     {
         Model = model;
@@ -46,6 +50,7 @@ internal record ModelEndpoint : DomainEntity<IModelEndpoint>, IModelEndpoint
         InputTokenCost = inputTokenCost;
         OutputTokenCost = outputTokenCost;
         CachedInputTokenCost = cachedInputTokenCost;
+        ManualPricing = manualPricing;
     }
 
     /// <summary>
@@ -58,6 +63,7 @@ internal record ModelEndpoint : DomainEntity<IModelEndpoint>, IModelEndpoint
         decimal? outputTokenCost,
         decimal? cachedInputTokenCost,
         IDomainEntityData existing,
+        bool manualPricing,
         IRepository<IModelEndpoint> repository)
         : base(existing, repository)
     {
@@ -66,6 +72,7 @@ internal record ModelEndpoint : DomainEntity<IModelEndpoint>, IModelEndpoint
         InputTokenCost = inputTokenCost;
         OutputTokenCost = outputTokenCost;
         CachedInputTokenCost = cachedInputTokenCost;
+        ManualPricing = manualPricing;
     }
 
     /// <summary>

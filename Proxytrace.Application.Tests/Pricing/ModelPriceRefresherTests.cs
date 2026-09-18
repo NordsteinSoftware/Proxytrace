@@ -118,6 +118,34 @@ public sealed class ModelPriceRefresherTests : BaseTest<Module>
         endpoints.Should().NotContain(e => e.Model.Name == "broken-model");
     }
 
+    [TestMethod]
+    public async Task RefreshAll_PreservesManualPrices_WhileUpdatingAndDiscoveringOtherModels()
+    {
+        var client = Substitute.For<IProviderClient>();
+        IServiceProvider services = BuildServices(client);
+        var provider = await services.GetRequiredService<IDomainEntityGenerator<IModelProvider>>().CreateAsync(CancellationToken);
+        var models = services.GetRequiredService<IModelRepository>();
+        var manual = await models.GetOrCreateAsync("manual", CancellationToken);
+        var automatic = await models.GetOrCreateAsync("automatic", CancellationToken);
+        var discovered = await models.GetOrCreateAsync("discovered", CancellationToken);
+        var repository = services.GetRequiredService<IModelEndpointRepository>();
+        var create = services.GetRequiredService<IModelEndpoint.CreateNew>();
+        await repository.AddAsync(create(manual, provider, 7, 9, 3, true), CancellationToken);
+        await repository.AddAsync(create(automatic, provider, 1, 2, null), CancellationToken);
+        client.GetModelsAsync(Arg.Any<CancellationToken>()).Returns(Task.FromResult<IReadOnlyList<PricedModel>>([
+            new(manual, new ModelPrice(2, 4, 1)), new(automatic, new ModelPrice(2, 4, 1)), new(discovered, new ModelPrice(2, 4, 1)),
+        ]));
+
+        await services.GetRequiredService<IModelPriceRefresher>().RefreshAllAsync(CancellationToken);
+
+        var endpoints = await repository.GetByProviderAsync(provider.Id, CancellationToken);
+        endpoints.Should().HaveCount(3);
+        endpoints.Should().ContainSingle(e => e.Model.Id == manual.Id && e.ManualPricing
+            && e.InputTokenCost == 7 && e.OutputTokenCost == 9 && e.CachedInputTokenCost == 3);
+        endpoints.Where(e => e.Model.Id != manual.Id).Should().OnlyContain(e => !e.ManualPricing
+            && e.InputTokenCost == 2 && e.OutputTokenCost == 4 && e.CachedInputTokenCost == 1);
+    }
+
     private IServiceProvider BuildServices(IProviderClient client) =>
         GetServices(builder =>
         {

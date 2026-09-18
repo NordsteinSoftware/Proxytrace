@@ -35,8 +35,6 @@ internal sealed class ModelPriceRefresher : IModelPriceRefresher
     /// </summary>
     public async Task RefreshProviderAsync(IModelProvider provider, CancellationToken cancellationToken = default)
     {
-        IReadOnlyList<IModelEndpoint> existing = await endpointRepository.GetByProviderAsync(provider.Id, cancellationToken);
-
         IReadOnlyList<PricedModel> discovered;
         try
         {
@@ -48,6 +46,8 @@ internal sealed class ModelPriceRefresher : IModelPriceRefresher
             logger.LogWarning(ex, "Model discovery failed for provider {ProviderId}", provider.Id);
             return;
         }
+
+        IReadOnlyList<IModelEndpoint> existing = await endpointRepository.GetByProviderAsync(provider.Id, cancellationToken);
 
         foreach (PricedModel pm in discovered)
         {
@@ -68,7 +68,10 @@ internal sealed class ModelPriceRefresher : IModelPriceRefresher
 
             if (existingEndpoint is not null)
             {
-                // Always refresh the price of an existing endpoint from the resolved value.
+                if (existingEndpoint.ManualPricing)
+                    continue;
+
+                // Refresh only automatically managed prices.
                 IModelEndpoint updated = updateEndpoint(
                     existingEndpoint.Model, existingEndpoint.Provider,
                     pm.Price.InputTokenCost, pm.Price.OutputTokenCost, pm.Price.CachedInputTokenCost, existingEndpoint);

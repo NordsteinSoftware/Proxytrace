@@ -858,10 +858,17 @@ export interface ModelEndpointDto {
   providerName: string;
   inputTokenCost: number | null;
   outputTokenCost: number | null;
-  /** Cached-input price (EUR / 1M tokens); auto-fetched from the LiteLLM catalog, read-only. */
+  /** Cached-input price (EUR / 1M tokens); null falls back to the input price. */
   cachedInputTokenCost: number | null;
+  manualPricing: boolean;
   createdAt: string;
   updatedAt: string;
+}
+export interface UpdateModelPricingRequest {
+  inputTokenCost: number | null;
+  outputTokenCost: number | null;
+  cachedInputTokenCost: number | null;
+  manualPricing: boolean;
 }
 export type ApiKeyScope = 'Ingestion' | 'Passthrough' | 'McpRead' | 'McpWrite' | 'ApiRead' | 'ApiWrite';
 export interface ApiKeyDto {

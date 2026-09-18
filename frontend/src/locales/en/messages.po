@@ -1294,6 +1294,12 @@ msgstr "Cached"
 msgid "Cached / 1M €"
 msgstr "Cached / 1M €"
 
+msgid "Cached-input price"
+msgstr "Cached-input price"
+
+msgid "Cached-input price cannot exceed the input price."
+msgstr "Cached-input price cannot exceed the input price."
+
 #. placeholder {0}: index + 1
 msgid "Call {0}"
 msgstr "Call {0}"
@@ -1626,6 +1632,12 @@ msgstr "Could not read the upstream API key."
 
 msgid "Could not reset your password. Please try again."
 msgstr "Could not reset your password. Please try again."
+
+msgid "Could not restore automatic pricing. Please try again."
+msgstr "Could not restore automatic pricing. Please try again."
+
+msgid "Could not save prices. Please try again."
+msgstr "Could not save prices. Please try again."
 
 msgid "Could not start setup. Please try again."
 msgstr "Could not start setup. Please try again."
@@ -2054,6 +2066,9 @@ msgstr "Edit monthly budget"
 msgid "Edit name"
 msgstr "Edit name"
 
+msgid "Edit prices"
+msgstr "Edit prices"
+
 msgid "Edit schedule"
 msgstr "Edit schedule"
 
@@ -2123,6 +2138,9 @@ msgstr "Endpoint URL"
 msgid "Enter a number, or leave the field empty to unset the threshold."
 msgstr "Enter a number, or leave the field empty to unset the threshold."
 
+msgid "Enter prices from 0 to below 1,000,000,000,000 with up to 6 decimal places. Leave blank for unknown."
+msgstr "Enter prices from 0 to below 1,000,000,000,000 with up to 6 decimal places. Leave blank for unknown."
+
 msgid "Enter the 6-digit code from your authenticator app, or one of your backup codes."
 msgstr "Enter the 6-digit code from your authenticator app, or one of your backup codes."
 
@@ -2161,6 +2179,9 @@ msgstr "Errors"
 
 msgid "Estimated cost in EUR"
 msgstr "Estimated cost in EUR"
+
+msgid "EUR per 1M tokens. Leave blank for unknown. An unknown cached-input price uses the input price."
+msgstr "EUR per 1M tokens. Leave blank for unknown. An unknown cached-input price uses the input price."
 
 msgid "Evaluation pass rate"
 msgstr "Evaluation pass rate"
@@ -2608,6 +2629,9 @@ msgstr "Input / 1M €"
 msgid "Input conversation"
 msgstr "Input conversation"
 
+msgid "Input price"
+msgstr "Input price"
+
 msgid "Input tokens"
 msgstr "Input tokens"
 
@@ -2952,6 +2976,9 @@ msgstr "Manage"
 msgid "Manage this installation's license key."
 msgstr "Manage this installation's license key."
 
+msgid "Manual"
+msgstr "Manual"
+
 msgid "Many tool calls"
 msgstr "Many tool calls"
 
@@ -3112,6 +3139,9 @@ msgstr "Model switch"
 
 msgid "Models"
 msgstr "Models"
+
+msgid "Models and automatic prices reload from the provider. Manual prices are preserved."
+msgstr "Models and automatic prices reload from the provider. Manual prices are preserved."
 
 msgid "Models are discovered from your provider automatically; prices load from the catalogue."
 msgstr "Models are discovered from your provider automatically; prices load from the catalogue."
@@ -3815,6 +3845,9 @@ msgstr "Output / 1M €"
 msgid "Output contract"
 msgstr "Output contract"
 
+msgid "Output price"
+msgstr "Output price"
+
 msgid "Output tokens"
 msgstr "Output tokens"
 
@@ -4194,9 +4227,6 @@ msgstr "Proxytrace speaks the OpenAI protocol — point it at OpenAI or any Open
 
 msgid "pt"
 msgstr "pt"
-
-msgid "Pulled from the provider; prices load automatically."
-msgstr "Pulled from the provider; prices load automatically."
 
 msgid "Put the cases in a new suite"
 msgstr "Put the cases in a new suite"
@@ -4644,6 +4674,9 @@ msgstr "Save your backup codes"
 
 msgid "Saving clears this budget's alert state, so the next check re-evaluates against the new thresholds."
 msgstr "Saving clears this budget's alert state, so the next check re-evaluates against the new thresholds."
+
+msgid "Saving makes all three prices manual. Manual prices are preserved when models and prices reload."
+msgstr "Saving makes all three prices manual. Manual prices are preserved when models and prices reload."
 
 msgid "Saving…"
 msgstr "Saving…"
@@ -5921,6 +5954,9 @@ msgstr "Upstream pass-through"
 
 msgid "Upstream pass-through — forward non-inference paths (such as /health) to the provider using its own credential. Not traced, and not checked by detectors."
 msgstr "Upstream pass-through — forward non-inference paths (such as /health) to the provider using its own credential. Not traced, and not checked by detectors."
+
+msgid "Use automatic pricing"
+msgstr "Use automatic pricing"
 
 msgid "Use your resource’s OpenAI-compatible v1 endpoint. Model discovery lists the models you have deployed."
 msgstr "Use your resource’s OpenAI-compatible v1 endpoint. Model discovery lists the models you have deployed."

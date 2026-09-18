@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using Proxytrace.Domain.AuditLog;
 using Autofac;
 using AwesomeAssertions;
@@ -310,12 +311,92 @@ public sealed class ModelProvidersControllerTests : BaseTest<Module>
         var result = await controller.UpdateModelPricing(
             endpoint.Provider.Id,
             endpoint.Id,
-            new UpdateModelEndpointPricingRequest(9.99m, 19.99m),
+            new UpdateModelEndpointPricingRequest(9.99m, 19.99m, 1.25m),
             CancellationToken);
 
         result.Value.Should().NotBeNull();
         result.Value.InputTokenCost.Should().Be(9.99m);
         result.Value.OutputTokenCost.Should().Be(19.99m);
+        result.Value.CachedInputTokenCost.Should().Be(1.25m);
+        result.Value.ManualPricing.Should().BeTrue();
+        var stored = await services.GetRequiredService<IModelEndpointRepository>().GetAsync(endpoint.Id, CancellationToken);
+        stored.CachedInputTokenCost.Should().Be(1.25m);
+        stored.ManualPricing.Should().BeTrue();
+    }
+
+    [TestMethod]
+    public async Task UpdateModelPricing_RejectsWrongProviderAndMissingEndpoint()
+    {
+        IServiceProvider services = GetServices();
+        var controller = ResolveController(services);
+        var endpoint = await services.GetRequiredService<IDomainEntityGenerator<IModelEndpoint>>().CreateAsync(CancellationToken);
+        var other = await services.GetRequiredService<IDomainEntityGenerator<IModelProvider>>().CreateAsync(CancellationToken);
+        var request = new UpdateModelEndpointPricingRequest(0, null, null);
+        (await controller.UpdateModelPricing(other.Id, endpoint.Id, request, CancellationToken)).Result.Should().BeOfType<NotFoundObjectResult>();
+        (await controller.UpdateModelPricing(Guid.NewGuid(), endpoint.Id, request, CancellationToken)).Result.Should().BeOfType<NotFoundObjectResult>();
+        (await controller.UpdateModelPricing(endpoint.Provider.Id, Guid.NewGuid(), request, CancellationToken)).Result.Should().BeOfType<NotFoundObjectResult>();
+    }
+
+    [TestMethod]
+    public void UpdateModelPricing_ValidatesAllPricesAndDatabasePrecision()
+    {
+        UpdateModelEndpointPricingRequest[] valid = [
+            new(0, 0, 0), new(null, null, null), new(null, 1, 2),
+            new(999999999999.999999m, 0.000001m, null),
+        ];
+        UpdateModelEndpointPricingRequest[] invalid = [
+            new(-1, 1, null), new(1, -1, null), new(1, 1, -1), new(1, 1, 2),
+            new(1000000000000m, 1, null), new(1, 1000000000000m, null), new(null, null, 1000000000000m),
+            new(0.0000001m, 1, null), new(1, 0.0000001m, null), new(1, 1, 0.0000001m),
+        ];
+        foreach (var request in valid)
+            Validator.TryValidateObject(request, new ValidationContext(request), [], true).Should().BeTrue();
+        foreach (var request in invalid)
+            Validator.TryValidateObject(request, new ValidationContext(request), [], true).Should().BeFalse();
+    }
+
+    [TestMethod]
+    public async Task UpdateModelPricing_ManualSurvivesReload_AndAutomaticRefreshRetriesAfterFailure()
+    {
+        var client = Substitute.For<IProviderClient>();
+        IServiceProvider services = GetServices(builder => builder.RegisterInstance<IProviderClient.Factory>(_ => client));
+        var audit = new RecordingAuditLogger();
+        var controller = ResolveController(services, audit);
+        var endpoint = await services.GetRequiredService<IDomainEntityGenerator<IModelEndpoint>>().CreateAsync(CancellationToken);
+        var repository = services.GetRequiredService<IModelEndpointRepository>();
+        client.GetModelsAsync(Arg.Any<CancellationToken>()).Returns(Task.FromResult<IReadOnlyList<PricedModel>>(
+            [new(endpoint.Model, new ModelPrice(2, 4, 1))]));
+
+        await controller.UpdateModelPricing(endpoint.Provider.Id, endpoint.Id, new(0, null, null), CancellationToken);
+        await controller.Reload(endpoint.Provider.Id, CancellationToken);
+        var manual = await repository.GetAsync(endpoint.Id, CancellationToken);
+        manual.InputTokenCost.Should().Be(0);
+        manual.OutputTokenCost.Should().BeNull();
+        manual.CachedInputTokenCost.Should().BeNull();
+        manual.ManualPricing.Should().BeTrue();
+        audit.Events.Should().Contain(e => e.Id == (int)AuditAction.EndpointConfigUpdated);
+
+        client.GetModelsAsync(Arg.Any<CancellationToken>()).Returns<IReadOnlyList<PricedModel>>(_ => throw new HttpRequestException("Unavailable"));
+        var automatic = (await controller.UpdateModelPricing(endpoint.Provider.Id, endpoint.Id, new(99, 99, 99, false), CancellationToken)).Value!;
+        automatic.ManualPricing.Should().BeFalse();
+        automatic.InputTokenCost.Should().Be(0);
+        automatic.OutputTokenCost.Should().BeNull();
+        automatic.CachedInputTokenCost.Should().BeNull();
+
+        client.GetModelsAsync(Arg.Any<CancellationToken>()).Returns(Task.FromResult<IReadOnlyList<PricedModel>>(
+            [new(endpoint.Model, new ModelPrice(2, 4, 1))]));
+        await services.GetRequiredService<IModelPriceRefresher>().RefreshAllAsync(CancellationToken);
+        var refreshed = await repository.GetAsync(endpoint.Id, CancellationToken);
+        refreshed.InputTokenCost.Should().Be(2);
+        refreshed.OutputTokenCost.Should().Be(4);
+        refreshed.CachedInputTokenCost.Should().Be(1);
+
+        await controller.UpdateModelPricing(endpoint.Provider.Id, endpoint.Id, new(9, 9, 9), CancellationToken);
+        automatic = (await controller.UpdateModelPricing(endpoint.Provider.Id, endpoint.Id, new(null, null, null, false), CancellationToken)).Value!;
+        automatic.InputTokenCost.Should().Be(2);
+        automatic.OutputTokenCost.Should().Be(4);
+        automatic.CachedInputTokenCost.Should().Be(1);
+        automatic.ManualPricing.Should().BeFalse();
     }
 
     [TestMethod]
