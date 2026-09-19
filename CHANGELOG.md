@@ -9,11 +9,32 @@ follow [Semantic Versioning](https://semver.org). Ongoing work is collected unde
 
 ## [Unreleased]
 
+## [1.13.0] - 2026-09-19
+
 ### Added
+
+- **Model prices can be set by hand.** Every model in a provider's **Models** section now has an
+  **Edit prices** action: set the input, output and cached-input price in **EUR per 1M tokens**,
+  where zero means free and blank means unknown. Editing marks that model endpoint **Manual**, and
+  from then on its prices survive model discovery, the **Reload models & prices** button and the
+  background price refresh, while every other model keeps updating from the catalogue.
+  **Use automatic pricing** hands the endpoint back to the catalogue and refreshes it immediately.
+  A cached-input price cannot exceed the input price, and prices cannot be negative. Costs stay
+  derived at read time, so an edit also reprices that endpoint's history — no price history is
+  stored.
 
 - **Selection stats in Traces.** Check individual calls or conversation groups to see their
   combined token usage, cost, average latency and spread, and error rate. Use **Clear selection**
   in the filter toolbar to return to stats for all matching traces without shifting the page layout.
+
+- **The trace table's columns can be resized.** Drag a column's right edge, or focus the handle and
+  use the arrow keys, to give the data you care about the room it deserves. Widths are remembered
+  per browser, and every column keeps a minimum width so none can be squeezed out of existence.
+
+### Changed
+
+- **The custom time range is quicker to fill in.** **From** and **To** each have a **NOW** button
+  and a clear button, and the panel is now wide enough to show a full timestamp.
 
 ## [1.12.0] - 2026-09-17
 
