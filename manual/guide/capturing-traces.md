@@ -104,6 +104,11 @@ traces, not just the ones currently on screen. While sorted by anything other th
 conversations are shown as individual calls rather than grouped rows — grouping only makes
 sense in time order.
 
+To make the table fit the details you care about, drag the right edge of any column header to
+resize that column. You can also focus its resize handle and press `←` or `→` to adjust it from
+the keyboard. Every column keeps a minimum width, and your chosen widths are remembered in your
+browser.
+
 ### The timeline
 
 ![The traces timeline strip — a stepped cyan line plots the trace count per time slice above a zero line, with red error notches hanging below it.](/screenshots/traces/timeline.png)
@@ -141,6 +146,10 @@ one-click **quick ranges** (last 15 minutes through last 30 days) and a **custom
 explicit From/To date-times — the same picker used on the Error Log. Drag-zooming the timeline
 simply sets a custom range, which the picker then shows. Use **Clear** (or the ✕) to return to
 all-time.
+
+In a custom range, the **NOW** button beside either **From** or **To** fills that field with the
+current date and time. The adjacent ✕ clears that field only, so you can quickly make either end
+of the range open-ended; the full timestamp remains visible while you fine-tune it.
 
 When you **first** open Traces, the range automatically snaps to the smallest quick range that
 still contains data, so you never land on an empty view. After that, your filter bar — time
