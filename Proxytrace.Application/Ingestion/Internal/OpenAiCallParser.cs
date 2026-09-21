@@ -215,6 +215,11 @@ internal class OpenAiCallParser : IOpenAiCallParser
         if (responseBody is null)
             return false;
 
+        if (LooksLikeSse(responseBody))
+        {
+            return HasOnlySupportedSseResponseContent(responseBody);
+        }
+
         try
         {
             using var doc = JsonDocument.Parse(responseBody);
@@ -228,6 +233,75 @@ internal class OpenAiCallParser : IOpenAiCallParser
         {
             return false;
         }
+    }
+
+    private static bool HasOnlySupportedSseResponseContent(string responseBody)
+    {
+        var toolCalls = new Dictionary<int, StreamedToolCall>();
+        var toolCallOrder = new List<int>();
+        var sawCompletionChunk = false;
+
+        foreach (var line in responseBody.Split('\n'))
+        {
+            if (!TryGetSseData(line, out var data))
+            {
+                continue;
+            }
+
+            if (data == "[DONE]")
+            {
+                continue;
+            }
+
+            try
+            {
+                using var doc = JsonDocument.Parse(data);
+                var root = doc.RootElement;
+                if (!root.TryGetProperty("choices", out var choices))
+                {
+                    continue;
+                }
+
+                if (choices.ValueKind != JsonValueKind.Array)
+                {
+                    return false;
+                }
+
+                if (choices.GetArrayLength() == 0)
+                {
+                    continue;
+                }
+
+                sawCompletionChunk = true;
+                var choice = choices[0];
+                if (!choice.TryGetProperty("delta", out var delta))
+                {
+                    continue;
+                }
+
+                if (delta.ValueKind != JsonValueKind.Object)
+                {
+                    return false;
+                }
+
+                if (delta.TryGetProperty("content", out var content)
+                    && content.ValueKind != JsonValueKind.String)
+                {
+                    return false;
+                }
+
+                if (!AccumulateSupportedToolCallDeltas(delta, toolCalls, toolCallOrder))
+                {
+                    return false;
+                }
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        return sawCompletionChunk;
     }
 
     private static Message? ParseMessage(string? role, JsonElement el) => role switch
@@ -446,15 +520,14 @@ internal class OpenAiCallParser : IOpenAiCallParser
 
         foreach (var line in responseBody.Split('\n'))
         {
-            var trimmed = line.Trim();
-            if (!trimmed.StartsWith("data: ") || trimmed == "data: [DONE]")
+            if (!TryGetSseData(line, out var data) || data == "[DONE]")
             {
                 continue;
             }
 
             try
             {
-                using var doc = JsonDocument.Parse(trimmed["data: ".Length..]);
+                using var doc = JsonDocument.Parse(data);
                 if (!doc.RootElement.TryGetProperty("choices", out var choices)
                     || choices.GetArrayLength() == 0)
                 {
@@ -553,6 +626,59 @@ internal class OpenAiCallParser : IOpenAiCallParser
         }
     }
 
+    private static bool AccumulateSupportedToolCallDeltas(
+        JsonElement delta,
+        Dictionary<int, StreamedToolCall> toolCalls,
+        List<int> order)
+    {
+        if (!delta.TryGetProperty("tool_calls", out var toolCallsEl))
+        {
+            return true;
+        }
+
+        if (toolCallsEl.ValueKind != JsonValueKind.Array)
+        {
+            return false;
+        }
+
+        foreach (var toolCall in toolCallsEl.EnumerateArray())
+        {
+            if (toolCall.ValueKind != JsonValueKind.Object)
+            {
+                return false;
+            }
+
+            if (toolCall.TryGetProperty("id", out var id)
+                && id.ValueKind != JsonValueKind.String)
+            {
+                return false;
+            }
+
+            if (toolCall.TryGetProperty("function", out var function))
+            {
+                if (function.ValueKind != JsonValueKind.Object)
+                {
+                    return false;
+                }
+
+                if (function.TryGetProperty("name", out var name)
+                    && name.ValueKind != JsonValueKind.String)
+                {
+                    return false;
+                }
+
+                if (function.TryGetProperty("arguments", out var arguments)
+                    && arguments.ValueKind != JsonValueKind.String)
+                {
+                    return false;
+                }
+            }
+        }
+
+        AccumulateToolCallDeltas(delta, toolCalls, order);
+        return true;
+    }
+
     /// <summary>
     /// Mutable accumulator for a single streamed tool call, reassembled across SSE delta chunks.
     /// </summary>
@@ -640,6 +766,19 @@ internal class OpenAiCallParser : IOpenAiCallParser
         return false;
     }
 
+    private static bool TryGetSseData(string line, out string data)
+    {
+        var trimmed = line.Trim();
+        if (!trimmed.StartsWith("data:", StringComparison.Ordinal))
+        {
+            data = "";
+            return false;
+        }
+
+        data = trimmed["data:".Length..].TrimStart();
+        return true;
+    }
+
     private static (ulong? inputTokens, ulong? outputTokens, ulong? cachedInputTokens, string? finishReason) ParseUsageFromSse(string responseBody)
     {
         ulong? inputTokens = null;
@@ -649,15 +788,14 @@ internal class OpenAiCallParser : IOpenAiCallParser
 
         foreach (var line in responseBody.Split('\n'))
         {
-            var trimmed = line.Trim();
-            if (!trimmed.StartsWith("data: ") || trimmed == "data: [DONE]")
+            if (!TryGetSseData(line, out var data) || data == "[DONE]")
             {
                 continue;
             }
 
             try
             {
-                using var doc = JsonDocument.Parse(trimmed["data: ".Length..]);
+                using var doc = JsonDocument.Parse(data);
                 var (pt, ct, cached, fr) = ExtractUsageFromElement(doc.RootElement);
                 inputTokens ??= pt;
                 outputTokens ??= ct;

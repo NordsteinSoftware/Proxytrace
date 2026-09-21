@@ -157,6 +157,26 @@ public sealed class AgentCallIngestorTests : BaseTest<Module>
                                                    }
                                                    """;
 
+    private const string ChatTurn3RequestBody = $$"""
+                                                         {
+                                                             "model": "{{Model}}",
+                                                             "messages": [
+                                                                 {"role": "system", "content": "{{SystemPrompt}}"},
+                                                                 {"role": "user", "content": "What is 2+2?"},
+                                                                 {"role": "assistant", "content": "2+2 equals 4."},
+                                                                 {"role": "user", "content": "What about 3+3?"},
+                                                                 {"role": "assistant", "content": "3+3 equals 6."},
+                                                                 {"role": "user", "content": "What about 4+4?"}
+                                                             ]
+                                                         }
+                                                         """;
+
+    private const string ChatTurn3StreamedResponseBody =
+        "data: {\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"4+4 equals \"}}]}\n\n" +
+        "data:{\"choices\":[{\"index\":0,\"delta\":{\"content\":\"8.\"}}]}\n\n" +
+        "data: {\"choices\":[{\"index\":0,\"delta\":{},\"finish_reason\":\"stop\"}]}\n\n" +
+        "data: [DONE]\n\n";
+
     private const string MultimodalChatTurn1RequestBody = $$"""
                                                             {
                                                                 "model": "{{Model}}",
@@ -418,6 +438,38 @@ public sealed class AgentCallIngestorTests : BaseTest<Module>
     }
 
     [TestMethod]
+    public async Task IngestAsync_WithoutCorrelationHeaders_GroupsStreamedFinalTurnWithExactMessageHistory()
+    {
+        var services = GetServices();
+        var ingestion = services.GetRequiredService<AgentCallProcessor>();
+        var callRepo = services.GetRequiredService<IAgentCallRepository>();
+        var (provider, project) = await GetProviderAndProjectAsync(services);
+
+        await ingestion.IngestAsync(
+            new IngestJob(provider, project, ChatTurn1RequestBody, ChatTurn1ResponseBody,
+                TimeSpan.FromMilliseconds(100), HttpStatusCode.OK, SessionId: null),
+            CancellationToken);
+        await ingestion.IngestAsync(
+            new IngestJob(provider, project, ChatTurn2RequestBodyNoTools, ChatTurn2ResponseBody,
+                TimeSpan.FromMilliseconds(100), HttpStatusCode.OK, SessionId: null),
+            CancellationToken);
+        await ingestion.IngestAsync(
+            new IngestJob(provider, project, ChatTurn3RequestBody, ChatTurn3StreamedResponseBody,
+                TimeSpan.FromMilliseconds(100), HttpStatusCode.OK, SessionId: null),
+            CancellationToken);
+
+        var calls = (await callRepo.GetFilteredAsync(
+            new AgentCallFilter { ProjectId = project.Id }, 1, 10, CancellationToken)).Items;
+        var firstCall = calls.Single(c => c.Request.Messages.Count == 2);
+        var groupedCalls = (await callRepo.GetFilteredAsync(
+            new AgentCallFilter { ProjectId = project.Id, ConversationId = firstCall.ConversationId },
+            1, 10, CancellationToken)).Items;
+
+        groupedCalls.Should().HaveCount(3);
+        groupedCalls.Should().OnlyContain(c => c.ConversationId == firstCall.ConversationId);
+    }
+
+    [TestMethod]
     public async Task IngestAsync_WithoutCorrelationHeaders_GroupsToolLoop()
     {
         var services = GetServices();
@@ -497,6 +549,26 @@ public sealed class AgentCallIngestorTests : BaseTest<Module>
         continuation.ConversationId.Should().Be(ParseLegacyKey("explicit-thread"));
         calls.Single(c => c.Request.Messages.Count == 2).ConversationId
             .Should().NotBe(ParseLegacyKey("explicit-thread"));
+    }
+
+    [TestMethod]
+    public async Task IngestAsync_StreamedResponseWithExplicitConversationHeader_UsesHeader()
+    {
+        var services = GetServices();
+        var ingestion = services.GetRequiredService<AgentCallProcessor>();
+        var callRepo = services.GetRequiredService<IAgentCallRepository>();
+        var (provider, project) = await GetProviderAndProjectAsync(services);
+
+        await ingestion.IngestAsync(
+            new IngestJob(provider, project, ChatTurn1RequestBody, ChatTurn3StreamedResponseBody,
+                TimeSpan.FromMilliseconds(100), HttpStatusCode.OK, SessionId: null,
+                ConversationId: "explicit-thread"),
+            CancellationToken);
+
+        var call = (await callRepo.GetFilteredAsync(
+            new AgentCallFilter { ProjectId = project.Id }, 1, 10, CancellationToken)).Items.Single();
+
+        call.ConversationId.Should().Be(ParseLegacyKey("explicit-thread"));
     }
 
     [TestMethod]
