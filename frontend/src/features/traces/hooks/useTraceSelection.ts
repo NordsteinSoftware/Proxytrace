@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { AgentCallListItemDto, AgentCallSummaryDto } from '../../../api/models';
 
 export interface TraceStatsSelection {
@@ -6,10 +6,24 @@ export interface TraceStatsSelection {
   onChange: (traces: AgentCallListItemDto[], checked: boolean) => void;
 }
 
-/** Selection belongs to the current query; scrolling and live updates keep it intact. */
+/** Selection belongs to the current filter scope and survives navigation away and back. */
 export function useTraceSelection(traces: AgentCallListItemDto[], scope: string) {
-  const [selection, setSelection] = useState({ scope, ids: new Set<string>() });
+  const [selection, setSelection] = useState(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem('traces.selection') ?? 'null');
+      if (saved?.scope === scope && Array.isArray(saved.ids) && saved.ids.every((id: unknown) => typeof id === 'string')) {
+        return { scope, ids: new Set<string>(saved.ids) };
+      }
+    } catch { /* Storage unavailable or invalid — start with no selection. */ }
+    return { scope, ids: new Set<string>() };
+  });
   if (selection.scope !== scope) setSelection({ scope, ids: new Set() });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('traces.selection', JSON.stringify({ scope: selection.scope, ids: [...selection.ids] }));
+    } catch { /* Keep the in-memory selection when storage is unavailable. */ }
+  }, [selection]);
 
   const selected = traces.filter(trace => selection.ids.has(trace.id));
   const count = selected.length;
