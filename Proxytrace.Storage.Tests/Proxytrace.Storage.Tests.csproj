@@ -9,13 +9,13 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Autofac" Version="9.3.2" />
+        <PackageReference Include="Autofac" Version="9.3.4" />
         <PackageReference Include="Microsoft.AspNetCore.DataProtection" Version="10.0.12" />
         <PackageReference Include="coverlet.collector" Version="10.0.1">
           <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
           <PrivateAssets>all</PrivateAssets>
         </PackageReference>
-        <PackageReference Include="MSTest" Version="4.4.0" />
+        <PackageReference Include="MSTest" Version="4.4.1" />
     </ItemGroup>
 
     <ItemGroup>

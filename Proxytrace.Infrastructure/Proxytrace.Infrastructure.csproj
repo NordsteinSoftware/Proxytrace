@@ -11,6 +11,7 @@
     </ItemGroup>
     
     <ItemGroup>
+        <PackageReference Include="Autofac" Version="9.3.4" />
         <PackageReference Include="JsonSchema.Net" Version="9.4.0" />
         <PackageReference Include="Microsoft.AspNetCore.DataProtection" Version="10.0.12" />
         <PackageReference Include="Microsoft.Extensions.AI" Version="10.10.0" />
