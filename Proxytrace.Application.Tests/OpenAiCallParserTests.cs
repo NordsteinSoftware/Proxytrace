@@ -36,6 +36,134 @@ public sealed class OpenAiCallParserTests : BaseTest<Module>
         "data: {\"choices\":[{\"index\":0,\"delta\":{},\"finish_reason\":\"tool_calls\"}]}\n\n" +
         "data: [DONE]\n\n";
 
+    private const string StreamedTextResponse =
+        "data: {\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"Hello\"}}]}\n\n" +
+        "data:{\"choices\":[{\"index\":0,\"delta\":{\"content\":\" world\"}}]}\n\n" +
+        "data: {\"choices\":[],\"usage\":{\"prompt_tokens\":10,\"completion_tokens\":2}}\n\n" +
+        "data: [DONE]\n\n";
+
+    private const string StreamedTextResponseWithoutDone =
+        "data: {\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"Hello\"}}]}\n\n" +
+        "data: {\"choices\":[{\"index\":0,\"delta\":{\"content\":\" world\"}}]}\n\n";
+
+    private const string StreamedTextWithIncompleteToolCallResponse =
+        "data: {\"choices\":[{\"index\":0,\"delta\":{\"content\":\"Hello world\"}}]}\n\n" +
+        "data: {\"choices\":[{\"index\":0,\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":\"{\"}}]}}]}\n\n" +
+        "data: [DONE]\n\n";
+
+    private const string StreamedTextWithMalformedChunkResponse =
+        "data: {\"choices\":[{\"index\":0,\"delta\":{\"content\":\"Hello\"}}]}\n\n" +
+        "data: {not json}\n\n" +
+        "data: [DONE]\n\n";
+
+    private const string BufferedTextResponse = """
+                                                     {
+                                                         "choices": [{
+                                                             "message": {"role": "assistant", "content": "Hello world"}
+                                                         }]
+                                                     }
+                                                     """;
+
+    private const string UnsupportedStreamedResponse =
+        "data: {\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":[{\"type\":\"image_url\"}]}}]}\n\n" +
+        "data: [DONE]\n\n";
+
+    [TestMethod]
+    public async Task TryParse_CompleteStreamedTextResponse_SupportsAutomaticGrouping()
+    {
+        IServiceProvider services = GetServices();
+        var parser = services.GetRequiredService<IOpenAiCallParser>();
+        var provider = await services.GetRequiredService<IDomainEntityGenerator<IModelProvider>>()
+            .GetOrCreateAsync(CancellationToken);
+
+        ParseResult? result = await parser.TryParse(
+            provider, RequestBody, StreamedTextResponse,
+            TimeSpan.FromMilliseconds(50), HttpStatusCode.OK, CancellationToken);
+
+        result.Should().NotBeNull();
+        result?.SupportsAutomaticGrouping.Should().BeTrue();
+    }
+
+    [TestMethod]
+    public async Task TryParse_CompleteStreamedTextResponseWithoutDone_SupportsAutomaticGrouping()
+    {
+        IServiceProvider services = GetServices();
+        var parser = services.GetRequiredService<IOpenAiCallParser>();
+        var provider = await services.GetRequiredService<IDomainEntityGenerator<IModelProvider>>()
+            .GetOrCreateAsync(CancellationToken);
+
+        ParseResult? result = await parser.TryParse(
+            provider, RequestBody, StreamedTextResponseWithoutDone,
+            TimeSpan.FromMilliseconds(50), HttpStatusCode.OK, CancellationToken);
+
+        result.Should().NotBeNull();
+        result?.SupportsAutomaticGrouping.Should().BeTrue();
+    }
+
+    [TestMethod]
+    public async Task TryParse_StreamedTextWithIncompleteToolCall_SupportsAutomaticGrouping()
+    {
+        IServiceProvider services = GetServices();
+        var parser = services.GetRequiredService<IOpenAiCallParser>();
+        var provider = await services.GetRequiredService<IDomainEntityGenerator<IModelProvider>>()
+            .GetOrCreateAsync(CancellationToken);
+
+        ParseResult? result = await parser.TryParse(
+            provider, RequestBody, StreamedTextWithIncompleteToolCallResponse,
+            TimeSpan.FromMilliseconds(50), HttpStatusCode.OK, CancellationToken);
+
+        result.Should().NotBeNull();
+        result?.SupportsAutomaticGrouping.Should().BeTrue();
+    }
+
+    [TestMethod]
+    public async Task TryParse_StreamedTextWithMalformedChunk_DoesNotSupportAutomaticGrouping()
+    {
+        IServiceProvider services = GetServices();
+        var parser = services.GetRequiredService<IOpenAiCallParser>();
+        var provider = await services.GetRequiredService<IDomainEntityGenerator<IModelProvider>>()
+            .GetOrCreateAsync(CancellationToken);
+
+        ParseResult? result = await parser.TryParse(
+            provider, RequestBody, StreamedTextWithMalformedChunkResponse,
+            TimeSpan.FromMilliseconds(50), HttpStatusCode.OK, CancellationToken);
+
+        result.Should().NotBeNull();
+        result?.SupportsAutomaticGrouping.Should().BeFalse();
+    }
+
+    [TestMethod]
+    public async Task TryParse_BufferedTextResponse_SupportsAutomaticGrouping()
+    {
+        IServiceProvider services = GetServices();
+        var parser = services.GetRequiredService<IOpenAiCallParser>();
+        var provider = await services.GetRequiredService<IDomainEntityGenerator<IModelProvider>>()
+            .GetOrCreateAsync(CancellationToken);
+
+        ParseResult? result = await parser.TryParse(
+            provider, RequestBody, BufferedTextResponse,
+            TimeSpan.FromMilliseconds(50), HttpStatusCode.OK, CancellationToken);
+
+        result.Should().NotBeNull();
+        result?.SupportsAutomaticGrouping.Should().BeTrue();
+    }
+
+    [TestMethod]
+    public async Task TryParse_UnsupportedStreamedContent_DoesNotSupportAutomaticGrouping()
+    {
+        IServiceProvider services = GetServices();
+        var parser = services.GetRequiredService<IOpenAiCallParser>();
+        var provider = await services.GetRequiredService<IDomainEntityGenerator<IModelProvider>>()
+            .GetOrCreateAsync(CancellationToken);
+
+        ParseResult? result = await parser.TryParse(
+            provider, RequestBody, UnsupportedStreamedResponse,
+            TimeSpan.FromMilliseconds(50), HttpStatusCode.OK, CancellationToken);
+
+        result.Should().NotBeNull();
+        result?.SupportsAutomaticGrouping.Should().BeFalse();
+    }
+
     [TestMethod]
     public async Task TryParse_StreamedToolCallSplitAcrossChunks_ReassemblesIntoOneToolRequest()
     {
@@ -54,6 +182,7 @@ public sealed class OpenAiCallParserTests : BaseTest<Module>
 
         result.Should().NotBeNull();
         ParseResult parsed = result ?? throw new InvalidOperationException("Parse returned null");
+        parsed.SupportsAutomaticGrouping.Should().BeTrue();
         parsed.Response.Should().NotBeNull();
         ICompletion completion = parsed.Response ?? throw new InvalidOperationException("No completion");
 
@@ -110,6 +239,7 @@ public sealed class OpenAiCallParserTests : BaseTest<Module>
         // The call must be ingested (not dropped): an empty completion is still a real LLM call,
         // and its request is the only carrier of the preceding tool's result.
         ParseResult parsed = result ?? throw new InvalidOperationException("empty completion was dropped");
+        parsed.SupportsAutomaticGrouping.Should().BeTrue();
         parsed.Response.Should().NotBeNull();
         parsed.Request.Messages.Should().Contain(m => m is ToolMessage);
     }

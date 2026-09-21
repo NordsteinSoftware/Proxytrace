@@ -9,6 +9,12 @@ follow [Semantic Versioning](https://semver.org). Ongoing work is collected unde
 
 ## [Unreleased]
 
+### Fixed
+
+- **Streamed replies now stay in automatically grouped conversations.** A final SSE response whose
+  request exactly continues an earlier headerless history now remains in that conversation instead
+  of appearing as a detached new thread.
+
 ## [1.13.0] - 2026-09-19
 
 ### Added
