@@ -1,4 +1,5 @@
-import { useCallback } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
+import { useSearchParams } from 'react-router';
 import { useQuery } from '@tanstack/react-query';
 import { agentCallsApi } from '../api/agent-calls';
 import { QUERY_KEYS } from '../api/query-keys';
@@ -17,9 +18,35 @@ import type { AgentCallDto } from '../api/models';
  * `select(id, clear)` forwards {@link useSelectedId}'s `clear` list so sibling params (e.g. a
  * consumed `?focus=` deep-link) drop in the same history replace — two separate `setSearchParams`
  * calls in one tick both derive from the pre-update URL, so the second would clobber the first.
+ * An optional project-scoped storage key also restores the pane after tab navigation.
  */
-export function useSelectedTrace(): readonly [AgentCallDto | null, (id: string | null, clear?: string[]) => void] {
+export function useSelectedTrace(rememberKey?: string): readonly [AgentCallDto | null, (id: string | null, clear?: string[]) => void] {
   const [selectedId, setSelectedId] = useSelectedId('trace');
+  const [searchParams] = useSearchParams();
+  const focusId = searchParams.get('focus');
+  const restoredKey = useRef<string | undefined>(undefined);
+
+  // Restore once on entry (or project switch). Explicit deep links win; subsequent URL
+  // changes, including closing the drawer and back/forward, become the remembered value.
+  useEffect(() => {
+    if (!rememberKey) return;
+    const previousKey = restoredKey.current;
+    restoredKey.current = rememberKey;
+    if (previousKey !== rememberKey && !focusId && (previousKey !== undefined || !selectedId)) {
+      let id: string | null = null;
+      try {
+        const saved: unknown = JSON.parse(localStorage.getItem(rememberKey) ?? 'null');
+        if (typeof saved === 'string') id = saved;
+      } catch { /* Storage unavailable or invalid — no remembered selection. */ }
+      if (id !== selectedId) {
+        setSelectedId(id);
+        return;
+      }
+    }
+    try {
+      if (!focusId) localStorage.setItem(rememberKey, JSON.stringify(selectedId));
+    } catch { /* The URL selection still works when storage is unavailable. */ }
+  }, [rememberKey, selectedId, setSelectedId, focusId]);
 
   const detailQuery = useQuery({
     queryKey: QUERY_KEYS.agentCall(selectedId ?? undefined),

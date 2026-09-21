@@ -50,6 +50,11 @@ function Host({ rows, scope }: { rows: AgentCallListItemDto[]; scope: string }) 
 
 beforeEach(() => {
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+  const storage = new Map<string, string>();
+  vi.stubGlobal('localStorage', {
+    getItem: (key: string) => storage.get(key) ?? null,
+    setItem: (key: string, value: string) => storage.set(key, value),
+  });
   onOpen.mockClear();
   container = document.createElement('div');
   document.body.appendChild(container);
@@ -125,3 +130,29 @@ it('keeps selected IDs across new pages and live updates, and resets on query co
   render(updated);
   expect(summary()).toBeNull();
 });
+
+it('restores selected rows after leaving the page and remembers clearing them', () => {
+  render();
+  click(checkbox('0'));
+  click(groupCheckbox());
+  act(() => root.render(null));
+  render();
+  expect(summary()?.count).toBe(3);
+  expect(checkbox('0').checked).toBe(true);
+  expect(groupCheckbox().checked).toBe(true);
+  click(element('[data-testid="traces-clear-selection"]'));
+  act(() => root.render(null));
+  render();
+  expect(summary()).toBeNull();
+  expect(checkbox('0').checked).toBe(false);
+});
+
+it.each(['{broken', '{"scope":"project/filter/sort","ids":[3]}'])(
+  'ignores invalid stored selection: %s', raw => {
+    localStorage.setItem('traces.selection', raw);
+    render();
+    expect(summary()).toBeNull();
+    click(checkbox('0'));
+    expect(summary()?.count).toBe(1);
+  },
+);

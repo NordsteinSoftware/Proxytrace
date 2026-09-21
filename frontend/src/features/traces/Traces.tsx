@@ -59,7 +59,11 @@ export default function Traces() {
 
   const { traces, total, isFetching, isPlaceholderData, isFetchingNextPage, hasNextPage, fetchNextPage, allAgents, agentBreakdown } =
     useTraceQueries(traceQueryArgs);
-  const statsSelection = useTraceSelection(traces, JSON.stringify(buildTraceFilter(traceQueryArgs, currentProjectId ?? undefined)));
+  // Presets resolve against a new "now" on remount; selection follows the chosen range.
+  const statsSelection = useTraceSelection(traces, JSON.stringify({
+    ...buildTraceFilter({ ...traceQueryArgs, from: undefined, to: undefined }, currentProjectId ?? undefined),
+    timeRange,
+  }));
   // Whole filtered set, aggregated server-side — the list scrolls, so there is no page to summarize.
   const { summary } = useTraceSummary(traceQueryArgs);
 
@@ -98,9 +102,9 @@ export default function Traces() {
 
   // Flat list of all individual traces for prev/next navigation in the drawer
   const flatTraces = rows.flatMap(r => r.type === 'flat' ? [r.trace] : r.turns);
-  // Open trace lives in the URL (?trace=) so it survives refresh / is shareable. The detail panel
-  // always fetches the full trace by id (the list rows are light).
-  const [selectedTrace, selectTrace] = useSelectedTrace();
+  // Keep the shareable URL selection and remember it when returning through the sidebar.
+  // eslint-disable-next-line lingui/no-unlocalized-strings -- project-scoped storage key
+  const [selectedTrace, selectTrace] = useSelectedTrace(currentProjectId ? `traces.openTrace.${currentProjectId}` : undefined);
   const selectedIdx = selectedTrace ? flatTraces.findIndex(t => t.id === selectedTrace.id) : -1;
 
   const handleExpandConversation = useCallback((conversationId: string) => {
