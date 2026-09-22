@@ -2650,6 +2650,12 @@ msgstr "rumore interno"
 msgid "Instructions sent to the model before user messages."
 msgstr "Istruzioni inviate al modello prima dei messaggi User."
 
+msgid "Instrument your agent"
+msgstr "Strumenta il tuo agente"
+
+msgid "Instrumentation instructions"
+msgstr "Istruzioni per la strumentazione"
+
 msgid "Invalid"
 msgstr "Non valido"
 

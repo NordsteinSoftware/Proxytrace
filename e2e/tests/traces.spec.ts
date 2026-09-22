@@ -49,6 +49,13 @@ test.describe('Traces', () => {
     await page.goto('/traces', { waitUntil: 'load' });
     await expect(page.getByTestId('trace-table')).toBeVisible();
 
+    await page.getByTestId('traces-instrumentation-help').click();
+    const instructions = page.getByTestId('traces-instrumentation-instructions');
+    await expect(instructions).toBeVisible();
+    await expect(instructions).toContainText('base_url');
+    await expect(instructions.getByRole('link', { name: /Full proxy setup guide/ })).toBeVisible();
+    await page.getByRole('dialog').getByRole('button', { name: 'Close' }).click();
+
     // Filter to this agent so the assertion is independent of other tests' data.
     await selectAgentFilter(page, agentId);
 

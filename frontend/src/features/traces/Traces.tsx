@@ -23,6 +23,7 @@ import { useTraceHistogram } from './hooks/useTraceHistogram';
 import { useAutoDefaultRange } from './hooks/useAutoDefaultRange';
 import useCurrentProject from '../../hooks/useCurrentProject';
 import { useDebounce } from '../../hooks/useDebounce';
+import { TraceInstrumentationHelp } from './components/TracesEmptyState';
 
 export default function Traces() {
   const { currentProjectId } = useCurrentProject();
@@ -208,13 +209,16 @@ export default function Traces() {
         onTimeRangeChange={handleTimeRangeChange}
         onClearSelection={statsSelection.summary ? statsSelection.clear : undefined}
         trailing={
-          <TraceFilterPicker
-            agents={agents}
-            filters={advanced}
-            onChange={handleAdvancedChange}
-            showSystem={showSystem}
-            onShowSystemChange={handleShowSystemChange}
-          />
+          <>
+            <TraceFilterPicker
+              agents={agents}
+              filters={advanced}
+              onChange={handleAdvancedChange}
+              showSystem={showSystem}
+              onShowSystemChange={handleShowSystemChange}
+            />
+            <TraceInstrumentationHelp />
+          </>
         }
       />
 
