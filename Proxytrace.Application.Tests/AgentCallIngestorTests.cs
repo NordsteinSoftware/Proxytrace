@@ -470,6 +470,39 @@ public sealed class AgentCallIngestorTests : BaseTest<Module>
     }
 
     [TestMethod]
+    public async Task IngestAsync_WithoutCorrelationHeaders_GroupsStreamedTurnsWithNullContent()
+    {
+        var services = GetServices();
+        var ingestion = services.GetRequiredService<AgentCallProcessor>();
+        var callRepo = services.GetRequiredService<IAgentCallRepository>();
+        var (provider, project) = await GetProviderAndProjectAsync(services);
+
+        foreach (var (request, text) in new[]
+        {
+            (ChatTurn1RequestBody, "2+2 equals 4."),
+            (ChatTurn2RequestBodyNoTools, "3+3 equals 6."),
+            (ChatTurn3RequestBody, "4+4 equals 8.")
+        })
+        {
+            var response = "data: {\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":null}}]}\n\n"
+                + $$$"""data: {"choices":[{"index":0,"delta":{"content":"{{{text}}}"}}]}""" + "\n\n"
+                + "data: {\"choices\":[{\"index\":0,\"delta\":{\"content\":null},\"finish_reason\":\"stop\"}]}\n\n"
+                + "data: [DONE]\n\n";
+            await ingestion.IngestAsync(
+                new IngestJob(provider, project, request.Replace("\"model\":", "\"stream\": true, \"model\":"), response,
+                    TimeSpan.FromMilliseconds(100), HttpStatusCode.OK, SessionId: null),
+                CancellationToken);
+        }
+
+        var calls = (await callRepo.GetFilteredAsync(
+            new AgentCallFilter { ProjectId = project.Id }, 1, 10, CancellationToken)).Items;
+
+        calls.Should().HaveCount(3);
+        calls[0].ConversationId.Should().NotBeNull();
+        calls.Should().OnlyContain(c => c.ConversationId == calls[0].ConversationId);
+    }
+
+    [TestMethod]
     public async Task IngestAsync_WithoutCorrelationHeaders_GroupsToolLoop()
     {
         var services = GetServices();

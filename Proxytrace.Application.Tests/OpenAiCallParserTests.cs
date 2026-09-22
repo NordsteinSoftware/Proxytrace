@@ -85,6 +85,26 @@ public sealed class OpenAiCallParserTests : BaseTest<Module>
     }
 
     [TestMethod]
+    [DataRow(StreamedTextResponse)]
+    [DataRow(StreamedToolCallResponse)]
+    public async Task TryParse_StreamedResponseWithNullContent_SupportsAutomaticGrouping(string responseBody)
+    {
+        var services = GetServices();
+        var parser = services.GetRequiredService<IOpenAiCallParser>();
+        var provider = await services.GetRequiredService<IDomainEntityGenerator<IModelProvider>>()
+            .GetOrCreateAsync(CancellationToken);
+        var response = "data: {\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":null}}]}\n\n"
+            + responseBody;
+
+        var result = await parser.TryParse(
+            provider, RequestBody, response,
+            TimeSpan.FromMilliseconds(50), HttpStatusCode.OK, CancellationToken);
+
+        result.Should().NotBeNull();
+        result?.SupportsAutomaticGrouping.Should().BeTrue();
+    }
+
+    [TestMethod]
     public async Task TryParse_CompleteStreamedTextResponseWithoutDone_SupportsAutomaticGrouping()
     {
         IServiceProvider services = GetServices();

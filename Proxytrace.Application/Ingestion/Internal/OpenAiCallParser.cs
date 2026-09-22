@@ -285,7 +285,7 @@ internal class OpenAiCallParser : IOpenAiCallParser
                 }
 
                 if (delta.TryGetProperty("content", out var content)
-                    && content.ValueKind != JsonValueKind.String)
+                    && content.ValueKind is not (JsonValueKind.Null or JsonValueKind.String))
                 {
                     return false;
                 }
