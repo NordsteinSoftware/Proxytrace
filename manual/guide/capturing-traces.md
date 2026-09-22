@@ -44,6 +44,8 @@ Typical things you can do:
   and spread, and error rate. **Clear selection** in the filter toolbar returns to the full filtered
   summary; it stays in place and is disabled when nothing is selected. Scrolling
   and live arrivals keep your selection; changing the project, filters, time range, or sort clears it.
+  Your selection — and the trace you have open — are remembered while you navigate elsewhere in the
+  app, then restored when you return to Traces.
   Clicking the rest of a trace row still opens its details.
 - **Cached input.** Many providers serve part of a prompt from cache at a much lower rate.
   Wherever input tokens are shown — the summary, each row's token cell, and the trace
