@@ -12,6 +12,12 @@ internal record Project : DomainEntity<IProject>, IProject
     /// Gets the name.
     /// </summary>
     public string Name { get; }
+
+    public Guid? DefaultUpstreamProviderId { get; private init; }
+
+    public IProject WithDefaultUpstreamProvider(Guid? providerId)
+        => this with { DefaultUpstreamProviderId = providerId };
+
     /// <summary>
     /// Gets the system endpoint.
     /// </summary>
@@ -45,6 +51,7 @@ internal record Project : DomainEntity<IProject>, IProject
         IDomainEntityData existing,
         IRepository<IProject> repository) : base(existing, repository)
     {
+        DefaultUpstreamProviderId = (existing as IProject)?.DefaultUpstreamProviderId;
         Name = name;
         SystemEndpoint = systemEndpoint;
         Members = members.ToArray();

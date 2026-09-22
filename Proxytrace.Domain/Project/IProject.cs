@@ -11,6 +11,12 @@ public interface IProject : IDomainEntity
     /// <summary>The display name of the project.</summary>
     string Name { get; }
 
+    /// <summary>Provider used for anonymous pass-through, or null when disabled.</summary>
+    Guid? DefaultUpstreamProviderId { get; }
+
+    /// <summary>Returns a copy with the anonymous pass-through provider changed.</summary>
+    IProject WithDefaultUpstreamProvider(Guid? providerId);
+
     /// <summary>
     /// Endpoint for system agents (e.g. model name generation or optimizers)
     /// </summary>

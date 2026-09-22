@@ -330,6 +330,95 @@ public sealed class OpenAiProxyPassthroughTests
         controller.Response.StatusCode.Should().Be(StatusCodes.Status503ServiceUnavailable);
     }
 
+    [TestMethod]
+    [DataRow("https://agents.translogica.ai")]
+    [DataRow("https://example.openai.azure.com")]
+    public async Task Passthrough_Anonymous_ForwardsWithoutCredentialsOrCapture(string origin)
+    {
+        var resolver = NoKeyResolver();
+        resolver.ResolveAnonymousUpstreamAsync("translogica", Arg.Any<CancellationToken>()).Returns(new Uri(origin));
+        var capture = new CapturingHttpMessageHandler("{\"status\":\"ok\"}");
+        var stream = Substitute.For<IIngestionStream>();
+        var controller = BuildController(stream, resolver, new SingleHandlerClientFactory(capture));
+        controller.ControllerContext = BuildContext("", method: "POST", body: "probe", query: "?verbose=true");
+        controller.Request.ContentType = "text/plain";
+        controller.Request.Headers["x-custom-trace"] = "abc";
+        controller.Request.Headers["x-proxytrace-agent"] = "private";
+        controller.Request.Headers.Connection = "x-hop";
+        controller.Request.Headers["x-hop"] = "private";
+
+        await controller.Passthrough("translogica", "health", CancellationToken.None);
+
+        capture.LastUri.Should().Be(new Uri(origin + "/health?verbose=true"));
+        capture.LastMethod.Should().Be(HttpMethod.Post);
+        Encoding.UTF8.GetString(capture.LastBody).Should().Be("probe");
+        capture.LastContentType.Should().Contain("text/plain");
+        capture.LastHeaders.Should().Contain("x-custom-trace", "abc");
+        capture.LastHeaders.Keys.Should().NotContain(new[] { "authorization", "api-key", "x-proxytrace-agent", "x-hop" });
+        controller.Response.StatusCode.Should().Be(200);
+        await stream.DidNotReceiveWithAnyArgs().PublishAsync(default!, default);
+        await resolver.DidNotReceiveWithAnyArgs().ResolveAsync(default!, default, default);
+    }
+
+    [TestMethod]
+    [DataRow("Authorization", "")]
+    [DataRow("Authorization", "Bearer invalid")]
+    [DataRow("Authorization", "Basic invalid")]
+    [DataRow("api-key", "")]
+    [DataRow("api-key", "invalid")]
+    public async Task Passthrough_PresentCredentials_NeverFallBackToAnonymous(string header, string value)
+    {
+        var resolver = NoKeyResolver();
+        resolver.ResolveAnonymousUpstreamAsync("acme", Arg.Any<CancellationToken>()).Returns(new Uri("https://upstream.test"));
+        var capture = new CapturingHttpMessageHandler();
+        var controller = BuildController(Substitute.For<IIngestionStream>(), resolver, new SingleHandlerClientFactory(capture));
+        controller.ControllerContext = BuildContext("");
+        controller.Request.Headers[header] = value;
+
+        await controller.Passthrough("acme", "health", CancellationToken.None);
+
+        controller.Response.StatusCode.Should().Be(401);
+        capture.LastUri.Should().BeNull();
+        await resolver.DidNotReceiveWithAnyArgs().ResolveAnonymousUpstreamAsync(default!, default);
+    }
+
+    [TestMethod]
+    [DataRow("%252e%252e/secret", 0L, 400)]
+    [DataRow("health", 67108865L, 413)]
+    public async Task Passthrough_Anonymous_StillEnforcesGuards(string path, long length, int status)
+    {
+        var resolver = NoKeyResolver();
+        resolver.ResolveAnonymousUpstreamAsync("acme", Arg.Any<CancellationToken>()).Returns(new Uri("https://upstream.test"));
+        var controller = BuildController(Substitute.For<IIngestionStream>(), resolver);
+        controller.ControllerContext = BuildContext("");
+        controller.Request.ContentLength = length;
+
+        await controller.Passthrough("acme", path, CancellationToken.None);
+
+        controller.Response.StatusCode.Should().Be(status);
+        await resolver.DidNotReceiveWithAnyArgs().ResolveAnonymousUpstreamAsync(default!, default);
+    }
+
+    [TestMethod]
+    [DataRow(302)]
+    [DataRow(401)]
+    [DataRow(503)]
+    public async Task Passthrough_Anonymous_RelaysUpstreamResponse(int status)
+    {
+        var resolver = NoKeyResolver();
+        resolver.ResolveAnonymousUpstreamAsync("acme", Arg.Any<CancellationToken>()).Returns(new Uri("https://upstream.test"));
+        var controller = BuildController(Substitute.For<IIngestionStream>(), resolver,
+            new SingleHandlerClientFactory(new FakeHttpMessageHandler("upstream response", (HttpStatusCode)status,
+                new Dictionary<string, string> { ["Location"] = "https://upstream.test/status" })));
+        controller.ControllerContext = BuildContext("");
+
+        await controller.Passthrough("acme", "health", CancellationToken.None);
+
+        controller.Response.StatusCode.Should().Be(status);
+        controller.Response.Headers.Location.ToString().Should().Be("https://upstream.test/status");
+        Encoding.UTF8.GetString(((MemoryStream)controller.Response.Body).ToArray()).Should().Be("upstream response");
+    }
+
     // ── helpers ──────────────────────────────────────────────────────────────────
 
     private static OpenAiProxyController BuildController(

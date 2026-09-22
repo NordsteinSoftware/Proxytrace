@@ -11,6 +11,37 @@ namespace Proxytrace.Proxy.Tests;
 public sealed class ApiKeyResolverTests
 {
     [TestMethod]
+    [DataRow("configured")]
+    [DataRow("unknown-project")]
+    [DataRow("disabled")]
+    [DataRow("missing-provider")]
+    [DataRow("archived-provider")]
+    public async Task ResolveAnonymousUpstreamAsync_RequiresAnActiveConfiguredProvider(string scenario)
+    {
+        var projects = Substitute.For<IProjectRepository>();
+        var providers = Substitute.For<IModelProviderRepository>();
+        providers.FindAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>()).Returns((IModelProvider?)null);
+        projects.FindBySlugAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns((IProject?)null);
+        var project = Substitute.For<IProject>();
+        var provider = Provider();
+        var providerId = Guid.NewGuid();
+        provider.Endpoint.Returns(new Uri("https://agents.translogica.ai:8443/openai/v1"));
+        provider.IsArchived.Returns(scenario == "archived-provider");
+        if (scenario != "disabled")
+            project.DefaultUpstreamProviderId.Returns(providerId);
+        if (scenario != "unknown-project")
+            projects.FindBySlugAsync("translogica", Arg.Any<CancellationToken>()).Returns(project);
+        if (scenario != "missing-provider")
+            providers.FindAsync(providerId, Arg.Any<CancellationToken>()).Returns(provider);
+        var resolver = NewResolver(Substitute.For<IApiKeyRepository>(), providers, projects);
+
+        var result = await resolver.ResolveAnonymousUpstreamAsync("translogica", CancellationToken.None);
+
+        result.Should().Be(scenario == "configured" ? new Uri("https://agents.translogica.ai:8443") : null);
+        _ = provider.DidNotReceive().ApiKey;
+    }
+
+    [TestMethod]
     public async Task ResolveAsync_EveryCall_HitsRepositoryAgain()
     {
         // No positive credential caching (#407): each request must observe the current stored

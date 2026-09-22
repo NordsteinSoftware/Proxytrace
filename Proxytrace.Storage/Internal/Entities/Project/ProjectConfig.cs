@@ -6,6 +6,7 @@ using Proxytrace.Domain.ModelEndpoint;
 using Proxytrace.Domain.Project;
 using Proxytrace.Domain.User;
 using Proxytrace.Storage.Internal.Entities.ModelEndpoint;
+using Proxytrace.Storage.Internal.Entities.ModelProvider;
 
 namespace Proxytrace.Storage.Internal.Entities.Project;
 
@@ -38,6 +39,11 @@ internal class ProjectConfig : AbstractEntityConfiguration<ProjectEntity>, IMapp
     {
         builder.HasIndex(e => e.Name).IsUnique();
 
+        builder.HasOne<ModelProviderEntity>()
+            .WithMany()
+            .HasForeignKey(e => e.DefaultUpstreamProviderId)
+            .OnDelete(DeleteBehavior.Restrict);
+
         builder
             .HasOne<ModelEndpointEntity>()
             .WithMany()
@@ -63,7 +69,8 @@ internal class ProjectConfig : AbstractEntityConfiguration<ProjectEntity>, IMapp
             ? await users.GetManyAsync(memberIds, cancellationToken: cancellationToken)
             : [];
 
-        return factory(stored.Name, endpoint, members, stored);
+        return factory(stored.Name, endpoint, members, stored)
+            .WithDefaultUpstreamProvider(stored.DefaultUpstreamProviderId);
     }
 
     /// <summary>
@@ -75,6 +82,7 @@ internal class ProjectConfig : AbstractEntityConfiguration<ProjectEntity>, IMapp
             Id = domain.Id,
             Name = domain.Name,
             SystemEndpoint = domain.SystemEndpoint.Id,
+            DefaultUpstreamProviderId = domain.DefaultUpstreamProviderId,
             CreatedAt = domain.CreatedAt,
             UpdatedAt = domain.UpdatedAt,
             ProjectUsers = domain.Members

@@ -23,6 +23,7 @@ public sealed class SettingsAuthorizationTests
         AssertRequiresAdmin<ProjectsController>(
             nameof(ProjectsController.Create),
             nameof(ProjectsController.Update),
+            nameof(ProjectsController.UpdateDefaultUpstreamProvider),
             nameof(ProjectsController.Delete),
             nameof(ProjectsController.AddMember),
             nameof(ProjectsController.RemoveMember));

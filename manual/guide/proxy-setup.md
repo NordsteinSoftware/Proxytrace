@@ -176,18 +176,38 @@ check** (`/health`), but also anything else the provider serves at its host. Bec
 client's base URL points at Proxytrace, a call to `https://your-proxytrace-host/{project}/health`
 would otherwise have nowhere to go.
 
-Proxytrace **transparently forwards any path under `/{project}/…` that is not part of the
+With a valid key, Proxytrace **transparently forwards any path under `/{project}/…` that is not part of the
 `openai/v1` API** straight to the upstream provider's host, using the provider's real key. So
 `GET /{project}/health` reaches the upstream's `/health`, `GET /{project}/v1/models` reaches its
 `/v1/models`, and so on — no configuration needed.
 
-These pass-through calls are **not captured as traces** (only the `openai/v1` API is). They still
-require a valid key for the project, exactly like a traced call. If the upstream answers with a
-redirect, Proxytrace relays the `3xx` (including its `Location`) back to your client verbatim
+These pass-through calls are **not captured as traces** (only the `openai/v1` API is).
+Authenticated calls require a valid key for the project, exactly like a traced call. If the upstream
+answers with a redirect, Proxytrace relays the `3xx` (including its `Location`) back to your client verbatim
 rather than following it server-side — `Location` values are not rewritten to proxy URLs.
 
+### Anonymous forwarding
+
+An administrator can select a **Default upstream provider** under **Settings → General** for
+the active project. Requests outside `/openai/v1` that have neither an `Authorization` nor an
+`api-key` header then forward to that provider's host **without adding its stored API key**.
+For example, with upstream `https://agents.translogica.ai/openai/v1`:
+
+```text
+GET http://localhost:1234/translogica/health
+→ GET https://agents.translogica.ai/health
+```
+
+The upstream decides whether the request needs authentication; its status and response are
+relayed unchanged. Present but empty, malformed, or invalid credentials do not trigger anonymous
+forwarding. Requests under `/openai/v1` still require authentication.
+
+New and existing projects start with no default. Choose **None — anonymous forwarding disabled**
+to turn this off. Unknown projects and defaults that are unset, missing, or archived return `401`.
+Authenticated requests continue using the provider selected by their key, regardless of this setting.
+
 ::: warning Pass-through needs its own permission, and reaches the whole upstream host
-Forwarding is deliberately unrestricted in *path*: **any** method and **any** path under
+Authenticated forwarding is deliberately unrestricted in *path*: **any** method and **any** path under
 `/{project}/` is relayed to the provider's host with your real upstream key attached. That is what
 makes `/health` and other provider-specific routes work without configuration, but it also means the
 reach is the provider account's, not just its inference API — on a provider that serves account or
@@ -210,8 +230,9 @@ and if your provider offers scoped upstream keys, configure the provider in Prox
 :::
 
 ::: tip Which upstream, which path
-The target is the **host** of the project's provider — the same provider your LLM calls resolve
-to. The path after `/{project}/` is forwarded to that host's root, so `/{project}/health` maps to
+For authenticated calls, the target is the **host** of the provider selected by the key.
+For anonymous calls, it is the project's configured default upstream provider. The path after
+`/{project}/` is forwarded to that host's root, so `/{project}/health` maps to
 `https://<upstream-host>/health`, alongside (not under) the provider's `/v1` API path.
 :::
 

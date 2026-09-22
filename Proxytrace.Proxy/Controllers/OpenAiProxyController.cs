@@ -286,34 +286,52 @@ public class OpenAiProxyController : ControllerBase
     {
         var path = rest ?? string.Empty;
 
-        BufferedProxyRequest? buffered = await GuardAndBufferRequestAsync(path, project, cancellationToken);
-        if (buffered is null)
+        Uri origin;
+        string? upstreamKey = null;
+        byte[]? body;
+        if (!Request.Headers.ContainsKey("Authorization") && !Request.Headers.ContainsKey("api-key"))
         {
-            return;
+            if (!await GuardRequestAsync(path, cancellationToken))
+                return;
+
+            var destination = await apiKeyResolver.ResolveAnonymousUpstreamAsync(project, cancellationToken);
+            if (destination is null)
+            {
+                Response.StatusCode = StatusCodes.Status401Unauthorized;
+                return;
+            }
+
+            origin = destination;
+            body = await BufferRequestBodyAsync(cancellationToken);
+            if (body is null)
+            {
+                Response.StatusCode = StatusCodes.Status413PayloadTooLarge;
+                return;
+            }
+        }
+        else
+        {
+            var buffered = await GuardAndBufferRequestAsync(path, project, cancellationToken);
+            if (buffered is null)
+                return;
+
+            // Stored credentials require the explicit pass-through scope. Provider-key callers
+            // already hold the upstream credential and resolve with null scopes.
+            if (buffered.Resolved.Scopes is { } scopes && !scopes.HasFlag(ApiKeyScopes.Passthrough))
+            {
+                logger.LogWarning(
+                    "API key for project {ProjectId} lacks the Passthrough scope; refusing to forward /{Path}",
+                    buffered.Resolved.Project.Id, path.ToSingleLogLine());
+                Response.StatusCode = StatusCodes.Status403Forbidden;
+                return;
+            }
+
+            origin = new Uri(buffered.Resolved.Provider.Endpoint.GetLeftPart(UriPartial.Authority));
+            upstreamKey = buffered.Resolved.Provider.ApiKey;
+            body = buffered.RequestBodyBytes;
         }
 
-        // Pass-through needs its OWN scope, not merely the Ingestion scope that admitted the key to
-        // the proxy. Its reach differs in kind: any method and any path relayed to the provider
-        // origin with the organisation's real upstream credential attached — on a provider serving
-        // account or organization-management routes at the same host, that is the provider account's
-        // reach, and none of it is detected, traced or audited.
-        //
-        // A null Scopes means the caller authenticated with the provider's OWN key, in which case
-        // they can already call the provider directly and gating them here would protect nothing.
-        if (buffered.Resolved.Scopes is { } scopes && !scopes.HasFlag(ApiKeyScopes.Passthrough))
-        {
-            logger.LogWarning(
-                "API key for project {ProjectId} lacks the Passthrough scope; refusing to forward /{Path}",
-                buffered.Resolved.Project.Id, path.ToSingleLogLine());
-            Response.StatusCode = StatusCodes.Status403Forbidden;
-            return;
-        }
-
-        // Map to the provider's host ORIGIN (scheme+host+port), not its versioned API endpoint:
-        // `openai/v1/…` is a Proxytrace routing prefix, so the upstream's `/health` etc. live at the
-        // host root, siblings of the endpoint's `/v1` path.
-        var origin = new Uri(buffered.Resolved.Provider.Endpoint.GetLeftPart(UriPartial.Authority));
-        using var upstream = BuildUpstreamRequest(path, buffered.RequestBodyBytes, buffered.Resolved.Provider.ApiKey, origin);
+        using var upstream = BuildUpstreamRequest(path, body, upstreamKey, origin);
 
         // The dedicated "passthrough" client does NOT auto-follow redirects: a transparent proxy
         // relays the 3xx (with its Location) to the client instead of chasing it server-side, where
@@ -380,38 +398,8 @@ public class OpenAiProxyController : ControllerBase
         string? project,
         CancellationToken cancellationToken)
     {
-        // Refuse only when kiosk mode has NO live endpoint: a plain demo has no real upstream to
-        // forward to. When a live Kiosk:Endpoint IS configured the kiosk API mounts this route
-        // in-process so a sample client can turn calls into live traces, so the proxy must serve.
-        // Outside kiosk (the standalone proxy host / production) Enabled is false and it always serves.
-        if (kioskOptions.Enabled && !kioskEndpoint.IsConfigured)
-        {
-            Response.StatusCode = StatusCodes.Status503ServiceUnavailable;
-            Response.ContentType = "application/json";
-            await Response.WriteAsync(
-                "{\"kiosk\":true,\"message\":\"Proxy disabled in demo mode.\"}",
-                cancellationToken);
+        if (!await GuardRequestAsync(path, cancellationToken))
             return null;
-        }
-
-        // Reject path traversal: a catch-all route value could otherwise contain "../" and reach
-        // arbitrary paths on the upstream host, escaping the intended forward target. Routing decodes
-        // the route value only once, so a naive literal "../" scan is bypassable with a
-        // percent-encoded dot (`%2e%2e`, or double-encoded `%252e%252e`); fully decode before the
-        // check so no encoding layer can smuggle a `..` past it. The forward host is already pinned to
-        // the provider origin (no cross-host SSRF), so this is defense-in-depth against a future
-        // change that would rely on the guard actually holding.
-        if (ContainsPathTraversal(path))
-        {
-            Response.StatusCode = StatusCodes.Status400BadRequest;
-            return null;
-        }
-
-        if (Request.ContentLength is > MaxRequestBodyBytes)
-        {
-            Response.StatusCode = StatusCodes.Status413PayloadTooLarge;
-            return null;
-        }
 
         ResolvedApiKey? resolved = await GetResolvedKeyAsync(project, cancellationToken);
         if (resolved is null)
@@ -428,6 +416,44 @@ public class OpenAiProxyController : ControllerBase
         }
 
         return new BufferedProxyRequest(requestBodyBytes, resolved);
+    }
+
+    private async Task<bool> GuardRequestAsync(string path, CancellationToken cancellationToken)
+    {
+        // Refuse only when kiosk mode has NO live endpoint: a plain demo has no real upstream to
+        // forward to. When a live Kiosk:Endpoint IS configured the kiosk API mounts this route
+        // in-process so a sample client can turn calls into live traces, so the proxy must serve.
+        // Outside kiosk (the standalone proxy host / production) Enabled is false and it always serves.
+        if (kioskOptions.Enabled && !kioskEndpoint.IsConfigured)
+        {
+            Response.StatusCode = StatusCodes.Status503ServiceUnavailable;
+            Response.ContentType = "application/json";
+            await Response.WriteAsync(
+                "{\"kiosk\":true,\"message\":\"Proxy disabled in demo mode.\"}",
+                cancellationToken);
+            return false;
+        }
+
+        // Reject path traversal: a catch-all route value could otherwise contain "../" and reach
+        // arbitrary paths on the upstream host, escaping the intended forward target. Routing decodes
+        // the route value only once, so a naive literal "../" scan is bypassable with a
+        // percent-encoded dot (`%2e%2e`, or double-encoded `%252e%252e`); fully decode before the
+        // check so no encoding layer can smuggle a `..` past it. The forward host is already pinned to
+        // the provider origin (no cross-host SSRF), so this is defense-in-depth against a future
+        // change that would rely on the guard actually holding.
+        if (ContainsPathTraversal(path))
+        {
+            Response.StatusCode = StatusCodes.Status400BadRequest;
+            return false;
+        }
+
+        if (Request.ContentLength is > MaxRequestBodyBytes)
+        {
+            Response.StatusCode = StatusCodes.Status413PayloadTooLarge;
+            return false;
+        }
+
+        return true;
     }
 
     // Buffers the request body with the cap enforced *during* the copy, not after it. A chunked
@@ -1017,7 +1043,7 @@ public class OpenAiProxyController : ControllerBase
         return System.Text.Json.JsonSerializer.Serialize(payload);
     }
 
-    private HttpRequestMessage BuildUpstreamRequest(string path, byte[] bodyBytes, string providerApiKey, Uri providerEndpoint)
+    private HttpRequestMessage BuildUpstreamRequest(string path, byte[] bodyBytes, string? providerApiKey, Uri providerEndpoint)
     {
         var baseUrl = providerEndpoint.ToString().TrimEnd('/');
         var upstreamRequest = new HttpRequestMessage
@@ -1061,10 +1087,11 @@ public class OpenAiProxyController : ControllerBase
         // Replace the client's Proxytrace API key with the model provider's actual key. Azure's
         // classic data-plane auth reads `api-key` rather than the bearer — send both, matching
         // ServeAzureModelsAsync and ProviderClient.
-        upstreamRequest.Headers.TryAddWithoutValidation("Authorization", $"Bearer {providerApiKey}");
-        if (ProviderEndpoints.IsAzure(providerEndpoint))
+        if (providerApiKey is not null)
         {
-            upstreamRequest.Headers.TryAddWithoutValidation("api-key", providerApiKey);
+            upstreamRequest.Headers.TryAddWithoutValidation("Authorization", $"Bearer {providerApiKey}");
+            if (ProviderEndpoints.IsAzure(providerEndpoint))
+                upstreamRequest.Headers.TryAddWithoutValidation("api-key", providerApiKey);
         }
 
         return upstreamRequest;

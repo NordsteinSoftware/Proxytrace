@@ -11,6 +11,7 @@ using Proxytrace.Domain;
 using Proxytrace.Domain.Agent;
 using Proxytrace.Domain.AuditLog;
 using Proxytrace.Domain.ModelEndpoint;
+using Proxytrace.Domain.ModelProvider;
 using Nordstein.Core.Domain.Paging;
 using Proxytrace.Domain.Project;
 using Proxytrace.Domain.User;
@@ -181,8 +182,39 @@ public class ProjectsController : ControllerBase
     }
 
     /// <summary>
-    /// Deletes.
+    /// Sets or clears the provider for anonymous pass-through.
     /// </summary>
+    [HttpPut("{id:guid}/default-upstream-provider")]
+    [Authorize(Roles = nameof(UserRole.Admin))]
+    public async Task<ActionResult<ProjectDto>> UpdateDefaultUpstreamProvider(
+        Guid id,
+        [FromBody] UpdateDefaultUpstreamProviderRequest request,
+        [FromServices] IModelProviderRepository providers,
+        CancellationToken cancellationToken)
+    {
+        var project = await repository.FindAsync(id, cancellationToken);
+        if (project is null)
+            return NotFound();
+
+        if (request.ProviderId is { } providerId)
+        {
+            var provider = await providers.FindAsync(providerId, cancellationToken);
+            if (provider is null || provider.IsArchived)
+                return BadRequest("Default upstream provider must be an active provider.");
+        }
+
+        if (project.DefaultUpstreamProviderId == request.ProviderId)
+            return ToDto(project);
+
+        var saved = await repository.UpdateAsync(
+            project.WithDefaultUpstreamProvider(request.ProviderId), cancellationToken);
+        audit.LogAudit(
+            AuditAction.ProjectDefaultUpstreamProviderChanged, nameof(IProject), id, saved.Name, projectId: id,
+            details: JsonSerializer.Serialize(new { from = project.DefaultUpstreamProviderId, to = request.ProviderId }));
+        return ToDto(saved);
+    }
+
+    /// <summary>Deletes a project.</summary>
     [HttpDelete("{id:guid}")]
     [Authorize(Roles = nameof(UserRole.Admin))]
     public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)

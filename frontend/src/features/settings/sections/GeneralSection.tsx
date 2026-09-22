@@ -12,7 +12,8 @@ import { ConfirmDialog } from '../../../components/overlays/ConfirmDialog';
 import { TrashIcon, EditIcon, CheckIcon, XIcon } from '../../../components/icons';
 import { fmtDate } from '../../../lib/format';
 import { endpointLabel } from '../projectsMeta';
-import { useProject, useUpdateProject, useDeleteProject } from '../hooks/useProjects';
+import { useProject, useUpdateProject, useDeleteProject, useUpdateDefaultUpstreamProvider } from '../hooks/useProjects';
+import { useProvidersOverview } from '../../providers/hooks/useProviderQueries';
 import useModelEndpoints from '../../../hooks/useModelEndpoints';
 import { SectionHeader } from '../components/SectionHeader';
 
@@ -24,11 +25,15 @@ export function GeneralSection() {
 
   const { data: endpoints = [] } = useModelEndpoints();
   const { data: project, isLoading } = useProject(currentProjectId);
+  const { data: providersOverview, isLoading: providersLoading } = useProvidersOverview();
+  const updateDefaultProvider = useUpdateDefaultUpstreamProvider();
 
   const [editName, setEditName] = useState(false);
   const [editEndpoint, setEditEndpoint] = useState(false);
+  const [editProvider, setEditProvider] = useState(false);
   const [nameDraft, setNameDraft] = useState('');
   const [endpointDraft, setEndpointDraft] = useState('');
+  const [providerDraft, setProviderDraft] = useState('');
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   const updateProject = useUpdateProject();
@@ -117,6 +122,69 @@ export function GeneralSection() {
                 </IconButton>
               </div>
             )}
+          </FormField>
+
+          <FormField
+            label={t`Default upstream provider`}
+            htmlFor={editProvider ? 'default-upstream-provider' : undefined}
+            error={updateDefaultProvider.error?.message}
+          >
+            {editProvider ? (
+              <div className="flex items-center gap-2">
+                <div className="flex-1 min-w-0">
+                  <Select
+                    autoFocus
+                    id="default-upstream-provider"
+                    data-testid="default-upstream-provider"
+                    value={providerDraft}
+                    disabled={providersLoading || updateDefaultProvider.isPending}
+                    onValueChange={setProviderDraft}
+                  >
+                    <option value="">{t`None — anonymous forwarding disabled`}</option>
+                    {project.defaultUpstreamProviderId && !providersOverview?.providers.some(p => p.provider.id === project.defaultUpstreamProviderId) && (
+                      <option value={project.defaultUpstreamProviderId}>{t`Unavailable provider`}</option>
+                    )}
+                    {providersOverview?.providers.map(({ provider }) => <option key={provider.id} value={provider.id}>{provider.name}</option>)}
+                  </Select>
+                </div>
+                <IconButton
+                  data-write
+                  aria-label={t`Save default upstream provider`}
+                  onClick={() => updateDefaultProvider.mutate(
+                    { id: project.id, providerId: providerDraft || null },
+                    { onSuccess: () => setEditProvider(false) },
+                  )}
+                  disabled={providersLoading || updateDefaultProvider.isPending || providerDraft === (project.defaultUpstreamProviderId ?? '')}
+                >
+                  <CheckIcon size={14} />
+                </IconButton>
+                <IconButton aria-label={t`Cancel`} disabled={updateDefaultProvider.isPending} onClick={() => setEditProvider(false)}>
+                  <XIcon size={14} />
+                </IconButton>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <span className="text-title text-primary">
+                  {project.defaultUpstreamProviderId
+                    ? providersOverview?.providers.find(p => p.provider.id === project.defaultUpstreamProviderId)?.provider.name ?? t`Unavailable provider`
+                    : t`None — anonymous forwarding disabled`}
+                </span>
+                <IconButton
+                  data-write
+                  aria-label={t`Edit default upstream provider`}
+                  onClick={() => {
+                    setProviderDraft(project.defaultUpstreamProviderId ?? '');
+                    updateDefaultProvider.reset();
+                    setEditProvider(true);
+                  }}
+                >
+                  <EditIcon size={14} />
+                </IconButton>
+              </div>
+            )}
+            <p className="text-body-sm text-muted">
+              <Trans>Requests without credentials outside /openai/v1 are forwarded to this provider without adding its API key. Choose None to disable.</Trans>
+            </p>
           </FormField>
 
           <div className="text-body-sm text-muted border-t border-hairline pt-4">

@@ -48,6 +48,16 @@ export function useUpdateProject() {
   });
 }
 
+/** Sets or clears anonymous forwarding for a project. */
+export function useUpdateDefaultUpstreamProvider() {
+  const invalidate = useInvalidateProject();
+  return useMutation({
+    mutationFn: (args: { id: string; providerId: string | null }) =>
+      projectsApi.updateDefaultUpstreamProvider(args.id, args.providerId),
+    onSuccess: (_result, args) => invalidate(args.id),
+  });
+}
+
 /** Deletes a project; invalidates the list. */
 export function useDeleteProject() {
   const qc = useQueryClient();

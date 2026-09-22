@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Button } from '../../../components/ui/Button';
 import { CodeBlock } from '../../../components/ui/CodeBlock';
 import { Tabs } from '../../../components/ui/Tabs';
+import { Modal } from '../../../components/overlays/Modal';
 import useCurrentProject from '../../../hooks/useCurrentProject';
 import { useIngestionBase } from '../../../hooks/useIngestionBase';
 import { ingestionUrl } from '../../../lib/ingestion';
@@ -12,13 +13,7 @@ import { Trans, useLingui } from '@lingui/react/macro';
 // eslint-disable-next-line lingui/no-unlocalized-strings -- sample model id, not UI copy
 const SAMPLE_MODEL = 'gpt-4o-mini';
 
-/**
- * Onboarding panel shown when a project has no traces yet. Spells out *how* to
- * ingest — point an OpenAI client at this project's proxy `base_url` — and shows
- * the real endpoint (live-resolved from the operator's configured proxy URL),
- * not just a link to the manual.
- */
-export function TracesEmptyState() {
+function InstrumentationInstructions() {
   const { t } = useLingui();
   // eslint-disable-next-line lingui/no-unlocalized-strings -- code snippet language id, not UI copy
   const [lang, setLang] = useState<SnippetLanguage>('python');
@@ -31,12 +26,8 @@ export function TracesEmptyState() {
   const active = snippets.find(s => s.id === lang) ?? snippets[0];
 
   return (
-    <div
-      data-testid="traces-empty-state"
-      className="py-10 px-4 flex flex-col items-center gap-4 text-center"
-    >
-      <div className="flex flex-col gap-1">
-        <span className="text-h2 font-semibold text-primary"><Trans>No traces yet</Trans></span>
+    <div data-testid="traces-instrumentation-instructions" className="w-full max-w-2xl flex flex-col gap-4">
+      <div className="flex flex-col gap-1 text-center">
         <span className="text-body text-secondary max-w-prose">
           <Trans>
             Route your agent through the proxy and every LLM call lands here automatically. Point
@@ -82,6 +73,45 @@ export function TracesEmptyState() {
           <Trans>Full proxy setup guide →</Trans>
         </a>
       </Button>
+    </div>
+  );
+}
+
+export function TraceInstrumentationHelp() {
+  const { t } = useLingui();
+  const [open, setOpen] = useState(false);
+
+  return (
+    <>
+      <Button
+        variant="secondary"
+        size="sm"
+        className="order-last size-9 !p-0 rounded-full text-title"
+        data-testid="traces-instrumentation-help"
+        aria-label={t`Instrumentation instructions`}
+        title={t`Instrumentation instructions`}
+        onClick={() => setOpen(true)}
+      >
+        ?
+      </Button>
+      {open && (
+        <Modal title={t`Instrument your agent`} size="md" onClose={() => setOpen(false)}>
+          <InstrumentationInstructions />
+        </Modal>
+      )}
+    </>
+  );
+}
+
+/** Onboarding panel shown when a project has no traces yet. */
+export function TracesEmptyState() {
+  return (
+    <div
+      data-testid="traces-empty-state"
+      className="py-10 px-4 flex flex-col items-center gap-4 text-center"
+    >
+      <span className="text-h2 font-semibold text-primary"><Trans>No traces yet</Trans></span>
+      <InstrumentationInstructions />
     </div>
   );
 }
