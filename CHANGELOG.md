@@ -9,12 +9,27 @@ follow [Semantic Versioning](https://semver.org). Ongoing work is collected unde
 
 ## [Unreleased]
 
+## [1.14.0] - 2026-09-22
+
 ### Added
 
 - **Traces remembers what you were looking at.** Your checked selection and the trace open in the
   detail pane are remembered separately for each project when you navigate elsewhere in the app,
   then restored when you return to Traces. A `?trace=` deep link still takes precedence over the
   remembered open trace.
+
+- **Projects can send unauthenticated pass-through requests to a default upstream provider.**
+  Pick a **Default upstream provider** under **Settings → General** and a request outside
+  `/openai/v1` that carries neither an `Authorization` nor an `api-key` header is relayed to that
+  provider's host **without adding its stored API key** — for upstreams that serve public routes
+  their clients need to reach through the proxy. Present but empty, malformed and invalid
+  credentials do not qualify, requests under `/openai/v1` still require authentication, and a
+  project with no default (the state every project starts in) keeps answering `401`. The change is
+  recorded in the audit log.
+
+- **The instrumentation instructions are reachable at any time.** The **?** button in the Traces
+  toolbar reopens the *instrument your agent* snippets — the same panel the empty state shows — so
+  getting the code sample no longer requires a project without traces.
 
 ### Fixed
 
