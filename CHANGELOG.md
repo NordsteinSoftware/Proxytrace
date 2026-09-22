@@ -9,6 +9,13 @@ follow [Semantic Versioning](https://semver.org). Ongoing work is collected unde
 
 ## [Unreleased]
 
+### Added
+
+- **Traces remembers what you were looking at.** Your checked selection and the trace open in the
+  detail pane are remembered separately for each project when you navigate elsewhere in the app,
+  then restored when you return to Traces. A `?trace=` deep link still takes precedence over the
+  remembered open trace.
+
 ### Fixed
 
 - **Streamed replies now stay in automatically grouped conversations.** A final SSE response whose
