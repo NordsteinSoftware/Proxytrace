@@ -71,4 +71,16 @@ internal sealed class ApiKeyResolver : IApiKeyResolver
 
         return new ResolvedApiKey(project, provider);
     }
+
+    public async Task<Uri?> ResolveAnonymousUpstreamAsync(string projectSlug, CancellationToken cancellationToken)
+    {
+        var project = await projects.FindBySlugAsync(projectSlug, cancellationToken);
+        if (project?.DefaultUpstreamProviderId is not { } providerId)
+            return null;
+
+        var provider = await providers.FindAsync(providerId, cancellationToken);
+        return provider is null || provider.IsArchived
+            ? null
+            : new Uri(provider.Endpoint.GetLeftPart(UriPartial.Authority));
+    }
 }

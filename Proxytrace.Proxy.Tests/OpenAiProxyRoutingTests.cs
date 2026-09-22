@@ -115,6 +115,26 @@ public sealed class OpenAiProxyRoutingTests
         await stream.Received(1).PublishAsync(Arg.Any<IngestMessage>(), Arg.Any<CancellationToken>());
     }
 
+    [TestMethod]
+    [DataRow("/acme/health", 200)]
+    [DataRow("/acme/openai/v1/models", 401)]
+    [DataRow("/acme/openai/v1", 401)]
+    [DataRow("/openai/v1/models", 401)]
+    public async Task AnonymousRequest_UsesDefaultOnlyOutsideOpenAiRoutes(string url, int status)
+    {
+        var capture = new CapturingHttpMessageHandler();
+        var stream = Substitute.For<IIngestionStream>();
+        await using var app = await StartHostAsync(stream, new SingleHandlerClientFactory(capture));
+        using var client = app.GetTestClient();
+
+        using var response = await client.GetAsync(url, CancellationToken.None);
+
+        ((int)response.StatusCode).Should().Be(status);
+        capture.LastAuthorization.Should().BeNull();
+        capture.LastUri.Should().Be(status == 200 ? new Uri("https://anonymous.test/health") : null);
+        await stream.DidNotReceiveWithAnyArgs().PublishAsync(default!, default);
+    }
+
     // ── host ────────────────────────────────────────────────────────────────────
 
     private static async Task<WebApplication> StartHostAsync(
@@ -154,6 +174,8 @@ public sealed class OpenAiProxyRoutingTests
         var resolver = Substitute.For<IApiKeyResolver>();
         resolver.ResolveAsync(Arg.Any<string>(), Arg.Any<string?>(), Arg.Any<CancellationToken>())
             .Returns(new ResolvedApiKey(project, provider));
+        resolver.ResolveAnonymousUpstreamAsync("acme", Arg.Any<CancellationToken>())
+            .Returns(new Uri("https://anonymous.test"));
         return resolver;
     }
 }

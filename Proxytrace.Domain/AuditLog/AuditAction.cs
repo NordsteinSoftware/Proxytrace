@@ -133,4 +133,5 @@ public enum AuditAction
     CostLimitDeleted = 74,
     CostBudgetSoftLimitReached = 75,
     CostBudgetHardLimitReached = 76,
+    ProjectDefaultUpstreamProviderChanged = 77,
 }

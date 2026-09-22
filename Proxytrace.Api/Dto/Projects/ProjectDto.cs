@@ -11,7 +11,10 @@ public record ProjectDto(
     Guid SystemEndpointId,
     IReadOnlyList<ProjectMemberDto> Members,
     DateTimeOffset CreatedAt,
-    DateTimeOffset UpdatedAt);
+    DateTimeOffset UpdatedAt,
+    Guid? DefaultUpstreamProviderId = null);
+
+public record UpdateDefaultUpstreamProviderRequest(Guid? ProviderId);
 
 /// <summary>
 /// Lightweight project projection for the projects list / app-wide project selector. Replaces the

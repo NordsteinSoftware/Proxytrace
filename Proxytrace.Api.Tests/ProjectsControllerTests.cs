@@ -12,6 +12,7 @@ using Proxytrace.Application.Auth;
 using Proxytrace.Domain;
 using Proxytrace.Domain.Agent;
 using Proxytrace.Domain.ModelEndpoint;
+using Proxytrace.Domain.ModelProvider;
 using Proxytrace.Domain.Project;
 using Proxytrace.Domain.User;
 using Nordstein.Core.Testing;
@@ -21,6 +22,55 @@ namespace Proxytrace.Api.Tests;
 [TestClass]
 public sealed class ProjectsControllerTests : BaseTest<Module>
 {
+    [TestMethod]
+    public async Task DefaultUpstreamProvider_PersistsSurvivesOtherUpdatesAndCanBeCleared()
+    {
+        var services = GetServices();
+        var controller = ResolveController(services);
+        var (project, user) = await SeedProjectAndUserAsync(services);
+        var providers = services.GetRequiredService<IModelProviderRepository>();
+        var provider = await services.GetRequiredService<IDomainEntityGenerator<IModelProvider>>().CreateAsync(CancellationToken);
+
+        var configured = await controller.UpdateDefaultUpstreamProvider(project.Id, new(provider.Id), providers, CancellationToken);
+        configured.Value!.DefaultUpstreamProviderId.Should().Be(provider.Id);
+        var added = await controller.AddMember(project.Id, user.Id, CancellationToken);
+        added.Value!.DefaultUpstreamProviderId.Should().Be(provider.Id);
+        var newEndpoint = await services.GetRequiredService<IDomainEntityGenerator<IModelEndpoint>>().CreateAsync(CancellationToken);
+        var renamed = await controller.Update(project.Id, new("Renamed", newEndpoint.Id), CancellationToken);
+        renamed.Value!.DefaultUpstreamProviderId.Should().Be(provider.Id);
+        var removed = await controller.RemoveMember(project.Id, user.Id, CancellationToken);
+        removed.Value!.DefaultUpstreamProviderId.Should().Be(provider.Id);
+        var loaded = await services.GetRequiredService<IProjectRepository>().GetAsync(project.Id, CancellationToken);
+        loaded.DefaultUpstreamProviderId.Should().Be(provider.Id);
+
+        var cleared = await controller.UpdateDefaultUpstreamProvider(project.Id, new(null), providers, CancellationToken);
+        cleared.Value!.DefaultUpstreamProviderId.Should().BeNull();
+        loaded = await services.GetRequiredService<IProjectRepository>().GetAsync(project.Id, CancellationToken);
+        loaded.DefaultUpstreamProviderId.Should().BeNull();
+    }
+
+    [TestMethod]
+    public async Task DefaultUpstreamProvider_RejectsUnknownProjectAndInvalidProviders()
+    {
+        var services = GetServices();
+        var controller = ResolveController(services);
+        var (project, _) = await SeedProjectAndUserAsync(services);
+        var providers = Substitute.For<IModelProviderRepository>();
+        providers.FindAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>()).Returns((IModelProvider?)null);
+        var id = Guid.NewGuid();
+
+        var unknownProject = await controller.UpdateDefaultUpstreamProvider(Guid.NewGuid(), new(null), providers, CancellationToken);
+        unknownProject.Result.Should().BeOfType<NotFoundResult>();
+        var unknownProvider = await controller.UpdateDefaultUpstreamProvider(project.Id, new(id), providers, CancellationToken);
+        unknownProvider.Result.Should().BeOfType<BadRequestObjectResult>();
+
+        var archived = Substitute.For<IModelProvider>();
+        archived.IsArchived.Returns(true);
+        providers.FindAsync(id, Arg.Any<CancellationToken>()).Returns(archived);
+        var archivedProvider = await controller.UpdateDefaultUpstreamProvider(project.Id, new(id), providers, CancellationToken);
+        archivedProvider.Result.Should().BeOfType<BadRequestObjectResult>();
+    }
+
     [TestMethod]
     public async Task Create_WithMemberIds_ReturnsDtoWithMembers()
     {

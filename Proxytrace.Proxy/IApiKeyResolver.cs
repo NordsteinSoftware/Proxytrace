@@ -24,6 +24,9 @@ public interface IApiKeyResolver
     /// <see langword="null"/> when authentication or attribution fails.
     /// </summary>
     Task<ResolvedApiKey?> ResolveAsync(string rawKey, string? projectSlug, CancellationToken cancellationToken);
+
+    /// <summary>Resolves only the anonymous destination, never a stored credential.</summary>
+    Task<Uri?> ResolveAnonymousUpstreamAsync(string projectSlug, CancellationToken cancellationToken);
 }
 
 /// <summary>

@@ -895,6 +895,7 @@ export interface ProjectDto {
   id: string;
   name: string;
   systemEndpointId: string;
+  defaultUpstreamProviderId: string | null;
   members: ProjectMemberDto[];
   createdAt: string;
   updatedAt: string;
@@ -1439,6 +1440,7 @@ export enum AuditAction {
   CostLimitDeleted = 'CostLimitDeleted',
   CostBudgetSoftLimitReached = 'CostBudgetSoftLimitReached',
   CostBudgetHardLimitReached = 'CostBudgetHardLimitReached',
+  ProjectDefaultUpstreamProviderChanged = 'ProjectDefaultUpstreamProviderChanged',
 }
 
 export enum AuditActorType {

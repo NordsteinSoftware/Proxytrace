@@ -6264,3 +6264,24 @@ msgstr "Dein Rubric muss einen dieser 5 Werte ausgeben; reasoning ist optional."
 
 msgid "Yourself (creator)"
 msgstr "Sie selbst (Ersteller)"
+
+msgid "Default upstream provider"
+msgstr "Standard-Upstream-Anbieter"
+
+msgid "None — anonymous forwarding disabled"
+msgstr "Keiner — anonyme Weiterleitung deaktiviert"
+
+msgid "Unavailable provider"
+msgstr "Anbieter nicht verfügbar"
+
+msgid "Requests without credentials outside /openai/v1 are forwarded to this provider without adding its API key. Choose None to disable."
+msgstr "Anfragen ohne Zugangsdaten außerhalb von /openai/v1 werden ohne Hinzufügen des API-Schlüssels an diesen Anbieter weitergeleitet. Wählen Sie Keiner zum Deaktivieren."
+
+msgid "Default Upstream Provider Changed"
+msgstr "Standard-Upstream-Anbieter geändert"
+
+msgid "Edit default upstream provider"
+msgstr "Standard-Upstream-Anbieter bearbeiten"
+
+msgid "Save default upstream provider"
+msgstr "Standard-Upstream-Anbieter speichern"

@@ -18,6 +18,8 @@ export const projectsApi = {
   get: (id: string) => api.get<ProjectDto>(`/api/projects/${id}`),
   create: (req: CreateProjectRequest) => api.post<ProjectDto>('/api/projects', req),
   update: (id: string, req: UpdateProjectRequest) => api.put<ProjectDto>(`/api/projects/${id}`, req),
+  updateDefaultUpstreamProvider: (id: string, providerId: string | null) =>
+    api.put<ProjectDto>(`/api/projects/${id}/default-upstream-provider`, { providerId }),
   delete: (id: string) => api.del(`/api/projects/${id}`),
 
   getMembers: (id: string) => api.get<ProjectMemberDto[]>(`/api/projects/${id}/members`),

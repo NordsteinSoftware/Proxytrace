@@ -6264,3 +6264,24 @@ msgstr "Votre rubrique doit produire l'une de ces 5 notes ; le raisonnement est 
 
 msgid "Yourself (creator)"
 msgstr "Vous-même (créateur)"
+
+msgid "Default upstream provider"
+msgstr "Fournisseur en amont par défaut"
+
+msgid "None — anonymous forwarding disabled"
+msgstr "Aucun — transfert anonyme désactivé"
+
+msgid "Unavailable provider"
+msgstr "Fournisseur indisponible"
+
+msgid "Requests without credentials outside /openai/v1 are forwarded to this provider without adding its API key. Choose None to disable."
+msgstr "Les requêtes sans identifiants en dehors de /openai/v1 sont transférées à ce fournisseur sans ajouter sa clé API. Choisissez Aucun pour désactiver."
+
+msgid "Default Upstream Provider Changed"
+msgstr "Fournisseur en amont par défaut modifié"
+
+msgid "Edit default upstream provider"
+msgstr "Modifier le fournisseur en amont par défaut"
+
+msgid "Save default upstream provider"
+msgstr "Enregistrer le fournisseur en amont par défaut"

@@ -18,7 +18,8 @@ internal static class ProjectDtoMapper
             p.SystemEndpoint.Id,
             p.Members.Select(ToMemberDto).ToArray(),
             p.CreatedAt,
-            p.UpdatedAt);
+            p.UpdatedAt,
+            p.DefaultUpstreamProviderId);
 
     /// <summary>Lightweight projection for the projects list — member count only, no member list.</summary>
     public static ProjectListItemDto ToListItemDto(IProject p) =>

@@ -16,6 +16,8 @@ internal record ProjectEntity : Entity
     /// </summary>
     public required Guid SystemEndpoint { get; init; }
 
+    public Guid? DefaultUpstreamProviderId { get; init; }
+
     /// <summary>
     /// Junction rows for the project's members.
     /// </summary>

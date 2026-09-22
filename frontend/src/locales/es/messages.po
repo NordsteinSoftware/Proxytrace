@@ -6264,3 +6264,24 @@ msgstr "Tu rúbrica debe producir una de estas 5 puntuaciones; el reasoning es o
 
 msgid "Yourself (creator)"
 msgstr "Tú mismo (creador)"
+
+msgid "Default upstream provider"
+msgstr "Proveedor de origen predeterminado"
+
+msgid "None — anonymous forwarding disabled"
+msgstr "Ninguno — reenvío anónimo desactivado"
+
+msgid "Unavailable provider"
+msgstr "Proveedor no disponible"
+
+msgid "Requests without credentials outside /openai/v1 are forwarded to this provider without adding its API key. Choose None to disable."
+msgstr "Las solicitudes sin credenciales fuera de /openai/v1 se reenvían a este proveedor sin añadir su clave API. Seleccione Ninguno para desactivar."
+
+msgid "Default Upstream Provider Changed"
+msgstr "Proveedor de origen predeterminado cambiado"
+
+msgid "Edit default upstream provider"
+msgstr "Editar proveedor de origen predeterminado"
+
+msgid "Save default upstream provider"
+msgstr "Guardar proveedor de origen predeterminado"
