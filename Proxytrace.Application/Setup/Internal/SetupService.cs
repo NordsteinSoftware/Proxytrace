@@ -146,7 +146,7 @@ internal class SetupService : ISetupService
             // and authenticate via the project-scoped proxy path. Keys can still be issued
             // later from the Providers page.
             var project = await projects.AddAsync(
-                createProject(input.ProjectName, endpoint, [user]),
+                createProject(input.ProjectName, endpoint, [user]).WithDefaultUpstreamProvider(provider.Id),
                 cancellationToken);
 
             return new SetupResult(provider.Id, endpoint.Id, project.Id);
