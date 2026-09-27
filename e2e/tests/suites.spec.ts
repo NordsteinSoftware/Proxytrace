@@ -245,6 +245,70 @@ test.describe('Test Suites', () => {
     await expect(page.getByTestId(`suite-case-count-${suiteId}`)).toHaveText('2');
   });
 
+  // The trace drawer's Add to test suite is the in-context way to curate a case by hand (the
+  // manual route beside Generate tests). It writes through the same suite endpoints the suite page
+  // uses, so these two tests pin the UI wiring: append to a picked suite, and create-and-add when
+  // the agent has no suite yet.
+  test('add a trace to an existing suite from the trace drawer', async ({ page, request }) => {
+    const client = await makeClient(request);
+
+    const agentName = uniqueName('Drawer Agent');
+    const { id: agentId } = await client.createAgent({ name: agentName, endpointId });
+    const suiteSeed = await client.seedAgentCall({ agentId, userContent: 'suite seed', assistantContent: 'seed reply' });
+    const call = await client.seedAgentCall({ agentId, userContent: 'drawer input', assistantContent: 'drawer reply' });
+    const { id: suiteId } = await client.createSuiteFromTraces(uniqueName('Drawer Suite'), agentId, [suiteSeed.id], []);
+
+    await page.goto(`/traces?trace=${call.id}`, { waitUntil: 'load' });
+    await expect(page.getByTestId('trace-detail')).toBeVisible();
+    await page.getByTestId('trace-add-test-btn').click();
+    const modal = page.getByTestId('add-trace-test-modal');
+    await expect(modal).toBeVisible();
+
+    // Pick the destination explicitly; the picker lists this agent's suites.
+    await page.getByTestId(`suite-option-${suiteId}`).click();
+    await page.getByTestId('modal-panel').getByTestId('modal-submit').click();
+
+    await expect(modal).toBeHidden();
+    await expect.poll(
+      async () => (await client.getTestSuite(suiteId)).testCases.length,
+      { timeout: 10_000, message: 'the trace did not land in the suite' },
+    ).toBe(2);
+
+    // The snackbar is the hand-off: it reports the destination and takes the user there.
+    const snackbarAction = page.getByTestId('toast-action-btn');
+    await expect(snackbarAction).toBeVisible();
+    await snackbarAction.click();
+    await expect(page).toHaveURL(new RegExp(`/suites\\?id=${suiteId}`));
+  });
+
+  test('create a suite from a trace when the agent has none', async ({ page, request }) => {
+    const client = await makeClient(request);
+    const { token } = await client.login('admin@e2e.test', 'E2ePassword1!');
+
+    const agentName = uniqueName('Drawer New Agent');
+    const { id: agentId } = await client.createAgent({ name: agentName, endpointId });
+    const call = await client.seedAgentCall({ agentId, userContent: 'create-suite input', assistantContent: 'create-suite reply' });
+    const suiteName = uniqueName('Drawer New Suite');
+
+    await page.goto(`/traces?trace=${call.id}`, { waitUntil: 'load' });
+    await expect(page.getByTestId('trace-detail')).toBeVisible();
+    await page.getByTestId('trace-add-test-btn').click();
+    await expect(page.getByTestId('add-trace-test-modal')).toBeVisible();
+
+    // No suites for this agent → the modal starts in create mode and its action waits for a name.
+    const submit = page.getByTestId('modal-panel').getByTestId('modal-submit');
+    await expect(submit).toBeDisabled();
+    await page.getByTestId('modal-panel').getByTestId('trace-new-suite-name').fill(suiteName);
+    await expect(submit).toBeEnabled();
+    await submit.click();
+
+    await expect(page.getByTestId('add-trace-test-modal')).toBeHidden();
+    await expect.poll(
+      async () => (await listSuites(request, token, projectId)).find(s => s.name === suiteName)?.id,
+      { timeout: 10_000, message: 'the new suite did not appear' },
+    ).toBeTruthy();
+  });
+
   test('delete a suite removes its card', async ({ page, request }) => {
     const client = await makeClient(request);
     const { token } = await client.login('admin@e2e.test', 'E2ePassword1!');
