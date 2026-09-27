@@ -164,7 +164,7 @@ while the time range, search, sort, and the System traces setting are shared acr
 
 ### The trace detail panel
 
-![The trace detail panel: the agent, model and status in the header with the Ask Tracey and Generate tests actions, latency, token and cost metrics below, and the Messages tab laying out the system, user, tool and assistant conversation.](/screenshots/traces/detail.png)
+![The trace detail panel: the agent, model and status in the header with the Ask Tracey, Generate tests and Add to test suite actions, latency, token and cost metrics below, and the Messages tab laying out the system, user, tool and assistant conversation.](/screenshots/traces/detail.png)
 
 Click a trace to open its detail panel. The header leads with the **agent** that made the
 call (click the name to jump to its [agent page](/guide/agents)), followed by the **model**
