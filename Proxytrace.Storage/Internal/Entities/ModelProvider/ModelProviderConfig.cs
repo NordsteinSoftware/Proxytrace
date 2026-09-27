@@ -62,13 +62,32 @@ internal class ModelProviderConfig : AbstractEntityConfiguration<ModelProviderEn
     /// Maps.
     /// </summary>
     public Task<IModelProvider> Map(ModelProviderEntity stored, CancellationToken cancellationToken = default)
-        => factory(stored.Name, new Uri(stored.Endpoint), Decrypt(stored.ApiKey), stored.Kind, stored).ToTaskResult();
+    {
+        string apiKey = Decrypt(stored.ApiKey, out bool apiKeyUnavailable);
+        return factory(
+            stored.Name,
+            new Uri(stored.Endpoint),
+            apiKey,
+            stored.Kind,
+            stored,
+            apiKeyUnavailable).ToTaskResult();
+    }
 
     /// <summary>
     /// Maps.
     /// </summary>
     public Task<ModelProviderEntity> Map(IModelProvider domain, CancellationToken cancellationToken = default)
-        => new ModelProviderEntity
+    {
+        // An unreadable stored key must be re-entered, never silently erased: persisting the empty
+        // value would destroy the ciphertext (and with it any chance of recovery when the key ring
+        // is restored). Creation/update paths already refuse an empty key, so this is the backstop.
+        if (string.IsNullOrEmpty(domain.ApiKey))
+        {
+            throw new InvalidOperationException(
+                "Refusing to persist a model provider with an empty upstream API key; re-enter the key first.");
+        }
+
+        return new ModelProviderEntity
         {
             Id = domain.Id,
             Name = domain.Name,
@@ -80,23 +99,27 @@ internal class ModelProviderConfig : AbstractEntityConfiguration<ModelProviderEn
             CreatedAt = domain.CreatedAt,
             UpdatedAt = domain.UpdatedAt,
         }.ToTaskResult();
+    }
 
     /// <summary>
     /// Decrypts the stored upstream key, degrading to an empty string (rather than throwing) when the
     /// ciphertext can't be decrypted — e.g. an ephemeral Data Protection key ring after a restart
     /// without <c>PROXYTRACE_DATA_DIR</c>. Listing and the proxy resolver must never crash; the
-    /// provider simply fails to authenticate upstream until an operator re-enters the key. Mirrors
-    /// <c>EmailSettingsStore.DecryptPassword</c>.
+    /// provider loads with the key unset and <paramref name="apiKeyUnavailable"/> set so entity
+    /// validation tolerates it, and the operator re-enters the key before it can authenticate
+    /// upstream again.
     /// </summary>
-    private string Decrypt(string cipher)
+    private string Decrypt(string cipher, out bool apiKeyUnavailable)
     {
         try
         {
+            apiKeyUnavailable = false;
             return protector.Value.Unprotect(cipher);
         }
         catch (CryptographicException ex)
         {
             logger.LogWarning(ex, "Could not decrypt a stored provider API key; treating it as unset.");
+            apiKeyUnavailable = true;
             return string.Empty;
         }
     }

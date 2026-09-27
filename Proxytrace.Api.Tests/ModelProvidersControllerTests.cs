@@ -83,6 +83,21 @@ public sealed class ModelProvidersControllerTests : BaseTest<Module>
     }
 
     [TestMethod]
+    public async Task Create_WithAnEmptyUpstreamKey_ReturnsBadRequest()
+    {
+        // The domain requires a key on every creation; the controller answers with a 400 instead of
+        // letting the ValidationException surface as a 500.
+        IServiceProvider services = GetServices();
+        var controller = ResolveController(services);
+
+        var result = await controller.Create(
+            new CreateModelProviderRequest("Acme", "https://api.acme.test/", string.Empty, ModelProviderKind.OpenAiCompatible),
+            CancellationToken);
+
+        result.Result.Should().BeOfType<BadRequestObjectResult>();
+    }
+
+    [TestMethod]
     public async Task Update_Existing_PersistsChange()
     {
         IServiceProvider services = GetServices();
@@ -96,6 +111,23 @@ public sealed class ModelProvidersControllerTests : BaseTest<Module>
 
         result.Value.Should().NotBeNull();
         result.Value.Name.Should().Be("Renamed");
+    }
+
+    [TestMethod]
+    public async Task Update_WithAnExplicitlyEmptyUpstreamKey_ReturnsBadRequest()
+    {
+        // Writing an empty key would erase the stored ciphertext; the controller refuses before the
+        // write instead of persisting a provider that can no longer authenticate upstream.
+        IServiceProvider services = GetServices();
+        var controller = ResolveController(services);
+        var provider = await services.GetRequiredService<IDomainEntityGenerator<IModelProvider>>().CreateAsync(CancellationToken);
+
+        var result = await controller.Update(
+            provider.Id,
+            new UpdateModelProviderRequest("Renamed", provider.Endpoint.ToString(), string.Empty, provider.Kind),
+            CancellationToken);
+
+        result.Result.Should().BeOfType<BadRequestObjectResult>();
     }
 
     [TestMethod]

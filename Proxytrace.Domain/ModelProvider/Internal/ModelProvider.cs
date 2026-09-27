@@ -8,6 +8,10 @@ namespace Proxytrace.Domain.ModelProvider.Internal;
 internal record ModelProvider : DomainEntity<IModelProvider>, IModelProvider
 {
     private readonly IProviderClient.Factory clientFactory;
+
+    // Set only when the stored credential could not be decrypted on load. An empty ApiKey is a
+    // legitimate state in exactly that case; every creation/update path still requires one.
+    private readonly bool apiKeyUnavailable;
     /// <summary>
     /// Gets the name.
     /// </summary>
@@ -52,10 +56,12 @@ internal record ModelProvider : DomainEntity<IModelProvider>, IModelProvider
         string apiKey,
         ModelProviderKind kind,
         IDomainEntityData existing,
+        bool apiKeyUnavailable,
         IProviderClient.Factory clientFactory,
         IRepository<IModelProvider> repository) : base(existing, repository)
     {
         this.clientFactory = clientFactory;
+        this.apiKeyUnavailable = apiKeyUnavailable;
         Name = name;
         Endpoint = endpoint;
         ApiKey = apiKey;
@@ -100,7 +106,10 @@ internal record ModelProvider : DomainEntity<IModelProvider>, IModelProvider
             yield return Validation.NotNullOrWhiteSpace(Name);
         }
 
-        if (string.IsNullOrWhiteSpace(ApiKey))
+        // An empty key is legitimate only when the stored credential could not be decrypted on load
+        // (apiKeyUnavailable) — see docs/security.md. Creation and updates still require a key, and
+        // the storage mapper refuses to persist an empty one so the ciphertext is never erased.
+        if (!apiKeyUnavailable && string.IsNullOrWhiteSpace(ApiKey))
         {
             yield return Validation.NotNullOrWhiteSpace(ApiKey);
         }

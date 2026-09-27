@@ -172,6 +172,14 @@ public class ModelProvidersController : ControllerBase
         [FromBody] CreateModelProviderRequest request,
         CancellationToken cancellationToken)
     {
+        // The domain requires a key on every creation, and rejecting an empty one here turns a
+        // ValidationException into a 400 the caller can act on. (Self-hosted backends may use a
+        // sentinel like "EMPTY" or "ollama", but it is still a non-empty value the operator supplies.)
+        if (string.IsNullOrWhiteSpace(request.UpstreamApiKey))
+        {
+            return BadRequest("An upstream API key is required.");
+        }
+
         var provider = createProvider(request.Name, request.Endpoint.ToEndpointUri(), request.UpstreamApiKey, request.Kind);
         var saved = await providerRepository.AddAsync(provider, cancellationToken);
         await priceRefresher.RefreshProviderAsync(saved, cancellationToken);
@@ -195,6 +203,17 @@ public class ModelProvidersController : ControllerBase
         // A null key means "leave the credential alone" — the client no longer receives it, so an
         // edit that only renames the provider has nothing to send back.
         string apiKey = request.UpstreamApiKey ?? existing.ApiKey;
+
+        // Never let an update write an empty key: it would erase the stored ciphertext. That state
+        // is reachable when the stored key could not be decrypted (lost Data Protection key ring) —
+        // the provider loads with the key unset, so an edit has to supply it again. An explicitly
+        // empty replacement is rejected for the same reason a keyless create is.
+        if (string.IsNullOrWhiteSpace(apiKey))
+        {
+            return BadRequest(request.UpstreamApiKey is null
+                ? "The stored upstream API key could not be read; enter it again to save this provider."
+                : "An upstream API key is required.");
+        }
 
         // Credential rotation is a security-relevant action of its own; compare against the stored
         // key before it is overwritten so the audit trail distinguishes a rotation from an

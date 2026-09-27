@@ -1,9 +1,13 @@
+using Autofac;
 using AwesomeAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using NSubstitute;
 using Proxytrace.Domain;
 using Proxytrace.Domain.ModelProvider;
+using Nordstein.Core.Common.Security;
 using Nordstein.Core.Testing;
+using System.Security.Cryptography;
 using ModelProviderEntity = Proxytrace.Storage.Internal.Entities.ModelProvider.ModelProviderEntity;
 
 namespace Proxytrace.Storage.Tests;
@@ -92,5 +96,64 @@ public sealed class ModelProviderSecretTests : BaseTest<Module>
             CancellationToken);
 
         (await providers.FindByApiKeyAsync("sk-wrong", CancellationToken)).Should().BeNull();
+    }
+
+    [TestMethod]
+    public async Task FindAsync_WhenTheStoredKeyCannotBeDecrypted_LoadsTheProviderWithTheKeyUnset()
+    {
+        // A protector that always throws stands in for a lost Data Protection key ring. Reads must
+        // degrade (docs/security.md): the provider loads with an empty key instead of failing entity
+        // validation, so provider/agent/project listings keep rendering until the key is re-entered.
+        var throwingProtector = Substitute.For<ISecretProtector>();
+        throwingProtector.Unprotect(Arg.Any<string>())
+            .Returns(_ => throw new CryptographicException("The key was not found in the key ring."));
+
+        IServiceProvider services = GetServices(builder =>
+            builder.RegisterInstance(throwingProtector).As<ISecretProtector>());
+        var providers = services.GetRequiredService<IModelProviderRepository>();
+        var contextFactory = services.GetRequiredService<Func<StorageDbContext>>();
+        var now = DateTimeOffset.UtcNow;
+        var providerId = Guid.NewGuid();
+
+        var seed = contextFactory();
+        seed.Set<ModelProviderEntity>().Add(new ModelProviderEntity
+        {
+            Id = providerId,
+            Name = "orphaned",
+            Endpoint = "https://api.example.com/v1",
+            ApiKey = "ciphertext-from-another-key-ring",
+            ApiKeyLookupHash = "hmac1:0000",
+            Kind = ModelProviderKind.OpenAiCompatible,
+            CreatedAt = now,
+            UpdatedAt = now,
+        });
+        await seed.SaveChangesAsync(CancellationToken);
+
+        var loaded = await providers.FindAsync(providerId, CancellationToken);
+
+        loaded.Should().NotBeNull();
+        loaded?.ApiKey.Should().BeEmpty();
+    }
+
+    [TestMethod]
+    public async Task UpdateAsync_WithAnEmptyKey_IsRefused_SoTheStoredCiphertextSurvives()
+    {
+        // Saving a provider whose key could not be decrypted without re-entering it would overwrite
+        // the ciphertext with an empty value, destroying any chance of recovery once the key ring is
+        // restored. The storage mapper refuses that write; the controller surfaces it as a 400.
+        IServiceProvider services = GetServices();
+        var providers = services.GetRequiredService<IModelProviderRepository>();
+        var create = services.GetRequiredService<IModelProvider.CreateNew>();
+        var createExisting = services.GetRequiredService<IModelProvider.CreateExisting>();
+
+        var saved = await providers.AddAsync(
+            create("p", new Uri("https://api.example.com/v1"), "sk-secret", ModelProviderKind.OpenAiCompatible),
+            CancellationToken);
+        var unavailable = createExisting(
+            saved.Name, saved.Endpoint, string.Empty, saved.Kind, saved, apiKeyUnavailable: true);
+
+        await FluentActions
+            .Invoking(() => providers.UpdateAsync(unavailable, CancellationToken))
+            .Should().ThrowAsync<InvalidOperationException>();
     }
 }

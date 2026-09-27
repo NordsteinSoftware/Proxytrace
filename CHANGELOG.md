@@ -78,6 +78,11 @@ follow [Semantic Versioning](https://semver.org). Ongoing work is collected unde
 
 ### Fixed
 
+- **Providers survive a lost Data Protection key ring.** When the key ring behind
+  `PROXYTRACE_DATA_DIR` is gone, a stored upstream provider key can no longer be decrypted. That used
+  to make provider, agent and project pages fail outright; providers now load with the key unset until
+  you re-enter it, and edits refuse to overwrite the stored ciphertext in the meantime.
+
 - **A half-open custom time range counts as a filter.** A range with only an end set (or only a
   start) previously left the traces empty state reading as a first-run setup screen; it now shows
   the no-match state with its **Reset view** action.

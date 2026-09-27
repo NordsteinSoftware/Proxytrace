@@ -44,7 +44,10 @@ lowest product layer both the API host and the lean ingestion proxy can reach wi
   proxy cannot decrypt what the API wrote (the deploy/e2e compose files wire the shared `appdata`
   volume into both). Reads degrade gracefully on a `CryptographicException` (treat the secret as unset
   + log) rather than crashing a hot path — see `ModelProviderConfig.Decrypt` and
-  `EmailSettingsStore.DecryptPassword`.
+  `EmailSettingsStore.DecryptPassword`. A provider whose stored key cannot be decrypted loads with an
+  empty key and a flag that lets entity validation pass, so listings keep rendering; every write path
+  still requires a key, and the storage mapper refuses to persist an empty one — the ciphertext
+  survives until the operator re-enters the key.
 - **`ISecretHasher`** — `Hash(value)` → hex SHA-256 (`Sha256SecretHasher`, delegating to the shared
   `Nordstein.Core.Common.Security.Sha256.HexHash`). Deterministic and **key-ring-independent**, so the
   verify paths keep working even if `PROXYTRACE_DATA_DIR` is lost. Unkeyed SHA-256 is safe **only**
