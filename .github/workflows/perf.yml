@@ -28,6 +28,10 @@ on:
         description: "k6 duration (http scope)"
         type: string
         default: "30s"
+      pages:
+        description: "k6 pages to load, comma-separated (http scope; blank = all)"
+        type: string
+        default: ""
 
 jobs:
   perf:
@@ -52,7 +56,7 @@ jobs:
           k6 version
 
       - name: Run performance suite
-        run: ./perf/run.sh --size "${{ inputs.size }}" --scopes "${{ inputs.scopes }}" --vus "${{ inputs.vus }}" --duration "${{ inputs.duration }}"
+        run: ./perf/run.sh --size "${{ inputs.size }}" --scopes "${{ inputs.scopes }}" --vus "${{ inputs.vus }}" --duration "${{ inputs.duration }}" --pages "${{ inputs.pages }}"
 
       - name: Summarize
         if: always()

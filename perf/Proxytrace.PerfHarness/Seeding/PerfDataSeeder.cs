@@ -13,12 +13,14 @@ using Nordstein.Core.AI.Messages;
 using Proxytrace.Domain.Model;
 using Proxytrace.Domain.ModelEndpoint;
 using Proxytrace.Domain.ModelProvider;
+using Proxytrace.Application.Auth.Local;
 using Proxytrace.Domain.Project;
 using Proxytrace.Domain.Session;
 using Proxytrace.Domain.TestCase;
 using Proxytrace.Domain.TestRun;
 using Proxytrace.Domain.TestRunGroup;
 using Proxytrace.Domain.TestSuite;
+using Proxytrace.Domain.User;
 using Proxytrace.PerfHarness.Bootstrap;
 
 namespace Proxytrace.PerfHarness.Seeding;
@@ -32,6 +34,10 @@ namespace Proxytrace.PerfHarness.Seeding;
 /// </summary>
 internal sealed class PerfDataSeeder
 {
+    /// <summary>The HTTP scope's sign-in account; must match the k6 helper's defaults.</summary>
+    internal const string AdminEmail = "perf-admin@proxytrace.dev";
+    internal const string AdminPassword = "PerfAdmin123!";
+
     private readonly PerfContainer container;
 
     public PerfDataSeeder(PerfContainer container)
@@ -47,6 +53,9 @@ internal sealed class PerfDataSeeder
         // --- 1. fixed seed graph + canned payload pools (one scope) ---
         Console.WriteLine($"[seed] building fixed graph: 1 project, {options.EndpointCount} endpoints, {options.AgentCount} agents…");
         var graph = await BuildGraphAsync(options, cancellationToken);
+
+        // --- 1b. the perf admin, so the HTTP scope can always log in ---
+        await SeedAdminAsync(cancellationToken);
 
         // --- 2. high-volume agent-call rows, batched ---
         var start = DateTimeOffset.UtcNow.AddDays(-options.DaysSpread);
@@ -178,6 +187,33 @@ internal sealed class PerfDataSeeder
             });
         }
     }
+
+    /// <summary>
+    /// Seeds the admin account the k6 HTTP scope signs in with. Without it a full
+    /// <c>--scopes all</c> run breaks: the db-layer scope's <c>ApiKeyResolutionScenario</c> creates a
+    /// generated key-owner user, so <c>/api/auth/mode</c> reports <c>setupRequired: false</c> while
+    /// the perf credentials still do not exist — and the HTTP scope's login gets a 401. Mirrors
+    /// <c>SetupService.CreateFirstAdminAsync</c>'s two-step hashing (the hash is salted with the
+    /// user, so a draft instance is hashed first), and is idempotent so a kept database reuses the
+    /// account.
+    /// </summary>
+    private Task SeedAdminAsync(CancellationToken cancellationToken)
+        => container.InScopeAsync(async scope =>
+        {
+            var users = scope.Resolve<IUserRepository>();
+            if (await users.FindByEmailAsync(AdminEmail, cancellationToken) is not null)
+            {
+                return;
+            }
+
+            var createUser = scope.Resolve<IUser.CreateNew>();
+            var passwords = scope.Resolve<IPasswordService>();
+            var draft = createUser(AdminEmail, externalSubject: null, passwordHash: "placeholder", role: UserRole.Admin);
+            string passwordHash = passwords.Hash(draft, AdminPassword);
+            var admin = createUser(AdminEmail, externalSubject: null, passwordHash: passwordHash, role: UserRole.Admin);
+            await users.AddAsync(admin, cancellationToken);
+            Console.WriteLine($"[seed] seeded admin {AdminEmail}");
+        });
 
     private async Task<SeedGraph> BuildGraphAsync(SeedOptions options, CancellationToken cancellationToken)
     {
@@ -370,9 +406,12 @@ internal sealed class PerfDataSeeder
     /// <see cref="SeedOptions.TestRunSuitePoolSize"/> synthetic suites, so the suite-scoped
     /// TestRunStats query (<c>WHERE SuiteId IN (...)</c>, issue #253) can be measured against a large,
     /// realistically-distributed table. Each <c>TestRunStatsEntity</c> requires a matching
-    /// <c>TestRunEntity</c> (the <c>TestRunId</c> FK is 1:1), so one real anchor suite/group is built
-    /// and a test run is inserted per stats row; the stats <c>SuiteId</c> is a plain indexed column
-    /// (no FK), so the suite spread is synthetic and needs no extra suite graph.
+    /// <c>TestRunEntity</c> (the <c>TestRunId</c> FK is 1:1), so one real anchor suite and a pool of
+    /// run groups are built and a test run is inserted per stats row. Groups are sized like real
+    /// suite invocations (<see cref="ITestRunGroup.MaxModelEndpoints"/> endpoints ×
+    /// <see cref="ITestRunGroup.MaxSampleCount"/> samples), so the Runs page's group list — which
+    /// loads every run of each group it returns — sees a realistic payload (the stats
+    /// <c>SuiteId</c> is a plain indexed column with no FK, so the suite spread stays synthetic).
     /// </summary>
     private async Task SeedTestRunStatsAsync(SeedGraph graph, SeedOptions options, CancellationToken cancellationToken)
     {
@@ -382,20 +421,24 @@ internal sealed class PerfDataSeeder
         }
 
         int poolSize = Math.Max(1, options.TestRunSuitePoolSize);
-        Console.WriteLine($"[seed] building {options.TestRunCount:N0} test-run stats rows across {poolSize} suites…");
+        int runsPerGroup = RunsPerGroup;
+        int groupCount = (int)Math.Ceiling(options.TestRunCount / (double)runsPerGroup);
+        Console.WriteLine(
+            $"[seed] building {options.TestRunCount:N0} test-run stats rows across {poolSize} suites "
+            + $"and {groupCount:N0} run groups…");
         var rng = new Random(options.RandomSeed + 1);
         var suiteIdPool = Enumerable.Range(0, poolSize).Select(_ => Guid.NewGuid()).ToArray();
 
-        var anchor = await BuildTestRunAnchorAsync(graph, cancellationToken);
+        var anchor = await BuildTestRunAnchorAsync(graph, groupCount, cancellationToken);
 
         var start = DateTimeOffset.UtcNow.AddDays(-options.DaysSpread);
         var span = TimeSpan.FromDays(options.DaysSpread);
 
         long created = 0;
-        int sampleIndex = 0;
         while (created < options.TestRunCount)
         {
             int batchCount = (int)Math.Min(options.BatchSize, options.TestRunCount - created);
+            long batchStart = created;
 
             await container.InScopeAsync(async scope =>
             {
@@ -406,8 +449,19 @@ internal sealed class PerfDataSeeder
                 var runs = new List<ITestRun>(batchCount);
                 for (int i = 0; i < batchCount; i++)
                 {
-                    IModelEndpoint endpoint = graph.Endpoints[rng.Next(graph.Endpoints.Count)];
-                    runs.Add(createRun(anchor.Group, endpoint, sampleIndex++));
+                    long globalIndex = batchStart + i;
+                    // One group per full cohort: the first MaxModelEndpoints runs are sample 0 of
+                    // each endpoint, the next block sample 1, and so on. Rotating the endpoint set
+                    // per group spreads the cohorts across all seeded endpoints.
+                    int groupIndex = (int)(globalIndex / runsPerGroup);
+                    int withinGroup = (int)(globalIndex % runsPerGroup);
+                    int endpointIndex =
+                        (groupIndex * ITestRunGroup.MaxModelEndpoints + withinGroup % ITestRunGroup.MaxModelEndpoints)
+                        % graph.Endpoints.Count;
+                    runs.Add(createRun(
+                        anchor.Groups[groupIndex],
+                        graph.Endpoints[endpointIndex],
+                        withinGroup / ITestRunGroup.MaxModelEndpoints));
                 }
 
                 // Test runs first (committed) so the TestRunStats TestRunId FK resolves on upsert.
@@ -416,7 +470,8 @@ internal sealed class PerfDataSeeder
                 foreach (ITestRun run in runs)
                 {
                     Guid suiteId = suiteIdPool[rng.Next(suiteIdPool.Length)];
-                    await statsWriter.UpsertAsync(BuildRunStats(run, anchor, suiteId, rng, start, span), cancellationToken);
+                    await statsWriter.UpsertAsync(
+                        BuildRunStats(run, anchor.AgentId, suiteId, rng, start, span), cancellationToken);
                 }
             });
 
@@ -425,13 +480,17 @@ internal sealed class PerfDataSeeder
         }
     }
 
+    /// <summary>Runs in one seeded group, matching the runner's real envelope (3 endpoints × 5 samples).</summary>
+    private const int RunsPerGroup = ITestRunGroup.MaxModelEndpoints * ITestRunGroup.MaxSampleCount;
+
     /// <summary>
-    /// Builds the single real suite/group the seeded test runs hang off — the minimum graph that
-    /// satisfies the <c>TestRunStatsEntity.TestRunId → TestRunEntity</c> FK (one suite with one
-    /// evaluator and one test case, plus one run group). Reuses a seeded agent/endpoint and the canned
-    /// conversation/assistant-message pools.
+    /// Builds the real graph the seeded test runs hang off — one suite (with one evaluator and one
+    /// test case) and <paramref name="groupCount"/> run groups for it, each shaped like a real suite
+    /// invocation (see <see cref="RunsPerGroup"/>). Reuses a seeded agent and the canned
+    /// conversation/assistant-message pools; the group size is what keeps
+    /// <c>TestRunDtoMapper.ToListItemDtoAsync</c>'s per-group run load bounded.
     /// </summary>
-    private Task<TestRunAnchor> BuildTestRunAnchorAsync(SeedGraph graph, CancellationToken cancellationToken)
+    private Task<TestRunAnchor> BuildTestRunAnchorAsync(SeedGraph graph, int groupCount, CancellationToken cancellationToken)
         => container.InScopeAsync(async scope =>
         {
             var projectRepository = scope.Resolve<IRepository<IProject>>();
@@ -452,15 +511,18 @@ internal sealed class PerfDataSeeder
                 createTestCase(graph.Conversations[0], graph.AssistantMessages[0], sourceAgentCallId: null), cancellationToken);
             ITestSuite suite = await suiteRepository.AddAsync(
                 createSuite("Perf Run-Stats Suite", agent, [evaluator], [testCase]), cancellationToken);
-            ITestRunGroup group = await groupRepository.AddAsync(
-                createGroup(suite, isSystemRun: false, null, sampleCount: 1), cancellationToken);
 
-            return new TestRunAnchor(agent.Id, group);
+            var groups = Enumerable.Range(0, groupCount)
+                .Select(_ => createGroup(suite, isSystemRun: false, null, sampleCount: ITestRunGroup.MaxSampleCount))
+                .ToArray();
+            await groupRepository.AddRangeAsync(groups, cancellationToken);
+
+            return new TestRunAnchor(agent.Id, groups);
         });
 
     private static TestRunStats BuildRunStats(
         ITestRun run,
-        TestRunAnchor anchor,
+        Guid agentId,
         Guid suiteId,
         Random rng,
         DateTimeOffset start,
@@ -476,9 +538,9 @@ internal sealed class PerfDataSeeder
 
         return new TestRunStats(
             TestRunId: run.Id,
-            AgentId: anchor.AgentId,
+            AgentId: agentId,
             EndpointId: run.Endpoint.Id,
-            GroupId: anchor.Group.Id,
+            GroupId: run.Group.Id,
             SuiteId: suiteId,
             TestCases: testCases,
             Passed: passed,
@@ -497,7 +559,7 @@ internal sealed class PerfDataSeeder
         IReadOnlyList<AssistantMessage> AssistantMessages,
         IReadOnlyList<IModelParameters> ModelParameters);
 
-    private sealed record TestRunAnchor(Guid AgentId, ITestRunGroup Group);
+    private sealed record TestRunAnchor(Guid AgentId, IReadOnlyList<ITestRunGroup> Groups);
 
     /// <summary>One pooled debugging session: its derived id and the external key stored on the row.</summary>
     private readonly record struct SessionSeed(Guid Id, string ExternalKey);

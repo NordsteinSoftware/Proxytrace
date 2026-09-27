@@ -15,7 +15,7 @@ against real Postgres, which the in-memory unit suite must never do).
 | Scope | Measures | Tool |
 |-------|----------|------|
 | **DB-layer** | Statistics/list/histogram query latency (p95) + write-ingestion throughput, against ~1M seeded rows | `Proxytrace.PerfHarness` console |
-| **HTTP load** | Read endpoints (`/api/statistics/dashboard`, `/api/agent-calls`, `/api/statistics/agents/{id}/distributions`) under concurrent VUs | `k6` (`perf/load/read-endpoints.js`) |
+| **HTTP load** | Page-load profiles (dashboard, traces, agents, suites, runs, costs, evaluators, anomalies) under concurrent VUs — each visit fires the page's mount requests as one batch | `k6` (`perf/load/read-endpoints.js` + `perf/load/helpers/pages.js`) |
 | **Micro-benchmarks** | Per-row JSON serialize/deserialize cost (the EF value-converter hot path), pure CPU | BenchmarkDotNet (`Proxytrace.Benchmarks`) |
 
 ## How the DB-layer harness reuses real code
@@ -48,17 +48,22 @@ plans and the not-yet-paid `NULLS LAST` index lever.
 
 The seeder also loads `TestRunStats` projection rows (default ~25k, scaled down for small `--size`)
 spread across ~250 synthetic suites, for the suite-scoped query the test-suites controller runs (#253).
-Because `TestRunStatsEntity.TestRunId` is a 1:1 FK to `TestRunEntity`, one real anchor suite/group is
-built and a `TestRun` is inserted per stats row; the stats `SuiteId` is a plain indexed column (no FK),
-so the suite spread is synthetic and needs no per-suite graph. The `TestRunStatsQueryScenario` then
-times the scoped read (`WHERE SuiteId IN (...)`) for a single busy suite (`testRunStatsBySuite`, the
-single-suite GET) and a 50-suite page (`testRunStatsBySuitePage`, the suites list), plus the
-dashboard's server-side aggregates over the same table (#288): the pass-rate totals
-(`testRunStatsPassTotals`, a single scalar `GROUP BY` row) and the sparkline cohorts
+Because `TestRunStatsEntity.TestRunId` is a 1:1 FK to `TestRunEntity`, one real anchor suite and a pool
+of real run groups are built and a `TestRun` is inserted per stats row, assigned to the group its
+cohort belongs to; groups are sized like a real suite invocation (`MaxModelEndpoints` ×
+`MaxSampleCount`, at most 15 runs), so the Runs page's group list — which loads every run of each
+group it returns — sees a representative payload instead of one 25k-run group. The stats `SuiteId` is
+a plain indexed column (no FK), so the suite spread is synthetic and needs no per-suite graph. The
+`TestRunStatsQueryScenario` then times the scoped read (`WHERE SuiteId IN (...)`) for a single busy
+suite (`testRunStatsBySuite`, the single-suite GET) and a 50-suite page (`testRunStatsBySuitePage`,
+the suites list), plus the dashboard's server-side aggregates over the same table (#288): the
+pass-rate totals (`testRunStatsPassTotals`, a single scalar `GROUP BY` row) and the sparkline cohorts
 (`testRunStatsRecentCohorts`, a `(GroupId, EndpointId)` `GROUP BY` ordered by `max(RunCompletedAt)`,
 capped at 50). All four budgets are **uncalibrated placeholders** — set conservatively — until a
-full run lands. (`StatsQueryTranslationTests` in the unit suite additionally locks these aggregate
-shapes to server-side Npgsql translation via `ToQueryString`, without a live database.)
+full run lands; the group pool raises `testRunStatsRecentCohorts`'s grouping cardinality, so
+recalibrate that one especially on the first run after a reseed. (`StatsQueryTranslationTests` in the
+unit suite additionally locks these aggregate shapes to server-side Npgsql translation via
+`ToQueryString`, without a live database.)
 
 ### Filtered-set summary (`agentCallsSummary`, `agentCallsSummaryByTimeRange`)
 
@@ -166,12 +171,55 @@ key ids, leaving the rest in the null/unattributed group, so result cardinality 
 than one giant null group. The ids are synthetic because `ApiKeyId` is FK-free — no `ApiKeyEntity`
 rows are needed. Both budgets are **placeholders marked RECALIBRATE**, same as the per-agent pair.
 
+## HTTP page-load scenarios (`perf/load/`)
+
+The k6 scope models **visits to the product's main pages**, not isolated endpoints. One k6 iteration is
+one page visit: it fires every request that page makes on mount as a **single concurrent batch** —
+the way a browser fetches them — and records the batch's slowest response as one `page_load_<page>`
+sample, the page's time-to-data. Each request keeps its own `name` tag, so per-endpoint p95s remain
+comparable with the `httpP95Ms` budgets and with the DB-layer metrics behind them (and every measured
+endpoint is reported in the summary, budgeted or not).
+
+Profiles live in [`perf/load/helpers/pages.js`](../perf/load/helpers/pages.js) and mirror the real
+hooks (`frontend/src/features/*/hooks`), including the desktop default selection (the first
+agent/suite/evaluator/run group opens with its detail reads) and the default time windows each page
+resolves to — 90 days for the dashboard's aggregate, 7 days for the traces and agent-stat reads, the
+current UTC month for the Costs page, 24h/hourly for the anomalies timeline, all-time for the suite
+run stats.
+
+| Page | Weight | Requests fired per visit |
+|------|--------|--------------------------|
+| `traces` | 4 | list chunk, filter-bar overview, KPI summary, histogram, first-load newest-trace probe, tool-name picker, recent sessions |
+| `dashboard` | 2 | dashboard aggregate, draft-proposal count |
+| `agents` | 2 | agent list, full agent, versions, stats overview, distributions, recent traces, recent outliers |
+| `suites` | 2 | suite list, agent/evaluator filter lists, suite detail, run-stats strip, edit-dialog full traces, schedules |
+| `runs` | 1 | run-group list, agent filter list, default-selected group detail |
+| `costs` | 1 | cost overview (month-to-date), budget list, budget status, agent list, providers overview |
+| `evaluators` | 1 | evaluators overview (with 7d sparklines), agentic presets, evaluator detail |
+| `anomalies` | 1 | 24h/hourly anomaly timeline, recent flagged calls |
+
+Visits are picked by weight (traces is the workhorse, the dashboard the landing page); `PAGES=traces`
+(or `perf/run.sh --scopes http --pages traces,dashboard`) pins a subset for a focused run. Ids the
+profiles need (project, busiest agent, first suite, first evaluator, first run group) are discovered
+once in k6 `setup` via `helpers/auth.js`; a missing optional id only drops that page's detail-shaped
+requests, while a missing project/agent fails setup loudly.
+
+**Budgets.** `httpP95Ms` entries keep working unchanged (they key the request's `name` tag), so the
+dashboard/list/distributions thresholds still gate the run. The **new** page and endpoint metrics
+start without budgets on purpose — a missing key means "measure but never fail", so the profiles run
+and produce numbers before thresholds are invented for them (the same rule the DB-layer budgets
+followed). To make them gate: add the endpoint p95s to `httpP95Ms` (short narrow reads ≈ 3× their
+db-layer twin; heavy aggregates ≈ 2–2.5×) and each page's `page_load_<page>` p95 to
+`httpPageP95Ms` (+20–30%); the k6 script emits thresholds for every key it finds. See
+`_comment_httpPages` in [`perf-budgets.json`](../perf/perf-budgets.json).
+
 ## Budgets (`perf/perf-budgets.json`)
 
 The single source of absolute budgets, shared by all three scopes (the DB-layer runner and benchmarks
-read it directly; k6 maps `httpP95Ms` onto its `thresholds`, which set the process exit code). A scope
-exits non-zero on any breach. The committed values are **placeholders** — calibrate on the first full
-~1M run. A missing entry means "measure but never fail", so a new scenario runs before its budget exists.
+read it directly; k6 maps `httpP95Ms`/`httpPageP95Ms` onto its `thresholds`, which set the process
+exit code). A scope exits non-zero on any breach. The committed values are **placeholders** —
+calibrate on the first full ~1M run. A missing entry means "measure but never fail", so a new scenario
+runs before its budget exists.
 
 ### Sizing a budget (#372)
 
@@ -209,12 +257,15 @@ full-window-aggregate territory (~270 ms+), far above the budget either way.
 ```bash
 perf/run.sh                                   # full suite, ~1M rows
 perf/run.sh --size 100000 --scopes db-layer   # quick smoke
+perf/run.sh --scopes http --pages traces,dashboard   # one page-load profile
 ```
 
 `run.sh` boots `docker-compose.perf.yml` (Postgres `:5433`, API `:5230`), seeds, runs the scopes, writes
 `perf/results/*.json`, and tears down. The API and the in-process harness **share one database** — the
-harness seeds the rows the API serves. The statistics endpoints are project filters, not tenant security
-boundaries, so the k6-bootstrapped admin sees all seeded data. CI: the manual **Performance** workflow
+harness seeds the rows the API serves, including the `perf-admin@proxytrace.dev` account the HTTP scope
+signs in with (seeded up front so a full `--scopes all` run does not depend on the db-layer scope
+leaving the database userless). The statistics endpoints are project filters, not tenant security
+boundaries, so the seeded admin sees all seeded data. CI: the manual **Performance** workflow
 (`.github/workflows/perf.yml`, `workflow_dispatch`).
 
 See [`perf/README.md`](../perf/README.md) for the operator-facing quick reference.

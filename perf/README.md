@@ -14,7 +14,7 @@ explicitly via `perf/run.sh` or the **Performance** GitHub workflow (`workflow_d
 | Scope | What it measures | How |
 |-------|------------------|-----|
 | `db-layer` | Statistics/list/histogram query latency (p95) + write-ingestion throughput, against the seeded DB | `Proxytrace.PerfHarness` (boots the real Storage+Application graph against Postgres, times the real readers) |
-| `http` | Read endpoints (dashboard, agent-calls list, agent distributions) under concurrent VUs | `k6` against the running stack |
+| `http` | Page-load profiles (dashboard, traces, agents, suites, runs, costs, evaluators, anomalies) under concurrent VUs — each visit fires the page's mount requests as one batch | `k6` (`perf/load/read-endpoints.js` + `load/helpers/pages.js`) |
 | `benchmarks` | Per-row JSON serialize/deserialize cost (pure CPU, no DB) | BenchmarkDotNet (`Proxytrace.Benchmarks`) |
 
 ## Run it
@@ -28,6 +28,9 @@ perf/run.sh --size 100000 --scopes db-layer,benchmarks
 
 # only the HTTP load test, heavier load, keep the stack up afterwards
 perf/run.sh --scopes http --vus 25 --duration 60s --keep
+
+# only the pages you care about (comma-separated; default: all)
+perf/run.sh --scopes http --pages traces,dashboard
 ```
 
 `run.sh` boots a throwaway stack (`docker-compose.perf.yml`: Postgres on `:5433`, API on `:5230`),
@@ -51,12 +54,25 @@ measurement will therefore flap on a busier host or a noisier run — give short
 their spread, not over a single sample ([#372](https://github.com/NordsteinSoftware/Proxytrace/issues/372),
 `_comment_anomaly`).
 
+### HTTP page budgets
+
+The page-load scope reports two kinds of series, both budgeted through this file: per-request p95s
+(keep their `name` tag, so the **existing** `httpP95Ms` entries apply unchanged) and one
+`page_load_<page>` trend per visit — the time until the page's slowest mount request returned. The
+**page/endpoint metrics added with the page profiles have no budgets yet**: a missing key means
+measure-only, so they produce numbers before thresholds are invented for them. Calibrate after a full
+run by adding the endpoint p95s under `httpP95Ms` (short narrow reads ≈ 3× their db-layer twin, heavy
+aggregates ≈ 2–2.5×) and each page's p95 under `httpPageP95Ms` (+20–30%); the k6 script picks both up
+automatically (see `_comment_httpPages`).
+
 ## Components
 
 ```
 Proxytrace.PerfHarness/   seeder + db-layer scenario runner (seed | db-layer | all)
 Proxytrace.Benchmarks/    BenchmarkDotNet micro-benchmarks
-load/read-endpoints.js    k6 HTTP load test (+ helpers/auth.js)
+load/read-endpoints.js    k6 page-load entry point (scenarios, thresholds, summary)
+load/helpers/pages.js     page -> mount-request profiles + visit weights
+load/helpers/auth.js      login/setup + id discovery for the load test
 docker-compose.perf.yml   stack overlay (use with ../docker-compose.yml)
 perf-budgets.json         absolute budgets, shared by every scope
 run.sh                    orchestrator (mirrored by .github/workflows/perf.yml)
