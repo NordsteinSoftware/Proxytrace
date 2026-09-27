@@ -4,14 +4,13 @@ import { Trans, useLingui } from '@lingui/react/macro';
 import { AreaChart } from '../../../components/charts';
 import { EmptyState } from '../../../components/ui/EmptyState';
 import { Skeleton } from '../../../components/ui/Skeleton';
-import { SegmentedControl } from '../../../components/ui/SegmentedControl';
 import type { SummaryDto } from '../../../api/models';
 import { modelColor } from '../../../lib/colors';
 import { fmtTokens } from '../../../lib/format';
 import { useCountUp } from '../../../hooks/useCountUp';
 import { CachedTokensHint } from '../../../components/ui/CachedTokensHint';
 import { bucketAxisLabel, rangeWindowLabel, type RangeKey, type StatisticsBucket } from '../../../lib/time-range';
-import { RANGES, splitTokenStr, EYEBROW_CLS, type ModelSplit } from '../dashboardMeta';
+import { splitTokenStr, EYEBROW_CLS, type ModelSplit } from '../dashboardMeta';
 import { cn } from '../../../lib/cn';
 
 interface HeroTokenCardProps {
@@ -23,11 +22,10 @@ interface HeroTokenCardProps {
   bucket: StatisticsBucket;
   modelSplit: ModelSplit;
   range: RangeKey;
-  onRangeChange: (r: RangeKey) => void;
   isLoading: boolean;
 }
 
-export function HeroTokenCard({ summary, tokenVolume, tokenBuckets, bucket, modelSplit, range, onRangeChange, isLoading }: HeroTokenCardProps) {
+export function HeroTokenCard({ summary, tokenVolume, tokenBuckets, bucket, modelSplit, range, isLoading }: HeroTokenCardProps) {
   const { t } = useLingui();
   const totalTokens = (summary?.totalInputTokens ?? 0) + (summary?.totalOutputTokens ?? 0);
   // Roll the headline up from 0 on load — the dashboard's one orchestrated reveal moment.
@@ -43,38 +41,31 @@ export function HeroTokenCard({ summary, tokenVolume, tokenBuckets, bucket, mode
 
   return (
     <div data-testid="hero-token-card" className="relative overflow-hidden rounded-lg bg-card px-4 pt-3 pb-3.5 flex flex-col gap-2.5 shadow-[var(--shadow-card)]">
-      {/* Header: value + range picker */}
-      <div className="relative flex items-start justify-between">
-        <div>
-          <div className={cn(EYEBROW_CLS, 'mb-1')}>
-            <Trans>Token Volume · {rangeWindowLabel(range)}</Trans>
-          </div>
-          <div className="flex items-baseline gap-2.5 flex-wrap">
-            {/* display-tier: intentional, outside type scale */}
-            <span
-              data-testid="hero-token-total"
-              data-token-total={totalTokens}
-              className="text-[68px] font-bold tracking-[-0.045em] leading-[0.92] tabular-nums text-primary"
-            >
-              {tokenNum}<span>{tokenSuffix}</span>
-            </span>
-          </div>
-          <div className="mt-1.5 flex gap-2.5 text-caption font-mono text-muted items-center flex-wrap">
-            <span>
-              <Trans><span className="text-secondary font-semibold">{(summary?.totalInputTokens ?? 0).toLocaleString()}</span> in</Trans>
-              <CachedTokensHint cachedInput={summary?.totalCachedInputTokens ?? 0} input={summary?.totalInputTokens ?? 0} />
-            </span>
-            <span className="text-border">/</span>
-            <span><Trans><span className="text-secondary font-semibold">{(summary?.totalOutputTokens ?? 0).toLocaleString()}</span> out</Trans></span>
-            <span className="text-border">/</span>
-            <span><Trans><span className="text-secondary font-semibold">{(summary?.totalCalls ?? 0).toLocaleString()}</span> traces</Trans></span>
-          </div>
+      {/* Header: value within the dashboard's selected range */}
+      <div className="relative">
+        <div className={cn(EYEBROW_CLS, 'mb-1')}>
+          <Trans>Token Volume · {rangeWindowLabel(range)}</Trans>
         </div>
-        <SegmentedControl
-          value={range}
-          onChange={onRangeChange}
-          segments={RANGES.map(r => ({ value: r, label: r }))}
-        />
+        <div className="flex items-baseline gap-2.5 flex-wrap">
+          {/* display-tier: intentional, outside type scale */}
+          <span
+            data-testid="hero-token-total"
+            data-token-total={totalTokens}
+            className="text-[68px] font-bold tracking-[-0.045em] leading-[0.92] tabular-nums text-primary"
+          >
+            {tokenNum}<span>{tokenSuffix}</span>
+          </span>
+        </div>
+        <div className="mt-1.5 flex gap-2.5 text-caption font-mono text-muted items-center flex-wrap">
+          <span>
+            <Trans><span className="text-secondary font-semibold">{(summary?.totalInputTokens ?? 0).toLocaleString()}</span> in</Trans>
+            <CachedTokensHint cachedInput={summary?.totalCachedInputTokens ?? 0} input={summary?.totalInputTokens ?? 0} />
+          </span>
+          <span className="text-border">/</span>
+          <span><Trans><span className="text-secondary font-semibold">{(summary?.totalOutputTokens ?? 0).toLocaleString()}</span> out</Trans></span>
+          <span className="text-border">/</span>
+          <span><Trans><span className="text-secondary font-semibold">{(summary?.totalCalls ?? 0).toLocaleString()}</span> traces</Trans></span>
+        </div>
       </div>
 
       {/* Area chart */}

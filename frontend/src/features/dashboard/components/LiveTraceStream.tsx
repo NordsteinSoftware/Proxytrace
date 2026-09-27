@@ -9,17 +9,20 @@ import { Skeleton } from '../../../components/ui/Skeleton';
 import type { AgentCallListItemDto } from '../../../api/models';
 import { buildRows } from '../../../lib/trace';
 import { useNowTick } from '../../../hooks/useNowTick';
-import { LiveStreamRow, LIVE_STREAM_GRID, LIVE_STREAM_GRID_WIDE, LIVE_STREAM_GRID_NARROW, NARROW_HIDDEN } from './LiveStreamRow';
+import { LiveStreamRow, LIVE_STREAM_GRID, LIVE_STREAM_GRID_WIDE, LIVE_STREAM_GRID_NARROW, LIVE_STREAM_GRID_PHONE, NARROW_HIDDEN, PHONE_HIDDEN } from './LiveStreamRow';
 import { cn } from '../../../lib/cn';
 import { COL_HEADER_CLS } from '../dashboardMeta';
+import type { RangeKey } from '../../../lib/time-range';
 
 interface LiveTraceStreamProps {
   traces: AgentCallListItemDto[];
   isLoading: boolean;
   freshIds: Set<string>;
+  range: RangeKey;
+  onRangeChange: (range: RangeKey) => void;
 }
 
-export function LiveTraceStream({ traces, isLoading, freshIds }: LiveTraceStreamProps) {
+export function LiveTraceStream({ traces, isLoading, freshIds, range, onRangeChange }: LiveTraceStreamProps) {
   const { t } = useLingui();
   const navigate = useNavigate();
   const rows = useMemo(() => buildRows(traces), [traces]);
@@ -29,7 +32,7 @@ export function LiveTraceStream({ traces, isLoading, freshIds }: LiveTraceStream
     <section
       data-testid="live-trace-stream"
       className="rounded-lg bg-card px-3.5 pt-2.5 pb-1.5 flex flex-col shadow-[var(--shadow-card)] @container"
-      style={{ '--live-grid': LIVE_STREAM_GRID_WIDE, '--live-grid-narrow': LIVE_STREAM_GRID_NARROW } as React.CSSProperties}
+      style={{ '--live-grid': LIVE_STREAM_GRID_WIDE, '--live-grid-narrow': LIVE_STREAM_GRID_NARROW, '--live-grid-phone': LIVE_STREAM_GRID_PHONE } as React.CSSProperties}
     >
       <header className="flex items-end justify-between mb-3">
         <div>
@@ -51,7 +54,7 @@ export function LiveTraceStream({ traces, isLoading, freshIds }: LiveTraceStream
           6px). Without that the row hover wash and the divider stopped 14px short of the card
           edge, so a hovered row read as a floating strip rather than a filled row. */}
       <div className={cn(LIVE_STREAM_GRID, COL_HEADER_CLS, '-mx-3.5 px-5 pb-2.5 border-b border-border-subtle')}>
-        <span /><span><Trans>Message</Trans></span><span className={cn('text-center', NARROW_HIDDEN)}><Trans>Turns</Trans></span><span className={cn('text-center', NARROW_HIDDEN)}><Trans>Model</Trans></span><span className="text-center"><Trans>Status</Trans></span><span className="text-right"><Trans>Tokens</Trans></span><span className="text-right"><Trans>Latency</Trans></span><span className="text-right"><Trans>Age</Trans></span>
+        <span /><span><Trans>Message</Trans></span><span className={cn('text-center', NARROW_HIDDEN)}><Trans>Turns</Trans></span><span className={cn('text-center', NARROW_HIDDEN)}><Trans>Model</Trans></span><span className="text-center"><Trans>Status</Trans></span><span className={cn('text-right', PHONE_HIDDEN)}><Trans>Tokens</Trans></span><span className={cn('text-right', PHONE_HIDDEN)}><Trans>Latency</Trans></span><span className="text-right"><Trans>Age</Trans></span>
       </div>
 
       {isLoading ? (
@@ -61,8 +64,11 @@ export function LiveTraceStream({ traces, isLoading, freshIds }: LiveTraceStream
       ) : rows.length === 0 ? (
         <div className="py-10">
           <EmptyState
-            title={t`No traces yet`}
-            description={t`Route your agent through the Proxytrace proxy to start capturing traces.`}
+            title={range === 'all' ? t`No traces yet` : t`No traces in this range`}
+            description={range === 'all'
+              ? t`Route your agent through the Proxytrace proxy to start capturing traces.`
+              : t`Try a wider data range.`}
+            action={range === 'all' ? undefined : <Button variant="link" size="sm" onClick={() => onRangeChange('all')}><Trans>Show all time →</Trans></Button>}
           />
         </div>
       ) : (

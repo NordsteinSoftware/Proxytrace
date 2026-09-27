@@ -83,11 +83,11 @@ left, and the selected item's full **dossier** on the right.
 
 The queue groups theories by what they need from you, most urgent first:
 
-- **Needs decision** — validated theories whose proposal awaits your Promote/Dismiss call.
+- **Needs decision** — validated theories whose proposal awaits your Approve/Dismiss call.
 - **Needs attention** — theories whose A/B validation **failed to run**. Each row offers a
   retry (once the provider issue is fixed) or a dismissal; until you act, the row stays
   visible instead of vanishing into History.
-- **Awaiting adoption** — promoted proposals Proxytrace is watching live traffic for.
+- **Awaiting adoption** — approved proposals Proxytrace is watching live traffic for.
 - **In flight** — theories that are queued (*Proposed*) or mid-A/B-test (*Validating*, with a
   live progress bar).
 - **History** — everything decided (adopted, dismissed, or disproven), collapsed by default,
@@ -108,7 +108,7 @@ measured pass-rate jump and the p-value verdict. Selecting a row opens its dossi
   gain** (the measured pass-rate jump, with the p-value verdict) as the headline, the
   **concrete change to apply** — the prompt diff, tool definition diff, or model swap — in the
   wide column, and the evidence (the full A/B result, source runs, and rationale) alongside.
-  **Promote** and **Dismiss** sit in the pinned decision bar at the bottom.
+  **Approve for implementation** and **Dismiss** sit in the pinned decision bar at the bottom.
 - A **disproven or dismissed** theory keeps the same dossier with its (non-)improvement and
   verdict, so history stays inspectable.
 - A **failed** theory's dossier states that the A/B validation could not run and that nothing
@@ -153,16 +153,16 @@ spawned, clearing the recorded A/B metrics, and re-queuing it for a fresh valida
 to retry a theory after the agent, suite, or model has changed — or after fixing the provider
 problem that made a validation fail.
 
-Reset is **not** offered once a proposal has been **promoted** (accepted): the change is already
-applied to the agent, and resetting would not revert it. Dismiss-then-reset is fine; promoted
-proposals are not resettable.
+Reset is **not** offered once a proposal has been **approved** (accepted): the change is
+already prepared for the agent, and resetting would not undo it. Dismiss-then-reset is fine;
+approved proposals are not resettable.
 
 ## Submitting your own theory
 
 Send a `POST /api/theories` request naming the agent, the suite to validate against, your
 rationale, and the proposed change (a new system prompt, a replacement endpoint, or updated
 tools). Proxytrace deduplicates and validates it exactly like an optimizer-produced theory;
-if it wins, it appears under **Needs decision** ready to promote, and you can follow it through
+if it wins, it appears under **Needs decision** ready to approve, and you can follow it through
 the queue as it moves through validation.
 
 ## Deduplication

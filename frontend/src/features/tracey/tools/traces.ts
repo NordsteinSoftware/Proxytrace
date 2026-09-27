@@ -58,7 +58,7 @@ export const createTraceTools: ToolFactory = (ctx, store) => ({
           durationMs: t.durationMs,
           tokens: t.inputTokens + t.outputTokens,
           preview: t.messagePreview ? clip(t.messagePreview, 100) : null,
-          // The two fields that make a tool loop legible. `preview` is the FIRST user message, so
+          // The two fields that make a tool loop legible. `preview` is the latest user message, so
           // every call of one turn previews identically — without the conversation id and the
           // per-call tool-call count the rows are indistinguishable, and "the newest one" silently
           // means "the closing summary".

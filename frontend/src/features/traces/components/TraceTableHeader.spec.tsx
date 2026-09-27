@@ -11,6 +11,8 @@ import { TraceTableHeader } from './TraceTableHeader';
 
 const i18n = setupI18n({ locale: 'en', messages: { en: {} } });
 const onSortChange = vi.fn();
+const onJumpToLatest = vi.fn();
+let pendingRefresh = false;
 let container: HTMLDivElement;
 let root: Root;
 
@@ -21,7 +23,7 @@ function Host() {
       <TooltipProvider>
         <div data-testid="layout" style={style}>
           <TraceTableHeader sort={{ field: 'time', desc: true }} onSortChange={onSortChange}
-            position={{ first: 0, last: 0, total: 0, pendingRefresh: false }} onColumnResize={resizeColumn} />
+            position={{ first: 0, last: 0, total: 0, pendingRefresh, onJumpToLatest }} onColumnResize={resizeColumn} />
         </div>
       </TooltipProvider>
     </I18nProvider>
@@ -36,6 +38,8 @@ beforeEach(() => {
     setItem: (key: string, value: string) => { storage.set(key, value); },
   });
   onSortChange.mockClear();
+  onJumpToLatest.mockClear();
+  pendingRefresh = false;
   container = document.createElement('div');
   document.body.appendChild(container);
   root = createRoot(container);
@@ -105,4 +109,13 @@ it.each(['null', '{}', '["wide", -20, 99999, null]'])('validates saved widths: %
   localStorage.setItem('traces.columnWidths', raw);
   render();
   expect(layout().getPropertyValue('--trace-grid')).not.toMatch(/wide|-20|99999|NaN/);
+});
+
+it('offers a visible jump action only while new traces are waiting', () => {
+  render();
+  expect(container.querySelector('[data-testid="trace-jump-latest"]')).toBeNull();
+  pendingRefresh = true;
+  render();
+  act(() => container.querySelector<HTMLButtonElement>('[data-testid="trace-jump-latest"]')!.click());
+  expect(onJumpToLatest).toHaveBeenCalledOnce();
 });

@@ -100,7 +100,7 @@ export interface AgentCallDto {
 }
 
 /** Lightweight agent-call projection for the traces table / dashboard live stream. Carries row
- * fields plus a precomputed first-user-message preview and response tool-request count; the full
+ * fields plus a precomputed latest-user-message preview and response tool-request count; the full
  * {@link AgentCallDto} (request, response, tools, model parameters) is fetched per-selection via
  * `GET /api/agent-calls/{id}`. */
 export interface AgentCallListItemDto {
@@ -109,7 +109,7 @@ export interface AgentCallListItemDto {
   agentName: string | null;
   model: string;
   provider: string;
-  /** First user message in the request, whitespace-collapsed; null when none. */
+  /** Latest user message in the request, whitespace-collapsed; null when none. */
   messagePreview: string | null;
   /** Number of tool requests in the response. */
   toolCount: number;

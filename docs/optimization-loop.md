@@ -417,10 +417,11 @@ An **`OptimizationProposal`** has `Kind`, `Status` (`Draft`/`Accepted`/`Adopted`
 to the **Proposals** review desk over SSE via `IProposalBroadcaster` (`proposal-created`,
 `proposal-status-changed`) and `ITheoryBroadcaster`.
 
-**Promote = handoff, not auto-apply.** On promote the UI offers the handoff package: copy
-buttons for the proposed prompt / tools JSON / model name, a client-generated markdown
-"apply this change" doc, and the machine-readable artifact endpoint
-`GET /api/proposals/{id}/artifact` (license-gated like the rest of the controller).
+**Approve = handoff, not auto-apply.** Approving (the UI's *Approve for implementation*; the
+status transition is `Accept()`) offers the handoff package: copy buttons for the proposed
+prompt / tools JSON / model name, a client-generated markdown "apply this change" doc, and the
+machine-readable artifact endpoint `GET /api/proposals/{id}/artifact` (license-gated like the
+rest of the controller).
 
 `ITheoryValidationService` also supports **resetting** a terminal theory (Validated, Invalidated,
 or Failed) for re-validation (`TheoryResetOutcome`) — refused if the spawned proposal was already

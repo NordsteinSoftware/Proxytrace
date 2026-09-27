@@ -57,8 +57,9 @@ Typical things you can do:
 - **Filters** compose through the **+ Filter** button on the toolbar line, beside search and
   the time range. Pick a field, pick a value, and the filter appears as a removable chip on the
   row below; add as many as you need — they combine (a trace must match every chip). Click a
-  chip to change its value or remove it; **Clear all** drops every chip at once. Available
-  filters:
+  chip to change its value or remove it; **Clear filters** drops every chip at once, and
+  **Reset view** beside the toolbar returns the whole page to its opening state — no chips, no
+  search, all-time range, and no zoom. Available filters:
   - **Agent** — focus on one agent. Only agents that actually have traces in the selected
     time range are listed.
   - **Anomaly** — only flagged traces: **Any anomaly**, or a specific reason (high tokens,
@@ -90,8 +91,8 @@ Typical things you can do:
   one is new — and nothing else moves or reloads. Under a metric sort (say slowest-first) the new
   trace lands wherever it actually ranks rather than being pushed to the top, and a call that doesn't
   match your filters doesn't appear at all. Live captures pause while you are scrolled down, so rows
-  never shift under you mid-read: a small pulsing dot beside the position count means new traces are
-  waiting, and scrolling back to the top brings them in.
+  never shift under you mid-read: a **New traces · Jump to latest ↑** action appears beside the
+  position count, and clicking it (or scrolling back to the top) brings the waiting traces in.
 
 ![Scrolling back through the trace list: day markers label each run of traces, the header keeps a running "1–15 of 16" count, and an "End of results" rule closes the list.](/screenshots/traces/day-markers.png)
 
@@ -171,11 +172,13 @@ and the call's **HTTP status**. The line below shows the full **trace ID** with 
 button that puts it on your clipboard, and the exact **capture time** (date and time, to the
 second). The header also holds the panel's actions: **Ask Tracey** opens a question box where
 you can ask something specific about this call (for example, “Why was the refund approved?”),
-then hands the trace ID and your question to the [AI assistant](/guide/tracey). **Generate tests**
-reads the whole conversation and [proposes the test cases worth
-building](/guide/test-suites-and-cases#let-proxytrace-propose-the-cases) — it starts as soon as the
-panel opens (Enterprise). To turn traces into cases by hand instead, open a suite on the **Test
-Suites** page and use [Add from traces](/guide/test-suites-and-cases#building-a-suite-from-traces).
+then hands the trace ID and your question to the [AI assistant](/guide/tracey). **Add to test
+suite** turns the trace into a [test case](/guide/test-suites-and-cases) directly — pick an
+existing suite or create one, keep the model's recorded response as the expected output, or
+correct it to capture the behaviour you actually want — and it works on every license tier.
+**Generate tests** instead reads the whole conversation and [proposes the test cases worth
+building](/guide/test-suites-and-cases#let-proxytrace-propose-the-cases) — it starts as soon as
+the panel opens (Enterprise).
 
 If the call was [flagged as an outlier](/guide/outliers) or by a
 [custom anomaly detector](/guide/anomaly-dashboard#custom-anomaly-detectors), an **Anomalous

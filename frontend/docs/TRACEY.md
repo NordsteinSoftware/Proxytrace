@@ -381,7 +381,7 @@ the synthesis agent reads the whole conversation, targets the call that *decided
 `Correction` landing on an already-resolved input as `Unpassable` (`ProposalValidator`, backend) —
 before anything is written. The remaining three catch what still gets through. `find_traces` reports
 `conversationId` and `toolCallsRequested` per row,
-which is what makes a loop legible at all — `preview` is the *first user message*, so every call of
+which is what makes a loop legible at all — `preview` is the *latest user message*, so every call of
 one turn previews identically and "the newest trace" silently means "the closing summary".
 `Conversation.ResolvedToolCallCount` (domain) counts the tool calls an input already resolved and
 rides out on `TestCaseDto.resolvedToolCallCount`, so `get_suite`'s digest carries `resolvedToolCalls`

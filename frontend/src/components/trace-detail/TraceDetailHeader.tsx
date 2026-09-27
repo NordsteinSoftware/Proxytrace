@@ -11,6 +11,7 @@ import { ColoredBadge } from '../ui/ColoredBadge';
 import { Button, IconButton } from '../ui/Button';
 import { AskTraceyButton } from '../tracey/AskTraceyButton';
 import { Trans, useLingui } from '@lingui/react/macro';
+import { traceStatusLabel } from './traceStatus';
 
 export interface HeaderAction {
   disabled: boolean;
@@ -24,6 +25,7 @@ interface Props {
   onPrev?: () => void;
   onNext?: () => void;
   onAskTracey: () => void;
+  onAddTest?: () => void;
   generate: HeaderAction;
 }
 
@@ -33,19 +35,18 @@ interface Props {
  * (mono, copyable, truncates first) + exact capture time, with the actions. Message/tool-call
  * counts are deliberately absent — the tab badges below already carry them.
  *
- * Generate tests is the drawer's only test-creation action, so it holds the primary slot. Adding a
- * case by hand lives on the Test Suites page ("Add from traces"), which is not license-gated.
+ * Adding a recorded or corrected test is the primary action; AI generation is separate.
  */
-export function TraceDetailHeader({ trace, onClose, onPrev, onNext, onAskTracey, generate }: Props) {
+export function TraceDetailHeader({ trace, onClose, onPrev, onNext, onAskTracey, onAddTest, generate }: Props) {
   const navigate = useNavigate();
-  const { t } = useLingui();
+  const { t, i18n } = useLingui();
   const canGenerate = useFeature('TestCaseSynthesis');
 
   const aColor = agentColor(trace.agentId ?? trace.id);
   const statusOk = trace.httpStatus >= 200 && trace.httpStatus < 300;
   const statusErr = trace.httpStatus >= 500;
   const statusColor = statusOk ? 'var(--success)' : statusErr ? 'var(--danger)' : 'var(--warn)';
-  const statusLabel = statusOk ? t`OK` : statusErr ? t`ERROR` : t`RATE_LIMIT`;
+  const statusLabel = i18n._(traceStatusLabel(trace.httpStatus));
 
   return (
     <div className="px-5 pt-4 pb-3 flex flex-col gap-2.5 border-b border-hairline shrink-0">
@@ -70,6 +71,7 @@ export function TraceDetailHeader({ trace, onClose, onPrev, onNext, onAskTracey,
         )}
         <ColoredBadge color={modelColor(trace.model)} label={trace.model} dot size="md" />
         <span
+          data-testid="trace-detail-status"
           className={cn(
             'inline-flex items-center gap-1.5 px-2 py-0.5 rounded-none text-caption font-semibold font-mono shrink-0',
             statusOk ? 'bg-success-subtle' : statusErr ? 'bg-danger-subtle' : 'bg-[color-mix(in_srgb,var(--warn)_15%,transparent)]',
@@ -97,7 +99,7 @@ export function TraceDetailHeader({ trace, onClose, onPrev, onNext, onAskTracey,
       </div>
 
       {/* Provenance row: trace ID + exact capture time left, actions right */}
-      <div className="flex items-center gap-2 min-w-0">
+      <div className="flex flex-wrap items-center gap-2 min-w-0">
         <span className="mono text-body-sm text-secondary truncate min-w-0" title={trace.id}>{trace.id}</span>
         <CopyButton text={trace.id} label={t`Copy trace ID`} className="shrink-0" />
         <span aria-hidden className="text-body-sm text-muted shrink-0">·</span>
@@ -119,7 +121,7 @@ export function TraceDetailHeader({ trace, onClose, onPrev, onNext, onAskTracey,
           </>
         )}
         <span className="flex-1" />
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex flex-wrap items-center gap-2">
           <AskTraceyButton
             data-testid="ask-tracey-btn-trace"
             onClick={onAskTracey}
@@ -134,11 +136,16 @@ export function TraceDetailHeader({ trace, onClose, onPrev, onNext, onAskTracey,
             }}
             disabled={canGenerate && generate.disabled}
             title={canGenerate ? generate.tooltip || undefined : undefined}
-            variant="primary"
+            variant="secondary"
+            data-write
             size="sm"
             leftIcon={canGenerate ? <SparklesIcon size={12} /> : <LockIcon size={12} />}
           >
             {canGenerate ? <Trans>Generate tests</Trans> : <Trans>Upgrade to generate</Trans>}
+          </Button>
+          <Button variant="primary" size="sm" data-testid="trace-add-test-btn" onClick={onAddTest}
+            disabled={!onAddTest} title={!trace.agentId ? t`Link this trace to an agent before adding a test.` : undefined}>
+            <Trans>Add to test suite</Trans>
           </Button>
         </div>
       </div>

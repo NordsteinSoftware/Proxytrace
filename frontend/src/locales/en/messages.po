@@ -362,10 +362,6 @@ msgstr "{0} selected"
 msgid "{0} slower"
 msgstr "{0} slower"
 
-#. placeholder {0}: Math.round(v)
-msgid "{0} t/s"
-msgstr "{0} t/s"
-
 #. placeholder {0}: fmtTokens(totalTok)
 msgid "{0} tok"
 msgstr "{0} tok"
@@ -776,6 +772,9 @@ msgstr "Acceptable"
 msgid "Accepted"
 msgstr "Accepted"
 
+msgid "Access denied"
+msgstr "Access denied"
+
 msgid "Access Denied"
 msgstr "Access Denied"
 
@@ -865,6 +864,9 @@ msgstr "Add the judge to {0}"
 
 msgid "Add to suite"
 msgstr "Add to suite"
+
+msgid "Add to test suite"
+msgstr "Add to test suite"
 
 msgid "Add tool request"
 msgstr "Add tool request"
@@ -1098,6 +1100,18 @@ msgstr "Apply to all agents"
 msgid "Approaching limit"
 msgstr "Approaching limit"
 
+msgid "Approval prepares the handoff. Apply the change in your agent's code, then Proxytrace checks live traffic for adoption."
+msgstr "Approval prepares the handoff. Apply the change in your agent's code, then Proxytrace checks live traffic for adoption."
+
+msgid "Approve for implementation"
+msgstr "Approve for implementation"
+
+msgid "Approved"
+msgstr "Approved"
+
+msgid "Approved — apply the change in your agent, then check adoption."
+msgstr "Approved — apply the change in your agent, then check adoption."
+
 msgid "Approximate tokens (chars / 4)"
 msgstr "Approximate tokens (chars / 4)"
 
@@ -1162,6 +1176,9 @@ msgstr "Auth error: {0}"
 
 msgid "Authentication code"
 msgstr "Authentication code"
+
+msgid "Authentication failed"
+msgstr "Authentication failed"
 
 msgid "Auto"
 msgstr "Auto"
@@ -1390,14 +1407,14 @@ msgstr "clear"
 msgid "Clear"
 msgstr "Clear"
 
-msgid "Clear all"
-msgstr "Clear all"
-
 msgid "Clear conversation"
 msgstr "Clear conversation"
 
 msgid "Clear filter"
 msgstr "Clear filter"
+
+msgid "Clear filters"
+msgstr "Clear filters"
 
 msgid "Clear search"
 msgstr "Clear search"
@@ -1438,6 +1455,9 @@ msgstr "Click a score to filter · selected highlights below"
 msgid "Click any row to inspect its conversation."
 msgstr "Click any row to inspect its conversation."
 
+msgid "Client error"
+msgstr "Client error"
+
 msgid "close"
 msgstr "close"
 
@@ -1456,6 +1476,10 @@ msgstr "Compare"
 #. placeholder {0}: row.summary
 msgid "Compare all models — {0}"
 msgstr "Compare all models — {0}"
+
+#. placeholder {0}: baseline.run.endpointName
+msgid "Compared with {0}"
+msgstr "Compared with {0}"
 
 msgid "Comparing runs…"
 msgstr "Comparing runs…"
@@ -1739,6 +1763,9 @@ msgstr "Create schedule"
 msgid "Create suite"
 msgstr "Create suite"
 
+msgid "Create suite and add test"
+msgstr "Create suite and add test"
+
 msgid "Create Test Suite"
 msgstr "Create Test Suite"
 
@@ -1790,6 +1817,9 @@ msgstr "current"
 msgid "Current calendar month (UTC)"
 msgstr "Current calendar month (UTC)"
 
+msgid "current ingestion backlog"
+msgstr "current ingestion backlog"
+
 msgid "Current license"
 msgstr "Current license"
 
@@ -1835,6 +1865,9 @@ msgstr "Dashboard, agents, test suites & evaluators"
 msgid "Data Purged"
 msgstr "Data Purged"
 
+msgid "Data range"
+msgstr "Data range"
+
 msgid "days"
 msgstr "days"
 
@@ -1846,6 +1879,12 @@ msgstr "Default model"
 
 msgid "Default parameters (none specified)"
 msgstr "Default parameters (none specified)"
+
+msgid "Default upstream provider"
+msgstr "Default upstream provider"
+
+msgid "Default Upstream Provider Changed"
+msgstr "Default Upstream Provider Changed"
 
 msgid "Definition"
 msgstr "Definition"
@@ -2051,6 +2090,9 @@ msgstr "Edit"
 msgid "Edit {0}"
 msgstr "Edit {0}"
 
+msgid "Edit default upstream provider"
+msgstr "Edit default upstream provider"
+
 msgid "Edit detector"
 msgstr "Edit detector"
 
@@ -2158,9 +2200,6 @@ msgstr "error"
 
 msgid "Error"
 msgstr "Error"
-
-msgid "ERROR"
-msgstr "ERROR"
 
 msgid "Error log"
 msgstr "Error log"
@@ -2578,6 +2617,9 @@ msgstr "Improved the pass rate."
 msgid "improvement only"
 msgstr "improvement only"
 
+msgid "Improvements"
+msgstr "Improvements"
+
 msgid "in"
 msgstr "in"
 
@@ -2608,8 +2650,8 @@ msgstr "Indexing configuration for the active project."
 msgid "Info"
 msgstr "Info"
 
-msgid "ingestion backlog"
-msgstr "ingestion backlog"
+msgid "Informational"
+msgstr "Informational"
 
 msgid "Ingestion proxy"
 msgstr "Ingestion proxy"
@@ -2760,6 +2802,10 @@ msgstr "last 30 days"
 msgid "Last 30 days"
 msgstr "Last 30 days"
 
+#. placeholder {0}: fmtLatency(telemetry.p95Ms)
+msgid "last 5 min · p95 {0}"
+msgstr "last 5 min · p95 {0}"
+
 msgid "Last 6 hours"
 msgstr "Last 6 hours"
 
@@ -2810,12 +2856,6 @@ msgstr "Latency spectrum"
 msgid "Latency stats appear after traces arrive."
 msgstr "Latency stats appear after traces arrive."
 
-msgid "latest suite run"
-msgstr "latest suite run"
-
-msgid "latest suite run · project-wide"
-msgstr "latest suite run · project-wide"
-
 msgid "Leave blank to keep current password"
 msgstr "Leave blank to keep current password"
 
@@ -2844,6 +2884,9 @@ msgstr "License Set"
 msgid "Licensed to <0>{0}</0>"
 msgstr "Licensed to <0>{0}</0>"
 
+msgid "Link this trace to an agent before adding a test."
+msgstr "Link this trace to an agent before adding a test."
+
 msgid "List agents"
 msgstr "List agents"
 
@@ -2859,8 +2902,14 @@ msgstr "LIVE"
 msgid "Live feed"
 msgstr "Live feed"
 
+msgid "Live rates · last 5 min"
+msgstr "Live rates · last 5 min"
+
 msgid "live re-score"
 msgstr "live re-score"
+
+msgid "Live throughput"
+msgstr "Live throughput"
 
 msgid "LLM"
 msgstr "LLM"
@@ -3276,8 +3325,11 @@ msgstr "New suite"
 msgid "New suite name"
 msgstr "New suite name"
 
-msgid "New traces available. Scroll to the top to refresh."
-msgstr "New traces available. Scroll to the top to refresh."
+msgid "New traces · Jump to latest ↑"
+msgstr "New traces · Jump to latest ↑"
+
+msgid "New traces available."
+msgstr "New traces available."
 
 msgid "Next"
 msgstr "Next"
@@ -3527,6 +3579,12 @@ msgstr "No response captured for this call."
 msgid "No rows."
 msgstr "No rows."
 
+msgid "No runs for this agent"
+msgstr "No runs for this agent"
+
+msgid "No runs in range"
+msgstr "No runs in range"
+
 msgid "No runs yet"
 msgstr "No runs yet"
 
@@ -3650,6 +3708,9 @@ msgstr "Non-model data deleted"
 msgid "None"
 msgstr "None"
 
+msgid "None — anonymous forwarding disabled"
+msgstr "None — anonymous forwarding disabled"
+
 msgid "Not attached to any suite yet."
 msgstr "Not attached to any suite yet."
 
@@ -3713,6 +3774,9 @@ msgstr "Numeric extract"
 msgid "Numeric Match"
 msgstr "Numeric Match"
 
+msgid "Observed in traffic"
+msgstr "Observed in traffic"
+
 msgid "Off"
 msgstr "Off"
 
@@ -3730,6 +3794,9 @@ msgstr "One of the regex triggers is not a valid pattern."
 
 msgid "Online"
 msgstr "Online"
+
+msgid "Only completed, consistently judged cases are compared."
+msgstr "Only completed, consistently judged cases are compared."
 
 msgid "Only successful traces (2xx) are shown — errored traces aren't useful for benchmarking."
 msgstr "Only successful traces (2xx) are shown — errored traces aren't useful for benchmarking."
@@ -3778,6 +3845,9 @@ msgstr "Open suite \"{0}\""
 
 msgid "Open test run"
 msgstr "Open test run"
+
+msgid "Open Test Suites →"
+msgstr "Open Test Suites →"
 
 msgid "Open this result in the run matrix"
 msgstr "Open this result in the run matrix"
@@ -3865,10 +3935,6 @@ msgstr "Overview"
 
 msgid "Owner"
 msgstr "Owner"
-
-#. placeholder {0}: fmtLatency(telemetry.p95Ms)
-msgid "p95 {0}"
-msgstr "p95 {0}"
 
 #. placeholder {0}: fmtLatency(latencyStats.p95)
 #. placeholder {1}: fmtLatency(latencyStats.p99)
@@ -4126,15 +4192,6 @@ msgstr "Projects group your agents, traces, and benchmarks."
 msgid "Projects, Users & API keys"
 msgstr "Projects, Users & API keys"
 
-msgid "Promote"
-msgstr "Promote"
-
-msgid "Promoted"
-msgstr "Promoted"
-
-msgid "Promoted — awaiting adoption in your agent."
-msgstr "Promoted — awaiting adoption in your agent."
-
 msgid "Prompt rewrite"
 msgstr "Prompt rewrite"
 
@@ -4267,8 +4324,8 @@ msgstr "Raised"
 msgid "Range"
 msgstr "Range"
 
-msgid "RATE_LIMIT"
-msgstr "RATE_LIMIT"
+msgid "Rate limited"
+msgstr "Rate limited"
 
 msgid "Raw JSON"
 msgstr "Raw JSON"
@@ -4334,6 +4391,9 @@ msgstr "Recommended"
 msgid "RED"
 msgstr "RED"
 
+msgid "Redirect"
+msgstr "Redirect"
+
 msgid "Refine"
 msgstr "Refine"
 
@@ -4348,6 +4408,9 @@ msgstr "Regressed"
 
 msgid "Regression"
 msgstr "Regression"
+
+msgid "Regressions"
+msgstr "Regressions"
 
 msgid "Regular expression…"
 msgstr "Regular expression…"
@@ -4443,6 +4506,9 @@ msgstr "Request · {model}"
 msgid "Request a new link"
 msgstr "Request a new link"
 
+msgid "Requests without credentials outside /openai/v1 are forwarded to this provider without adding its API key. Choose None to disable."
+msgstr "Requests without credentials outside /openai/v1 are forwarded to this provider without adding its API key. Choose None to disable."
+
 msgid "required"
 msgstr "required"
 
@@ -4475,6 +4541,9 @@ msgstr "Reset to Proposed"
 
 msgid "Reset two-factor authentication"
 msgstr "Reset two-factor authentication"
+
+msgid "Reset view"
+msgstr "Reset view"
 
 msgid "Reset your password"
 msgstr "Reset your password"
@@ -4511,6 +4580,9 @@ msgstr "Retry validation"
 
 msgid "Reveal"
 msgstr "Reveal"
+
+msgid "Review"
+msgstr "Review"
 
 msgid "Review instructions"
 msgstr "Review instructions"
@@ -4565,6 +4637,9 @@ msgstr "Run a suite to get started."
 
 msgid "Run cancelled."
 msgstr "Run cancelled."
+
+msgid "run cases in selected range"
+msgstr "run cases in selected range"
 
 msgid "Run comparison"
 msgstr "Run comparison"
@@ -4663,6 +4738,9 @@ msgstr "Save"
 msgid "Save changes"
 msgstr "Save changes"
 
+msgid "Save default upstream provider"
+msgstr "Save default upstream provider"
+
 msgid "Save endpoint"
 msgstr "Save endpoint"
 
@@ -4671,6 +4749,9 @@ msgstr "Save name"
 
 msgid "Save schedule"
 msgstr "Save schedule"
+
+msgid "Save the recorded response as the expected output, or correct it to capture the behavior you want."
+msgstr "Save the recorded response as the expected output, or correct it to capture the behavior you want."
 
 msgid "Save these backup codes somewhere safe. Each can be used once to sign in if you lose your authenticator. They will not be shown again."
 msgstr "Save these backup codes somewhere safe. Each can be used once to sign in if you lose your authenticator. They will not be shown again."
@@ -4985,6 +5066,9 @@ msgstr "Sensitivity (standard deviations)"
 msgid "Sensitivity must be above 0, and the sample counts at least 1."
 msgstr "Sensitivity must be above 0, and the sample counts at least 1."
 
+msgid "Server error"
+msgstr "Server error"
+
 msgid "Session"
 msgstr "Session"
 
@@ -5026,6 +5110,9 @@ msgstr "Share this one-time link with the user. It won't be shown again."
 
 msgid "Show"
 msgstr "Show"
+
+msgid "Show all time →"
+msgstr "Show all time →"
 
 msgid "Show available tools"
 msgstr "Show available tools"
@@ -5318,6 +5405,10 @@ msgstr "Terrible"
 msgid "Test"
 msgstr "Test"
 
+#. placeholder {0}: suite.name
+msgid "Test added to {0}"
+msgstr "Test added to {0}"
+
 msgid "Test case"
 msgstr "Test case"
 
@@ -5430,8 +5521,8 @@ msgstr "The A/B validation could not run — nothing was measured."
 msgid "The A/B validation could not run (e.g. the provider was unreachable) — the theory was never tested. Retry it or dismiss it."
 msgstr "The A/B validation could not run (e.g. the provider was unreachable) — the theory was never tested. Retry it or dismiss it."
 
-msgid "The change beat the baseline. Promote it to get the handoff package, or dismiss it."
-msgstr "The change beat the baseline. Promote it to get the handoff package, or dismiss it."
+msgid "The change beat the baseline. Approve it for implementation to get the handoff package, or dismiss it."
+msgstr "The change beat the baseline. Approve it for implementation to get the handoff package, or dismiss it."
 
 msgid "The change is live in the agent."
 msgstr "The change is live in the agent."
@@ -5637,9 +5728,6 @@ msgstr "This will permanently remove <0>{0}</0> and detach it from all test suit
 msgid "This window is too wide for {0} buckets — showing {1} spend instead."
 msgstr "This window is too wide for {0} buckets — showing {1} spend instead."
 
-msgid "Throughput"
-msgstr "Throughput"
-
 msgid "Thursday"
 msgstr "Thursday"
 
@@ -5831,8 +5919,14 @@ msgstr "Triggers"
 msgid "Try a different search term."
 msgstr "Try a different search term."
 
+msgid "Try a wider data range."
+msgstr "Try a wider data range."
+
 msgid "Try again"
 msgstr "Try again"
+
+msgid "Try another agent or clear the filter."
+msgstr "Try another agent or clear the filter."
 
 msgid "Try clearing the search or widening the time range."
 msgstr "Try clearing the search or widening the time range."
@@ -5883,6 +5977,12 @@ msgstr "Unattributed"
 msgid "Unattributed spend came through the provider's own key, or was recorded before per-key tracking existed. A key budget cannot cap it — the project budget is what holds it."
 msgstr "Unattributed spend came through the provider's own key, or was recorded before per-key tracking existed. A key budget cannot cap it — the project budget is what holds it."
 
+msgid "Unavailable provider"
+msgstr "Unavailable provider"
+
+msgid "Unchanged"
+msgstr "Unchanged"
+
 msgid "Undo"
 msgstr "Undo"
 
@@ -5903,6 +6003,9 @@ msgstr "Unknown agent"
 
 msgid "Unknown project"
 msgstr "Unknown project"
+
+msgid "Unknown status"
+msgstr "Unknown status"
 
 msgid "Unlimited agents"
 msgstr "Unlimited agents"
@@ -6264,24 +6367,3 @@ msgstr "Your rubric must produce one of these 5 scores; reasoning is optional."
 
 msgid "Yourself (creator)"
 msgstr "Yourself (creator)"
-
-msgid "Default upstream provider"
-msgstr "Default upstream provider"
-
-msgid "None — anonymous forwarding disabled"
-msgstr "None — anonymous forwarding disabled"
-
-msgid "Unavailable provider"
-msgstr "Unavailable provider"
-
-msgid "Requests without credentials outside /openai/v1 are forwarded to this provider without adding its API key. Choose None to disable."
-msgstr "Requests without credentials outside /openai/v1 are forwarded to this provider without adding its API key. Choose None to disable."
-
-msgid "Default Upstream Provider Changed"
-msgstr "Default Upstream Provider Changed"
-
-msgid "Edit default upstream provider"
-msgstr "Edit default upstream provider"
-
-msgid "Save default upstream provider"
-msgstr "Save default upstream provider"

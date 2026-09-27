@@ -126,7 +126,7 @@ export function TraceFilterBar({ agents, filters, onChange, onClearAll, showSyst
         data-testid="traces-clear-filters"
         onClick={onClearAll}
       >
-        <Trans>Clear all</Trans>
+        <Trans>Clear filters</Trans>
       </Button>
     </div>
   );

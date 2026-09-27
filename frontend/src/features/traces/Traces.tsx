@@ -6,7 +6,7 @@ import type { TraceAdvancedFilters, TraceRow, TraceSortField } from './tracesMet
 import { useTraceAdvancedFilters } from './hooks/useTraceAdvancedFilters';
 import { TraceFilterBar } from './components/TraceFilterBar';
 import { TraceFilterPicker } from './components/TraceFilterPicker';
-import { ALL_TIME, resolveRange, nowMs, type TimeRange } from '../../lib/timeRange';
+import { ALL_TIME, isRangeActive, resolveRange, nowMs, type TimeRange } from '../../lib/timeRange';
 import { buildTraceFilter, useTraceQueries } from './hooks/useTraceQueries';
 import { useTraceSelection } from './hooks/useTraceSelection';
 import { useTraceSummary } from './hooks/useTraceSummary';
@@ -154,11 +154,23 @@ export default function Traces() {
     setAdvanced(patch);
   }
 
-  function handleClearAdvanced() {
+  function handleClearFilters() {
     clearAdvanced();
-    // The system-traces view toggle now reads as a filter chip, so "Clear all" drops it too.
     setShowSystem(false);
   }
+
+  function handleResetView() {
+    handleClearFilters();
+    setSearch('');
+    setTimeRange(ALL_TIME);
+    setZoomStack([]);
+  }
+
+  // Reset is a no-op when the view is already at its opening state — hide it rather than offer
+  // a button that does nothing. (The filtered-empty state reads the same inputs, so its reset
+  // link is always present when it can help.)
+  const canResetView = hasActiveTraceFilters({ search, timeRangeActive: isRangeActive(timeRange), advanced })
+    || showSystem || zoomStack.length > 0;
 
   // Picking from the time-range picker is a fresh context — drop any zoom history.
   function handleTimeRangeChange(range: TimeRange) {
@@ -207,6 +219,7 @@ export default function Traces() {
         timeRange={timeRange}
         onSearchChange={handleSearchChange}
         onTimeRangeChange={handleTimeRangeChange}
+        onResetView={canResetView ? handleResetView : undefined}
         onClearSelection={statsSelection.summary ? statsSelection.clear : undefined}
         trailing={
           <>
@@ -226,7 +239,7 @@ export default function Traces() {
         agents={agents}
         filters={advanced}
         onChange={handleAdvancedChange}
-        onClearAll={handleClearAdvanced}
+        onClearAll={handleClearFilters}
         showSystem={showSystem}
         onShowSystemChange={handleShowSystemChange}
       />
@@ -263,7 +276,8 @@ export default function Traces() {
           onSelectTrace: t => selectTrace(t.id),
           onToggleConv: toggleConv,
         }}
-        filtered={hasActiveTraceFilters({ search: debouncedSearch, timeRangeActive: from != null, advanced })}
+        filtered={hasActiveTraceFilters({ search: debouncedSearch, timeRangeActive: isRangeActive(timeRange), advanced })}
+        onResetFilters={handleResetView}
         sort={sort}
         onSortChange={handleSortChange}
         scrollToTraceId={pendingScrollId}

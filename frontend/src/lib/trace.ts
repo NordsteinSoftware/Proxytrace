@@ -6,7 +6,7 @@
 import type { AgentCallListItemDto } from '../api/models';
 
 /**
- * Preview text for a trace row: the first user message in the request, with collapsed whitespace
+ * Preview text for a trace row: the latest user message in the request, with collapsed whitespace
  * (precomputed by the backend into {@link AgentCallListItemDto.messagePreview}). Null when the
  * request had no user message — including the empty-string marker the preview backfill writes for
  * such rows — so callers render an em-dash placeholder.

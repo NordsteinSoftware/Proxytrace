@@ -1,4 +1,4 @@
-import { useCallback, useRef } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router';
 import { Trans, useLingui } from '@lingui/react/macro';
 import { LanguageMenuItems } from './LanguageMenuItems';
@@ -16,11 +16,15 @@ import { Avatar } from '../ui/Avatar';
 import { IconButton } from '../ui/Button';
 import { Menu } from '../ui/Menu';
 import { UnifiedSearch, type UnifiedSearchHandle } from '../search/UnifiedSearch';
-import { LayoutSidebarIcon, LogOutIcon, LockIcon } from '../icons';
+import { Modal } from '../overlays/Modal';
+import { searchHitToHref } from '../../lib/search-routes';
+import { useMediaQuery } from '../../hooks/useMediaQuery';
+import { LayoutSidebarIcon, LogOutIcon, LockIcon, SearchIcon } from '../icons';
 import { cn } from '../../lib/cn';
 
 // Layout variant token (not UI copy) — typed so the literal is recognized as non-copy.
 const SEARCH_WIDTH: 'auto' | 'fixed' = 'fixed';
+const COMPACT_SEARCH_WIDTH: 'auto' | 'fixed' = 'auto';
 
 interface TopbarProps {
   /** Collapse the rail (md+) or toggle the off-canvas drawer (below md). Owned by the Shell. */
@@ -40,8 +44,14 @@ export function Topbar({ onToggleSidebar }: TopbarProps) {
   const { enabled: kioskEnabled } = useKiosk();
   const currentUser = useCurrentUser();
 
+  // eslint-disable-next-line lingui/no-unlocalized-strings -- CSS media query, not UI copy
+  const compactSearch = useMediaQuery('(max-width: 639px)');
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const searchRef = useRef<UnifiedSearchHandle>(null);
-  const focusSearch = useCallback(() => searchRef.current?.focus(), []);
+  const focusSearch = useCallback(() => {
+    if (compactSearch) setMobileSearchOpen(true);
+    else searchRef.current?.focus();
+  }, [compactSearch]);
   // eslint-disable-next-line lingui/no-unlocalized-strings -- keyboard shortcut key, not UI copy
   useGlobalShortcut('k', focusSearch);
 
@@ -65,7 +75,7 @@ export function Topbar({ onToggleSidebar }: TopbarProps) {
 
   return (
     <header
-      className="h-[48px] shrink-0 flex items-center px-4 gap-3 relative z-[3] bg-surface-2 border-b border-border"
+      className="h-[48px] shrink-0 flex items-center px-2 gap-1.5 sm:px-4 sm:gap-3 relative z-[3] bg-surface-2 border-b border-border"
     >
       <IconButton onClick={onToggleSidebar} aria-label={t`Toggle sidebar`}>
         <LayoutSidebarIcon size={16} />
@@ -86,6 +96,11 @@ export function Topbar({ onToggleSidebar }: TopbarProps) {
         )}
       </div>
       <div className="flex-1 sm:hidden" />
+      {currentProject?.id && (
+        <IconButton className="sm:hidden" onClick={() => setMobileSearchOpen(true)} aria-label={t`Search`} data-testid="mobile-search-trigger">
+          <SearchIcon size={16} />
+        </IconButton>
+      )}
 
       <div
         title={i18n._(HEALTH_LABEL[healthStatus])}
@@ -101,8 +116,7 @@ export function Topbar({ onToggleSidebar }: TopbarProps) {
             healthStatus === 'online' && 'pulse-dot',
           )}
         />
-        {/* Dot-only below lg — the label is redundant with the color + title on tight topbars. */}
-        <span className="hidden lg:inline">{i18n._(HEALTH_LABEL[healthStatus])}</span>
+        <span>{i18n._(HEALTH_LABEL[healthStatus])}</span>
       </div>
 
       <span className="hidden sm:contents"><LicenseBadge /></span>
@@ -139,6 +153,21 @@ export function Topbar({ onToggleSidebar }: TopbarProps) {
           <Trans>Logout</Trans>
         </Menu.Item>
       </Menu>
+      {mobileSearchOpen && compactSearch && currentProject?.id && (
+        <Modal title={t`Search`} onClose={() => setMobileSearchOpen(false)}>
+          <UnifiedSearch
+            projectId={currentProject.id}
+            width={COMPACT_SEARCH_WIDTH}
+            autoFocus
+            inlineResults
+            showShortcut={false}
+            onSelect={hit => {
+              navigate(searchHitToHref(hit));
+              setMobileSearchOpen(false);
+            }}
+          />
+        </Modal>
+      )}
     </header>
   );
 }

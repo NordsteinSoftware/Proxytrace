@@ -30,6 +30,8 @@ interface Props {
   recentLimit?: number;
   className?: string;
   showShortcut?: boolean;
+  /** Render results inside the parent panel (used by the compact-screen search dialog). */
+  inlineResults?: boolean;
 }
 
 export const UnifiedSearch = forwardRef<UnifiedSearchHandle, Props>(function UnifiedSearch({
@@ -44,6 +46,7 @@ export const UnifiedSearch = forwardRef<UnifiedSearchHandle, Props>(function Uni
   recentLimit = 6,
   className = '',
   showShortcut = true,
+  inlineResults = false,
 }, ref) {
   const { t } = useLingui();
   const [activeIndex, setActiveIndex] = useState(0);
@@ -101,15 +104,16 @@ export const UnifiedSearch = forwardRef<UnifiedSearchHandle, Props>(function Uni
       const hit = flat[activeIndex];
       if (hit) commit(hit);
     } else if (e.key === 'Escape') {
+      if (inlineResults) return; // The containing dialog owns Escape.
       e.preventDefault();
       if (raw) setRaw('');
       else close();
     }
   }
 
-  const dropdownWidthCls = width === 'fixed'
-    ? cn('left-1/2 -translate-x-1/2 w-[80vw]')
-    : cn('left-0 right-0');
+  const dropdownWidthCls = inlineResults
+    ? cn('relative mt-2 w-full')
+    : width === 'fixed' ? cn('left-1/2 -translate-x-1/2 w-[80vw]') : cn('left-0 right-0');
 
   const wrapperWidthCls = width === 'fixed' ? cn('flex-1 max-w-[720px] mx-auto') : cn('w-full');
   const inputBgCls = cn('bg-card-2');
@@ -161,7 +165,7 @@ export const UnifiedSearch = forwardRef<UnifiedSearchHandle, Props>(function Uni
 
       {open && (
         <div className={cn(
-          'absolute top-[calc(100%+8px)]',
+          !inlineResults && 'absolute top-[calc(100%+8px)]',
           dropdownWidthCls,
           'bg-surface-2 border border-border',
           'shadow-[var(--shadow-float)]',
@@ -192,8 +196,8 @@ export const UnifiedSearch = forwardRef<UnifiedSearchHandle, Props>(function Uni
           )}
 
           {hits.length > 0 && (
-            <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] h-[60vh] min-h-[280px]">
-              <div data-testid="search-results" className="min-h-0 overflow-y-auto py-2 border-r border-border-subtle">
+            <div className={cn('grid', inlineResults ? 'grid-cols-1 max-h-[50vh]' : 'grid-cols-[minmax(0,1fr)_minmax(0,1fr)] h-[60vh] min-h-[280px]')}>
+              <div data-testid="search-results" className={cn('min-h-0 overflow-y-auto py-2', !inlineResults && 'border-r border-border-subtle')}>
                 <SearchResultList
                   groupOrder={groupOrder}
                   grouped={grouped}
@@ -207,23 +211,25 @@ export const UnifiedSearch = forwardRef<UnifiedSearchHandle, Props>(function Uni
                 />
               </div>
 
-              <div className="min-h-0 overflow-y-auto p-4">
-                {activeHit ? (
-                  <SearchPreview key={`${activeHit.kind}-${activeHit.entityId}`} hit={activeHit} />
-                ) : (
-                  <div className="text-body-sm text-muted"><Trans>Hover or arrow to preview.</Trans></div>
-                )}
-              </div>
+              {!inlineResults && (
+                <div className="min-h-0 overflow-y-auto p-4">
+                  {activeHit ? (
+                    <SearchPreview key={`${activeHit.kind}-${activeHit.entityId}`} hit={activeHit} />
+                  ) : (
+                    <div className="text-body-sm text-muted"><Trans>Hover or arrow to preview.</Trans></div>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
-          <div className="border-t border-border px-4 py-2 flex items-center gap-4 text-body-sm text-muted bg-card-2">
+          {!inlineResults && <div className="border-t border-border px-4 py-2 flex items-center gap-4 text-body-sm text-muted bg-card-2">
             <span className="flex items-center gap-1.5"><kbd className={kbdCls}>↑↓</kbd> <Trans>navigate</Trans></span>
             <span className="flex items-center gap-1.5"><kbd className={kbdCls}>↵</kbd> {onSelect ? <Trans>pick</Trans> : <Trans>open</Trans>}</span>
             {/* eslint-disable-next-line lingui/no-unlocalized-strings -- keyboard key label, not UI copy */}
             <span className="flex items-center gap-1.5"><kbd className={kbdCls}>esc</kbd> <Trans>close</Trans></span>
             <span className="ml-auto">{hits.length > 0 ? (isRecentMode ? <Trans>{hits.length} recent</Trans> : <Plural value={hits.length} one="# result" other="# results" />) : ''}</span>
-          </div>
+          </div>}
         </div>
       )}
     </div>

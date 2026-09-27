@@ -3,7 +3,9 @@ import { useSearchParams } from 'react-router';
 import { Trans, useLingui } from '@lingui/react/macro';
 import type { TestRunGroupDto } from '../../api/models';
 import { Card } from '../../components/ui/Card';
-import { isActive } from './results';
+import { isActive, runsComplete } from './results';
+import { buildLeaderboard } from './comparison';
+import { useCurrentEndpointId } from './hooks/useAgentEndpoint';
 import type { LiveProgress } from './live';
 import {
   buildCohorts,
@@ -26,6 +28,10 @@ export function MatrixView({ group, live }: {
 }) {
   const { t } = useLingui();
   const cohorts = useMemo(() => buildCohorts(group.runs), [group.runs]);
+  const currentEndpointId = useCurrentEndpointId(group.agentId);
+  const complete = runsComplete(group.runs);
+  const baseline = buildLeaderboard(cohorts, complete, currentEndpointId).find(e => e.isBaseline);
+  const baselineEndpointId = complete ? baseline?.run.endpointId ?? null : null;
   const [searchParams, setSearchParams] = useSearchParams();
   // eslint-disable-next-line lingui/no-unlocalized-strings -- URL query-param key
   const caseParam = searchParams.get('case');
@@ -55,8 +61,8 @@ export function MatrixView({ group, live }: {
     return next;
   }, { replace: true });
   const closeDrawer = () => { setSelectedCase(null); if (caseParam) clearCaseParam(); };
-  const counts = matrixCounts(allRows);
-  const rows = useMemo(() => filterSortMatrixRows(allRows, filter, sort, active), [allRows, filter, sort, active]);
+  const counts = matrixCounts(allRows, baselineEndpointId);
+  const rows = useMemo(() => filterSortMatrixRows(allRows, filter, sort, active, baselineEndpointId), [allRows, filter, sort, active, baselineEndpointId]);
 
   const multi = cohorts.length > 1;
   const sampled = cohorts.some(c => c.sampleCount > 1);
@@ -94,6 +100,18 @@ export function MatrixView({ group, live }: {
           />
         </div>
       </div>
+
+      {multi && baselineEndpointId && baseline && (
+        <div className="flex flex-wrap items-center gap-2 border-b border-hairline px-4 py-2.5" data-testid="matrix-changes">
+          <span className="text-body-sm text-secondary"><Trans>Compared with {baseline.run.endpointName}</Trans></span>
+          <SegmentedControl value={filter} onChange={setFilter} segments={[
+            { value: 'regressions', label: t`Regressions`, count: counts.regressions, testId: 'matrix-regressions' },
+            { value: 'improvements', label: t`Improvements`, count: counts.improvements, testId: 'matrix-improvements' },
+            { value: 'unchanged', label: t`Unchanged`, count: counts.unchanged, testId: 'matrix-unchanged' },
+          ]} />
+          <span className="text-body-sm text-muted"><Trans>Only completed, consistently judged cases are compared.</Trans></span>
+        </div>
+      )}
 
       {/* Matrix */}
       {rows.length === 0 ? (

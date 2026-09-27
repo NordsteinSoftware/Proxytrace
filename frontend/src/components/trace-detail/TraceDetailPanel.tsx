@@ -23,6 +23,8 @@ import { msg } from '@lingui/core/macro';
 import { type MessageDescriptor } from '@lingui/core';
 import { useTraceyChatContext } from '../../features/tracey/tracey-chat-context';
 import { traceQuestionPrompt } from '../tracey/askTraceyPrompts';
+import { useLocalStorageState } from '../../hooks/useLocalStorageState';
+import { AddTraceTestModal } from './AddTraceTestModal';
 
 type Tab = 'Messages' | 'Tools' | 'Raw JSON' | 'Metadata';
 
@@ -45,17 +47,19 @@ export function TraceDetailPanel({ trace, onClose, onPrev, onNext }: Props) {
   const { askTracey } = useTraceyChatContext();
   const { t, i18n } = useLingui();
   // eslint-disable-next-line lingui/no-unlocalized-strings -- Tab id token (display label from TAB_LABELS)
-  const [tab, setTab] = useState<Tab>('Messages');
+  const [storedTab, setTab] = useLocalStorageState<Tab>('traces.detailTab', 'Messages');
+  // The drawer unmounts while an uncached trace loads; keep the inspection tab across that gap.
+  const tab = typeof storedTab === 'string' && Object.hasOwn(TAB_LABELS, storedTab) ? storedTab : 'Messages';
   const [generating, setGenerating] = useState(false);
+  const [addingTest, setAddingTest] = useState(false);
   const [askingTracey, setAskingTracey] = useState(false);
   const [prevTraceId, setPrevTraceId] = useState(trace.id);
 
-  // Reset tab when trace changes (derived state pattern per BEST_PRACTICES §4)
+  // Close trace-specific actions when the trace changes; keep the inspection tab.
   if (prevTraceId !== trace.id) {
     setPrevTraceId(trace.id);
-    // eslint-disable-next-line lingui/no-unlocalized-strings -- Tab id token (display label from TAB_LABELS)
-    setTab('Messages');
     setGenerating(false);
+    setAddingTest(false);
     setAskingTracey(false);
   }
 
@@ -102,13 +106,14 @@ export function TraceDetailPanel({ trace, onClose, onPrev, onNext }: Props) {
 
   return (
     <>
-      <DetailPanel onClose={onClose} onPrev={onPrev} onNext={onNext} keyboardEnabled={!generating && !askingTracey} testId="trace-detail">
+      <DetailPanel onClose={onClose} onPrev={onPrev} onNext={onNext} keyboardEnabled={!generating && !askingTracey && !addingTest} testId="trace-detail">
         <TraceDetailHeader
           trace={trace}
           onClose={onClose}
           onPrev={onPrev}
           onNext={onNext}
           onAskTracey={() => setAskingTracey(true)}
+          onAddTest={trace.agentId && !suitesQuery.isLoading ? () => setAddingTest(true) : undefined}
           generate={{
             disabled: generateDisabled,
             tooltip: generateTooltip,
@@ -187,6 +192,7 @@ export function TraceDetailPanel({ trace, onClose, onPrev, onNext }: Props) {
         </div>
       </DetailPanel>
 
+      {addingTest && <AddTraceTestModal trace={trace} suites={suites} onClose={() => setAddingTest(false)} />}
       {generating && (
         <SynthesizeTestsModal trace={trace} suites={suites} onClose={() => setGenerating(false)} />
       )}

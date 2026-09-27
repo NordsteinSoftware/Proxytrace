@@ -119,6 +119,13 @@ several. Click any cell to open the **comparison drawer**: it shows the case inp
 model's full output, and the per-evaluator verdicts side by side, so divergent behaviour is
 easy to spot without leaving the page.
 
+When a finished run compares more than one model, the matrix also offers a **change filter**
+above it: **Regressions**, **Improvements**, and **Unchanged** narrow the rows against your
+in-production **baseline** column, so you can jump straight to the cases a candidate broke (or
+fixed). Only cases where every model produced a consistent, judged verdict are classified — a
+case that is still running, unjudged, or flaky is left out of the change counts rather than
+being called unchanged.
+
 Each model column also has a **Request** button. It shows the exact request that run sends to
 the model — the resolved model name, the full message list (with the agent's system prompt
 merged in), and the **tool definitions** the model receives. Use it to confirm the agent is

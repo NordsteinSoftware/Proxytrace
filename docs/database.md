@@ -126,13 +126,14 @@ Set the connection string in:
 - **The traces list reads a lightweight projection.** `GetFilteredListAsync` selects scalar columns
   only and returns `AgentCallListItem`, so a page never reads or deserialises the `Request`,
   `Response` or `ModelParameters` payload columns. Two denormalised columns populated at write time
-  back this: `RequestPreview` (first user message, collapsed + truncated) and
+  back this: `RequestPreview` (latest user message, collapsed + truncated) and
   `ResponseToolRequestCount`. The full payload is loaded per-selection via `FindAsync`. The shared
   `AgentCallPreview.Build` computes the preview, used both at ingestion (`AgentCallConfig`) and by the
   backfill below. (Rows written before `RequestPreview` existed start with it `null`; a one-time,
   idempotent startup backfill — `AgentCallPreviewBackfillService`, registered after the DB initializer
   — recomputes their preview in bounded batches `WHERE RequestPreview IS NULL`, so they regain it on
-  the next boot. A request with no user message is marked with an empty string rather than `null` so
+  the next boot. The multi-turn preview migration also clears old previews for that backfill to
+  refresh. A request with no user message is marked with an empty string rather than `null` so
   the candidate set strictly shrinks and a re-run is a no-op; the client renders an empty preview as
   the same em-dash placeholder as `null`. `ResponseToolRequestCount` is not backfilled — older rows
   keep its `0` default.)

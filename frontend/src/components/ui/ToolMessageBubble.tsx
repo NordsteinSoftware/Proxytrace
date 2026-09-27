@@ -3,7 +3,7 @@ import { Trans, useLingui } from '@lingui/react/macro';
 import { ChevronRightIcon, ExternalLinkIcon } from '../icons';
 import { JsonBlock } from './JsonBlock';
 import { CopyButton } from './CopyButton';
-import { Button } from './Button';
+import { IconButton } from './Button';
 import { hoverRevealOverlayCls } from './classes';
 
 function safeParse(s: string | null | undefined): unknown {
@@ -94,16 +94,15 @@ export function ToolMessageBubble({ request, result, onJumpToDefinition, default
           </span>
         </button>
         {onJumpToDefinition && (
-          <Button
-            variant="ghost"
+          <IconButton
             size="sm"
             onClick={() => onJumpToDefinition()}
-            leftIcon={<ExternalLinkIcon size={10} strokeWidth={2.5} />}
+            aria-label={t`View tool definition on Agents page`}
             title={t`View tool definition on Agents page`}
-            className="ml-1 shrink-0 !px-2 !py-1 !text-caption !text-success hover:!text-success hover:!bg-success-subtle"
+            className="ml-1 shrink-0 !text-success hover:!text-success hover:!bg-success-subtle"
           >
-            <Trans>Definition</Trans>
-          </Button>
+            <ExternalLinkIcon size={13} strokeWidth={2.5} />
+          </IconButton>
         )}
       </div>
 

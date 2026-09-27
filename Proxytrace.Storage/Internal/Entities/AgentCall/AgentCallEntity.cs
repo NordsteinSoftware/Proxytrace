@@ -106,7 +106,7 @@ internal record AgentCallEntity : Entity
     // Denormalised summaries populated at write time so the traces-list query can project scalar
     // columns only, without reading/deserialising the Request and Response payload columns.
     /// <summary>
-    /// Truncated first user message from the request, populated at write time so list queries can
+    /// Truncated latest user message from the request, populated at write time so list queries can
     /// display a preview without deserializing the full Request JSON payload.
     /// </summary>
     public string? RequestPreview { get; init; }

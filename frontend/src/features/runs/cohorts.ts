@@ -6,6 +6,7 @@
 // before. Pure derive helpers — no JSX, no I/O; unit-tested in cohorts.spec.ts.
 
 import type { TestRunDto } from '../../api/models';
+import { TestRunStatus } from '../../api/models';
 import {
   buildMatrixCell,
   isDivergent,
@@ -177,8 +178,19 @@ export function cohortPassRate(rows: CohortRow[], cohortIndex: number): number |
 
 // ── Matrix filter / sort (cohort rows) ─────────────────────────────────────────
 
-export type MatrixFilter = 'all' | 'divergent' | 'flaky' | 'failing' | 'passing';
+export type CaseChange = 'regressions' | 'improvements' | 'unchanged';
+export type MatrixFilter = 'all' | 'divergent' | 'flaky' | 'failing' | 'passing' | CaseChange;
 export type MatrixSort = 'order' | 'worst';
+
+/** Compare only complete, consistently judged cohorts; missing or flaky data is not unchanged. */
+export function caseChange(row: CohortRow, baselineEndpointId: string | null): CaseChange | null {
+  const baseline = row.cells.find(c => c.cohort.endpointId === baselineEndpointId);
+  if (!baseline || row.cells.length < 2 || row.cells.some(c =>
+    c.status !== 'done' || c.judgedCount !== c.sampleCount || c.verdict === null || c.verdict === 'mixed'
+    || c.cohort.runs.some(r => r.status !== TestRunStatus.Completed))) return null;
+  if (row.cells.every(c => c.verdict === baseline.verdict)) return 'unchanged';
+  return baseline.verdict === 'pass' ? 'regressions' : 'improvements';
+}
 
 const rowFailing = (row: CohortRow): boolean => row.cells.some(c => c.verdict === 'fail' || c.verdict === 'mixed');
 const rowPassing = (row: CohortRow): boolean =>
@@ -188,14 +200,17 @@ const rowMinScore = (row: CohortRow): number => {
   return scores.length ? Math.min(...scores) : 1;
 };
 
-export interface MatrixCounts { all: number; divergent: number; flaky: number; failing: number; passing: number; }
+export interface MatrixCounts { all: number; divergent: number; flaky: number; failing: number; passing: number; regressions: number; improvements: number; unchanged: number; }
 
-export const matrixCounts = (rows: CohortRow[]): MatrixCounts => ({
+export const matrixCounts = (rows: CohortRow[], baselineEndpointId: string | null = null): MatrixCounts => ({
   all: rows.length,
   divergent: rows.filter(r => r.divergent).length,
   flaky: rows.filter(r => r.flaky).length,
   failing: rows.filter(rowFailing).length,
   passing: rows.filter(rowPassing).length,
+  regressions: rows.filter(r => caseChange(r, baselineEndpointId) === 'regressions').length,
+  improvements: rows.filter(r => caseChange(r, baselineEndpointId) === 'improvements').length,
+  unchanged: rows.filter(r => caseChange(r, baselineEndpointId) === 'unchanged').length,
 });
 
 /**
@@ -209,12 +224,16 @@ export function filterSortMatrixRows(
   filter: MatrixFilter,
   sort: MatrixSort,
   freezeOrder = false,
+  baselineEndpointId: string | null = null,
 ): CohortRow[] {
   let out = rows;
   if (filter === 'divergent') out = out.filter(r => r.divergent);
   else if (filter === 'flaky') out = out.filter(r => r.flaky);
   else if (filter === 'failing') out = out.filter(rowFailing);
   else if (filter === 'passing') out = out.filter(rowPassing);
+  else if (filter === 'regressions' || filter === 'improvements' || filter === 'unchanged') {
+    out = out.filter(r => caseChange(r, baselineEndpointId) === filter);
+  }
 
   if (freezeOrder) return out;
   if (sort === 'worst') return [...out].sort((a, b) => rowMinScore(a) - rowMinScore(b));

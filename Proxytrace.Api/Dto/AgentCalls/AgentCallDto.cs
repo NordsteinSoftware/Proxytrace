@@ -42,7 +42,7 @@ public record AgentCallToolRequestDto(string Id, string Name, string Arguments);
 
 /// <summary>
 /// Lightweight agent-call projection for the traces table / dashboard live stream. Carries only the
-/// row fields plus two precomputed summaries — the first-user-message preview and the response
+/// row fields plus two precomputed summaries — the latest-user-message preview and the response
 /// tool-request count — so the list never ships the fat <see cref="AgentCallDto"/> (full request,
 /// response, tool specs and model parameters). The full DTO is fetched per-selection via
 /// <c>GET /api/agent-calls/{id}</c>.

@@ -9,6 +9,79 @@ follow [Semantic Versioning](https://semver.org). Ongoing work is collected unde
 
 ## [Unreleased]
 
+### Added
+
+- **A trace can become a test case without leaving the drawer.** The trace detail panel's new
+  **Add to test suite** action picks an existing suite or creates a new one, keeps the recorded
+  response as the expected output, and lets you correct it before saving — on every license tier.
+  **Generate tests** stays the AI-assisted route and moves beside it.
+
+- **The runs matrix filters to what changed.** A finished multi-model run compares every case
+  against the in-production **baseline** column and offers **Regressions**, **Improvements** and
+  **Unchanged** filters above the matrix. Only cases where every model produced a consistent,
+  judged verdict are classified — running, unjudged or flaky cases are left out of the change
+  counts rather than being called unchanged.
+
+- **The Traces toolbar resets the whole view in one click.** **Reset view** clears the filter
+  chips, search, time range and timeline zoom together, and the filtered-empty state offers the
+  same reset instead of asking you to widen the filters by hand. The action appears only while
+  there is something to reset.
+
+- **New traces are one click away while you read.** When live arrivals were withheld because you
+  had scrolled down, the position readout now shows a **New traces · Jump to latest ↑** action
+  that returns to the top and brings them in — the previous version only showed a pulsing dot.
+
+- **The dashboard's data range is a page control.** The window picker moved from the token card
+  into the page header, so one **Data range** choice governs the whole dashboard. The pulse band's
+  counters are now labelled **Live rates · last 5 min** to make clear they stay on a fixed window.
+
+- **Phones get the full search.** Below `sm` the topbar swaps its search box for a search button
+  that opens the project search in a dialog with inline results.
+
+- **The trace drawer remembers its tab.** Messages / Tools / Raw JSON / Metadata now persists
+  across traces, arrivals and refreshes instead of snapping back to Messages.
+
+- **The proposal dossier shows where the decision stands.** An approval progress strip
+  (Review → Approved → Observed in traffic / Marked adopted) sits above the handoff package, and
+  the decision bar states up front that approving prepares the handoff rather than changing your
+  agent.
+
+### Changed
+
+- **Trace rows preview the newest user message.** The list's preview column shows the latest user
+  message of the request instead of the first, so a multi-turn call reads as the turn that
+  actually prompted it. Existing multi-turn previews are refreshed once on upgrade.
+
+- **The proposal decision reads "Approve for implementation".** The promoted status is now
+  labelled **Approved** throughout the review desk.
+
+- **The trace drawer's status badge names the failure.** The blanket `RATE_LIMIT` label (shown for
+  every non-2xx, non-5xx call) is replaced by a specific one: **Rate limited** for 429,
+  **Authentication failed** for 401, **Access denied** for 403, and a status-class fallback
+  otherwise.
+
+- **Dashboard states stop guessing.** The pass-rate gauge and tile read **No runs in range**
+  instead of 0% when the selected range has no judged runs, p95 latency shows a placeholder until
+  real samples exist rather than borrowing the live 5-minute telemetry, and the live feed's empty
+  state offers **Show all time** when a range is the reason it is empty.
+
+- **The dashboard live feed reads on a phone.** On narrow screens the feed drops its tokens and
+  latency columns, so each row leads with the message preview and agent instead of truncating both
+  to a letter or two.
+
+- **Empty states point somewhere.** An agent-filtered Runs list offers **Clear filter**, an empty
+  Runs list links to **Test Suites**, and the topbar health chip keeps its wording at every width
+  instead of collapsing to a colour-only dot.
+
+- **Filter-bar and tool-bubble wording.** "Clear all" became **Clear filters**, and a tool call's
+  link to its definition is now a compact icon button instead of a "Definition" text button.
+
+### Fixed
+
+- **A half-open custom time range counts as a filter.** A range with only an end set (or only a
+  start) previously left the traces empty state reading as a first-run setup screen; it now shows
+  the no-match state with its **Reset view** action.
+
 ## [1.14.0] - 2026-09-22
 
 ### Added

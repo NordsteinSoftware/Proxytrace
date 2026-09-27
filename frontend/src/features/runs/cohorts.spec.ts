@@ -4,6 +4,7 @@ import type { EvaluationResultDto, TestResultDto, TestRunDto } from '../../api/m
 import {
   buildCohorts,
   buildCohortRows,
+  caseChange,
   cohortPassRate,
   matrixCounts,
   filterSortMatrixRows,
@@ -134,7 +135,31 @@ describe('matrixCounts / filterSortMatrixRows (cohort rows)', () => {
   const rows = buildCohortRows(buildCohorts([a, b]));
 
   it('counts each filter category including flaky', () => {
-    expect(matrixCounts(rows)).toEqual({ all: 3, divergent: 1, flaky: 0, failing: 2, passing: 1 });
+    // Change counts need a baseline endpoint; with none every row is uncomparable.
+    expect(matrixCounts(rows)).toEqual({
+      all: 3, divergent: 1, flaky: 0, failing: 2, passing: 1,
+      regressions: 0, improvements: 0, unchanged: 0,
+    });
+  });
+
+  it('classifies change against the baseline endpoint', () => {
+    // x: a passes, b fails; y: both fail; z: both pass.
+    expect(matrixCounts(rows, 'a')).toEqual({
+      all: 3, divergent: 1, flaky: 0, failing: 2, passing: 1,
+      regressions: 1, improvements: 0, unchanged: 2,
+    });
+    expect(matrixCounts(rows, 'b')).toEqual({
+      all: 3, divergent: 1, flaky: 0, failing: 2, passing: 1,
+      regressions: 0, improvements: 1, unchanged: 2,
+    });
+  });
+
+  it('filters to regressions / improvements / unchanged', () => {
+    expect(filterSortMatrixRows(rows, 'regressions', 'order', false, 'a').map(r => r.caseId)).toEqual(['x']);
+    expect(filterSortMatrixRows(rows, 'improvements', 'order', false, 'b').map(r => r.caseId)).toEqual(['x']);
+    expect(filterSortMatrixRows(rows, 'unchanged', 'order', false, 'a').map(r => r.caseId).sort()).toEqual(['y', 'z']);
+    // Without a baseline, no row can be classified.
+    expect(filterSortMatrixRows(rows, 'regressions', 'order')).toEqual([]);
   });
 
   it('filters to divergent / failing / passing', () => {
@@ -148,6 +173,32 @@ describe('matrixCounts / filterSortMatrixRows (cohort rows)', () => {
     const flakyRows = buildCohortRows(buildCohorts(flakyRuns));
     expect(matrixCounts(flakyRows).flaky).toBe(1);
     expect(filterSortMatrixRows(flakyRows, 'flaky', 'order').map(r => r.caseId)).toEqual(['c']);
+  });
+
+  it('a change needs a baseline match and a comparable pair of cohorts', () => {
+    const [x] = rows; // case x, endpoints a (pass) and b (fail)
+    expect(caseChange(x, 'a')).toBe('regressions');
+    expect(caseChange(x, 'b')).toBe('improvements');
+    expect(caseChange(x, null)).toBeNull();
+    expect(caseChange(x, 'missing-endpoint')).toBeNull();
+    const [single] = buildCohortRows(buildCohorts([a]));
+    expect(single.cells).toHaveLength(1);
+    expect(caseChange(single, 'a')).toBeNull();
+  });
+
+  it('does not classify incomplete or flaky data as a change', () => {
+    const running = run({ id: 'b', endpointId: 'b', status: TestRunStatus.Running, results: [res('x', [FAIL])], testCases: [{ id: 'x', summary: 'X' }] });
+    const [pendingX] = buildCohortRows(buildCohorts([a, running]));
+    expect(caseChange(pendingX, 'a')).toBeNull();
+
+    const flakyRuns = [
+      run({ id: 'a0', endpointId: 'a', sampleIndex: 0, results: [res('c', [PASS])], testCases: [{ id: 'c', summary: 'C' }] }),
+      run({ id: 'a1', endpointId: 'a', sampleIndex: 1, results: [res('c', [FAIL])], testCases: [{ id: 'c', summary: 'C' }] }),
+      run({ id: 'b0', endpointId: 'b', sampleIndex: 0, results: [res('c', [PASS])], testCases: [{ id: 'c', summary: 'C' }] }),
+    ];
+    const [mixed] = buildCohortRows(buildCohorts(flakyRuns));
+    expect(mixed.cells[0].verdict).toBe('mixed');
+    expect(caseChange(mixed, 'a')).toBeNull();
   });
 });
 

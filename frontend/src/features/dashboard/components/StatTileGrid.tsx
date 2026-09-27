@@ -4,7 +4,7 @@ import { useLingui } from '@lingui/react/macro';
 import { ActivityIcon, ClockIcon, ZapIcon, TargetIcon, ServerIcon, SigmaIcon } from '../../../components/icons';
 import type { SummaryDto, LiveTelemetryDto, DashboardTrendsDto } from '../../../api/models';
 import { fmtLatency } from '../../../lib/format';
-import { teleFmt, callSeriesDelta, passRateDelta, type LatencyStats } from '../dashboardMeta';
+import { callSeriesDelta, passRateDelta, type LatencyStats } from '../dashboardMeta';
 import { StatTile } from './StatTile';
 
 interface StatTileGridProps {
@@ -16,13 +16,12 @@ interface StatTileGridProps {
 
 export function StatTileGrid({ summary, telemetry, trends, latencyStats }: StatTileGridProps) {
   const { t } = useLingui();
-  const passPct = Math.round((summary?.overallPassRate ?? 0) * 100);
+  const passPct = summary?.overallPassRate == null ? null : Math.round(summary.overallPassRate * 100);
   // Real deltas from the trend series that already feed the sparklines below — first vs last half
   // of the window (percentage-point change for the pass rate). A series with too little data
   // yields no chip rather than a fabricated one.
   const tracesDelta = callSeriesDelta(trends?.traces ?? []);
   const latencyDelta = callSeriesDelta(trends?.latencyMs ?? []);
-  const throughputDelta = callSeriesDelta(trends?.throughput ?? []);
   const passDelta = passRateDelta(trends?.passRate ?? []);
 
   return (
@@ -60,30 +59,26 @@ export function StatTileGrid({ summary, telemetry, trends, latencyStats }: StatT
       <StatTile
         testId="stat-tile-throughput"
         icon={<ZapIcon size={11} />}
-        label={t`Throughput`}
+        label={t`Live throughput`}
         value={telemetry ? String(Math.round(telemetry.tokensPerSecond)) : '—'}
         countTo={telemetry ? telemetry.tokensPerSecond : undefined}
         formatCount={v => String(Math.round(v))}
         unit={t`t/s`}
-        sub={telemetry ? t`p95 ${fmtLatency(telemetry.p95Ms)}` : t`awaiting telemetry`}
-        delta={throughputDelta?.text}
-        deltaUp={throughputDelta?.up}
-        trace={trends?.throughput}
+        sub={telemetry ? t`last 5 min · p95 ${fmtLatency(telemetry.p95Ms)}` : t`awaiting telemetry`}
         traceColor="var(--teal)"
-        traceFormat={v => t`${Math.round(v)} t/s`}
       />
       <StatTile
         testId="stat-tile-pass-rate"
         icon={<TargetIcon size={11} />}
         label={t`Pass Rate`}
-        value={String(passPct)}
-        countTo={passPct}
+        value={passPct === null ? '—' : String(passPct)}
+        countTo={passPct ?? undefined}
         formatCount={v => String(Math.round(v))}
-        unit="%"
-        sub={t`latest suite run`}
-        delta={passDelta?.text}
+        unit={passPct === null ? undefined : '%'}
+        sub={summary === undefined ? '—' : passPct === null ? t`No runs in range` : t`run cases in selected range`}
+        delta={passPct === null ? undefined : passDelta?.text}
         deltaUp={passDelta?.up}
-        trace={trends?.passRate}
+        trace={passPct === null ? undefined : trends?.passRate}
         traceColor="var(--success)"
         traceFormat={v => t`${v.toFixed(0)}% pass`}
       />
@@ -94,15 +89,15 @@ export function StatTileGrid({ summary, telemetry, trends, latencyStats }: StatT
         value={telemetry ? String(telemetry.queueDepth) : '—'}
         countTo={telemetry ? telemetry.queueDepth : undefined}
         formatCount={v => String(Math.round(v))}
-        sub={t`ingestion backlog`}
+        sub={t`current ingestion backlog`}
         traceColor="var(--teal)"
       />
       <StatTile
         testId="stat-tile-p95"
         icon={<SigmaIcon size={11} />}
         label={t`p95 Latency`}
-        value={latencyStats ? String(Math.round(latencyStats.p95)) : teleFmt(telemetry?.p95Ms, v => String(Math.round(v)))}
-        countTo={latencyStats ? latencyStats.p95 : telemetry?.p95Ms}
+        value={latencyStats ? String(Math.round(latencyStats.p95)) : '—'}
+        countTo={latencyStats?.p95}
         formatCount={v => String(Math.round(v))}
         unit={t`ms`}
         sub={latencyStats ? t`p99 ${fmtLatency(latencyStats.p99)}` : t`awaiting samples`}

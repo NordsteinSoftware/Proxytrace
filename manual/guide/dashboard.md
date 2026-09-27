@@ -9,11 +9,12 @@ of your agents at a glance and links out to the detailed views.
 
 - **Live pulse** — a full-width activity line showing per-minute call volume over the last
   hour. It beats in real time as traces arrive, alongside live counters for traces per
-  minute, tokens per second, and error rate.
+  minute, tokens per second, and error rate. Those three counters always read the **last 5
+  minutes**, independent of the time range you pick for the rest of the page.
 - **Live trace feed** — the newest captured traces front and center, each row showing the
   agent, model, tokens, latency, and age, flashing briefly as new traffic arrives.
 - **Key metrics** — token volume with a model split, trace counts, latency percentiles,
-  ingestion queue depth, and the evaluation pass rate.
+  ingestion queue depth, and the evaluation pass rate of the run cases in the selected range.
 - **Agent fleet** — a roster of every detected agent, ranked by activity: each row shows the
   agent's endpoint, its own activity sparkline over the selected time range, token total and
   share of the project, trace count, and when it was last active. Click a row to open the
@@ -21,9 +22,10 @@ of your agents at a glance and links out to the detailed views.
   [proposals](/guide/optimization-proposals) are waiting for review.
 - **Latency spectrum** — each endpoint's latency spread drawn as a min→max span with p50,
   p95, and p99 markers on a shared scale, so a slow endpoint stands out at a glance.
-- **Time-range selector** — choose the window (last hour, 24 hours, 7 days, 30 days, or
-  **all** time) that all metrics are computed over. New visitors start on **all** time;
-  once you pick a window your choice is remembered in your browser, so it survives a
+- **Time-range selector** — the **Data range** control in the page header chooses the window
+  (last hour, 24 hours, 7 days, 30 days, or **all** time) that the token volume, metric
+  tiles, agent fleet, and latency spectrum are computed over. New visitors start on **all**
+  time; once you pick a window your choice is remembered in your browser, so it survives a
   refresh or navigating away and back.
 - **Notifications** — the bell icon in the top bar opens an inbox of alerts and updates for
   the project, including automatically detected anomalies from your test runs. It's available

@@ -22,17 +22,17 @@ import { hoverAccentWashCls } from '../../../components/ui/classes';
 // flexible message column even gets space (see #295). Viewport breakpoints (`lg:`/`xl:`)
 // can't see that; they only know the window width, not the sibling column eating into
 // this one. So — per DESIGN.md §4's "wide row grids" pattern (see also `tracesMeta.ts`'s
-// TRACE_GRID_CLS) — this collapses on a *container* query instead: the wrapping card
-// declares `@container` (LiveTraceStream.tsx) and exposes both templates as CSS vars;
-// below the `2xl` container breakpoint (~672px) the turns and model columns drop out
-// entirely (both the grid track and the corresponding cells, via `@max-2xl:hidden`),
-// leaving the message column all the room it needs even at narrow panel widths.
+// TRACE_GRID_CLS) — this collapses on *container* queries instead: the wrapping card
+// declares `@container` (LiveTraceStream.tsx) and exposes all three templates as CSS
+// vars. Below the `2xl` container breakpoint (~672px) the turns and model columns drop
+// out; below `md` (448px) the tokens and latency columns go too, because on a phone the
+// remaining five tracks still leave the message — the reason to read the feed — a sliver.
 // eslint-disable-next-line lingui/no-unlocalized-strings -- Tailwind grid-template class, not UI copy
-export const LIVE_STREAM_GRID = 'grid [grid-template-columns:var(--live-grid)] gap-4 @max-2xl:[grid-template-columns:var(--live-grid-narrow)] @max-2xl:gap-3';
+export const LIVE_STREAM_GRID = 'grid [grid-template-columns:var(--live-grid)] gap-4 @max-2xl:[grid-template-columns:var(--live-grid-narrow)] @max-2xl:gap-3 @max-md:[grid-template-columns:var(--live-grid-phone)]';
 
-// Full (wide) and narrow column templates, exposed as CSS vars on the `@container` card — see
-// {@link LIVE_STREAM_GRID}. Kept as plain strings (not a combined object) so this file keeps
-// exporting only constants + the component, per react-refresh/only-export-components.
+// Full, narrow, and phone column templates, exposed as CSS vars on the `@container` card —
+// see {@link LIVE_STREAM_GRID}. Kept as plain strings (not a combined object) so this file
+// keeps exporting only constants + the component, per react-refresh/only-export-components.
 // Track widths are budgeted around the model column, which carries the longest value in the row
 // (`deepseek/deepseek-v4-flash`): the column gap drops 20px→16px and hands the whole 28px it frees
 // to the model track. The turns track keeps its 64px — "12 turns" already fills it. Total fixed
@@ -40,10 +40,18 @@ export const LIVE_STREAM_GRID = 'grid [grid-template-columns:var(--live-grid)] g
 // budget is unchanged.
 export const LIVE_STREAM_GRID_WIDE = '14px minmax(0,1fr) 64px 132px 56px 60px 64px 52px';
 export const LIVE_STREAM_GRID_NARROW = '14px minmax(0,1fr) 56px 60px 64px 52px';
+// Phone: dot · message+agent · status · age. At a 390px viewport the card is ~370px wide, so the
+// message column gets ~60% of the row instead of the single-digit pixels the five-track template
+// left it. The two dropped measures (tokens, latency) are visible the moment the row is opened.
+export const LIVE_STREAM_GRID_PHONE = '14px minmax(0,1fr) 56px 52px';
 
 /** Shared visibility class for the turns + model cells, which drop below the `2xl` container breakpoint. */
 // eslint-disable-next-line lingui/no-unlocalized-strings -- Tailwind class, not UI copy
 export const NARROW_HIDDEN = '@max-2xl:hidden';
+
+/** Visibility class for the tokens + latency cells, which drop below the `md` container breakpoint. */
+// eslint-disable-next-line lingui/no-unlocalized-strings -- Tailwind class, not UI copy
+export const PHONE_HIDDEN = '@max-md:hidden';
 
 // The turns and model cells sit on *fixed* grid tracks, and `justify-self-center` sizes them to
 // their content — so content wider than the track (a long model id like `deepseek/deepseek-v4-flash`
@@ -88,8 +96,8 @@ export function LiveStreamRow({ row, freshIds, isLast, now, onSelect }: Props) {
         <span className={cn('text-muted text-center', NARROW_HIDDEN)}>—</span>
         <span className={cn(CLAMPED_CELL, NARROW_HIDDEN)}><Pill label={t.model} color={modelColor(t.model)} size="sm" /></span>
         <span className="text-caption font-semibold text-center" style={{ color: sc }}>{t.httpStatus}</span>
-        <span className="text-secondary text-right min-w-[54px]">{fmtTokens(t.inputTokens + t.outputTokens)}</span>
-        <span className="text-muted text-right min-w-[58px]">{fmtLatency(t.durationMs)}</span>
+        <span className={cn('text-secondary text-right min-w-[54px]', PHONE_HIDDEN)}>{fmtTokens(t.inputTokens + t.outputTokens)}</span>
+        <span className={cn('text-muted text-right min-w-[58px]', PHONE_HIDDEN)}>{fmtLatency(t.durationMs)}</span>
         <span className="text-muted text-right text-caption tabular-nums">{fmtRelative(t.createdAt, now)}</span>
       </RowButton>
     );
@@ -124,8 +132,8 @@ export function LiveStreamRow({ row, freshIds, isLast, now, onSelect }: Props) {
       </span>
       <span className={cn(CLAMPED_CELL, NARROW_HIDDEN)}><Pill label={head.model} color={modelColor(head.model)} size="sm" /></span>
       <span className="text-caption font-semibold text-center" style={{ color: sc }}>{allOk ? '2xx' : <Trans>mixed</Trans>}</span>
-      <span className="text-secondary text-right min-w-[54px]">{fmtTokens(totalTokens)}</span>
-      <span className="text-muted text-right min-w-[58px]">{fmtLatency(totalMs)}</span>
+      <span className={cn('text-secondary text-right min-w-[54px]', PHONE_HIDDEN)}>{fmtTokens(totalTokens)}</span>
+      <span className={cn('text-muted text-right min-w-[58px]', PHONE_HIDDEN)}>{fmtLatency(totalMs)}</span>
       <span className="text-muted text-right text-caption tabular-nums">{fmtRelative(head.createdAt, now)}</span>
     </RowButton>
   );

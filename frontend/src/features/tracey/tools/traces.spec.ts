@@ -23,7 +23,7 @@ const ctx = (): TraceyToolContext => ({
   loadedSkillIds: new Set<string>(),
 });
 
-/** One list row as the API returns it. `messagePreview` is the FIRST user message of the request. */
+/** One list row as the API returns it. `messagePreview` is the latest user message of the request. */
 const call = (id: string, over: Record<string, unknown> = {}) => ({
   id,
   agentName: 'Support',
@@ -46,7 +46,7 @@ beforeEach(() => vi.clearAllMocks());
 
 describe('find_traces digest', () => {
   it('carries the conversation id and per-call tool-call count', async () => {
-    // Every call of one tool loop previews the SAME first user message, so these two fields are the
+    // Every call of one tool loop previews the SAME latest user message, so these two fields are the
     // only thing that makes the loop legible — and that tells the decision points apart from the
     // closing summary (toolCallsRequested: 0).
     agentCallsApi.list.mockResolvedValue({

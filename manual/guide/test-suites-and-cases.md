@@ -10,22 +10,25 @@ The intended workflow is to **promote production traces** into durable benchmark
 
 1. Find a [trace](/guide/capturing-traces) that represents a critical behavior or a
    regression you want to guard against.
-2. Open its detail panel and click **Generate tests** — Proxytrace reads the conversation and
-   proposes the cases worth keeping (see [below](#let-proxytrace-propose-the-cases)).
+2. Open its detail panel and click **Add to test suite** to keep it as a case by hand —
+   choose the destination suite (or create one) and save the recorded response as the expected
+   output, or edit it first. **Generate tests** does the same job with the agent's help:
+   Proxytrace reads the conversation and proposes the cases worth keeping (see
+   [below](#let-proxytrace-propose-the-cases)).
 3. Group related cases into a test suite.
 
 Because cases come from real traffic, suites stay grounded in behaviors that actually
 matter.
 
-To add traces to a suite yourself, without the agent's help, open the suite on the **Test Suites**
-page and use **Add from traces** — pick the traces, and each becomes a case. That route works on
-every license tier.
+**Add to test suite** on the trace detail panel works on every license tier. You can also add
+several traces at once, without leaving the suite: open it on the **Test Suites** page and use
+**Add from traces** — pick the traces, and each becomes a case.
 
 ## Let Proxytrace propose the cases
 
 ::: tip Enterprise feature
 Generating test cases requires an Enterprise license. On other tiers, build suites by hand with
-**Add from traces** on the Test Suites page.
+**Add to test suite** in the trace detail panel, or **Add from traces** on the Test Suites page.
 :::
 
 A multi-turn conversation offers a lot of possible test cases, and most of them are not worth
@@ -162,6 +165,8 @@ expected output directly:
 
 - **In the Generate tests panel**, each candidate's expected output is editable before you add it
   to a suite.
+- **In the Add to test suite panel**, tick **Edit expected output** to correct the captured
+  response before saving the case.
 - **In the suite detail panel**, select a case and choose **Edit expected output** to revise
   an existing case.
 

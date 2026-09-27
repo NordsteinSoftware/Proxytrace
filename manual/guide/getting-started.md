@@ -18,8 +18,9 @@ operate the platform, see the [Operations](/admin/installation) section.
 3. **Agents are detected automatically.** Proxytrace extracts agent definitions (system
    prompt, tools, model, provider) from traces and versions them as they change. See
    [Agents](/guide/agents).
-4. **Curate traces into test suites.** Promote representative traces into reproducible
-   benchmarks. See [Test Suites & Cases](/guide/test-suites-and-cases).
+4. **Curate traces into test suites.** Turn representative traces into reproducible
+   benchmarks — add one straight from its detail panel, or let Proxytrace propose the
+   cases. See [Test Suites & Cases](/guide/test-suites-and-cases).
 5. **Run structured evaluations.** Score each case with configurable
    [Evaluators](/guide/evaluators) and track results over time via
    [Running Tests](/guide/running-tests).

@@ -11,7 +11,7 @@ interface Props {
   className?: string;
   /** Whether system messages start expanded. Defaults to collapsed. */
   defaultOpenSystem?: boolean;
-  /** Navigate to a tool's definition (renders a "Definition" affordance on tool bubbles). */
+  /** Navigate to a tool's definition from its tool bubble. */
   onJumpToDefinition?: (toolName: string) => void;
   /** Rendered after the message list (e.g. a finish-reason footer). */
   footer?: ReactNode;

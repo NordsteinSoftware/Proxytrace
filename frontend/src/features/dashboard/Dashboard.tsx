@@ -19,6 +19,8 @@ import { useLiveClock } from './hooks/useLiveClock';
 import { useFreshTraces } from './hooks/useFreshTraces';
 import { usePulse } from './hooks/usePulse';
 import { useDraftProposalCount } from '../../hooks/useProposals';
+import { SegmentedControl } from '../../components/ui/SegmentedControl';
+import { EYEBROW_CLS, RANGES } from './dashboardMeta';
 import { PulseBand } from './components/PulseBand';
 import { HeroTokenCard } from './components/HeroTokenCard';
 import { StatTileGrid } from './components/StatTileGrid';
@@ -94,9 +96,9 @@ export default function Dashboard() {
   return (
     <div className="w-full min-w-0 flex flex-col gap-2">
 
-      {/* Title + clock */}
-      <div className="fade-up flex items-center justify-between gap-3 px-0.5">
-        <div className="flex items-center gap-3.5">
+      {/* Page scope + clock */}
+      <header className="fade-up flex flex-wrap items-center justify-between gap-3 px-0.5">
+        <div className="flex flex-wrap items-center gap-3.5">
           <span className="text-caption text-accent-hover font-mono tracking-[0.18em] flex items-center gap-1.5 font-semibold">
             <span className="size-1.5 rounded-full bg-success pulse-dot" />
             <Trans>LIVE</Trans>
@@ -111,7 +113,11 @@ export default function Dashboard() {
             <span className="tracking-[0.14em] uppercase"><Trans>UTC · proxy</Trans></span>
           </div>
         </div>
-      </div>
+        <div className="flex w-full flex-wrap items-center gap-2" data-testid="dashboard-range" role="group" aria-label={t`Data range`}>
+          <span className={EYEBROW_CLS}><Trans>Data range</Trans></span>
+          <SegmentedControl value={range} onChange={setRange} segments={RANGES.map(r => ({ value: r, label: r }))} />
+        </div>
+      </header>
 
       {/* ① Pulse band — the 5-second hook */}
       <div className="fade-up [animation-delay:40ms]">
@@ -120,7 +126,7 @@ export default function Dashboard() {
 
       {/* ② Live theater + ③ token hero */}
       <div className="fade-up grid grid-cols-1 lg:grid-cols-[minmax(0,1.45fr)_minmax(0,1.15fr)] gap-2 [animation-delay:80ms]">
-        <LiveTraceStream traces={recentTraces} isLoading={dashboardLoading} freshIds={freshIds} />
+        <LiveTraceStream traces={recentTraces} isLoading={dashboardLoading} freshIds={freshIds} range={range} onRangeChange={setRange} />
         <HeroTokenCard
           summary={summary}
           tokenVolume={tokenSeries.values}
@@ -128,7 +134,6 @@ export default function Dashboard() {
           bucket={tokenBucket}
           modelSplit={modelSplit}
           range={range}
-          onRangeChange={setRange}
           isLoading={dashboardLoading}
         />
       </div>

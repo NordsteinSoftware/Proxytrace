@@ -6,6 +6,7 @@ import { AbTestHero } from '../AbTestHero';
 import { ChangeSections } from './ChangeSections';
 import { EvidenceList } from './EvidenceList';
 import { HandoffPanel } from './HandoffPanel';
+import { ApprovalProgress } from './ApprovalProgress';
 
 interface Props {
   theory: TheoryDto;
@@ -20,6 +21,7 @@ interface Props {
 export function ProposalDossier({ theory, proposal }: Props) {
   return (
     <div className="flex flex-col gap-4" data-testid="validated-proposal">
+      {proposal && <ApprovalProgress proposal={proposal} />}
       {proposal && <HandoffPanel proposal={proposal} />}
 
       <div className="grid grid-cols-1 gap-4 @3xl:grid-cols-[minmax(0,1fr)_minmax(260px,320px)]">

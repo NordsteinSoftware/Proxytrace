@@ -86,7 +86,7 @@ public sealed class AgentCallDtoMapper
         c.Agent.Name,
         c.Endpoint.Model.Name,
         c.Endpoint.Provider.Name,
-        FirstUserMessage(c),
+        LatestUserMessage(c),
         c.Response?.Response is AssistantMessage a ? a.ToolRequests.Count : 0,
         c.Response?.Usage?.InputTokenCount,
         c.Response?.Usage?.OutputTokenCount,
@@ -102,11 +102,10 @@ public sealed class AgentCallDtoMapper
         c.SessionId,
         (int)c.OutlierFlags);
 
-    /// <summary>First user message in the request with collapsed whitespace; null when none/empty.
-    /// Mirrors the frontend's old <c>firstUserMessage</c> so the list row reads a ready-made preview.</summary>
-    private static string? FirstUserMessage(IAgentCall c)
+    /// <summary>Latest user message in the request with collapsed whitespace; null when none/empty.</summary>
+    private static string? LatestUserMessage(IAgentCall c)
     {
-        var userMessage = c.Request.Messages.OfType<UserMessage>().FirstOrDefault();
+        var userMessage = c.Request.Messages.OfType<UserMessage>().LastOrDefault();
         var text = userMessage?.GetText();
         if (string.IsNullOrWhiteSpace(text))
             return null;

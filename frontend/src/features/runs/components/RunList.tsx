@@ -1,4 +1,5 @@
 import { Trans, useLingui } from '@lingui/react/macro';
+import { Link } from 'react-router';
 import type { TestRunGroupListItemDto } from '../../../api/models';
 import { cn } from '../../../lib/cn';
 import { FOCUS_RING } from '../../../lib/constants';
@@ -63,7 +64,17 @@ export function RunList({ groups, isLoading, selectedId, onSelect, onDelete, age
       loading={isLoading}
       skeletonHeight={110}
       isEmpty={groups.length === 0}
-      empty={<EmptyState title={t`No test runs yet`} description={t`Run a suite to get started.`} />}
+      empty={agentFilter.value
+        ? <EmptyState
+            title={t`No runs for this agent`}
+            description={t`Try another agent or clear the filter.`}
+            action={<Button variant="link" size="sm" onClick={() => agentFilter.onChange('')}><Trans>Clear filter</Trans></Button>}
+          />
+        : <EmptyState
+            title={t`No test runs yet`}
+            description={t`Run a suite to get started.`}
+            action={<Button variant="link" size="sm" asChild><Link to="/suites"><Trans>Open Test Suites →</Trans></Link></Button>}
+          />}
     >
       <div className="flex flex-col gap-2">
         {groups.map(group => (

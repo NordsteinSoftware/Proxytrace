@@ -14,6 +14,7 @@ interface Props {
   /** Trailing controls on the same line — the "+ Filter" picker sits here (see TraceFilterPicker). */
   trailing?: ReactNode;
   onClearSelection?: () => void;
+  onResetView?: () => void;
 }
 
 /**
@@ -21,7 +22,7 @@ interface Props {
  * `trailing`). Active filters — agent, tool, model, status, numeric ranges, and the system-traces
  * view toggle — compose through that picker and surface as chips in TraceFilterBar below.
  */
-export function TraceToolbar({ search, timeRange, onSearchChange, onTimeRangeChange, trailing, onClearSelection }: Props) {
+export function TraceToolbar({ search, timeRange, onSearchChange, onTimeRangeChange, trailing, onClearSelection, onResetView }: Props) {
   const { t } = useLingui();
   return (
     <div className="fade-up relative z-20 flex items-center gap-2 flex-wrap shrink-0 [animation-delay:80ms]">
@@ -38,6 +39,11 @@ export function TraceToolbar({ search, timeRange, onSearchChange, onTimeRangeCha
       <TimeRangePicker value={timeRange} onChange={onTimeRangeChange} testId="traces-time" />
 
       {trailing}
+      {onResetView && (
+        <Button variant="ghost" size="sm" data-testid="traces-reset-view" onClick={onResetView}>
+          <Trans>Reset view</Trans>
+        </Button>
+      )}
       <Button
         variant="ghost"
         size="sm"

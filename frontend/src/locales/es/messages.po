@@ -1,6 +1,6 @@
 msgid ""
 msgstr ""
-"POT-Creation-Date: 2026-06-20 08:07+0200\n"
+"POT-Creation-Date: 2026-09-27 11:38+0200\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -361,10 +361,6 @@ msgstr "{0} seleccionados"
 #. placeholder {0}: fmtDuration(-ms)
 msgid "{0} slower"
 msgstr "{0} más lento"
-
-#. placeholder {0}: Math.round(v)
-msgid "{0} t/s"
-msgstr "{0} t/s"
 
 #. placeholder {0}: fmtTokens(totalTok)
 msgid "{0} tok"
@@ -776,6 +772,9 @@ msgstr "Aceptable"
 msgid "Accepted"
 msgstr "Aceptado"
 
+msgid "Access denied"
+msgstr "Acceso denegado"
+
 msgid "Access Denied"
 msgstr "Acceso denegado"
 
@@ -865,6 +864,9 @@ msgstr "Añadir el juez a {0}"
 
 msgid "Add to suite"
 msgstr "Añadir a la Suite"
+
+msgid "Add to test suite"
+msgstr "Añadir al test suite"
 
 msgid "Add tool request"
 msgstr "Añadir solicitud de Tool"
@@ -1098,6 +1100,18 @@ msgstr "Aplicar a todos los Agents"
 msgid "Approaching limit"
 msgstr "Acercándose al límite"
 
+msgid "Approval prepares the handoff. Apply the change in your agent's code, then Proxytrace checks live traffic for adoption."
+msgstr "La aprobación prepara la transferencia. Aplica el cambio en el código de tu agente, luego Proxytrace verifica el tráfico en vivo para su adopción."
+
+msgid "Approve for implementation"
+msgstr "Aprobar para implementación"
+
+msgid "Approved"
+msgstr "Aprobado"
+
+msgid "Approved — apply the change in your agent, then check adoption."
+msgstr "Aprobado — aplica el cambio en tu agente y luego verifica la adopción."
+
 msgid "Approximate tokens (chars / 4)"
 msgstr "Tokens aproximados (chars / 4)"
 
@@ -1162,6 +1176,9 @@ msgstr "Error de autenticación: {0}"
 
 msgid "Authentication code"
 msgstr "Código de autenticación"
+
+msgid "Authentication failed"
+msgstr "Error de autenticación"
 
 msgid "Auto"
 msgstr "Automático"
@@ -1390,14 +1407,14 @@ msgstr "cerrar"
 msgid "Clear"
 msgstr "Cerrar"
 
-msgid "Clear all"
-msgstr "Borrar todo"
-
 msgid "Clear conversation"
 msgstr "Cerrar conversación"
 
 msgid "Clear filter"
 msgstr "Borrar filtro"
+
+msgid "Clear filters"
+msgstr "Borrar filtros"
 
 msgid "Clear search"
 msgstr "Borrar búsqueda"
@@ -1438,6 +1455,9 @@ msgstr "Haz clic en una puntuación para filtrar · destacados seleccionados aba
 msgid "Click any row to inspect its conversation."
 msgstr "Haz clic en cualquier fila para inspeccionar su conversación."
 
+msgid "Client error"
+msgstr "Error del cliente"
+
 msgid "close"
 msgstr "cerrar"
 
@@ -1456,6 +1476,10 @@ msgstr "Comparar"
 #. placeholder {0}: row.summary
 msgid "Compare all models — {0}"
 msgstr "Comparar todos los modelos — {0}"
+
+#. placeholder {0}: baseline.run.endpointName
+msgid "Compared with {0}"
+msgstr "Comparado con {0}"
 
 msgid "Comparing runs…"
 msgstr "Comparando runs…"
@@ -1739,6 +1763,9 @@ msgstr "Crear horario"
 msgid "Create suite"
 msgstr "Crear suite"
 
+msgid "Create suite and add test"
+msgstr "Crear suite y añadir prueba"
+
 msgid "Create Test Suite"
 msgstr "Crear Test Suite"
 
@@ -1790,6 +1817,9 @@ msgstr "actual"
 msgid "Current calendar month (UTC)"
 msgstr "Mes calendario actual (UTC)"
 
+msgid "current ingestion backlog"
+msgstr "cola de ingesta actual"
+
 msgid "Current license"
 msgstr "Licencia actual"
 
@@ -1835,6 +1865,9 @@ msgstr "Dashboard, agents, test suites y evaluators"
 msgid "Data Purged"
 msgstr "Datos purgados"
 
+msgid "Data range"
+msgstr "Intervalo de datos"
+
 msgid "days"
 msgstr "días"
 
@@ -1846,6 +1879,12 @@ msgstr "Modelo predeterminado"
 
 msgid "Default parameters (none specified)"
 msgstr "Parámetros predeterminados (no se especificó ninguno)"
+
+msgid "Default upstream provider"
+msgstr "Proveedor de origen predeterminado"
+
+msgid "Default Upstream Provider Changed"
+msgstr "Proveedor de origen predeterminado cambiado"
 
 msgid "Definition"
 msgstr "Definición"
@@ -2051,6 +2090,9 @@ msgstr "Editar"
 msgid "Edit {0}"
 msgstr "Editar {0}"
 
+msgid "Edit default upstream provider"
+msgstr "Editar proveedor de origen predeterminado"
+
 msgid "Edit detector"
 msgstr "Editar detector"
 
@@ -2158,9 +2200,6 @@ msgstr "error"
 
 msgid "Error"
 msgstr "Error"
-
-msgid "ERROR"
-msgstr "ERROR"
 
 msgid "Error log"
 msgstr "Registro de errores"
@@ -2578,6 +2617,9 @@ msgstr "Mejoró la tasa de aprobación."
 msgid "improvement only"
 msgstr "solo mejora"
 
+msgid "Improvements"
+msgstr "Mejoras"
+
 msgid "in"
 msgstr "en"
 
@@ -2608,8 +2650,8 @@ msgstr "Configuración de indexado para el proyecto activo."
 msgid "Info"
 msgstr "Información"
 
-msgid "ingestion backlog"
-msgstr "ingesta pendiente"
+msgid "Informational"
+msgstr "Informativo"
 
 msgid "Ingestion proxy"
 msgstr "Proxy de ingestión"
@@ -2760,6 +2802,10 @@ msgstr "últimos 30 días"
 msgid "Last 30 days"
 msgstr "Últimos 30 días"
 
+#. placeholder {0}: fmtLatency(telemetry.p95Ms)
+msgid "last 5 min · p95 {0}"
+msgstr "últimos 5 min · p95 {0}"
+
 msgid "Last 6 hours"
 msgstr "Últimas 6 horas"
 
@@ -2810,12 +2856,6 @@ msgstr "Espectro de latencia"
 msgid "Latency stats appear after traces arrive."
 msgstr "Las estadísticas de latencia aparecerán después de que lleguen Traces."
 
-msgid "latest suite run"
-msgstr "última ejecución de Suite"
-
-msgid "latest suite run · project-wide"
-msgstr "última ejecución de Suite · todo el proyecto"
-
 msgid "Leave blank to keep current password"
 msgstr "Déjalo en blanco para mantener la contraseña actual"
 
@@ -2844,6 +2884,9 @@ msgstr "Licencia configurada"
 msgid "Licensed to <0>{0}</0>"
 msgstr "Con licencia para <0>{0}</0>"
 
+msgid "Link this trace to an agent before adding a test."
+msgstr "Vincula este trace a un agente antes de añadir una prueba."
+
 msgid "List agents"
 msgstr "Listar Agents"
 
@@ -2859,8 +2902,14 @@ msgstr "EN VIVO"
 msgid "Live feed"
 msgstr "Feed en vivo"
 
+msgid "Live rates · last 5 min"
+msgstr "Tasas en vivo · últimos 5 min"
+
 msgid "live re-score"
 msgstr "recalificación en vivo"
+
+msgid "Live throughput"
+msgstr "Rendimiento en vivo"
 
 msgid "LLM"
 msgstr "LLM"
@@ -3276,8 +3325,11 @@ msgstr "Nuevo suite"
 msgid "New suite name"
 msgstr "Nuevo nombre de la suite"
 
-msgid "New traces available. Scroll to the top to refresh."
-msgstr "Nuevos traces disponibles. Desplázate hacia arriba para actualizar."
+msgid "New traces · Jump to latest ↑"
+msgstr "Nuevas Traces · Ir a las más recientes ↑"
+
+msgid "New traces available."
+msgstr "Hay nuevas Traces disponibles."
 
 msgid "Next"
 msgstr "Siguiente"
@@ -3527,6 +3579,12 @@ msgstr "No se capturó respuesta para esta llamada."
 msgid "No rows."
 msgstr "No hay filas."
 
+msgid "No runs for this agent"
+msgstr "No hay Runs para este Agent"
+
+msgid "No runs in range"
+msgstr "No hay Runs en el período seleccionado"
+
 msgid "No runs yet"
 msgstr "No hay Runs aún"
 
@@ -3650,6 +3708,9 @@ msgstr "Datos que no son del modelo eliminados"
 msgid "None"
 msgstr "Ninguna"
 
+msgid "None — anonymous forwarding disabled"
+msgstr "Ninguno — reenvío anónimo desactivado"
+
 msgid "Not attached to any suite yet."
 msgstr "Aún no está adjunto a ninguna Suite."
 
@@ -3713,6 +3774,9 @@ msgstr "Extracción numérica"
 msgid "Numeric Match"
 msgstr "Coincidencia numérica"
 
+msgid "Observed in traffic"
+msgstr "Observado en el tráfico"
+
 msgid "Off"
 msgstr "Desactivado"
 
@@ -3730,6 +3794,9 @@ msgstr "Uno de los triggers de regex no es un patrón válido."
 
 msgid "Online"
 msgstr "En línea"
+
+msgid "Only completed, consistently judged cases are compared."
+msgstr "Solo se comparan casos completados y juzgados de manera consistente."
 
 msgid "Only successful traces (2xx) are shown — errored traces aren't useful for benchmarking."
 msgstr "Solo se muestran traces exitosas (2xx) — los traces con error no sirven para benchmarking."
@@ -3778,6 +3845,9 @@ msgstr "Abrir suite \"{0}\""
 
 msgid "Open test run"
 msgstr "Abrir ejecución de prueba"
+
+msgid "Open Test Suites →"
+msgstr "Abrir Test Suites →"
 
 msgid "Open this result in the run matrix"
 msgstr "Abrir este resultado en la matriz del run"
@@ -3865,10 +3935,6 @@ msgstr "Resumen"
 
 msgid "Owner"
 msgstr "Propietario"
-
-#. placeholder {0}: fmtLatency(telemetry.p95Ms)
-msgid "p95 {0}"
-msgstr "p95 {0}"
 
 #. placeholder {0}: fmtLatency(latencyStats.p95)
 #. placeholder {1}: fmtLatency(latencyStats.p99)
@@ -4126,15 +4192,6 @@ msgstr "Los Projects agrupan tus agents, traces y benchmarks."
 msgid "Projects, Users & API keys"
 msgstr "Projects, Users & API keys"
 
-msgid "Promote"
-msgstr "Promover"
-
-msgid "Promoted"
-msgstr "Promovido"
-
-msgid "Promoted — awaiting adoption in your agent."
-msgstr "Promovido — en espera de adopción en tu agent."
-
 msgid "Prompt rewrite"
 msgstr "Reescritura del Prompt"
 
@@ -4267,8 +4324,8 @@ msgstr "Generada"
 msgid "Range"
 msgstr "Rango"
 
-msgid "RATE_LIMIT"
-msgstr "RATE_LIMIT"
+msgid "Rate limited"
+msgstr "Límite de solicitudes alcanzado"
 
 msgid "Raw JSON"
 msgstr "JSON sin procesar"
@@ -4334,6 +4391,9 @@ msgstr "Recomendado"
 msgid "RED"
 msgstr "ROJO"
 
+msgid "Redirect"
+msgstr "Redirección"
+
 msgid "Refine"
 msgstr "Refinar"
 
@@ -4348,6 +4408,9 @@ msgstr "Empeoró"
 
 msgid "Regression"
 msgstr "Regresión"
+
+msgid "Regressions"
+msgstr "Regresiones"
 
 msgid "Regular expression…"
 msgstr "Expresión regular…"
@@ -4443,6 +4506,9 @@ msgstr "Solicitud · {model}"
 msgid "Request a new link"
 msgstr "Solicitar un nuevo enlace"
 
+msgid "Requests without credentials outside /openai/v1 are forwarded to this provider without adding its API key. Choose None to disable."
+msgstr "Las solicitudes sin credenciales fuera de /openai/v1 se reenvían a este proveedor sin añadir su clave API. Seleccione Ninguno para desactivar."
+
 msgid "required"
 msgstr "obligatorio"
 
@@ -4475,6 +4541,9 @@ msgstr "Restablecer a Propuesta"
 
 msgid "Reset two-factor authentication"
 msgstr "Restablecer la autenticación de dos factores"
+
+msgid "Reset view"
+msgstr "Restablecer vista"
 
 msgid "Reset your password"
 msgstr "Restablece tu contraseña"
@@ -4511,6 +4580,9 @@ msgstr "Reintentar la validación"
 
 msgid "Reveal"
 msgstr "Revelar"
+
+msgid "Review"
+msgstr "Revisar"
 
 msgid "Review instructions"
 msgstr "Instrucciones de revisión"
@@ -4565,6 +4637,9 @@ msgstr "Ejecuta un Suite para empezar."
 
 msgid "Run cancelled."
 msgstr "Ejecución cancelada."
+
+msgid "run cases in selected range"
+msgstr "casos de Runs en el intervalo seleccionado"
 
 msgid "Run comparison"
 msgstr "Ejecutar comparación"
@@ -4663,6 +4738,9 @@ msgstr "Guardar"
 msgid "Save changes"
 msgstr "Guardar cambios"
 
+msgid "Save default upstream provider"
+msgstr "Guardar proveedor de origen predeterminado"
+
 msgid "Save endpoint"
 msgstr "Guardar Endpoint"
 
@@ -4671,6 +4749,9 @@ msgstr "Guardar nombre"
 
 msgid "Save schedule"
 msgstr "Guardar programación"
+
+msgid "Save the recorded response as the expected output, or correct it to capture the behavior you want."
+msgstr "Guarda la respuesta registrada como salida esperada, o corrígela para capturar el comportamiento que deseas."
 
 msgid "Save these backup codes somewhere safe. Each can be used once to sign in if you lose your authenticator. They will not be shown again."
 msgstr "Guarda estos códigos de respaldo en un lugar seguro. Cada uno puede usarse una vez para iniciar sesión si pierdes tu autenticador. No se mostrarán de nuevo."
@@ -4985,6 +5066,9 @@ msgstr "Sensibilidad (desviaciones estándar)"
 msgid "Sensitivity must be above 0, and the sample counts at least 1."
 msgstr "La sensibilidad debe ser mayor que 0, y el número de muestras al menos 1."
 
+msgid "Server error"
+msgstr "Error del servidor"
+
 msgid "Session"
 msgstr "Sesión"
 
@@ -5026,6 +5110,9 @@ msgstr "Comparte este enlace de un solo uso con el usuario. No se volverá a mos
 
 msgid "Show"
 msgstr "Mostrar"
+
+msgid "Show all time →"
+msgstr "Mostrar todo el período →"
 
 msgid "Show available tools"
 msgstr "Mostrar Tools disponibles"
@@ -5318,6 +5405,10 @@ msgstr "Terrible"
 msgid "Test"
 msgstr "Prueba"
 
+#. placeholder {0}: suite.name
+msgid "Test added to {0}"
+msgstr "Prueba añadida a {0}"
+
 msgid "Test case"
 msgstr "Caso de prueba"
 
@@ -5430,8 +5521,8 @@ msgstr "La validación A/B no pudo ejecutarse — no se midió nada."
 msgid "The A/B validation could not run (e.g. the provider was unreachable) — the theory was never tested. Retry it or dismiss it."
 msgstr "La validación A/B no pudo ejecutarse (p. ej., el Provider no estaba accesible) — la Theory nunca fue probada. Reinténtala o descártala."
 
-msgid "The change beat the baseline. Promote it to get the handoff package, or dismiss it."
-msgstr "El cambio superó la referencia. Promuévelo para obtener el paquete de traspaso, o descártalo."
+msgid "The change beat the baseline. Approve it for implementation to get the handoff package, or dismiss it."
+msgstr "El cambio superó la línea base. Apruébalo para implementación para obtener el paquete de transferencia, o descártalo."
 
 msgid "The change is live in the agent."
 msgstr "El cambio está activo en el Agent."
@@ -5637,9 +5728,6 @@ msgstr "Esto eliminará permanentemente <0>{0}</0> y lo desvinculará de todos l
 msgid "This window is too wide for {0} buckets — showing {1} spend instead."
 msgstr "Esta ventana es demasiado amplia para intervalos de {0}: se muestra el gasto {1} en su lugar."
 
-msgid "Throughput"
-msgstr "Throughput"
-
 msgid "Thursday"
 msgstr "Jueves"
 
@@ -5831,8 +5919,14 @@ msgstr "Triggers"
 msgid "Try a different search term."
 msgstr "Prueba con otro término de búsqueda."
 
+msgid "Try a wider data range."
+msgstr "Prueba con un período más amplio."
+
 msgid "Try again"
 msgstr "Intentar de nuevo"
+
+msgid "Try another agent or clear the filter."
+msgstr "Prueba otro Agent o borra el filtro."
 
 msgid "Try clearing the search or widening the time range."
 msgstr "Prueba borrando la búsqueda o ampliando el rango de tiempo."
@@ -5883,6 +5977,12 @@ msgstr "Sin atribuir"
 msgid "Unattributed spend came through the provider's own key, or was recorded before per-key tracking existed. A key budget cannot cap it — the project budget is what holds it."
 msgstr "El gasto sin atribuir provino de la propia key del proveedor, o se registró antes de que existiera el seguimiento por key. Un presupuesto de key no puede limitarlo; el presupuesto del proyecto es lo que lo contiene."
 
+msgid "Unavailable provider"
+msgstr "Proveedor no disponible"
+
+msgid "Unchanged"
+msgstr "Sin cambios"
+
 msgid "Undo"
 msgstr "Deshacer"
 
@@ -5903,6 +6003,9 @@ msgstr "Agent desconocido"
 
 msgid "Unknown project"
 msgstr "Proyecto desconocido"
+
+msgid "Unknown status"
+msgstr "Estado desconocido"
 
 msgid "Unlimited agents"
 msgstr "Agentes ilimitados"
@@ -6264,24 +6367,3 @@ msgstr "Tu rúbrica debe producir una de estas 5 puntuaciones; el reasoning es o
 
 msgid "Yourself (creator)"
 msgstr "Tú mismo (creador)"
-
-msgid "Default upstream provider"
-msgstr "Proveedor de origen predeterminado"
-
-msgid "None — anonymous forwarding disabled"
-msgstr "Ninguno — reenvío anónimo desactivado"
-
-msgid "Unavailable provider"
-msgstr "Proveedor no disponible"
-
-msgid "Requests without credentials outside /openai/v1 are forwarded to this provider without adding its API key. Choose None to disable."
-msgstr "Las solicitudes sin credenciales fuera de /openai/v1 se reenvían a este proveedor sin añadir su clave API. Seleccione Ninguno para desactivar."
-
-msgid "Default Upstream Provider Changed"
-msgstr "Proveedor de origen predeterminado cambiado"
-
-msgid "Edit default upstream provider"
-msgstr "Editar proveedor de origen predeterminado"
-
-msgid "Save default upstream provider"
-msgstr "Guardar proveedor de origen predeterminado"

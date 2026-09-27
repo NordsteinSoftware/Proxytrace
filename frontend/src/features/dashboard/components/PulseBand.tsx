@@ -31,7 +31,7 @@ export function PulseBand({ pulse, lastBeat, telemetry }: PulseBandProps) {
     <div
       data-testid="pulse-band"
       className={cn(
-        'relative overflow-hidden rounded-lg bg-card shadow-[var(--shadow-card)] px-4 py-3 flex items-stretch gap-5',
+        'relative overflow-hidden rounded-lg bg-card shadow-[var(--shadow-card)] px-4 py-3 flex flex-col sm:flex-row items-stretch gap-5',
         idle && 'pulse-idle-sweep',
       )}
     >
@@ -46,11 +46,14 @@ export function PulseBand({ pulse, lastBeat, telemetry }: PulseBandProps) {
         {lastBeat > 0 && <span key={lastBeat} className="pulse-sweep" />}
       </div>
 
-      {/* Live counters */}
-      <div className="relative flex items-center gap-6 pl-5 border-l border-hairline shrink-0">
-        <PulseCounter label={t`traces/min`} value={teleFmt(telemetry?.tracesPerMinute)} accent />
-        <PulseCounter label={t`tokens/s`} value={teleFmt(telemetry?.tokensPerSecond, v => String(Math.round(v)))} />
-        <PulseCounter label={t`errors`} value={errorPctDisplay} danger={(telemetry?.errorRate ?? 0) > 0} />
+      {/* Live counters have a different fixed window from the activity line. */}
+      <div className="relative flex flex-col justify-center gap-2 pt-3 border-t sm:pt-0 sm:border-t-0 sm:pl-5 sm:border-l border-hairline shrink-0">
+        <span className={EYEBROW_CLS}><Trans>Live rates · last 5 min</Trans></span>
+        <div className="flex items-center justify-between gap-6">
+          <PulseCounter label={t`traces/min`} value={teleFmt(telemetry?.tracesPerMinute)} accent />
+          <PulseCounter label={t`tokens/s`} value={teleFmt(telemetry?.tokensPerSecond, v => String(Math.round(v)))} />
+          <PulseCounter label={t`errors`} value={errorPctDisplay} danger={(telemetry?.errorRate ?? 0) > 0} />
+        </div>
       </div>
     </div>
   );

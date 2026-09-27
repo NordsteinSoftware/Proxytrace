@@ -11,7 +11,7 @@ Each proposal is grounded in evidence from [test runs](/guide/running-tests).
 
 ## What a proposal contains
 
-![A validated theory's dossier: the effective pass-rate gain with its p-value as the headline, the proposed system-prompt change shown as a diff beside the evidence, and the Promote / Dismiss decision bar.](/screenshots/proposals/detail.png)
+![A validated theory's dossier: the effective pass-rate gain with its p-value as the headline, the proposed system-prompt change shown as a diff beside the evidence, and the Approve for implementation / Dismiss decision bar.](/screenshots/proposals/detail.png)
 
 - **Kind** — the type of change (e.g. switch model, update system prompt).
 - **Rationale** — why the change is suggested.
@@ -19,7 +19,7 @@ Each proposal is grounded in evidence from [test runs](/guide/running-tests).
 - **Details** — the concrete, typed change (e.g. the new model, or the proposed prompt
   text).
 - **Evidence** — the specific test runs that justify the proposal.
-- **Status** — `Draft` (awaiting review), `Accepted` (promoted, awaiting adoption),
+- **Status** — `Draft` (awaiting review), `Accepted` (approved for implementation, awaiting adoption),
   `Adopted` (the change is live in the agent), or `Rejected` (dismissed).
 
 ## Reviewing proposals
@@ -31,13 +31,13 @@ belongs to a validated theory, queued under **Needs decision** in the left rail 
 1. Select the item — the first *Needs decision* entry is opened for you.
 2. In the dossier, read the measured gain and its significance, inspect the A/B results and
    linked evidence runs, and compare the proposed change against the current agent definition.
-3. **Promote** to accept it, or **Dismiss** to reject it — both in the pinned decision bar.
+3. **Approve for implementation** to accept it, or **Dismiss** to reject it — both in the pinned decision bar. Approving prepares the handoff; it does not change your agent.
 
-## Promoting = handoff, not auto-apply
+## Approving = handoff, not auto-apply
 
 Proxytrace sits between your agent and the model provider as an observing proxy — your
 agent's actual system prompt, tool definitions, and model live **in your code**, and
-Proxytrace cannot change them. Promoting a proposal therefore does not modify your agent.
+Proxytrace cannot change them. Approving a proposal therefore does not modify your agent.
 It marks the change as approved and gives you everything needed to apply it yourself:
 
 - **Copy buttons** — the proposed system prompt verbatim, the proposed tool definitions as
@@ -51,7 +51,7 @@ It marks the change as approved and gives you everything needed to apply it your
 
 ## Adoption tracking
 
-After you promote a proposal, Proxytrace watches the agent's live traffic for the change:
+After you approve a proposal, Proxytrace watches the agent's live traffic for the change:
 
 - A **prompt or tool** proposal flips to **Adopted** when a request arrives whose system
   prompt / tool set matches the proposed change **exactly** (a new agent version is detected
@@ -61,7 +61,7 @@ After you promote a proposal, Proxytrace watches the agent's live traffic for th
 
 Detection is exact on purpose — if you applied a tweaked variant of the change (or
 Proxytrace cannot see it, e.g. traffic got attributed to a different agent), use the
-**Mark adopted** button on the promoted proposal instead.
+**Mark adopted** button on the approved proposal instead.
 
 ::: tip
 Send the `X-Proxytrace-Agent` header with your agent's calls so traffic is attributed to the
@@ -70,7 +70,7 @@ right agent and adoption is detected reliably.
 
 ## Deduplication
 
-If you **Dismiss** or **Promote** a proposal, the optimizer remembers the exact change it
+If you **Dismiss** or **Approve** a proposal, the optimizer remembers the exact change it
 suggested. The next time it would surface an identical proposal (same agent + same
 proposed change), it suppresses it instead of asking you again. The proposal is only
 re-surfaced after **3 more completed test-run groups** have run against that agent — the

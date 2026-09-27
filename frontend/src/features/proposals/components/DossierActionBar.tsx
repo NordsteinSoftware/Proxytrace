@@ -22,7 +22,7 @@ interface Props extends DossierActions {
 
 /**
  * The dossier's pinned decision bar. What it offers follows the review state: a Draft proposal
- * gets Promote/Dismiss, an in-flight theory gets its cancel, terminal states read their outcome
+ * gets Approve/Dismiss, an in-flight theory gets its cancel, terminal states read their outcome
  * and (where the server allows) a reset back to Proposed.
  */
 export function DossierActionBar({ theory, proposal, onSetStatus, onReset, onReject, actionPending, resetPending, rejectPending }: Props) {
@@ -38,11 +38,14 @@ export function DossierActionBar({ theory, proposal, onSetStatus, onReset, onRej
 
   return (
     <div
-      className="flex shrink-0 items-center gap-2 border-t border-hairline px-4 py-3"
+      className="flex shrink-0 flex-wrap items-center gap-2 border-t border-hairline px-4 py-3"
       data-testid="dossier-action-bar"
     >
       {reviewable && (
         <>
+          <p className="m-0 w-full text-body-sm text-secondary" data-testid="proposal-approval-help">
+            <Trans>Approval prepares the handoff. Apply the change in your agent's code, then Proxytrace checks live traffic for adoption.</Trans>
+          </p>
           <Button
             variant="success" size="sm"
             loading={actionPending}
@@ -51,7 +54,7 @@ export function DossierActionBar({ theory, proposal, onSetStatus, onReset, onRej
             onClick={() => proposal && onSetStatus(ProposalStatus.Accepted)}
             data-testid="proposal-promote-btn"
           >
-            <Trans>Promote</Trans>
+            <Trans>Approve for implementation</Trans>
           </Button>
           <Button
             variant="secondary" size="sm"

@@ -49,12 +49,12 @@ export const REVIEW_META: Record<ProposalStatus, ReviewMeta> = {
   [ProposalStatus.Draft]: {
     label: msg`Pending review`,
     tone: 'teal',
-    description: msg`The change beat the baseline. Promote it to get the handoff package, or dismiss it.`,
+    description: msg`The change beat the baseline. Approve it for implementation to get the handoff package, or dismiss it.`,
   },
   [ProposalStatus.Accepted]: {
-    label: msg`Promoted`,
+    label: msg`Approved`,
     tone: 'accent',
-    description: msg`Promoted — awaiting adoption in your agent.`,
+    description: msg`Approved — apply the change in your agent, then check adoption.`,
   },
   [ProposalStatus.Adopted]: {
     label: msg`Adopted`,

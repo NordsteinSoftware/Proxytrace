@@ -2,6 +2,7 @@ import { useRef } from 'react';
 import { Trans, useLingui } from '@lingui/react/macro';
 import { cn } from '../../../lib/cn';
 import { Tooltip } from '../../../components/ui/Tooltip';
+import { Button } from '../../../components/ui/Button';
 import { AlertTriangleIcon, ArrowDownIcon, ArrowUpIcon } from '../../../components/icons';
 import {
   COL_HEADERS,
@@ -98,13 +99,13 @@ interface PositionProps {
   total: number;
   /** Live traces arrived while the reader was scrolled; the list refreshes on return to the top. */
   pendingRefresh: boolean;
+  onJumpToLatest: () => void;
 }
 
 /**
- * Where the reader is in the set. This is what replaced the paging stepper: the same orientation the
- * page number gave, but as a readout rather than a control, since scrolling is now how you move.
+ * Where the reader is in the set, with a jump action when arrivals were withheld while scrolling.
  */
-function PositionReadout({ first, last, total, pendingRefresh }: PositionProps) {
+function PositionReadout({ first, last, total, pendingRefresh, onJumpToLatest }: PositionProps) {
   return (
     <span
       data-testid="trace-position-readout"
@@ -112,12 +113,12 @@ function PositionReadout({ first, last, total, pendingRefresh }: PositionProps) 
     >
       {pendingRefresh && (
         <>
-          {/* Colour and motion alone can never carry meaning (DESIGN.md §7), so the dot is decorative
-              and the live region below states it in words. */}
-          <span aria-hidden className="pulse-dot inline-block w-1.5 h-1.5 rounded-full bg-accent" />
           <span className="sr-only" aria-live="polite">
-            <Trans>New traces available. Scroll to the top to refresh.</Trans>
+            <Trans>New traces available.</Trans>
           </span>
+          <Button variant="link" size="sm" data-testid="trace-jump-latest" onClick={onJumpToLatest}>
+            <Trans>New traces · Jump to latest ↑</Trans>
+          </Button>
         </>
       )}
       {total > 0 && <Trans>{first.toLocaleString()}–{last.toLocaleString()} of {total.toLocaleString()}</Trans>}

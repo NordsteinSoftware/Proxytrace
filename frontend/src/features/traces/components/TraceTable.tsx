@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useRef } from 'react';
 import { Trans } from '@lingui/react/macro';
 import { SkeletonList } from '../../../components/ui/Skeleton';
+import { Button } from '../../../components/ui/Button';
 import type { AgentCallListItemDto } from '../../../api/models';
 import { traceListView } from '../tracesMeta';
 import type { TraceRow, TraceSort, TraceSortField } from '../tracesMeta';
@@ -62,6 +63,7 @@ interface Props {
   selection: TraceSelectionProps;
   /** A narrowing filter (agent or search) is active — empty means "no match", not "no traces yet". */
   filtered: boolean;
+  onResetFilters?: () => void;
   sort: TraceSort;
   /** Header click: a new column sorts descending; the active column toggles direction. */
   onSortChange: (field: TraceSortField) => void;
@@ -106,6 +108,7 @@ export function TraceTable({
   live,
   selection,
   filtered,
+  onResetFilters,
   sort,
   onSortChange,
   scrollToTraceId,
@@ -148,6 +151,11 @@ export function TraceTable({
     onAtTopChange((scrollRef.current?.scrollTop ?? 0) <= AT_TOP_THRESHOLD_PX);
   }, [onAtTopChange]);
 
+  const jumpToLatest = useCallback(() => {
+    if (scrollRef.current) scrollRef.current.scrollTop = 0;
+    onAtTopChange(true);
+  }, [onAtTopChange]);
+
   const view = traceListView(traceIndices.length, isFetching, filtered);
 
   return (
@@ -171,7 +179,7 @@ export function TraceTable({
           <TraceTableHeader
             sort={sort}
             onSortChange={onSortChange}
-            position={{ first, last, total, pendingRefresh }}
+            position={{ first, last, total, pendingRefresh, onJumpToLatest: jumpToLatest }}
             onColumnResize={resizeColumn}
           />
 
@@ -184,9 +192,11 @@ export function TraceTable({
           )}
 
           {view === 'empty-filtered' && (
-            <div data-testid="traces-empty-state" className="py-12 flex flex-col items-center gap-1 text-center">
+            <div data-testid="traces-empty-state" className="py-12 flex flex-col items-center gap-2 text-center">
               <span className="text-secondary text-body"><Trans>No traces match your filters.</Trans></span>
-              <span className="text-muted text-body-sm"><Trans>Try widening the time range, agent, or search.</Trans></span>
+              {onResetFilters
+                ? <Button variant="link" size="sm" data-testid="traces-empty-reset-view" onClick={onResetFilters}><Trans>Reset view</Trans></Button>
+                : <span className="text-muted text-body-sm"><Trans>Try widening the time range, agent, or search.</Trans></span>}
             </div>
           )}
 
