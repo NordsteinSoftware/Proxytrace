@@ -18,7 +18,7 @@
 </p>
 
 <p align="center">
-  <a href="https://proxytrace.dev">Website</a> &nbsp;|&nbsp;
+  <a href="https://nordstein.eu/proxytrace/">Website</a> &nbsp;|&nbsp;
   <a href="manual/guide/getting-started.md">User guide</a> &nbsp;|&nbsp;
   <a href="manual/admin/installation.md">Installation</a> &nbsp;|&nbsp;
   <a href="CHANGELOG.md">Changelog</a>
@@ -95,8 +95,8 @@ providers, and additional routing options.
 | **Automate** | Query traces, curate suites, and start runs through the REST API or project-scoped MCP server. |
 
 Proxytrace supports OpenAI, Azure OpenAI, and OpenAI-compatible providers on `linux/amd64` and
-`linux/arm64`. Feature availability varies by plan; see [proxytrace.dev](https://proxytrace.dev) for
-the current feature matrix.
+`linux/arm64`. Feature availability varies by plan; see
+[the website](https://nordstein.eu/proxytrace/) for the current feature matrix.
 
 ## See the workflow
 
