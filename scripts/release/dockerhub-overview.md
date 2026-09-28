@@ -4,7 +4,7 @@
 make, turns real traces into regression suites, and closes the loop with evidence-backed
 optimization proposals. Self-hosted, runs entirely on your own infrastructure.
 
-- Website: <https://proxytrace.dev>
+- Website: <https://nordstein.eu/proxytrace/>
 - Source & releases: <https://github.com/NordsteinSoftware/Proxytrace>
 - Docs: served at `/docs` in every install
 

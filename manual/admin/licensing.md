@@ -254,7 +254,7 @@ offline-only key only for installs that will never reach `https://license.proxyt
 Enterprise licenses are available from the Proxytrace website. To purchase or to discuss
 offline / air-gapped licensing, see the pricing page or contact sales:
 
-- **Pricing:** <https://proxytrace.dev/#pricing>
+- **Pricing:** <https://nordstein.eu/proxytrace/#pricing>
 
 ## Key-rotation FAQ
 
