@@ -77,6 +77,12 @@ internal class AgentCallConfig : AbstractEntityConfiguration<AgentCallEntity>, I
         // Composite (SessionId, CreatedAt): the session detail page pages one session's traces
         // chronologically; the leading column alone also serves the traces-list session filter.
         builder.HasIndex(e => new { e.SessionId, e.CreatedAt });
+
+        // Partial composite (ScopeId, CreatedAt): serves the scope filter of the traces list,
+        // histogram and statistics (WHERE ScopeId = @p implies NOT NULL, so the planner can use it).
+        // Partial because unscoped traffic — and every row ingested before scopes existed — would
+        // only bloat it; that also makes creating it on an existing install a near-empty build.
+        builder.HasIndex(e => new { e.ScopeId, e.CreatedAt }).HasFilter("\"ScopeId\" IS NOT NULL");
         builder.HasIndex(e => e.LatencyMs);
         builder.HasIndex(e => e.TotalTokens);
         builder.HasIndex(e => e.ResponseToolRequestCount);
@@ -160,7 +166,8 @@ internal class AgentCallConfig : AbstractEntityConfiguration<AgentCallEntity>, I
             outlierFlags: stored.OutlierFlags,
             apiKeyId: stored.ApiKeyId,
             parentContinuationHash: stored.ParentContinuationHash,
-            supportsAutomaticGrouping: stored.ContinuationHash is not null);
+            supportsAutomaticGrouping: stored.ContinuationHash is not null,
+            scopeId: stored.ScopeId);
     }
 
     /// <summary>
@@ -190,6 +197,7 @@ internal class AgentCallConfig : AbstractEntityConfiguration<AgentCallEntity>, I
             SessionId = domain.SessionId,
             OutlierFlags = domain.OutlierFlags,
             ApiKeyId = domain.ApiKeyId,
+            ScopeId = domain.ScopeId,
             RequestPreview = AgentCallPreview.Build(domain.Request),
             ResponseToolRequestCount = domain.Response?.Response is AssistantMessage assistant
                 ? assistant.ToolRequests.Count

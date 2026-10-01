@@ -5,6 +5,7 @@ using Proxytrace.Domain;
 using Proxytrace.Domain.Agent;
 using Proxytrace.Domain.AgentCall;
 using Proxytrace.Domain.AgentVersion;
+using Proxytrace.Domain.Scope;
 using Proxytrace.Domain.Session;
 using Nordstein.Core.Domain.Events;
 using Proxytrace.Domain.ModelEndpoint;
@@ -796,6 +797,39 @@ internal class AgentCallRepository : AbstractRepository<IAgentCall, AgentCallEnt
             // the null group, so this only ever skips nothing.
             if (row.SessionId is { } sessionId)
                 removals.Add(new SessionTraceRemoval(sessionId, row.TraceCount, row.TotalTokens));
+        }
+
+        return removals;
+    }
+
+    /// <summary>
+    /// Gets the scope removals older than asynchronously.
+    /// </summary>
+    public async Task<IReadOnlyList<ScopeTraceRemoval>> GetScopeRemovalsOlderThanAsync(
+        DateTimeOffset cutoffDate,
+        CancellationToken cancellationToken = default)
+    {
+        // Same shape as GetSessionRemovalsOlderThanAsync, grouped by (scope, version) because the
+        // scope counters live on the per-version membership rows.
+        var grouped = await contextFactory()
+            .Set<AgentCallEntity>()
+            .AsNoTracking()
+            .Where(e => e.CreatedAt <= cutoffDate && e.ScopeId != null)
+            .GroupBy(e => new { e.ScopeId, e.AgentVersionId })
+            .Select(g => new
+            {
+                g.Key.ScopeId,
+                g.Key.AgentVersionId,
+                TraceCount = g.Count(),
+                TotalTokens = g.Sum(e => (long)(e.TotalTokens ?? 0)),
+            })
+            .ToListAsync(cancellationToken);
+
+        var removals = new List<ScopeTraceRemoval>(grouped.Count);
+        foreach (var row in grouped)
+        {
+            if (row.ScopeId is { } scopeId)
+                removals.Add(new ScopeTraceRemoval(scopeId, row.AgentVersionId, row.TraceCount, row.TotalTokens));
         }
 
         return removals;

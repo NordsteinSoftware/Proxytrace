@@ -4,6 +4,7 @@ using Proxytrace.Application.Statistics;
 using Proxytrace.Domain;
 using Proxytrace.Domain.AgentCall;
 using Proxytrace.Domain.Project;
+using Proxytrace.Domain.Scope;
 using Proxytrace.Domain.Session;
 using Proxytrace.PerfHarness.Bootstrap;
 using Proxytrace.PerfHarness.Reporting;
@@ -30,6 +31,7 @@ internal static class QueryLatencyScenario
         var agentStats = scope.Resolve<IAgentStatistics>();
         var callRepo = scope.Resolve<IAgentCallRepository>();
         var sessionRepo = scope.Resolve<ISessionRepository>();
+        var scopeRepo = scope.Resolve<IScopeRepository>();
         var projectRepo = scope.Resolve<IRepository<IProject>>();
 
         var lastCalls = await callRepo.GetLastCallTimesAsync(cancellationToken);
@@ -151,6 +153,20 @@ internal static class QueryLatencyScenario
         // seconds means the grouping stopped translating and started materialising the doomed rows.
         await Measure("sessionRemovalDeltas",
             () => callRepo.GetSessionRemovalsOlderThanAsync(now, cancellationToken));
+
+        // Scope-membership counterpart: the per-(scope, version) totals retention hands back to the
+        // scope membership counters. Same indexed CreatedAt range, one more grouping column.
+        await Measure("scopeRemovalDeltas",
+            () => callRepo.GetScopeRemovalsOlderThanAsync(now, cancellationToken));
+
+        // The Scopes page: every scope of the project with its per-agent activity. Reads only the
+        // scope and membership tables (a few hundred rows) joined to AgentVersion — it must never
+        // touch AgentCallEntity, so it stays flat however many traces exist.
+        if (projectId is { } scopesProject)
+        {
+            await Measure("scopesOverview",
+                () => scopeRepo.GetOverviewsAsync(scopesProject, cancellationToken));
+        }
 
         // Dashboard statistics aggregations.
         await Measure("statsSummary",

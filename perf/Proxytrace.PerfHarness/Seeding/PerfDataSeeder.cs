@@ -14,6 +14,7 @@ using Proxytrace.Domain.Model;
 using Proxytrace.Domain.ModelEndpoint;
 using Proxytrace.Domain.ModelProvider;
 using Proxytrace.Domain.Project;
+using Proxytrace.Domain.Scope;
 using Proxytrace.Domain.Session;
 using Proxytrace.Domain.TestCase;
 using Proxytrace.Domain.TestRun;
@@ -32,6 +33,11 @@ namespace Proxytrace.PerfHarness.Seeding;
 /// </summary>
 internal sealed class PerfDataSeeder
 {
+    // Relative traffic share of the seeded scopes, broadest first (the remainder up to 100% is the
+    // UnscopedRate share). Skewed on purpose: a scope filter is cheapest on a narrow scope and most
+    // expensive on a broad one, and the perf probes measure both ends.
+    private static readonly double[] ScopeWeights = [40, 25, 15, 8, 5];
+
     private readonly PerfContainer container;
 
     public PerfDataSeeder(PerfContainer container)
@@ -81,6 +87,14 @@ internal sealed class PerfDataSeeder
         // sessions never picked below are skipped — the perf DB only needs realistic cardinality.)
         var sessionAccumulators = new SessionAccumulator[sessionPoolSize];
 
+        // Scopes: ids derived exactly like ingestion admission derives them, so the stamped
+        // AgentCall.ScopeId and the Scope rows inserted after the loop agree. Membership counters are
+        // accumulated per (scope, version), the shape the ingestion upsert maintains.
+        var scopes = new ScopeSeeding(
+            ScopeWeights.Select((_, i) => ScopeIdDerivation.Derive(graph.ProjectId, $"perf-scope-{i}")).ToArray(),
+            HomeScopes(graph.Agents.Count),
+            new Dictionary<(int Scope, Guid Version), MembershipAccumulator>());
+
         long inserted = 0;
         while (inserted < options.TargetCalls)
         {
@@ -95,7 +109,7 @@ internal sealed class PerfDataSeeder
                 var batch = new List<IAgentCall>(batchCount);
                 for (int i = 0; i < batchCount; i++)
                 {
-                    batch.Add(BuildCall(graph, conversationIds, apiKeyPool, sessionPool, sessionAccumulators,
+                    batch.Add(BuildCall(graph, conversationIds, apiKeyPool, sessionPool, sessionAccumulators, scopes,
                         createExisting, createCompletion, rng, start, span, options));
                 }
 
@@ -109,6 +123,7 @@ internal sealed class PerfDataSeeder
         // Insert the Sessions rows once, after the call loop, for every pool entry that actually received
         // a call — with the counters accumulated above, so session lists never aggregate the traces table.
         await SeedSessionsAsync(graph, sessionPool, sessionAccumulators, cancellationToken);
+        await SeedScopesAsync(graph, scopes, cancellationToken);
 
         // --- 3. per-run test-run statistics rows (for the suite-scoped TestRunStats query, #253) ---
         await SeedTestRunStatsAsync(graph, options, cancellationToken);
@@ -177,6 +192,66 @@ internal sealed class PerfDataSeeder
                 await repository.AddRangeAsync(batch, cancellationToken);
             });
         }
+    }
+
+    /// <summary>
+    /// Inserts one Scope row per seeded scope (through the real <see cref="IScopeRepository"/>, with
+    /// the derived ids already stamped on the traces) and one membership row per (scope, version)
+    /// that received calls. Memberships go in through the ingestion upsert itself — a few hundred
+    /// rows — carrying the accumulated tokens and newest call time; their TraceCount is therefore 1
+    /// rather than exact, which is irrelevant to the read-latency probes (what matters is realistic
+    /// membership cardinality).
+    /// </summary>
+    private async Task SeedScopesAsync(SeedGraph graph, ScopeSeeding scopes, CancellationToken cancellationToken)
+    {
+        Console.WriteLine($"[seed] building {scopes.Ids.Count} scopes / {scopes.Memberships.Count} memberships…");
+        await container.InScopeAsync(async scope =>
+        {
+            var createExisting = scope.Resolve<IScope.CreateExisting>();
+            var repository = scope.Resolve<IScopeRepository>();
+            var now = DateTimeOffset.UtcNow;
+
+            var rows = scopes.Ids
+                .Select((id, i) => createExisting(
+                    externalKey: $"perf-scope-{i}",
+                    projectId: graph.ProjectId,
+                    displayName: $"Perf scope {i}",
+                    description: null,
+                    existing: new SeedEntityData(id, now, now)))
+                .ToList();
+            await repository.AddRangeAsync(rows, cancellationToken);
+
+            foreach (var ((scopeIndex, versionId), acc) in scopes.Memberships)
+            {
+                await repository.RecordActivityAsync(
+                    scopes.Ids[scopeIndex], versionId, acc.TotalTokens, acc.LastSeenAt, cancellationToken);
+            }
+        });
+    }
+
+    // Assigns each agent a home scope so the share of *agents* per scope follows ScopeWeights — with
+    // agents picked uniformly per call, that makes the share of *calls* follow it too.
+    private static int[] HomeScopes(int agentCount)
+    {
+        double total = ScopeWeights.Sum();
+        var homes = new int[agentCount];
+        for (int a = 0; a < agentCount; a++)
+        {
+            double position = (a + 0.5) / agentCount * total;
+            double cumulative = 0;
+            int home = ScopeWeights.Length - 1;
+            for (int s = 0; s < ScopeWeights.Length; s++)
+            {
+                cumulative += ScopeWeights[s];
+                if (position < cumulative)
+                {
+                    home = s;
+                    break;
+                }
+            }
+            homes[a] = home;
+        }
+        return homes;
     }
 
     private async Task<SeedGraph> BuildGraphAsync(SeedOptions options, CancellationToken cancellationToken)
@@ -262,6 +337,7 @@ internal sealed class PerfDataSeeder
         Guid[] apiKeyPool,
         SessionSeed[] sessionPool,
         SessionAccumulator[] sessionAccumulators,
+        ScopeSeeding scopes,
         IAgentCall.CreateExisting createExisting,
         ICompletion.Create createCompletion,
         Random rng,
@@ -269,7 +345,8 @@ internal sealed class PerfDataSeeder
         TimeSpan span,
         SeedOptions options)
     {
-        IAgent agent = graph.Agents[rng.Next(graph.Agents.Count)];
+        int agentIndex = rng.Next(graph.Agents.Count);
+        IAgent agent = graph.Agents[agentIndex];
         IAgentVersion version = agent.CurrentVersion;
         IModelEndpoint endpoint = graph.Endpoints[rng.Next(graph.Endpoints.Count)];
         Conversation request = graph.Conversations[rng.Next(graph.Conversations.Count)];
@@ -286,6 +363,12 @@ internal sealed class PerfDataSeeder
         Guid? apiKeyId = rng.NextDouble() < options.ApiKeyRate
             ? apiKeyPool[rng.Next(apiKeyPool.Length)]
             : null;
+
+        int? scopeIndex = rng.NextDouble() < options.UnscopedRate
+            ? null
+            : rng.NextDouble() < options.ScopeCrossoverRate
+                ? rng.Next(scopes.Ids.Count)
+                : scopes.HomeScopes[agentIndex];
 
         bool isError = rng.NextDouble() < options.ErrorRate;
 
@@ -330,6 +413,18 @@ internal sealed class PerfDataSeeder
             }
         }
 
+        if (scopeIndex is { } sx)
+        {
+            var key = (sx, version.Id);
+            scopes.Memberships.TryGetValue(key, out MembershipAccumulator membership);
+            membership.TotalTokens += callTokens;
+            if (createdAt > membership.LastSeenAt)
+            {
+                membership.LastSeenAt = createdAt;
+            }
+            scopes.Memberships[key] = membership;
+        }
+
         // ~OutlierRate of calls carry outlier flags: one random statistical bit (occasionally two),
         // and a quarter of flagged rows also carry the async CustomAnomaly bit so both the static and
         // custom count paths of the anomaly aggregates are exercised.
@@ -362,7 +457,8 @@ internal sealed class PerfDataSeeder
             conversationId: conversationId,
             sessionId: sessionId,
             outlierFlags: outlierFlags,
-            apiKeyId: apiKeyId);
+            apiKeyId: apiKeyId,
+            scopeId: scopeIndex is { } scoped ? scopes.Ids[scoped] : null);
     }
 
     /// <summary>
@@ -508,6 +604,19 @@ internal sealed class PerfDataSeeder
         public int TraceCount;
         public long TotalTokens;
         public DateTimeOffset LastActivityAt;
+    }
+
+    /// <summary>The seeded scopes, each agent's home scope, and the per-(scope, version) accumulators.</summary>
+    private sealed record ScopeSeeding(
+        IReadOnlyList<Guid> Ids,
+        int[] HomeScopes,
+        Dictionary<(int Scope, Guid Version), MembershipAccumulator> Memberships);
+
+    /// <summary>Membership activity accumulated for one (scope, version) as calls are assigned to it.</summary>
+    private struct MembershipAccumulator
+    {
+        public long TotalTokens;
+        public DateTimeOffset LastSeenAt;
     }
 
     private sealed record SeedEntityData(Guid Id, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt) : IDomainEntityData;

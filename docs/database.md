@@ -228,6 +228,15 @@ dotnet ef database update --project Proxytrace.Storage --startup-project Proxytr
 To regenerate the consolidated history from scratch, delete `Proxytrace.Storage/Migrations/*.cs`
 and run `dotnet ef migrations add Initial` with the env-var connection string above.
 
+The `AddScopes` migration adds the `ScopeEntity` table (unique `(ProjectId, ExternalKey)`, cascades
+with its project), the storage-only membership junction `ScopeAgentVersionEntity` (PK
+`(ScopeId, AgentVersionId)`, cascading from both its scope and its agent version — membership is derived
+data that retention rebuilds from traces, so it must never block a delete), and the **nullable, FK-free**
+`AgentCallEntity.ScopeId` column — metadata-only in PostgreSQL, no table rewrite. Its index
+`(ScopeId, CreatedAt)` is **partial** (`WHERE "ScopeId" IS NOT NULL`): every pre-existing row is
+unscoped, so the index builds near-empty on an existing install and only ever holds scoped traffic. No
+backfill — historical traces stay unscoped. See [domain-concepts](domain-concepts.md) (Scope).
+
 The `AddUserLanguage` migration adds a non-nullable `UserEntity.Language` column with a SQL default
 of `'en'` (configured via `HasDefaultValue("en")` in `UserConfig`), which backfills existing rows to
 English — see [`i18n.md`](i18n.md).

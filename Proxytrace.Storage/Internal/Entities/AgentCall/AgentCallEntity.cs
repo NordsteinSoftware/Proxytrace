@@ -94,6 +94,13 @@ internal record AgentCallEntity : Entity
     /// </summary>
     public Guid? ApiKeyId { get; init; }
 
+    /// <summary>
+    /// The scope (use-case group of agents) this call was sent under, or null when the client named
+    /// none. Nullable and FK-free like <see cref="SessionId"/> — scope deletion never cascades away
+    /// telemetry.
+    /// </summary>
+    public Guid? ScopeId { get; init; }
+
     // Outlier characteristics flagged at ingestion (bitmask). 0 = not an outlier. Persisted as a
     // single byte; a partial index (see AgentCallConfig) serves the "outliers only" trace filter.
     /// <summary>
