@@ -34,7 +34,7 @@ public sealed class OpenAiProxyBudgetBlockingTests
             new SingleHandlerClientFactory(upstream));
         controller.ControllerContext = BuildContext(body: """{"model":"gpt-4o","messages":[]}""");
 
-        await controller.Proxy("chat/completions", project: null, CancellationToken.None);
+        await controller.Proxy("chat/completions", project: null, scope: null, CancellationToken.None);
 
         controller.Response.StatusCode.Should().Be(StatusCodes.Status403Forbidden);
         upstream.LastMethod.Should().BeNull("a budget-blocked request must never reach the provider");
@@ -46,7 +46,7 @@ public sealed class OpenAiProxyBudgetBlockingTests
         var controller = BuildController(Substitute.For<IIngestionStream>(), BlocksOf(ProjectBlock()));
         controller.ControllerContext = BuildContext(body: """{"messages":[]}""");
 
-        await controller.Proxy("chat/completions", project: null, CancellationToken.None);
+        await controller.Proxy("chat/completions", project: null, scope: null, CancellationToken.None);
 
         using var doc = JsonDocument.Parse(ReadResponse(controller));
         JsonElement error = doc.RootElement.GetProperty("error");
@@ -60,7 +60,7 @@ public sealed class OpenAiProxyBudgetBlockingTests
         var controller = BuildController(Substitute.For<IIngestionStream>(), BlocksOf(ProjectBlock()));
         controller.ControllerContext = BuildContext(body: """{"messages":[]}""");
 
-        await controller.Proxy("chat/completions", project: null, CancellationToken.None);
+        await controller.Proxy("chat/completions", project: null, scope: null, CancellationToken.None);
 
         // An ingestion API key does not imply entitlement to the organisation's spend figures.
         string json = ReadResponse(controller);
@@ -75,13 +75,28 @@ public sealed class OpenAiProxyBudgetBlockingTests
         var controller = BuildController(stream, BlocksOf(ProjectBlock()));
         controller.ControllerContext = BuildContext(body: """{"messages":[]}""");
 
-        await controller.Proxy("chat/completions", project: null, CancellationToken.None);
+        await controller.Proxy("chat/completions", project: null, scope: null, CancellationToken.None);
 
         await stream.Received(1).PublishAsync(
             Arg.Is<IngestMessage>(m => m != null
                 && m.BlockedByBudget
                 && m.HttpStatus == StatusCodes.Status403Forbidden
                 && m.BlockedByDetectorId == null),
+            Arg.Any<CancellationToken>());
+    }
+
+    [TestMethod]
+    public async Task Proxy_BudgetBlockedScopedCall_PublishesBlockedTraceWithScope()
+    {
+        // A blocked call is still a trace of its scope — the rejection path must carry the tag too.
+        var stream = Substitute.For<IIngestionStream>();
+        var controller = BuildController(stream, BlocksOf(ProjectBlock()));
+        controller.ControllerContext = BuildContext(body: """{"messages":[]}""");
+
+        await controller.Proxy("chat/completions", project: "acme", scope: "Support", CancellationToken.None);
+
+        await stream.Received(1).PublishAsync(
+            Arg.Is<IngestMessage>(m => m != null && m.BlockedByBudget && m.ScopeKey == "support"),
             Arg.Any<CancellationToken>());
     }
 
@@ -95,7 +110,7 @@ public sealed class OpenAiProxyBudgetBlockingTests
             new SingleHandlerClientFactory(upstream));
         controller.ControllerContext = BuildContext(body: """{"messages":[]}""");
 
-        await controller.Proxy("chat/completions", project: null, CancellationToken.None);
+        await controller.Proxy("chat/completions", project: null, scope: null, CancellationToken.None);
 
         // Unattributed traffic is only caught by project-level budgets.
         upstream.LastMethod.Should().NotBeNull();
@@ -113,7 +128,7 @@ public sealed class OpenAiProxyBudgetBlockingTests
         controller.ControllerContext = BuildContext(
             body: """{"messages":[]}""", agentName: "Support bot");
 
-        await controller.Proxy("chat/completions", project: null, CancellationToken.None);
+        await controller.Proxy("chat/completions", project: null, scope: null, CancellationToken.None);
 
         controller.Response.StatusCode.Should().Be(StatusCodes.Status403Forbidden);
         upstream.LastMethod.Should().BeNull();
@@ -129,7 +144,7 @@ public sealed class OpenAiProxyBudgetBlockingTests
             new SingleHandlerClientFactory(upstream));
         controller.ControllerContext = BuildContext(body: """{"messages":[]}""");
 
-        await controller.Proxy("chat/completions", project: null, CancellationToken.None);
+        await controller.Proxy("chat/completions", project: null, scope: null, CancellationToken.None);
 
         upstream.LastMethod.Should().NotBeNull();
     }

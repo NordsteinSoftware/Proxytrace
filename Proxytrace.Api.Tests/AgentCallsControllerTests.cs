@@ -381,6 +381,44 @@ public sealed class AgentCallsControllerTests : BaseTest<Module>
     }
 
     [TestMethod]
+    public async Task Seed_WithScopeKey_StampsScopeAndDeleteGivesBackMembershipCounters()
+    {
+        IServiceProvider services = GetServices();
+        var controller = ResolveController(services);
+        var agent = await services.GetRequiredService<IDomainEntityGenerator<IAgent>>().CreateAsync(CancellationToken);
+        var expectedScopeId = Proxytrace.Domain.Scope.ScopeIdDerivation.Derive(agent.Project.Id, "support-agents");
+        var scopes = services.GetRequiredService<Proxytrace.Domain.Scope.IScopeRepository>();
+
+        var result = await controller.Seed(
+            new SeedAgentCallRequest(
+                AgentId: agent.Id,
+                Model: "gpt-4o",
+                UserContent: "hi",
+                AssistantContent: "hello",
+                SystemContent: null,
+                InputTokens: 30,
+                OutputTokens: 10,
+                DurationMs: 100,
+                ConversationId: null,
+                ScopeKey: "Support Agents"),
+            CancellationToken);
+        var dto = result.Result.Should().BeOfType<OkObjectResult>().Subject.Value.Should().BeOfType<AgentCallDto>().Subject;
+        var stored = await services.GetRequiredService<IAgentCallRepository>().GetAsync(dto.Id, CancellationToken);
+        var seeded = await scopes.GetOverviewAsync(expectedScopeId, CancellationToken);
+
+        await controller.Delete(dto.Id, CancellationToken);
+        var afterDelete = await scopes.GetOverviewAsync(expectedScopeId, CancellationToken);
+
+        stored.ScopeId.Should().Be(expectedScopeId, "the raw key is normalised exactly as ingestion does");
+        ArgumentNullException.ThrowIfNull(seeded);
+        seeded.TraceCount.Should().Be(1);
+        seeded.TotalTokens.Should().Be(40);
+        ArgumentNullException.ThrowIfNull(afterDelete);
+        afterDelete.TraceCount.Should().Be(0);
+        afterDelete.TotalTokens.Should().Be(0);
+    }
+
+    [TestMethod]
     public async Task GetAll_AsNonAdminBySessionAndProject_ReturnsSessionTraces()
     {
         IServiceProvider services = GetServices();
@@ -471,6 +509,8 @@ public sealed class AgentCallsControllerTests : BaseTest<Module>
         services.GetRequiredService<IAgentCallRepository>(),
         services.GetRequiredService<IAgentRepository>(),
         services.GetRequiredService<Proxytrace.Domain.Session.ISessionRepository>(),
+        services.GetRequiredService<Proxytrace.Domain.Scope.IScopeRepository>(),
+        services.GetRequiredService<Proxytrace.Application.Ingestion.ScopeOptions>(),
         services.GetRequiredService<IDashboardStatistics>(),
         services.GetRequiredService<ITraceBroadcaster>(),
         services.GetRequiredService<AgentCallDtoMapper>(),

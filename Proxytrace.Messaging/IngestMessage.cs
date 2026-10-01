@@ -38,6 +38,12 @@ namespace Proxytrace.Messaging;
 /// messages already in the stream keep deserializing across a rolling deploy — they simply arrive
 /// unattributed.
 /// </para>
+/// <para>
+/// <c>ScopeKey</c> carries the scope the client named — the <c>x-proxytrace-scope</c> header, else the
+/// <c>/{project}/{scope}/openai/v1</c> path segment — already canonicalised by the proxy (the consumer
+/// normalises again, so other producers stay safe). Null means unscoped. Trailing optional like the
+/// rest: messages already in the stream arrive unscoped across a rolling deploy.
+/// </para>
 /// </summary>
 public sealed record IngestMessage(
     Guid ProviderId,
@@ -53,4 +59,5 @@ public sealed record IngestMessage(
     string? BlockedTriggerPattern = null,
     string? ConversationId = null,
     bool BlockedByBudget = false,
-    Guid? ApiKeyId = null);
+    Guid? ApiKeyId = null,
+    string? ScopeKey = null);

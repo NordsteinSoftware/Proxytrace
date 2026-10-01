@@ -9,6 +9,16 @@ follow [Semantic Versioning](https://semver.org). Ongoing work is collected unde
 
 ## [Unreleased]
 
+### Added
+
+- **Scopes group the agents of one use case inside a project.** Name a scope in the proxy base
+  URL — `https://your-proxytrace-host/{project}/{scope}/openai/v1`, e.g.
+  `/translogica/support-agents/openai/v1` — or per request with the `x-proxytrace-scope` header
+  (the header wins when both are sent). Scopes are created automatically on first use, names are
+  normalised like project slugs (`Support Agents` and `support-agents` are one scope), and a name
+  that can't be used never fails the call — the trace is just recorded unscoped. Agents that serve
+  several use cases appear in each of their scopes. A project holds up to 200 scopes.
+
 ## [1.14.0] - 2026-09-22
 
 ### Added

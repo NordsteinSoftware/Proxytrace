@@ -41,4 +41,42 @@ public sealed class IngestMessageSerializationTests
 
         restored.Should().Be(original);
     }
+
+    [TestMethod]
+    public void IngestMessage_WithScopeKey_RoundTripsThroughJson()
+    {
+        var original = new IngestMessage(
+            ProviderId: Guid.NewGuid(),
+            ProjectId: Guid.NewGuid(),
+            RequestBody: "{}",
+            ResponseBody: null,
+            DurationMs: 10,
+            HttpStatus: 200,
+            SessionId: null,
+            ScopeKey: "support-agents");
+
+        var restored = JsonSerializer.Deserialize<IngestMessage>(JsonSerializer.Serialize(original));
+
+        restored.Should().Be(original);
+    }
+
+    [TestMethod]
+    public void IngestMessage_PayloadFromBeforeScopes_DeserializesUnscoped()
+    {
+        // A message published by a proxy that predates scopes must still deserialize after a rolling
+        // deploy — ScopeKey is a trailing optional and simply arrives null.
+        var providerId = Guid.NewGuid();
+        var projectId = Guid.NewGuid();
+        var json = $$"""
+            {"ProviderId":"{{providerId}}","ProjectId":"{{projectId}}","RequestBody":"{}","ResponseBody":null,
+             "DurationMs":10,"HttpStatus":200,"SessionId":null,"AgentName":null,"ApiKeyId":null}
+            """;
+
+        var restored = JsonSerializer.Deserialize<IngestMessage>(json);
+
+        restored.Should().NotBeNull();
+        ArgumentNullException.ThrowIfNull(restored);
+        restored.ProjectId.Should().Be(projectId);
+        restored.ScopeKey.Should().BeNull();
+    }
 }

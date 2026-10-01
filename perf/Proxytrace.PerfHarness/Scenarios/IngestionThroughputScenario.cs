@@ -9,6 +9,7 @@ using Nordstein.Core.AI.Completions;
 using Nordstein.Core.AI.Messages;
 using Proxytrace.Domain.ModelEndpoint;
 using Proxytrace.Domain.Project;
+using Proxytrace.Domain.Scope;
 using Proxytrace.Domain.Session;
 using Proxytrace.PerfHarness.Bootstrap;
 using Proxytrace.PerfHarness.Reporting;
@@ -29,6 +30,12 @@ internal static class IngestionThroughputScenario
     // ~SessionRate the seeder uses. A small fixed key pool keeps the derived session rows bounded.
     private const double SessionShare = 0.30;
     private const int ProbeSessionPoolSize = 64;
+
+    // Share of probe calls that name a scope, drawn from a few fixed keys: scopes are few and broad,
+    // so — unlike sessions — concurrent workers keep hitting the SAME membership rows. That hot-row
+    // update is exactly the write-path cost (and contention risk) of scopes worth measuring.
+    private const double ScopeShare = 0.90;
+    private static readonly string[] ProbeScopeKeys = ["perf-probe-scope-0", "perf-probe-scope-1", "perf-probe-scope-2"];
 
     public static async Task<MetricResult> RunAsync(
         PerfContainer container,
@@ -97,11 +104,21 @@ internal static class IngestionThroughputScenario
                 ProbeSession? session = rng.NextDouble() < SessionShare
                     ? graph.ProbeSessions[rng.Next(graph.ProbeSessions.Count)]
                     : null;
+                string? scopeKey = rng.NextDouble() < ScopeShare
+                    ? ProbeScopeKeys[rng.Next(ProbeScopeKeys.Length)]
+                    : null;
 
                 await container.InScopeAsync(async scope =>
                 {
                     var createNew = scope.Resolve<IAgentCall.CreateNew>();
                     var repository = scope.Resolve<IAgentCallRepository>();
+                    var scopeRepository = scope.Resolve<IScopeRepository>();
+
+                    // Mirror the worker: admission runs before the call persists (one PK probe in the
+                    // steady state), the membership bump after it.
+                    Guid? scopeId = scopeKey is null
+                        ? null
+                        : await scopeRepository.AdmitAsync(graph.ProjectId, scopeKey, 200, cancellationToken);
 
                     var agent = graph.Agents[rng.Next(graph.Agents.Count)];
                     var endpoint = graph.Endpoints[rng.Next(graph.Endpoints.Count)];
@@ -116,7 +133,8 @@ internal static class IngestionThroughputScenario
                         errorMessage: null,
                         modelParameters: graph.ModelParameters[rng.Next(graph.ModelParameters.Count)],
                         conversationId: null,
-                        sessionId: session?.Id);
+                        sessionId: session?.Id,
+                        scopeId: scopeId);
 
                     await repository.AddAsync(call, cancellationToken);
                     insertedIds.Add(call.Id);
@@ -132,6 +150,15 @@ internal static class IngestionThroughputScenario
                         var sessionRepository = scope.Resolve<ISessionRepository>();
                         await sessionRepository.RecordActivityAsync(
                             s.Id, s.ExternalKey, graph.ProjectId, totalTokens, call.CreatedAt, cancellationToken);
+                    }
+
+                    if (scopeId is { } scoped)
+                    {
+                        long scopedTokens = call.Response?.Usage is { } su
+                            ? (long)(su.InputTokenCount + su.OutputTokenCount)
+                            : 0;
+                        await scopeRepository.RecordActivityAsync(
+                            scoped, call.Version.Id, scopedTokens, call.CreatedAt, cancellationToken);
                     }
                 });
             }
@@ -161,6 +188,7 @@ internal static class IngestionThroughputScenario
         // a set of freshly-timestamped probe sessions with no surviving traces. The pool is fixed and
         // small, so deleting every derived id is cheap and idempotent.
         await CleanupProbeSessionsAsync(container, graph.ProbeSessions, cancellationToken);
+        await CleanupProbeScopesAsync(container, graph.ProjectId, cancellationToken);
 
         return result;
     }
@@ -211,6 +239,22 @@ internal static class IngestionThroughputScenario
             {
                 var repository = scope.Resolve<ISessionRepository>();
                 await repository.RemoveAsync(session.Id, cancellationToken);
+            });
+        }
+    }
+
+    /// <summary>
+    /// Removes the probe scopes (their memberships cascade), restoring the post-seed scope set so
+    /// scopesOverview measures the seeded state on the next kept-DB iterate run.
+    /// </summary>
+    private static async Task CleanupProbeScopesAsync(PerfContainer container, Guid projectId, CancellationToken cancellationToken)
+    {
+        foreach (string key in ProbeScopeKeys)
+        {
+            await container.InScopeAsync(async scope =>
+            {
+                var repository = scope.Resolve<IScopeRepository>();
+                await repository.RemoveAsync(ScopeIdDerivation.Derive(projectId, key), cancellationToken);
             });
         }
     }

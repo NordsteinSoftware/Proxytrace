@@ -22,4 +22,8 @@ public record SeedAgentCallRequest(
     IReadOnlyList<string>? ToolNames = null,
     // Raw client session key: when set, the seeded call is stamped with the derived session id and
     // the session's counters are bumped, so e2e can exercise the sessions list / session filter.
-    string? SessionKey = null);
+    string? SessionKey = null,
+    // Raw client scope key: when set, it is normalised and admitted exactly as ingestion does, the
+    // call is stamped with the scope id and its membership counters bumped — so e2e can exercise
+    // the scopes page and the scope filter without the ingestion proxy.
+    string? ScopeKey = null);

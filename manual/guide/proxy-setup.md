@@ -87,6 +87,33 @@ dropped and spaces turned into hyphens. For example, project **"Showcase Project
 The legacy `https://your-proxytrace-host/openai/v1` form (no project segment) still works for
 Proxytrace-issued keys, since the key already carries its project.
 
+### The scope segment (optional)
+
+If a project holds several agentic use cases — say a support crew and a billing crew — give each
+its own [scope](/guide/scopes) by adding a second path segment between the project and
+`/openai/v1`:
+
+```
+https://your-proxytrace-host/{project}/{scope}/openai/v1
+```
+
+For example `https://your-proxytrace-host/translogica/support-agents/openai/v1` sends every call
+of that client to the scope **support-agents** in project **translogica**. Scopes are created
+automatically the first time a call names them — there is nothing to set up first.
+
+- **Same naming rules as projects.** The scope is lower-cased and spaces or underscores become
+  hyphens, so `Support Agents`, `support_agents` and `support-agents` are one scope. Keys are capped
+  at 64 characters; `openai` and `v1` are reserved.
+- **Never breaks a call.** A scope that leaves nothing usable after these rules (or a reserved
+  word) does not fail the request — the trace is just recorded without a scope.
+- **Keep `/openai/v1` at the end.** Only the traced OpenAI routes understand the scope segment. A
+  base URL like `…/translogica/support-agents/v1` (without `openai`) is *not* recognised and is
+  forwarded to the provider as an unknown path.
+
+You can also name the scope per request with the **`x-proxytrace-scope`** header instead — handy
+when one client serves several use cases. When both are present, **the header wins**. Like every
+`x-proxytrace-*` header it is never forwarded to the provider.
+
 ## Create an API key
 
 A Proxytrace **API Key** is tied to a **Project** and a **Model Provider**. Create one from

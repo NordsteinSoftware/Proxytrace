@@ -10,6 +10,7 @@ using Proxytrace.Api.Auth.Licensing;
 using Proxytrace.Api.Dto.Agents;
 using Proxytrace.Api.Dto.Statistics;
 using Proxytrace.Api.Dto.TestCases;
+using Proxytrace.Application.Ingestion;
 using Proxytrace.Application.Statistics;
 using Proxytrace.Application.TestCase;
 using Proxytrace.Domain.TestSuite;
@@ -21,6 +22,7 @@ using Proxytrace.Domain.AuditLog;
 using Nordstein.Core.AI.Completions;
 using Nordstein.Core.AI.Messages;
 using Nordstein.Core.Domain.Paging;
+using Proxytrace.Domain.Scope;
 using Proxytrace.Domain.Session;
 
 namespace Proxytrace.Api.Controllers;
@@ -38,6 +40,8 @@ public class AgentCallsController : ControllerBase
     private readonly IAgentCallRepository repository;
     private readonly IAgentRepository agentRepository;
     private readonly ISessionRepository sessionRepository;
+    private readonly IScopeRepository scopeRepository;
+    private readonly ScopeOptions scopeOptions;
     private readonly IDashboardStatistics statistics;
     private readonly ITraceBroadcaster traceBroadcaster;
     private readonly AgentCallDtoMapper agentCallDtoMapper;
@@ -57,6 +61,8 @@ public class AgentCallsController : ControllerBase
         IAgentCallRepository repository,
         IAgentRepository agentRepository,
         ISessionRepository sessionRepository,
+        IScopeRepository scopeRepository,
+        ScopeOptions scopeOptions,
         IDashboardStatistics statistics,
         ITraceBroadcaster traceBroadcaster,
         AgentCallDtoMapper agentCallDtoMapper,
@@ -75,6 +81,8 @@ public class AgentCallsController : ControllerBase
         this.repository = repository;
         this.agentRepository = agentRepository;
         this.sessionRepository = sessionRepository;
+        this.scopeRepository = scopeRepository;
+        this.scopeOptions = scopeOptions;
         this.statistics = statistics;
         this.traceBroadcaster = traceBroadcaster;
         this.agentCallDtoMapper = agentCallDtoMapper;
@@ -505,6 +513,11 @@ public class AgentCallsController : ControllerBase
             ? null
             : DeriveSession(projectId, request.SessionKey);
 
+        // Likewise for the scope: admitted exactly as ingestion admits it (normalised key, cap).
+        Guid? scopeId = ScopeKey.Normalize(request.ScopeKey) is { } scopeKey
+            ? await scopeRepository.AdmitAsync(projectId, scopeKey, scopeOptions.MaxScopesPerProject, cancellationToken)
+            : null;
+
         IAgentCall call = await repository.AddAsync(
             createCall(
                 agent: agent,
@@ -518,7 +531,8 @@ public class AgentCallsController : ControllerBase
                 modelParameters: agent.ModelParameters,
                 conversationId: request.ConversationId,
                 sessionId: session?.Id,
-                outlierFlags: (OutlierFlags)(request.OutlierFlags ?? 0)),
+                outlierFlags: (OutlierFlags)(request.OutlierFlags ?? 0),
+                scopeId: scopeId),
             cancellationToken);
 
         if (session is { } stamped)
@@ -528,6 +542,12 @@ public class AgentCallsController : ControllerBase
                 totalTokens: request.InputTokens + request.OutputTokens,
                 lastActivityAt: call.CreatedAt,
                 cancellationToken);
+        }
+
+        if (scopeId is { } scoped)
+        {
+            await scopeRepository.RecordActivityAsync(
+                scoped, call.Version.Id, request.InputTokens + request.OutputTokens, call.CreatedAt, cancellationToken);
         }
 
         // Publish to the trace SSE broadcaster exactly as the ingestion pipeline does, so
@@ -595,6 +615,7 @@ public class AgentCallsController : ControllerBase
                 projectId: call.Agent.Project.Id);
 
             await ReverseSessionActivityAsync(call, cancellationToken);
+            await ReverseScopeActivityAsync(call, cancellationToken);
         }
 
         return removed ? NoContent() : NotFound();
@@ -623,6 +644,30 @@ public class AgentCallsController : ControllerBase
         catch (Exception ex)
         {
             audit.LogWarning(ex, "Session counter reversal failed for session {SessionId}", sessionId);
+        }
+    }
+
+    /// <summary>
+    /// Gives back the counters this trace contributed to its scope membership — the scope
+    /// counterpart of <see cref="ReverseSessionActivityAsync"/>, with the same best-effort stance.
+    /// </summary>
+    private async Task ReverseScopeActivityAsync(IAgentCall call, CancellationToken cancellationToken)
+    {
+        if (call.ScopeId is not { } scopeId)
+            return;
+
+        try
+        {
+            long totalTokens = call.Response?.Usage is { } usage
+                ? (long)(usage.InputTokenCount + usage.OutputTokenCount)
+                : 0;
+            await scopeRepository.RecordTraceRemovalsAsync(
+                [new ScopeTraceRemoval(scopeId, call.Version.Id, TraceCount: 1, TotalTokens: totalTokens)],
+                cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            audit.LogWarning(ex, "Scope counter reversal failed for scope {ScopeId}", scopeId);
         }
     }
 }

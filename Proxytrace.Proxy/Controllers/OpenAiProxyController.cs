@@ -10,6 +10,7 @@ using Proxytrace.Domain.ApiKey;
 using Proxytrace.Domain.Kiosk;
 using Proxytrace.Domain.ModelProvider;
 using Proxytrace.Domain.Project;
+using Proxytrace.Domain.Scope;
 using Proxytrace.Messaging;
 
 namespace Proxytrace.Proxy.Controllers;
@@ -58,6 +59,11 @@ public class OpenAiProxyController : ControllerBase
     // Optional: a client may name its owning agent explicitly. When present, ingestion attributes the
     // call to that named agent directly, skipping the prompt/tool similarity matcher.
     private const string AgentNameHeader = "x-proxytrace-agent";
+
+    // Optional: names the scope (use-case group of agents) the call belongs to. Overrides the
+    // `/{project}/{scope}/openai/v1` path segment when both are sent — the base URL configures a
+    // client once, the header can vary per request.
+    private const string ScopeHeader = "x-proxytrace-scope";
 
     // Headers owned by Proxytrace itself, prefixed so the strip rule below catches future additions
     // (x-proxytrace-session-id, x-proxytrace-agent, …) — they steer ingestion and never travel
@@ -142,17 +148,25 @@ public class OpenAiProxyController : ControllerBase
         this.logger = logger;
     }
 
-    // Two shapes are accepted: the project-scoped `/{project}/openai/v1/…` form (required for the
-    // upstream-provider-key auth path) and the legacy `/openai/v1/…` form (project derived from a
-    // Proxytrace-issued key). The literal `openai/v1/…` template is matched ahead of the
-    // parameterised one, so `project` is only bound for the scoped form.
+    // Three shapes are accepted: the project-scoped `/{project}/openai/v1/…` form (required for the
+    // upstream-provider-key auth path), the legacy `/openai/v1/…` form (project derived from a
+    // Proxytrace-issued key), and `/{project}/{scope}/openai/v1/…`, which additionally names the
+    // scope (use-case group of agents) the call belongs to. The literal `openai/v1/…` template is
+    // matched ahead of the parameterised ones, so `project` is only bound for the project forms;
+    // `/{project}/openai/v1/…` never binds `{scope}` because its third segment is not `openai`.
+    //
+    // `{scope}` deliberately carries NO route constraint: a constraint that rejected a value (say
+    // `Support_Agents`) would not 404 — the request would fall through to the untraced
+    // `{project}/{**rest}` pass-through and silently lose the trace. The value is normalised in the
+    // action instead, and an unusable one just leaves the call unscoped.
     /// <summary>
     /// Proxy.
     /// </summary>
     [Route("openai/v1/{**path}")]
     [Route("{project}/openai/v1/{**path}")]
+    [Route("{project}/{scope}/openai/v1/{**path}")]
     [HttpGet, HttpPost, HttpPut, HttpDelete, HttpPatch, HttpHead, HttpOptions]
-    public async Task Proxy(string? path, string? project, CancellationToken cancellationToken)
+    public async Task Proxy(string? path, string? project, string? scope, CancellationToken cancellationToken)
     {
         // {**path} also matches zero segments (`GET /openai/v1`), in which case the route value is
         // absent and the parameter binds null.
@@ -180,17 +194,7 @@ public class OpenAiProxyController : ControllerBase
 
         var requestBody = Encoding.UTF8.GetString(requestBodyBytes);
 
-        var sessionId = Request.Headers.TryGetValue(SessionIdHeader, out var sid)
-            ? sid.ToString()
-            : null;
-
-        var conversationId = Request.Headers.TryGetValue(ConversationIdHeader, out var cid)
-            ? cid.ToString()
-            : null;
-
-        var agentName = Request.Headers.TryGetValue(AgentNameHeader, out var an)
-            ? an.ToString()
-            : null;
+        var tags = ReadCallTags(scope);
 
         // Monthly cost budget: checked before the detectors because it needs no body inspection —
         // if the project has already spent its hard limit, no further upstream contact is wanted at
@@ -198,11 +202,11 @@ public class OpenAiProxyController : ControllerBase
         // since it never reaches the provider it adds ~no tokens to the spend that blocked it.
         var budgetSw = Stopwatch.StartNew();
         BudgetBlockMatch? budgetBlocked = await budgetBlocker.EvaluateAsync(
-            resolved.Project.Id, agentName, resolved.ApiKeyId, cancellationToken);
+            resolved.Project.Id, tags.AgentName, resolved.ApiKeyId, cancellationToken);
         if (budgetBlocked is not null)
         {
             await RejectBudgetBlockedRequestAsync(
-                resolved, requestBody, budgetBlocked, budgetSw.Elapsed, sessionId, conversationId, agentName, cancellationToken);
+                resolved, requestBody, budgetBlocked, budgetSw.Elapsed, tags, cancellationToken);
             return;
         }
 
@@ -210,11 +214,11 @@ public class OpenAiProxyController : ControllerBase
         // On a match the call is rejected (never forwarded) but still recorded as a blocked trace.
         var blockSw = Stopwatch.StartNew();
         BlockedRequestMatch? blocked = await requestBlocker.EvaluateAsync(
-            resolved.Project.Id, agentName, requestBody, cancellationToken);
+            resolved.Project.Id, tags.AgentName, requestBody, cancellationToken);
         if (blocked is not null)
         {
             await RejectBlockedRequestAsync(
-                resolved, requestBody, blocked, blockSw.Elapsed, sessionId, conversationId, agentName, cancellationToken);
+                resolved, requestBody, blocked, blockSw.Elapsed, tags, cancellationToken);
             return;
         }
 
@@ -260,11 +264,11 @@ public class OpenAiProxyController : ControllerBase
 
             if (isStreaming)
             {
-                await ProxyStreamingResponseAsync(resolved, requestBody, upstreamResponse, sw, sessionId, conversationId, agentName, cancellationToken);
+                await ProxyStreamingResponseAsync(resolved, requestBody, upstreamResponse, sw, tags, cancellationToken);
             }
             else
             {
-                await ProxyBufferedResponseAsync(resolved, requestBody, upstreamResponse, sw, sessionId, conversationId, agentName, client.Timeout, cancellationToken);
+                await ProxyBufferedResponseAsync(resolved, requestBody, upstreamResponse, sw, tags, client.Timeout, cancellationToken);
             }
         }
     }
@@ -641,9 +645,7 @@ public class OpenAiProxyController : ControllerBase
         string requestBody,
         HttpResponseMessage upstreamResponse,
         Stopwatch sw,
-        string? sessionId,
-        string? conversationId,
-        string? agentName,
+        ProxyCallTags tags,
         TimeSpan upstreamBodyTimeout,
         CancellationToken cancellationToken)
     {
@@ -721,7 +723,7 @@ public class OpenAiProxyController : ControllerBase
             // Capture is decoupled from the client request lifetime: the upstream call has already
             // completed, so a client disconnect/timeout here must not drop the captured call.
             // Publish with CancellationToken.None rather than the request-aborted token.
-            await EnqueueSafeAsync(resolved, requestBody, captured.ToString(), sw.Elapsed, capturedStatus, sessionId, conversationId, agentName, CancellationToken.None);
+            await EnqueueSafeAsync(resolved, requestBody, captured.ToString(), sw.Elapsed, capturedStatus, tags, CancellationToken.None);
         }
     }
 
@@ -732,9 +734,7 @@ public class OpenAiProxyController : ControllerBase
         string requestBody,
         HttpResponseMessage upstreamResponse,
         Stopwatch sw,
-        string? sessionId,
-        string? conversationId,
-        string? agentName,
+        ProxyCallTags tags,
         CancellationToken cancellationToken)
     {
         var accumulated = new StringBuilder();
@@ -828,7 +828,7 @@ public class OpenAiProxyController : ControllerBase
             // data the proxy exists to capture. Decouple from the request-aborted token with
             // CancellationToken.None so the publish itself isn't cancelled by the same disconnect.
             sw.Stop();
-            await EnqueueSafeAsync(resolved, requestBody,accumulated.ToString(), sw.Elapsed, upstreamResponse.StatusCode, sessionId, conversationId, agentName, CancellationToken.None);
+            await EnqueueSafeAsync(resolved, requestBody,accumulated.ToString(), sw.Elapsed, upstreamResponse.StatusCode, tags, CancellationToken.None);
         }
     }
 
@@ -887,6 +887,31 @@ public class OpenAiProxyController : ControllerBase
         }
     }
 
+    // The Proxytrace-owned request tags that steer ingestion. The scope comes from the header when it
+    // names a usable key, else from the `{scope}` route segment; both are canonicalised here so the
+    // stream carries the stored form. An unusable or reserved key never fails the call — the proxy is
+    // transparent, so a bad tag only means the trace is recorded unscoped.
+    private ProxyCallTags ReadCallTags(string? routeScope)
+    {
+        var headerScope = Request.Headers.TryGetValue(ScopeHeader, out var sc) ? sc.ToString() : null;
+        var fromHeader = ScopeKey.Normalize(headerScope);
+        var fromRoute = ScopeKey.Normalize(routeScope);
+        if (fromHeader is not null && fromRoute is not null && fromHeader != fromRoute)
+        {
+            logger.LogDebug(
+                "Scope header {HeaderScope} overrides scope path segment {RouteScope}", fromHeader, fromRoute);
+        }
+
+        return new ProxyCallTags(
+            SessionId: Request.Headers.TryGetValue(SessionIdHeader, out var sid) ? sid.ToString() : null,
+            ConversationId: Request.Headers.TryGetValue(ConversationIdHeader, out var cid) ? cid.ToString() : null,
+            AgentName: Request.Headers.TryGetValue(AgentNameHeader, out var an) ? an.ToString() : null,
+            ScopeKey: fromHeader ?? fromRoute);
+    }
+
+    /// <summary>The per-request tags threaded from the request into the ingestion message.</summary>
+    private sealed record ProxyCallTags(string? SessionId, string? ConversationId, string? AgentName, string? ScopeKey);
+
     // Takes the whole ResolvedApiKey rather than provider+project: every captured call must carry
     // the authenticating key's id so spend can be attributed per key, and passing the resolution
     // outcome as one value means a new capture path cannot forget to thread it through.
@@ -896,9 +921,7 @@ public class OpenAiProxyController : ControllerBase
         string? responseBody,
         TimeSpan duration,
         HttpStatusCode httpStatus,
-        string? sessionId,
-        string? conversationId,
-        string? agentName,
+        ProxyCallTags tags,
         CancellationToken cancellationToken,
         BlockedRequestMatch? blocked = null,
         bool blockedByBudget = false)
@@ -913,14 +936,15 @@ public class OpenAiProxyController : ControllerBase
                     ResponseBody: responseBody,
                     DurationMs: (long)duration.TotalMilliseconds,
                     HttpStatus: (int)httpStatus,
-                    SessionId: sessionId,
-                    AgentName: agentName,
+                    SessionId: tags.SessionId,
+                    AgentName: tags.AgentName,
                     BlockedByDetectorId: blocked?.DetectorId,
                     BlockedDetectorName: blocked?.DetectorName,
                     BlockedTriggerPattern: blocked?.TriggerPattern,
-                    ConversationId: conversationId,
+                    ConversationId: tags.ConversationId,
                     BlockedByBudget: blockedByBudget,
-                    ApiKeyId: resolved.ApiKeyId),
+                    ApiKeyId: resolved.ApiKeyId,
+                    ScopeKey: tags.ScopeKey),
                 cancellationToken);
         }
         catch (Exception ex)
@@ -944,9 +968,7 @@ public class OpenAiProxyController : ControllerBase
         string requestBody,
         BlockedRequestMatch blocked,
         TimeSpan elapsed,
-        string? sessionId,
-        string? conversationId,
-        string? agentName,
+        ProxyCallTags tags,
         CancellationToken cancellationToken)
     {
         logger.LogInformation(
@@ -966,9 +988,7 @@ public class OpenAiProxyController : ControllerBase
             responseBody: errorJson,
             duration: elapsed,
             httpStatus: HttpStatusCode.Forbidden,
-            sessionId: sessionId,
-            conversationId: conversationId,
-            agentName: agentName,
+            tags: tags,
             CancellationToken.None,
             blocked: blocked);
     }
@@ -978,9 +998,7 @@ public class OpenAiProxyController : ControllerBase
         string requestBody,
         BudgetBlockMatch blocked,
         TimeSpan elapsed,
-        string? sessionId,
-        string? conversationId,
-        string? agentName,
+        ProxyCallTags tags,
         CancellationToken cancellationToken)
     {
         logger.LogInformation(
@@ -1000,9 +1018,7 @@ public class OpenAiProxyController : ControllerBase
             responseBody: errorJson,
             duration: elapsed,
             httpStatus: HttpStatusCode.Forbidden,
-            sessionId: sessionId,
-            conversationId: conversationId,
-            agentName: agentName,
+            tags: tags,
             CancellationToken.None,
             blockedByBudget: true);
     }

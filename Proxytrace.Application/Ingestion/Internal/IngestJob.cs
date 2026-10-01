@@ -18,4 +18,5 @@ internal sealed record IngestJob(
     string? BlockedTriggerPattern = null,
     string? ConversationId = null,
     bool BlockedByBudget = false,
-    Guid? ApiKeyId = null);
+    Guid? ApiKeyId = null,
+    string? ScopeKey = null);

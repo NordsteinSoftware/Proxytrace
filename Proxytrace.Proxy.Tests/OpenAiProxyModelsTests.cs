@@ -36,7 +36,7 @@ public sealed class OpenAiProxyModelsTests
         var controller = BuildController(handler, AzureKey());
         controller.ControllerContext = BuildGetContext("Bearer valid");
 
-        await controller.Proxy("models", project: null, CancellationToken.None);
+        await controller.Proxy("models", project: null, scope: null, CancellationToken.None);
 
         controller.Response.StatusCode.Should().Be((int)HttpStatusCode.OK);
 
@@ -60,7 +60,7 @@ public sealed class OpenAiProxyModelsTests
         var controller = BuildController(new FixedHandler(upstreamList), OpenAiKey());
         controller.ControllerContext = BuildGetContext("Bearer valid");
 
-        await controller.Proxy("models", project: null, CancellationToken.None);
+        await controller.Proxy("models", project: null, scope: null, CancellationToken.None);
 
         controller.Response.StatusCode.Should().Be((int)HttpStatusCode.OK);
         ReadResponse(controller).Should().Be(upstreamList, "non-Azure /models stays a transparent passthrough");
@@ -77,7 +77,7 @@ public sealed class OpenAiProxyModelsTests
         var controller = BuildController(handler, AzureKey());
         controller.ControllerContext = BuildGetContext("Bearer valid");
 
-        await controller.Proxy("models", project: null, CancellationToken.None);
+        await controller.Proxy("models", project: null, scope: null, CancellationToken.None);
 
         controller.Response.StatusCode.Should().Be((int)HttpStatusCode.Unauthorized);
     }
@@ -99,7 +99,7 @@ public sealed class OpenAiProxyModelsTests
         controller.ControllerContext = BuildGetContext("Bearer valid");
 
         await FluentActions
-            .Awaiting(() => controller.Proxy("models", project: null, CancellationToken.None))
+            .Awaiting(() => controller.Proxy("models", project: null, scope: null, CancellationToken.None))
             .Should().NotThrowAsync("a malformed provider key must not escape the proxy as an unhandled 500");
 
         controller.Response.StatusCode.Should().Be((int)HttpStatusCode.OK);

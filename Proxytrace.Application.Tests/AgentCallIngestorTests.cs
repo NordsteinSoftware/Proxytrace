@@ -22,6 +22,7 @@ using Proxytrace.Domain.ModelProvider;
 using Nordstein.Core.AI.Prompts;
 using Proxytrace.Domain.Prompt;
 using Proxytrace.Domain.Project;
+using Proxytrace.Domain.Scope;
 using Proxytrace.Domain.Session;
 using Proxytrace.Licensing;
 using Nordstein.Core.Testing;
@@ -1360,7 +1361,8 @@ public sealed class AgentCallIngestorTests : BaseTest<Module>
         string? conversationId = null,
         Guid? blockedByDetectorId = null,
         string? blockedDetectorName = null,
-        string? blockedTriggerPattern = null)
+        string? blockedTriggerPattern = null,
+        string? scopeKey = null)
         => new(
             Provider: provider,
             Project: project,
@@ -1372,7 +1374,8 @@ public sealed class AgentCallIngestorTests : BaseTest<Module>
             ConversationId: conversationId,
             BlockedByDetectorId: blockedByDetectorId,
             BlockedDetectorName: blockedDetectorName,
-            BlockedTriggerPattern: blockedTriggerPattern);
+            BlockedTriggerPattern: blockedTriggerPattern,
+            ScopeKey: scopeKey);
 
     // Replicates the SHA1-string→Guid conversion ingestion uses for a non-GUID correlation key
     // (same algorithm as AgentCallProcessor.ParseSessionId), so tests can assert the derived
@@ -1730,4 +1733,103 @@ public sealed class AgentCallIngestorTests : BaseTest<Module>
                 SessionId: null,
                 AgentName: "Support Agent"),
             CancellationToken);
+
+    // ── Scopes (x-proxytrace-scope header / {project}/{scope}/openai/v1 segment) ──────────────
+
+    [TestMethod]
+    public async Task IngestAsync_ScopeKey_StampsScopeAndRecordsMembership()
+    {
+        var services = GetServices();
+        var (provider, project) = await GetProviderAndProjectAsync(services);
+        var processor = services.GetRequiredService<AgentCallProcessor>();
+        var expectedScopeId = ScopeIdDerivation.Derive(project.Id, "support-agents");
+
+        // A raw, non-canonical key from a third-party producer is normalised again at ingestion.
+        await processor.IngestAsync(NewJob(provider, project, scopeKey: "Support Agents"), CancellationToken);
+        await processor.IngestAsync(NewJob(provider, project, scopeKey: "support-agents"), CancellationToken);
+
+        var calls = (await services.GetRequiredService<IAgentCallRepository>()
+            .GetFilteredAsync(new AgentCallFilter { ProjectId = project.Id }, 1, 10, CancellationToken)).Items;
+        calls.Should().HaveCount(2).And.OnlyContain(c => c.ScopeId == expectedScopeId);
+
+        var overview = await services.GetRequiredService<IScopeRepository>().GetOverviewAsync(expectedScopeId, CancellationToken);
+        ArgumentNullException.ThrowIfNull(overview);
+        overview.Scope.ExternalKey.Should().Be("support-agents");
+        overview.TraceCount.Should().Be(2);
+        overview.Agents.Select(a => a.AgentId).Should().BeEquivalentTo(calls.Select(c => c.Agent.Id).Distinct());
+    }
+
+    [TestMethod]
+    [DataRow(null)]
+    [DataRow("   ")]
+    [DataRow("openai")]
+    public async Task IngestAsync_NoOrUnusableScopeKey_LeavesScopeNullAndCreatesNoScope(string? scopeKey)
+    {
+        var services = GetServices();
+        var (provider, project) = await GetProviderAndProjectAsync(services);
+        var processor = services.GetRequiredService<AgentCallProcessor>();
+
+        await processor.IngestAsync(NewJob(provider, project, scopeKey: scopeKey), CancellationToken);
+
+        var call = (await services.GetRequiredService<IAgentCallRepository>()
+            .GetFilteredAsync(new AgentCallFilter { ProjectId = project.Id }, 1, 10, CancellationToken)).Items.Single();
+        call.ScopeId.Should().BeNull();
+        (await services.GetRequiredService<IScopeRepository>().GetOverviewsAsync(project.Id, CancellationToken))
+            .Should().BeEmpty();
+    }
+
+    [TestMethod]
+    public async Task IngestAsync_ProjectAtScopeCap_IngestsNewScopeUnscoped()
+    {
+        var services = GetServices(builder =>
+            builder.RegisterInstance(new ScopeOptions { MaxScopesPerProject = 1 }).As<ScopeOptions>());
+        var (provider, project) = await GetProviderAndProjectAsync(services);
+        var processor = services.GetRequiredService<AgentCallProcessor>();
+
+        await processor.IngestAsync(NewJob(provider, project, scopeKey: "first"), CancellationToken);
+        await processor.IngestAsync(NewJob(provider, project, scopeKey: "second"), CancellationToken);
+
+        var calls = (await services.GetRequiredService<IAgentCallRepository>()
+            .GetFilteredAsync(new AgentCallFilter { ProjectId = project.Id }, 1, 10, CancellationToken)).Items;
+        calls.Should().HaveCount(2, "the cap drops the tag, never the trace");
+        calls.Select(c => c.ScopeId).Should().BeEquivalentTo(
+            [ScopeIdDerivation.Derive(project.Id, "first"), (Guid?)null]);
+    }
+
+    [TestMethod]
+    public async Task IngestAsync_ScopeAdmissionFails_StillPersistsCallWithDerivedScopeId()
+    {
+        var scopes = Substitute.For<IScopeRepository>();
+        scopes.AdmitAsync(Arg.Any<Guid>(), Arg.Any<string>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromException<Guid?>(new InvalidOperationException("db down")));
+        var services = GetServices(builder => builder.RegisterInstance(scopes).As<IScopeRepository>());
+        var (provider, project) = await GetProviderAndProjectAsync(services);
+        var processor = services.GetRequiredService<AgentCallProcessor>();
+
+        await processor.IngestAsync(NewJob(provider, project, scopeKey: "support"), CancellationToken);
+
+        var call = (await services.GetRequiredService<IAgentCallRepository>()
+            .GetFilteredAsync(new AgentCallFilter { ProjectId = project.Id }, 1, 10, CancellationToken)).Items.Single();
+        call.ScopeId.Should().Be(ScopeIdDerivation.Derive(project.Id, "support"),
+            "the deterministic id still matches the row a later admission creates");
+    }
+
+    [TestMethod]
+    public async Task IngestAsync_ScopeMembershipUpsertFails_StillPersistsScopedCall()
+    {
+        var scopes = Substitute.For<IScopeRepository>();
+        scopes.AdmitAsync(Arg.Any<Guid>(), Arg.Any<string>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+            .Returns(call => Task.FromResult<Guid?>(ScopeIdDerivation.Derive(call.ArgAt<Guid>(0), "support")));
+        scopes.RecordActivityAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<long>(), Arg.Any<DateTimeOffset>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromException(new InvalidOperationException("db down")));
+        var services = GetServices(builder => builder.RegisterInstance(scopes).As<IScopeRepository>());
+        var (provider, project) = await GetProviderAndProjectAsync(services);
+        var processor = services.GetRequiredService<AgentCallProcessor>();
+
+        await processor.IngestAsync(NewJob(provider, project, scopeKey: "support"), CancellationToken);
+
+        var call = (await services.GetRequiredService<IAgentCallRepository>()
+            .GetFilteredAsync(new AgentCallFilter { ProjectId = project.Id }, 1, 10, CancellationToken)).Items.Single();
+        call.ScopeId.Should().Be(ScopeIdDerivation.Derive(project.Id, "support"));
+    }
 }
