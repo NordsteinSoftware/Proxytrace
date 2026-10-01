@@ -9,6 +9,11 @@ follow [Semantic Versioning](https://semver.org). Ongoing work is collected unde
 
 ## [Unreleased]
 
+### Fixed
+
+- Automatic agent grouping now recognizes small tool-set changes when the system prompt still
+  clearly identifies the agent, recording a new version instead of another agent entry.
+
 ## [1.14.0] - 2026-09-22
 
 ### Added

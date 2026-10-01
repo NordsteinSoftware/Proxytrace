@@ -46,6 +46,11 @@ The canned assistant-message pool includes three tool-calling shapes (fixed name
 the column-sort whitelist. See `_comment_traceSort` in `perf/perf-budgets.json` for the measured
 plans and the not-yet-paid `NULLS LAST` index lever.
 
+The `agentCurrentVersions` query probe measures the bounded project lookup used when ingestion
+sees a changed tool set. It joins active agents to their current versions in SQL and returns at
+most 32 versions, so its work scales with agents rather than trace count. Its 50 ms budget is a
+placeholder until a full PostgreSQL run is available.
+
 The seeder also loads `TestRunStats` projection rows (default ~25k, scaled down for small `--size`)
 spread across ~250 synthetic suites, for the suite-scoped query the test-suites controller runs (#253).
 Because `TestRunStatsEntity.TestRunId` is a 1:1 FK to `TestRunEntity`, one real anchor suite/group is

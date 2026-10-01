@@ -40,6 +40,50 @@ public class AgentVersionMatcherTests : BaseTest<Module>
     }
 
     [TestMethod]
+    public async Task FindsSimilarVersion_WhenToolSetChanges()
+    {
+        var services = GetServices();
+        var matcher = services.GetRequiredService<IAgentVersionMatcher>();
+        var agents = services.GetRequiredService<IAgentRepository>();
+        var promptCreate = services.GetRequiredService<IPromptTemplate.Create>();
+        var project = await services.GetRequiredService<IDomainEntityGenerator<IProject>>().CreateAsync(CancellationToken);
+        var endpoint = await services.GetRequiredService<IDomainEntityGenerator<IModelEndpoint>>().CreateAsync(CancellationToken);
+        var prompt = promptCreate("agent", "You are a customer support agent. Look up orders and help customers resolve delivery problems promptly.");
+        var lookup = new ToolSpecification("lookup", "Looks up an order", ToolArguments.None);
+        var existing = await agents.GetOrCreateAsync(prompt, [lookup], project, endpoint, cancellationToken: CancellationToken);
+
+        var match = await matcher.FindSimilarVersionAsync(
+            project,
+            promptCreate("agent", prompt.Template + " Be polite."),
+            [lookup, new ToolSpecification("refund", "Issues a refund", ToolArguments.None)],
+            CancellationToken);
+
+        match.Should().NotBeNull();
+        match.AgentId.Should().Be(existing.Id);
+    }
+
+    [TestMethod]
+    public async Task NoMatch_WhenShortGenericPromptHasUnrelatedTools()
+    {
+        var services = GetServices();
+        var matcher = services.GetRequiredService<IAgentVersionMatcher>();
+        var agents = services.GetRequiredService<IAgentRepository>();
+        var promptCreate = services.GetRequiredService<IPromptTemplate.Create>();
+        var project = await services.GetRequiredService<IDomainEntityGenerator<IProject>>().CreateAsync(CancellationToken);
+        var endpoint = await services.GetRequiredService<IDomainEntityGenerator<IModelEndpoint>>().CreateAsync(CancellationToken);
+        var prompt = promptCreate("agent", "You are a helpful assistant.");
+        await agents.GetOrCreateAsync(
+            prompt, [new ToolSpecification("orders", "Looks up orders", ToolArguments.None)],
+            project, endpoint, cancellationToken: CancellationToken);
+
+        var match = await matcher.FindSimilarVersionAsync(
+            project, prompt,
+            [new ToolSpecification("code", "Reads code", ToolArguments.None)], CancellationToken);
+
+        match.Should().BeNull();
+    }
+
+    [TestMethod]
     public async Task NoMatch_WhenPromptDiffersTooMuch()
     {
         var services = GetServices();

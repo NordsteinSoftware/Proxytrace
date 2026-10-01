@@ -3,6 +3,7 @@ using Proxytrace.Domain.Statistics;
 using Proxytrace.Application.Statistics;
 using Proxytrace.Domain;
 using Proxytrace.Domain.AgentCall;
+using Proxytrace.Domain.AgentVersion;
 using Proxytrace.Domain.Project;
 using Proxytrace.Domain.Session;
 using Proxytrace.PerfHarness.Bootstrap;
@@ -29,6 +30,7 @@ internal static class QueryLatencyScenario
         var statsReader = scope.Resolve<IAgentCallStatsReader>();
         var agentStats = scope.Resolve<IAgentStatistics>();
         var callRepo = scope.Resolve<IAgentCallRepository>();
+        var versionRepo = scope.Resolve<IAgentVersionRepository>();
         var sessionRepo = scope.Resolve<ISessionRepository>();
         var projectRepo = scope.Resolve<IRepository<IProject>>();
 
@@ -56,6 +58,12 @@ internal static class QueryLatencyScenario
             var (p50, p95) = await PerfReport.MeasureLatencyAsync(warmup, iterations, action);
             Console.WriteLine($"[db-layer] {name,-26} p50={p50,8:N1}ms  p95={p95,8:N1}ms");
             results.Add(new MetricResult("db-layer", name, p95, budgets.DbQueryBudget(name), "ms", BudgetDirection.LowerIsBetter));
+        }
+
+        if (project is not null)
+        {
+            await Measure("agentCurrentVersions",
+                () => versionRepo.GetRecentCurrentVersionsAsync(project, 32, cancellationToken));
         }
 
         // Traces table (the hot list + histogram paths).

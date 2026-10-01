@@ -19,10 +19,11 @@ matches an existing agent or represents a brand-new one:
 
 1. **Exact match** — the prompt and tool-set are byte-for-byte identical to an existing
    version. The call attaches to that version, no new row is created.
-2. **Similar match** — the tool-set is identical when compared by tool name + parameter
-   JSON schema (descriptions stripped), and the system prompt is at least 85 % similar
-   (normalized Levenshtein ratio). The call creates a **new version** under the existing
-   agent, and that version becomes the agent's current version.
+2. **Similar match** — with the same tool names and parameter schemas (descriptions stripped),
+   a system prompt at least 85 % similar (normalized Levenshtein ratio) creates a **new version**
+   under the existing agent. When tools change, a prompt at least 85 % similar can also match an
+   existing active agent if it shares a tool name; an identical prompt of at least 80 characters
+   can match even if no tools overlap. The new version becomes the agent's current version.
 3. **No match** — neither rule fires, so Proxytrace creates a brand-new agent with v1.
 
 **Continuation calls.** A follow-up call within the same conversation (same `SessionId`) that
@@ -30,7 +31,7 @@ omits tools *and* sends the identical system prompt inherits the previous call's
 without re-evaluating the rules above. If the system prompt changes, the rules apply.
 
 The similarity threshold is configurable via `AgentVersioningOptions.SimilarityThreshold`;
-the candidate-cap before Levenshtein is `AgentVersioningOptions.MaxCandidates` (default 32).
+the candidate cap before Levenshtein is `AgentVersioningOptions.MaxCandidates` (default 32).
 
 ### Naming an agent explicitly
 
@@ -59,6 +60,8 @@ one, you can re-parent the version from the agent's detail page:
    single database transaction.
 
 Moving versions into or out of a **system agent** is not allowed.
+Changes to automatic matching affect future calls; existing duplicate agents stay separate until
+their versions are moved using this action.
 
 ## The agent detail view
 

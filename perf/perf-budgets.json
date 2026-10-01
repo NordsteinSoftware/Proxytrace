@@ -20,6 +20,7 @@
   },
 
   "dbQueryP95Ms": {
+    "agentCurrentVersions": 50,
     "agentCallsList": 90,
     "agentCallsListByProjects": 120,
     "agentCallsListByAgent": 40,

@@ -1,4 +1,3 @@
-using Proxytrace.Domain.AgentCall;
 using Proxytrace.Domain.AgentVersion;
 using Proxytrace.Domain.Project;
 using Nordstein.Core.AI.Prompts;
@@ -16,8 +15,8 @@ public interface IAgentVersionMatcher
     /// <summary>
     /// Returns the best matching <see cref="IAgentVersion"/> in <paramref name="project"/> for a
     /// new call whose strict fingerprint missed, or null if no candidate clears the similarity
-    /// threshold. Tool-sets must match identically on the loose fingerprint; the prompt is
-    /// compared by normalized Levenshtein ratio.
+    /// threshold. Matching tool shapes use the normal prompt threshold; changed tools require
+    /// shared tool names or an identical substantial prompt.
     /// </summary>
     Task<IAgentVersion?> FindSimilarVersionAsync(
         IProject project,
@@ -29,7 +28,6 @@ public interface IAgentVersionMatcher
 internal sealed class AgentVersionMatcher : IAgentVersionMatcher
 {
     private readonly IAgentVersionRepository versions;
-    private readonly IAgentCallRepository calls;
     private readonly AgentVersioningOptions options;
 
     /// <summary>
@@ -37,11 +35,9 @@ internal sealed class AgentVersionMatcher : IAgentVersionMatcher
     /// </summary>
     public AgentVersionMatcher(
         IAgentVersionRepository versions,
-        IAgentCallRepository calls,
         AgentVersioningOptions options)
     {
         this.versions = versions;
-        this.calls = calls;
         this.options = options;
     }
 
@@ -55,11 +51,6 @@ internal sealed class AgentVersionMatcher : IAgentVersionMatcher
         CancellationToken cancellationToken)
     {
         var allCandidates = await versions.GetByLooseFingerprintAsync(project, systemPrompt, tools, cancellationToken);
-        if (allCandidates.Count == 0)
-        {
-            return null;
-        }
-
         // Cap candidates to the most recent N before Levenshtein. Loose-fingerprint collisions can
         // accumulate; bounding the work keeps O(n·m·k) under control.
         var candidates = allCandidates
@@ -77,25 +68,35 @@ internal sealed class AgentVersionMatcher : IAgentVersionMatcher
                 Ratio = SimilarityRatio(v.SystemPrompt.Template, systemPrompt.Template),
             })
             .Where(x => x.Ratio >= options.SimilarityThreshold)
-            .OrderByDescending(x => x.Ratio)
             .ToList();
 
         if (ranked.Count == 0)
         {
-            return null;
+            // A changed tool set has a different loose fingerprint. Shared tool names plus the
+            // normal prompt threshold bridge small edits; without shared tools, require an exact
+            // substantial prompt to avoid merging unrelated generic assistants.
+            var current = await versions.GetRecentCurrentVersionsAsync(project, options.MaxCandidates, cancellationToken);
+            ranked = current
+                .Where(v => LengthPasses(v.SystemPrompt.Template.Length, targetLen, options.SimilarityThreshold))
+                .Select(v => new
+                {
+                    Version = v,
+                    Ratio = SimilarityRatio(v.SystemPrompt.Template, systemPrompt.Template),
+                })
+                .Where(x => (x.Ratio >= options.SimilarityThreshold &&
+                             x.Version.Tools.Any(t => tools.Any(incoming => incoming.Name == t.Name))) ||
+                            (x.Ratio == 1.0 && targetLen >= 80))
+                .ToList();
+
+            if (ranked.Count == 0)
+            {
+                return null;
+            }
         }
 
-        // Tie-break by most-recently-used: highest CreatedAt on calls referencing the version.
-        // We don't have a direct call-count query, so just pick the highest ratio; on ties use the
-        // most recently created version.
-        var top = ranked[0];
-        var ties = ranked.Where(x => Math.Abs(x.Ratio - top.Ratio) < 1e-9).ToList();
-        if (ties.Count == 1)
-        {
-            return top.Version;
-        }
-
-        return ties.OrderByDescending(t => t.Version.CreatedAt).First().Version;
+        return ranked.OrderByDescending(x => x.Ratio)
+            .ThenByDescending(x => x.Version.CreatedAt)
+            .First().Version;
     }
 
     /// <summary>

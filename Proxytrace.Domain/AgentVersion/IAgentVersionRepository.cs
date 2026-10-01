@@ -33,6 +33,15 @@ public interface IAgentVersionRepository : IRepository<IAgentVersion>
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Returns recent current versions of active agents in a project for matching calls whose
+    /// tool set changed. One version per agent keeps the fallback bounded by agent count.
+    /// </summary>
+    Task<IReadOnlyList<IAgentVersion>> GetRecentCurrentVersionsAsync(
+        IProject project,
+        int limit,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Returns all versions belonging to <paramref name="agent"/> ordered by VersionNumber asc.
     /// </summary>
     Task<IReadOnlyList<IAgentVersion>> GetByAgentAsync(

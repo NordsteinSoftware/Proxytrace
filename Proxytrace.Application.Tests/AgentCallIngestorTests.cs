@@ -867,6 +867,35 @@ public sealed class AgentCallIngestorTests : BaseTest<Module>
     }
 
     [TestMethod]
+    public async Task IngestAsync_WhenToolsChangeWithSameDistinctivePrompt_AddsVersionToExistingAgent()
+    {
+        var services = GetServices();
+        var ingestion = services.GetRequiredService<AgentCallProcessor>();
+        var calls = services.GetRequiredService<IAgentCallRepository>();
+        var agents = services.GetRequiredService<IAgentRepository>();
+        var (provider, project) = await GetProviderAndProjectAsync(services);
+        const string prompt = "You are the customer support agent for this store. Help customers track orders and resolve delivery problems promptly.";
+        var firstRequest = NamedAgentRequestBody.Replace(SystemPrompt, prompt, StringComparison.Ordinal);
+        var secondRequest = firstRequest.Replace(ToolName, "get_forecast", StringComparison.Ordinal);
+
+        foreach (var request in new[] { firstRequest, secondRequest })
+        {
+            await ingestion.IngestAsync(new IngestJob(
+                Provider: provider, Project: project, RequestBody: request,
+                ResponseBody: ChatTurn1ResponseBody, Duration: TimeSpan.FromMilliseconds(100),
+                HttpStatus: HttpStatusCode.OK, SessionId: null), CancellationToken);
+        }
+
+        var stored = (await calls.GetFilteredAsync(
+            new AgentCallFilter { ProjectId = project.Id }, 1, 10, CancellationToken)).Items;
+        stored.Should().HaveCount(2);
+        stored.Select(c => c.Version.Tools.Single().Name).Should().BeEquivalentTo([ToolName, "get_forecast"]);
+        stored[0].Agent.Id.Should().Be(stored[1].Agent.Id);
+        stored[0].Version.Id.Should().NotBe(stored[1].Version.Id);
+        (await agents.GetByProjectAsync(project.Id, CancellationToken)).Should().ContainSingle();
+    }
+
+    [TestMethod]
     public async Task IngestAsync_WhenAgentNameProvided_AttributesToSameAgentAndBypassesSimilarity()
     {
         var services = GetServices();

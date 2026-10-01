@@ -8,6 +8,7 @@ using Proxytrace.Domain.Project;
 using Nordstein.Core.AI.Prompts;
 using Proxytrace.Domain.Prompt;
 using Nordstein.Core.AI.Tools;
+using Proxytrace.Storage.Internal.Entities.Agent;
 
 namespace Proxytrace.Storage.Internal.Entities.AgentVersion;
 
@@ -65,6 +66,25 @@ internal class AgentVersionRepository : AbstractRepository<IAgentVersion, AgentV
             .Set<AgentVersionEntity>()
             .AsNoTracking()
             .Where(e => e.Project == project.Id && e.LooseFingerprint == loose)
+            .ToListAsync(cancellationToken);
+        return await Map(stored, cancellationToken);
+    }
+
+    /// <summary>
+    /// Loads a bounded set of active agents' current versions when tool shapes differ.
+    /// </summary>
+    public async Task<IReadOnlyList<IAgentVersion>> GetRecentCurrentVersionsAsync(
+        IProject project,
+        int limit,
+        CancellationToken cancellationToken = default)
+    {
+        var context = contextFactory();
+        var stored = await context.Set<AgentEntity>()
+            .AsNoTracking()
+            .Where(a => a.Project == project.Id && !a.IsArchived && !a.IsSystemAgent)
+            .OrderByDescending(a => a.UpdatedAt)
+            .Take(limit)
+            .Join(context.Set<AgentVersionEntity>(), a => a.CurrentVersionId, v => v.Id, (a, v) => v)
             .ToListAsync(cancellationToken);
         return await Map(stored, cancellationToken);
     }
