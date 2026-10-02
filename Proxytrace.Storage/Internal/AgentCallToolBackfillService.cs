@@ -2,6 +2,8 @@ using Autofac.Features.OwnedInstances;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Nordstein.Core.AI.Messages;
+using Nordstein.Core.Common.Serialization;
 using Proxytrace.Storage.Internal.Entities.AgentCall;
 using Proxytrace.Storage.Internal.Entities.AgentVersion;
 
@@ -37,6 +39,7 @@ internal sealed class AgentCallToolBackfillService : IHostedService
     // backfill never runs inside a logical transaction, so it never needs the shared ambient context.
     private readonly Func<Owned<StorageDbContext>> contextFactory;
     private readonly ILogger<AgentCallToolBackfillService> logger;
+    private readonly ISerializer serializer;
     private readonly int batchSize;
     private readonly TimeSpan retryDelay;
 
@@ -49,11 +52,13 @@ internal sealed class AgentCallToolBackfillService : IHostedService
     public AgentCallToolBackfillService(
         Func<Owned<StorageDbContext>> contextFactory,
         ILogger<AgentCallToolBackfillService> logger,
+        ISerializer serializer,
         int batchSize = 500,
         TimeSpan? retryDelay = null)
     {
         this.contextFactory = contextFactory;
         this.logger = logger;
+        this.serializer = serializer;
         this.batchSize = batchSize;
         this.retryDelay = retryDelay ?? TimeSpan.FromSeconds(2);
     }
@@ -125,7 +130,8 @@ internal sealed class AgentCallToolBackfillService : IHostedService
 
             foreach (var row in batch)
             {
-                var names = row.Response?.ToolRequests.Select(t => t.Name).Distinct().ToList() ?? [];
+                var response = row.Response is null ? null : serializer.Deserialize<AssistantMessage>(row.Response);
+                var names = response?.ToolRequests.Select(t => t.Name).Distinct().ToList() ?? [];
 
                 // Empty marker (single blank-named row) when the response yields no names, so the row
                 // leaves the "has no tool rows" candidate set and the pass cannot loop on it. The filter

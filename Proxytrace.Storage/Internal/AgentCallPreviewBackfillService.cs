@@ -2,6 +2,8 @@ using Autofac.Features.OwnedInstances;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Nordstein.Core.AI.Messages;
+using Nordstein.Core.Common.Serialization;
 using Proxytrace.Storage.Internal.Entities.AgentCall;
 
 namespace Proxytrace.Storage.Internal;
@@ -32,6 +34,7 @@ internal sealed class AgentCallPreviewBackfillService : IHostedService
     // backfill never runs inside a logical transaction, so it never needs the shared ambient context.
     private readonly Func<Owned<StorageDbContext>> contextFactory;
     private readonly ILogger<AgentCallPreviewBackfillService> logger;
+    private readonly ISerializer serializer;
     private readonly int batchSize;
     private readonly TimeSpan retryDelay;
 
@@ -44,11 +47,13 @@ internal sealed class AgentCallPreviewBackfillService : IHostedService
     public AgentCallPreviewBackfillService(
         Func<Owned<StorageDbContext>> contextFactory,
         ILogger<AgentCallPreviewBackfillService> logger,
+        ISerializer serializer,
         int batchSize = 500,
         TimeSpan? retryDelay = null)
     {
         this.contextFactory = contextFactory;
         this.logger = logger;
+        this.serializer = serializer;
         this.batchSize = batchSize;
         this.retryDelay = retryDelay ?? TimeSpan.FromSeconds(2);
     }
@@ -115,7 +120,7 @@ internal sealed class AgentCallPreviewBackfillService : IHostedService
                 // Empty marker (not null) when the request has no user message, so the row leaves the
                 // IS NULL candidate set and the pass cannot loop on it. The list query passes this value
                 // straight through; the client renders an empty preview as the same em-dash placeholder.
-                var preview = AgentCallPreview.Build(row.Request) ?? string.Empty;
+                var preview = AgentCallPreview.Build(serializer.DeserializeRequired<Conversation>(row.Request)) ?? string.Empty;
                 db.Entry(row).CurrentValues.SetValues(row with { RequestPreview = preview });
             }
 

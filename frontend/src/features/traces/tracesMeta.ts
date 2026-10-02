@@ -62,6 +62,8 @@ export type TraceStatusClassFilter = '' | '2' | '4' | '5';
  */
 export interface TraceAdvancedFilters {
   agent: string;
+  /** Scope id (use-case group of agents). */
+  scope: string;
   session: string;
   anomaly: TraceAnomalyFilter;
   tool: string;
@@ -75,6 +77,7 @@ export interface TraceAdvancedFilters {
 
 export const EMPTY_ADVANCED_FILTERS: TraceAdvancedFilters = {
   agent: '',
+  scope: '',
   session: '',
   anomaly: '',
   tool: '',
@@ -104,6 +107,7 @@ export function isValidAdvancedFilters(v: unknown): v is TraceAdvancedFilters {
   const f = v as Record<keyof TraceAdvancedFilters, unknown>;
   return (
     typeof f.agent === 'string' &&
+    typeof f.scope === 'string' &&
     typeof f.session === 'string' &&
     typeof f.tool === 'string' &&
     typeof f.model === 'string' &&
@@ -129,6 +133,7 @@ export function advancedFilterParams(f: TraceAdvancedFilters): Partial<AgentCall
   const maxLatencyMs = numericParam(f.maxLatencyMs);
   return {
     ...(f.agent ? { agentId: f.agent } : {}),
+    ...(f.scope ? { scopeId: f.scope } : {}),
     ...(f.session ? { sessionId: f.session } : {}),
     ...(f.anomaly === 'any' ? { outlierOnly: true } : {}),
     ...(f.anomaly && f.anomaly !== 'any' ? { anomalyFlags: ANOMALY_FLAG_BITS[f.anomaly] } : {}),

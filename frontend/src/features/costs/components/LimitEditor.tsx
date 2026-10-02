@@ -166,7 +166,7 @@ export function LimitEditor({
 
         <div data-testid="budget-scope-help">
           <Collapsible
-            title={<span className="text-body-sm text-secondary"><Trans>How this scope is enforced</Trans></span>}
+            title={<span className="text-body-sm text-secondary"><Trans>How this budget is enforced</Trans></span>}
             contentClassName="pt-2 pl-4 flex flex-col gap-2"
           >
             <EnforcementNote kind={draft.scope.kind} />

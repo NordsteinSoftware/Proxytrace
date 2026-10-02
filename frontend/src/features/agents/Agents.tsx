@@ -13,6 +13,9 @@ import { useIsMobile } from '../../hooks/useMediaQuery';
 import { AgentList } from './AgentList';
 import { AgentDetail } from './AgentDetail';
 import { useAgents, useAgentDetail, useDeleteAgent } from './hooks/useAgents';
+import { useProjectScopes } from '../../hooks/useProjectScopes';
+import { AgentRailFilters } from './AgentRailFilters';
+import { ALL_AGENT_SCOPES, filterAgentsByScope, groupAgentsByScope, type AgentScopeFilter as ScopeFilter } from './agentScopes';
 
 export default function Agents() {
   const { t } = useLingui();
@@ -26,12 +29,17 @@ export default function Agents() {
 
   const [showSystem, setShowSystem] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const { scopes } = useProjectScopes();
+  const [scopeFilter, setScopeFilter] = useState<ScopeFilter>(ALL_AGENT_SCOPES);
+  const [groupByScope, setGroupByScope] = useState(false);
 
   const selectedIsSystem = selectedId
     ? allAgents.some(a => a.id === selectedId && a.isSystemAgent)
     : false;
 
-  const agents = (showSystem || selectedIsSystem) ? allAgents : allAgents.filter(a => !a.isSystemAgent);
+  const visible = (showSystem || selectedIsSystem) ? allAgents : allAgents.filter(a => !a.isSystemAgent);
+  const agents = filterAgentsByScope(visible, scopes, scopeFilter);
+  const groups = groupByScope && scopeFilter.kind === 'all' && scopes.length > 0 ? groupAgentsByScope(agents, scopes) : null;
 
   // On mobile the list and detail are separate screens — only an explicit selection opens the
   // detail. Desktop keeps the select-first default.
@@ -73,11 +81,18 @@ export default function Agents() {
           {(!isMobile || !selected) && (
             <AgentList
               agents={agents}
+              groups={groups}
               selectedId={selected?.id ?? null}
               onSelect={handleSelect}
               isLoading={isLoading}
-              showSystem={showSystem}
-              onToggleSystem={hasSystemAgents ? () => setShowSystem(v => !v) : undefined}
+              filter={(hasSystemAgents || scopes.length > 0) ? (
+                <AgentRailFilters
+                  scopes={scopes}
+                  scope={{ filter: scopeFilter, onFilterChange: setScopeFilter, grouped: groupByScope, onGroupedChange: setGroupByScope }}
+                  showSystem={showSystem}
+                  onToggleSystem={hasSystemAgents ? () => setShowSystem(v => !v) : undefined}
+                />
+              ) : undefined}
             />
           )}
 

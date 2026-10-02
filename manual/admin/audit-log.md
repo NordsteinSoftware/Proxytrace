@@ -37,6 +37,7 @@ The actions recorded today:
 | API keys | API key minted, API key deleted |
 | Projects | Project created, renamed, deleted; member added/removed |
 | Agents | Agent endpoint changed, agent deleted, agent version moved |
+| Scopes | Scope display name or description edited, scope deleted (scopes are created by traffic and idle ones removed by trace retention — neither is audited) |
 | Traces | Trace deleted |
 | Test suites | Test suite created, updated, deleted; test case added, edited, or removed |
 | Evaluators | Evaluator created, updated, deleted |

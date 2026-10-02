@@ -6,7 +6,7 @@ import { cn } from '../../lib/cn';
 /** The rail's page-code vocabulary: one unique mono two-letter glyph per destination, rendered
  *  where an icon used to sit. Technical glyphs — never translated, never user copy. */
 export type NavCode =
-  | 'TY' | 'DB' | 'TR' | 'AN' | 'CO' | 'AG' | 'PG' | 'TS'
+  | 'TY' | 'DB' | 'TR' | 'AN' | 'CO' | 'AG' | 'SC' | 'PG' | 'TS'
   | 'EV' | 'EP' | 'RN' | 'PR' | 'AU' | 'SE' | 'DC';
 
 export interface NavEntry {
@@ -51,6 +51,7 @@ export const navGroups: NavGroup[] = [
     label: msg`Build`,
     items: [
       { label: msg`Agents`, code: 'AG', to: '/agents' },
+      { label: msg`Scopes`, code: 'SC', to: '/scopes' },
       { label: msg`Agent Playground`, code: 'PG', to: '/playground' },
     ],
   },

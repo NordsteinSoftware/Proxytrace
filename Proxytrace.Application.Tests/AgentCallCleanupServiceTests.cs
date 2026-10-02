@@ -6,6 +6,7 @@ using Proxytrace.Application.Cleanup;
 using Proxytrace.Application.Cleanup.Internal;
 using Proxytrace.Domain;
 using Proxytrace.Domain.AgentCall;
+using Proxytrace.Domain.Scope;
 using Proxytrace.Domain.Session;
 using Proxytrace.Licensing;
 using Nordstein.Core.Testing;
@@ -95,6 +96,82 @@ public sealed class AgentCallCleanupServiceTests : BaseTest<Module>
         allAfterDelete.Should().HaveCount(callGenerated);
 
         allAfterDelete.Should().AllSatisfy(x => expectedDeleted.Should().NotContain(x.Id));
+    }
+
+    [TestMethod]
+    public async Task CleanOnce_ReconcilesScopeMembershipCountersAndSweepsMembershipsWithTheSameCutoff()
+    {
+        const int retentionDurationDays = 2;
+        var expectedCutoff = DateTimeOffset.UtcNow - TimeSpan.FromDays(retentionDurationDays);
+        var removals = new[] { new ScopeTraceRemoval(Guid.NewGuid(), Guid.NewGuid(), 4, 400) };
+
+        var agentCallRepository = Substitute.For<IAgentCallRepository>();
+        agentCallRepository
+            .GetScopeRemovalsOlderThanAsync(Arg.Any<DateTimeOffset>(), Arg.Any<CancellationToken>())
+            .Returns(removals);
+        var scopeRepository = Substitute.For<IScopeRepository>();
+
+        var services = GetServices(builder =>
+        {
+            builder.RegisterInstance(agentCallRepository).As<IAgentCallRepository>();
+            builder.RegisterInstance(scopeRepository).As<IScopeRepository>();
+            builder.RegisterInstance(new AgentCallCleanupConfiguration
+            {
+                CleanupIntervalHours = 1,
+                RetentionDurationDays = retentionDurationDays,
+            });
+        });
+
+        await services.GetRequiredService<AgentCallCleanupService>().CleanOnceAsync(CancellationToken);
+
+        var tolerance = TimeSpan.FromSeconds(10);
+
+        // Deltas are read before the delete, then handed back to the membership counters.
+        Received.InOrder(() =>
+        {
+            agentCallRepository.GetScopeRemovalsOlderThanAsync(
+                Arg.Is<DateTimeOffset>(x => (expectedCutoff - x).Duration() < tolerance), Arg.Any<CancellationToken>());
+            agentCallRepository.RemoveOlderThanAsync(Arg.Any<DateTimeOffset>(), Arg.Any<CancellationToken>());
+            scopeRepository.RecordTraceRemovalsAsync(Arg.Any<IReadOnlyCollection<ScopeTraceRemoval>>(), Arg.Any<CancellationToken>());
+        });
+
+        await scopeRepository.Received(1).RecordTraceRemovalsAsync(
+            Arg.Is<IReadOnlyCollection<ScopeTraceRemoval>>(x => x != null && x.SequenceEqual(removals)),
+            Arg.Any<CancellationToken>());
+        await scopeRepository.Received(1).RemoveMembershipsOlderThanAsync(
+            Arg.Is<DateTimeOffset>(x => (expectedCutoff - x).Duration() < tolerance),
+            Arg.Any<CancellationToken>());
+    }
+
+    [TestMethod]
+    public async Task CleanOnce_SweepsIdleScopesWithTheSameCutoff_AfterTheirMemberships()
+    {
+        // Without this sweep every scope ever admitted would hold a slot under the per-project cap
+        // forever. It must run after the membership sweep, which is what makes a scope idle.
+        const int retentionDurationDays = 2;
+        var expectedCutoff = DateTimeOffset.UtcNow - TimeSpan.FromDays(retentionDurationDays);
+        var scopeRepository = Substitute.For<IScopeRepository>();
+
+        var services = GetServices(builder =>
+        {
+            builder.RegisterStub<IAgentCallRepository>();
+            builder.RegisterInstance(scopeRepository).As<IScopeRepository>();
+            builder.RegisterInstance(new AgentCallCleanupConfiguration
+            {
+                CleanupIntervalHours = 1,
+                RetentionDurationDays = retentionDurationDays,
+            });
+        });
+
+        await services.GetRequiredService<AgentCallCleanupService>().CleanOnceAsync(CancellationToken);
+
+        var tolerance = TimeSpan.FromSeconds(10);
+        Received.InOrder(() =>
+        {
+            scopeRepository.RemoveMembershipsOlderThanAsync(Arg.Any<DateTimeOffset>(), Arg.Any<CancellationToken>());
+            scopeRepository.RemoveIdleOlderThanAsync(
+                Arg.Is<DateTimeOffset>(x => (expectedCutoff - x).Duration() < tolerance), Arg.Any<CancellationToken>());
+        });
     }
 
     [TestMethod]

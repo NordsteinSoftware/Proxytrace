@@ -60,6 +60,30 @@ public class DemoSeedingTests : BaseTest<Module>
     }
 
     [TestMethod]
+    public async Task Seed_Scopes_GroupTheDemoAgentsWithTheTriageAgentInTwoScopes()
+    {
+        var ctx = services.GetRequiredService<DemoSeedContext>();
+        var project = ctx.Project;
+        ArgumentNullException.ThrowIfNull(project);
+        var scopes = (await services.GetRequiredService<Proxytrace.Domain.Scope.IScopeRepository>()
+                .GetOverviewsAsync(project.Id, CancellationToken))
+            .ToDictionary(o => o.Scope.ExternalKey);
+
+        scopes.Keys.Should().BeEquivalentTo(["customer-care", "engineering", "analytics"]);
+        scopes.Values.Should().OnlyContain(o => o.TraceCount > 0 && o.Scope.DisplayName != null);
+        var triage = ctx.EmailTriageAgent;
+        ArgumentNullException.ThrowIfNull(triage);
+        scopes["customer-care"].Agents.Select(a => a.AgentId).Should().Contain(triage.Id);
+        scopes["engineering"].Agents.Select(a => a.AgentId).Should().Contain(triage.Id,
+            "the triage agent routes bug reports to engineering, so it serves two scopes");
+
+        var (scoped, total) = await services.GetRequiredService<IAgentCallRepository>()
+            .GetFilteredAsync(new AgentCallFilter(ScopeId: scopes["analytics"].Scope.Id), 1, 1, CancellationToken);
+        total.Should().Be(scopes["analytics"].TraceCount, "the restamped calls and the membership counters agree");
+        scoped.Should().OnlyContain(c => c.ScopeId == scopes["analytics"].Scope.Id);
+    }
+
+    [TestMethod]
     public async Task Seed_All_Scenarios_Populates_Expected_Entity_Counts()
     {
         var ctx = services.GetRequiredService<DemoSeedContext>();

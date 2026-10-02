@@ -8,6 +8,7 @@ using Proxytrace.Domain.AgentCall;
 using Nordstein.Core.AI.Completions;
 using Nordstein.Core.AI.Messages;
 using Proxytrace.Domain.ModelEndpoint;
+using Proxytrace.Domain.Scope;
 using Proxytrace.Domain.TestResult;
 using Proxytrace.Domain.TestRun;
 using Proxytrace.Domain.TestRunGroup;
@@ -48,6 +49,7 @@ internal sealed class StatisticsBackfillScenario : IDemoScenario
     private readonly IRepository<IAgentCall> agentCallRepo;
     private readonly IRepository<ITestRunGroup> groupRepo;
     private readonly IRandom random;
+    private readonly IScopeRepository scopes;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="StatisticsBackfillScenario"/> class.
@@ -63,8 +65,10 @@ internal sealed class StatisticsBackfillScenario : IDemoScenario
         ITestResult.CreateExisting testResultExisting,
         IRepository<IAgentCall> agentCallRepo,
         IRepository<ITestRunGroup> groupRepo,
-        IRandom random)
+        IRandom random,
+        IScopeRepository scopes)
     {
+        this.scopes = scopes;
         this.ctx = ctx;
         this.planner = planner;
         this.agentCallExisting = agentCallExisting;
@@ -106,6 +110,7 @@ internal sealed class StatisticsBackfillScenario : IDemoScenario
         }
 
         await agentCallRepo.AddRangeAsync(calls, cancellationToken);
+        await RecordScopeMembershipsAsync(calls, cancellationToken);
 
         await StaggerTestRunsAsync(now, cancellationToken);
     }
@@ -117,6 +122,7 @@ internal sealed class StatisticsBackfillScenario : IDemoScenario
         List<IAgentCall> calls)
     {
         var traffic = profile.Traffic;
+        long interaction = 0;
         for (int day = 0; day < WindowDays; day++)
         {
             var dayStart = windowStart.AddDays(day);
@@ -132,12 +138,14 @@ internal sealed class StatisticsBackfillScenario : IDemoScenario
                 var endpoint = PickWeighted(traffic.EndpointMix);
                 var plan = planner.Plan(traffic);
                 Guid? conversationId = plan.SharesConversation ? Guid.NewGuid() : null;
+                // All calls of one interaction share its scope, as one client request loop would.
+                Guid? scopeId = ctx.ScopeFor(profile.Agent, interaction++);
 
                 foreach (var planned in plan.Calls)
                 {
                     calls.Add(BuildBackdatedCall(
                         profile.Agent, endpoint, planned,
-                        createdAt.AddSeconds(planned.OffsetSeconds), conversationId));
+                        createdAt.AddSeconds(planned.OffsetSeconds), conversationId, scopeId));
                 }
             }
         }
@@ -148,7 +156,8 @@ internal sealed class StatisticsBackfillScenario : IDemoScenario
         IModelEndpoint endpoint,
         PlannedDemoCall planned,
         DateTimeOffset createdAt,
-        Guid? conversationId)
+        Guid? conversationId,
+        Guid? scopeId)
     {
         var request = new Conversation([agent.CreateSystemMessage(), .. planned.RequestTail]);
         ICompletion? response = planned.ResponseMessage is null
@@ -170,7 +179,29 @@ internal sealed class StatisticsBackfillScenario : IDemoScenario
             modelParameters: paramsFactory(temperature: 0.3),
             existing: new BackdatedData(Guid.NewGuid(), createdAt, createdAt),
             conversationId: conversationId,
-            outlierFlags: planned.OutlierFlags);
+            outlierFlags: planned.OutlierFlags,
+            scopeId: scopeId);
+    }
+
+    // The scope membership counters ingestion would have bumped call by call, written once per
+    // (scope, version) — the backfill inserts its calls in bulk, so it records them in bulk too.
+    private async Task RecordScopeMembershipsAsync(IReadOnlyList<IAgentCall> calls, CancellationToken cancellationToken)
+    {
+        var memberships = calls
+            .Where(c => c.ScopeId is not null)
+            .GroupBy(c => (ScopeId: c.ScopeId ?? Guid.Empty, VersionId: c.Version.Id));
+        foreach (var group in memberships)
+        {
+            long tokens = group.Sum(c => c.CountedTokens());
+            await scopes.RecordActivitiesAsync(
+                group.Key.ScopeId,
+                group.Key.VersionId,
+                group.Count(),
+                tokens,
+                group.Min(c => c.CreatedAt),
+                group.Max(c => c.CreatedAt),
+                cancellationToken);
+        }
     }
 
     private DateTimeOffset SampleTimestamp(DateTimeOffset dayStart)

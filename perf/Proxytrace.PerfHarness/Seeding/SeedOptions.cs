@@ -13,6 +13,13 @@ internal sealed record SeedOptions(
     // (sessionsRecent) measure against realistic cardinality; a matching Sessions row is bulk-inserted
     // for every pool entry that received at least one call (see SeedAsync).
     double SessionRate = 0.30,
+    // Scope (use-case group) assignment. Every agent gets a "home" scope drawn from a skewed
+    // distribution (see PerfDataSeeder.ScopeWeights: one broad scope with ~40% of traffic down to a
+    // ~5% niche one), a ScopeCrossoverRate share of its calls go to another scope (agents shared
+    // between use cases), and UnscopedRate of calls carry no scope at all — so the scope filter is
+    // measured on both its broadest (worst-case selectivity) and narrowest scope.
+    double UnscopedRate = 0.07,
+    double ScopeCrossoverRate = 0.10,
     // Fraction of calls stamped with a non-zero OutlierFlags bitmask so the partial outlier index
     // and the anomaly aggregates (anomalyTimeline) measure against a realistically small flagged
     // subset; a share of flagged rows also carries the CustomAnomaly bit (see BuildCall).

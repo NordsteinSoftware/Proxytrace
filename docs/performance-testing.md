@@ -121,6 +121,23 @@ deliberately passes a cutoff covering the whole seed, which is the worst case �
 only ever sees the tail beyond the retention window. Regression signature: a climb toward seconds
 means the grouping stopped translating and started materializing the doomed rows client-side.
 
+### Scopes (`scopeRemovalDeltas`, `scopesOverview`)
+
+The seeder spreads calls over five scopes with a deliberately skewed share (40/25/15/8/5%), 7%
+unscoped and 10% of each agent's calls crossing into another scope (`SeedOptions.UnscopedRate`,
+`ScopeCrossoverRate`) — so scope-filtered probes can be measured on both the broadest scope (worst
+selectivity) and the narrowest. `scopeRemovalDeltas` is the `sessionRemovalDeltas` shape grouped by
+`(ScopeId, AgentVersionId)`, the key of the membership counters it reverses. `scopesOverview` backs
+the Scopes page and reads only the scope and membership tables joined to `AgentVersion` — a few
+hundred rows; a climb means it started aggregating `AgentCallEntity`.
+
+On the write side, `ingestThroughput` sends ~90% of its probe calls to one of three scopes, so the
+timed loop pays scope admission (one probe of the unique `(ProjectId, ExternalKey)` index) before each insert and the membership bump
+after it — on a *few hot rows* shared by all eight workers, the contention scopes add that sessions
+(many cold rows) do not. Measured on a 20k dev seed (2026-10): 331 calls/s with scopes vs 377 on
+master, ~12% — well inside the budget. If concurrency or replica count grows and this widens,
+coalesce the bumps in-process before writing.
+
 ### Proxy credential resolution (`Scenarios/ApiKeyResolutionScenario.cs`)
 
 The proxy resolves inbound credentials from storage on **every** proxied request (no positive

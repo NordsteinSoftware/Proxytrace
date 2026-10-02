@@ -14,7 +14,11 @@ interface PulseState {
   lastBeat: number;
 }
 
-export function usePulse(serverPulse: number[] | undefined, projectId: string | undefined): PulseState {
+export function usePulse(
+  serverPulse: number[] | undefined,
+  projectId: string | undefined,
+  scopeId?: string,
+): PulseState {
   const [pulse, setPulse] = useState<number[]>(() => normalizePulse(serverPulse));
   const [lastBeat, setLastBeat] = useState(0);
 
@@ -40,6 +44,8 @@ export function usePulse(serverPulse: number[] | undefined, projectId: string | 
   useTraceStream(e => {
     // The stream is server-filtered to member projects; narrow to the selected project here.
     if (projectId && e.projectId !== projectId) return;
+    // …and to the selected scope, so the band counts what the scoped aggregates count.
+    if (scopeId && e.scopeId !== scopeId) return;
     setPulse(bumpPulse);
     setLastBeat(Date.now());
   });

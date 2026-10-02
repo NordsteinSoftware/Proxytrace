@@ -116,6 +116,94 @@ public sealed class OpenAiProxyRoutingTests
     }
 
     [TestMethod]
+    [DataRow("/acme/support-agents/openai/v1/chat/completions", "support-agents")]
+    [DataRow("/acme/Support_Agents/openai/v1/chat/completions", "support-agents")]
+    [DataRow("/acme/openai/v1/chat/completions", null)]
+    [DataRow("/acme/openai/openai/v1/chat/completions", null)]
+    public async Task ScopedOpenAiRoute_Ingests_WithCanonicalScopeKey(string url, string? expectedScope)
+    {
+        // The scope segment is unconstrained on purpose: a non-canonical value is normalised rather
+        // than falling through to the untraced pass-through, and a reserved one ("openai") just
+        // leaves the call unscoped.
+        var stream = Substitute.For<IIngestionStream>();
+        IngestMessage? published = null;
+        await stream.PublishAsync(Arg.Do<IngestMessage>(m => published = m), Arg.Any<CancellationToken>());
+        await using var app = await StartHostAsync(stream);
+        using var client = app.GetTestClient();
+
+        using var request = new HttpRequestMessage(HttpMethod.Post, url);
+        request.Headers.Add("Authorization", "Bearer valid");
+        request.Content = new StringContent("""{"model":"gpt-4o","messages":[]}""", Encoding.UTF8, "application/json");
+
+        var response = await client.SendAsync(request, CancellationToken.None);
+        await response.Content.ReadAsStringAsync(CancellationToken.None);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        published.Should().NotBeNull("the scoped route is a traced route");
+        ArgumentNullException.ThrowIfNull(published);
+        published.ScopeKey.Should().Be(expectedScope);
+    }
+
+    [TestMethod]
+    public async Task ScopedOpenAiRoute_ForwardsToVersionedUpstreamPath()
+    {
+        var capture = new CapturingHttpMessageHandler("""{"object":"list","data":[]}""");
+        await using var app = await StartHostAsync(Substitute.For<IIngestionStream>(), new SingleHandlerClientFactory(capture));
+        using var client = app.GetTestClient();
+
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/acme/support/openai/v1/models");
+        request.Headers.Add("Authorization", "Bearer valid");
+
+        var response = await client.SendAsync(request, CancellationToken.None);
+        await response.Content.ReadAsStringAsync(CancellationToken.None);
+
+        capture.LastUri.Should().Be(new Uri("http://upstream.test/v1/models"),
+            "the scope segment is Proxytrace routing metadata and never reaches the provider");
+    }
+
+    [TestMethod]
+    public async Task ScopeHeader_OverridesScopePathSegment()
+    {
+        var stream = Substitute.For<IIngestionStream>();
+        IngestMessage? published = null;
+        await stream.PublishAsync(Arg.Do<IngestMessage>(m => published = m), Arg.Any<CancellationToken>());
+        await using var app = await StartHostAsync(stream);
+        using var client = app.GetTestClient();
+
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/acme/support/openai/v1/chat/completions");
+        request.Headers.Add("Authorization", "Bearer valid");
+        request.Headers.Add("x-proxytrace-scope", "Billing Agents");
+        request.Content = new StringContent("""{"model":"gpt-4o","messages":[]}""", Encoding.UTF8, "application/json");
+
+        var response = await client.SendAsync(request, CancellationToken.None);
+        await response.Content.ReadAsStringAsync(CancellationToken.None);
+
+        ArgumentNullException.ThrowIfNull(published);
+        published.ScopeKey.Should().Be("billing-agents");
+    }
+
+    [TestMethod]
+    public async Task UnusableScopeHeader_FallsBackToScopePathSegment()
+    {
+        var stream = Substitute.For<IIngestionStream>();
+        IngestMessage? published = null;
+        await stream.PublishAsync(Arg.Do<IngestMessage>(m => published = m), Arg.Any<CancellationToken>());
+        await using var app = await StartHostAsync(stream);
+        using var client = app.GetTestClient();
+
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/acme/support/openai/v1/chat/completions");
+        request.Headers.Add("Authorization", "Bearer valid");
+        request.Headers.Add("x-proxytrace-scope", "!!!");
+        request.Content = new StringContent("""{"model":"gpt-4o","messages":[]}""", Encoding.UTF8, "application/json");
+
+        var response = await client.SendAsync(request, CancellationToken.None);
+        await response.Content.ReadAsStringAsync(CancellationToken.None);
+
+        ArgumentNullException.ThrowIfNull(published);
+        published.ScopeKey.Should().Be("support");
+    }
+
+    [TestMethod]
     [DataRow("/acme/health", 200)]
     [DataRow("/acme/openai/v1/models", 401)]
     [DataRow("/acme/openai/v1", 401)]

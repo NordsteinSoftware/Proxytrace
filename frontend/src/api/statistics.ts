@@ -16,7 +16,7 @@ type AgentRangeParams = { from: string; to: string; bucket: StatisticsBucket; [k
 
 export const statisticsApi = {
   /** One-shot dashboard payload (replaces the per-widget request fan-out). */
-  dashboard: (params?: { from?: string; to?: string; projectId?: string; excludeSystemAgents?: boolean; recentTraceCount?: number }) =>
+  dashboard: (params?: { from?: string; to?: string; projectId?: string; scopeId?: string; excludeSystemAgents?: boolean; recentTraceCount?: number }) =>
     api.get<DashboardViewDto>(`/api/statistics/dashboard${qs(params ?? {})}`),
   passRates: (params?: { from?: string; to?: string; agentId?: string; projectId?: string; endpointId?: string }) =>
     api.get<PassRateDto[]>(`/api/statistics/pass-rates${qs(params ?? {})}`),

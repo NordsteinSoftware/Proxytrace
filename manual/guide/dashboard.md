@@ -25,6 +25,10 @@ of your agents at a glance and links out to the detailed views.
   **all** time) that all metrics are computed over. New visitors start on **all** time;
   once you pick a window your choice is remembered in your browser, so it survives a
   refresh or navigating away and back.
+- **Scope selector** — when the project has [scopes](/guide/scopes), a selector next to the
+  clock narrows the whole dashboard — pulse, metrics, live feed, and agent fleet — to one use
+  case. The evaluation pass rate is hidden while a scope is selected: test runs aren't tied to a
+  scope, so a scoped pass rate would be misleading. Your choice is remembered per project.
 - **Notifications** — the bell icon in the top bar opens an inbox of alerts and updates for
   the project, including automatically detected anomalies from your test runs. It's available
   on every page, not just the dashboard. See [Notifications](/guide/notifications).

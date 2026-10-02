@@ -7,6 +7,7 @@ import type { AgentListItemDto } from '../../api/models';
 import useCurrentProject from '../../hooks/useCurrentProject';
 import { bucketFor, rangeFromOpt, RANGE_KEYS, type RangeKey } from '../../lib/time-range';
 import { useLocalStorageState } from '../../hooks/useLocalStorageState';
+import { cn } from '../../lib/cn';
 import {
   computeLatencyStats,
   computeTokenSeries,
@@ -18,6 +19,7 @@ import { useDashboardView } from './hooks/useDashboardQueries';
 import { useLiveClock } from './hooks/useLiveClock';
 import { useFreshTraces } from './hooks/useFreshTraces';
 import { usePulse } from './hooks/usePulse';
+import { useDashboardScope } from './hooks/useDashboardScope';
 import { useDraftProposalCount } from '../../hooks/useProposals';
 import { PulseBand } from './components/PulseBand';
 import { HeroTokenCard } from './components/HeroTokenCard';
@@ -26,6 +28,7 @@ import { LiveTraceStream } from './components/LiveTraceStream';
 import { PassRateGauge } from './components/PassRateGauge';
 import { AgentFleetSection } from './components/AgentFleetSection';
 import { LatencySection } from './components/LatencySection';
+import { DashboardScopeSelect } from './components/DashboardScopeSelect';
 import { AskTraceyButton } from '../../components/tracey/AskTraceyButton';
 import { projectHealthPrompt } from '../../components/tracey/askTraceyPrompts';
 
@@ -47,22 +50,25 @@ export default function Dashboard() {
   const from = useMemo(() => rangeFromOpt(range), [range]);
   const { currentProjectId, currentProject } = useCurrentProject();
   const projectId = currentProjectId ?? undefined;
-  const enabled = currentProjectId !== null;
+  const { scopes, scopeId, isResolved: scopeResolved, setScopeId } = useDashboardScope(projectId);
+  const enabled = currentProjectId !== null && scopeResolved;
 
   const clock = useLiveClock();
 
   // ── Data hooks ──────────────────────────────────────────────────────────────
 
-  const queryOpts = { from, projectId, enabled };
+  const queryOpts = { from, projectId, scopeId, enabled };
 
-  const { data: dashboard, isLoading: dashboardLoading } = useDashboardView(queryOpts);
-  const { pulse, lastBeat } = usePulse(dashboard?.pulse, projectId);
+  const { data: dashboard, isLoading: dashboardFetching } = useDashboardView(queryOpts);
+  // A request held back for the remembered scope is still loading, not "no data".
+  const dashboardLoading = dashboardFetching || !scopeResolved;
+  const { pulse, lastBeat } = usePulse(dashboard?.pulse, projectId, scopeId);
   const proposalCount = useDraftProposalCount();
 
   // ── SSE: invalidate on new traces ───────────────────────────────────────────
 
   useTraceStream(() => {
-    qc.invalidateQueries({ queryKey: QUERY_KEYS.statisticsDashboard(from, projectId) });
+    qc.invalidateQueries({ queryKey: QUERY_KEYS.statisticsDashboard(from, projectId, scopeId) });
   });
 
   // ── Derived data ────────────────────────────────────────────────────────────
@@ -105,6 +111,7 @@ export default function Dashboard() {
           <p className="text-body-sm text-muted">{currentProject?.name ?? t`All projects`}</p>
         </div>
         <div className="flex items-center gap-3">
+          <DashboardScopeSelect scopes={scopes} scopeId={scopeId} onChange={setScopeId} />
           <AskTraceyButton data-testid="ask-tracey-btn-dashboard" prompt={projectHealthPrompt()} />
           <div className="flex items-center gap-2.5 font-mono text-caption text-muted">
             <span className="text-primary font-semibold tracking-[0.04em] tabular-nums">{clock}</span>
@@ -134,14 +141,21 @@ export default function Dashboard() {
       </div>
 
       {/* ④ Scale + quality band */}
-      <div className="fade-up grid grid-cols-1 lg:grid-cols-[minmax(0,2.1fr)_minmax(0,1fr)] gap-2 [animation-delay:120ms]">
+      {/* Test runs carry no scope, so a scoped pass rate could only be the scope's agents' runs —
+          shared agents would count in full. The gauge is hidden rather than shown misleading. */}
+      <div
+        className={cn(
+          'fade-up grid grid-cols-1 gap-2 [animation-delay:120ms]',
+          !scopeId && 'lg:grid-cols-[minmax(0,2.1fr)_minmax(0,1fr)]',
+        )}
+      >
         <StatTileGrid
           summary={summary}
           telemetry={telemetry}
           trends={trends}
           latencyStats={latencyStats}
         />
-        <PassRateGauge summary={summary} passRateTrend={trends?.passRate} />
+        {!scopeId && <PassRateGauge summary={summary} passRateTrend={trends?.passRate} />}
       </div>
 
       {/* ⑤ Fleet roster + latency spectrum */}

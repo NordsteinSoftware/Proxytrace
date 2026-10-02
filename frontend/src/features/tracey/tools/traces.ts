@@ -8,8 +8,8 @@ import { traceTranscript } from './trace-transcript';
 export const createTraceTools: ToolFactory = (ctx, store) => ({
   find_traces: tool({
     description:
-      'Search the captured traces (real LLM calls) of this project — by agent, free-text query, ' +
-      'or HTTP status — newest first. Use it to ground a tuning hypothesis in what the agent ' +
+      'Search the captured traces (real LLM calls) of this project — by agent, scope, free-text ' +
+      'query, or HTTP status — newest first. Use it to ground a tuning hypothesis in what the agent ' +
       'actually said: find failing or suspicious calls, then `get_trace` one with `verbose: true` ' +
       'to read its whole conversation. ' +
       'The matching traces are rendered to the user as a card. Hides traces of internal system ' +
@@ -23,6 +23,8 @@ export const createTraceTools: ToolFactory = (ctx, store) => ({
     parameters: z.object({
       present: presentArg,
       agentId: z.string().optional().describe('Only traces of this agent.'),
+      scopeId: z.string().optional()
+        .describe('Only traces sent under this scope (use-case group of agents) — an id from `list_scopes`.'),
       query: z.string().optional().describe('Free-text search over the captured request/response.'),
       httpStatus: z.number().int().optional()
         .describe('Only calls with this exact upstream HTTP status (e.g. 500 for errors).'),
@@ -30,7 +32,7 @@ export const createTraceTools: ToolFactory = (ctx, store) => ({
       includeSystem: includeSystemArg,
     }),
     confirm: false,
-    execute: async ({ agentId, query, httpStatus, limit, includeSystem }) => {
+    execute: async ({ agentId, scopeId, query, httpStatus, limit, includeSystem }) => {
       // A user who says "look at trace <guid>" hands over a real id, and the model sometimes routes
       // it here instead of to `get_trace`. The backend `q` is a fulltext index over the captured
       // request/response, so an id matches nothing — an empty result the model reads as "that trace
@@ -41,6 +43,7 @@ export const createTraceTools: ToolFactory = (ctx, store) => ({
       const { items } = await agentCallsApi.list({
         projectId: ctx.projectId,
         agentId,
+        scopeId,
         q: query,
         httpStatus,
         // The backend defaults this to true; pass false explicitly so system-agent traces stay hidden.

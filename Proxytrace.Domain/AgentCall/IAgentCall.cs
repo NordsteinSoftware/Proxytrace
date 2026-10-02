@@ -83,6 +83,14 @@ public interface IAgentCall : IDomainEntity<IAgentCall>, ISearchable
     /// </summary>
     Guid? ApiKeyId { get; }
 
+    /// <summary>
+    /// The scope (use-case group of agents) this call was sent under — from the
+    /// <c>/{project}/{scope}/openai/v1</c> path segment or the <c>x-proxytrace-scope</c> header;
+    /// null when the client named none. FK-free correlation id, like <see cref="SessionId"/> — see
+    /// IScope.
+    /// </summary>
+    Guid? ScopeId { get; }
+
     SearchKind ISearchable.SearchKind => SearchKind.AgentCall;
 
     /// <summary>
@@ -103,7 +111,8 @@ public interface IAgentCall : IDomainEntity<IAgentCall>, ISearchable
         OutlierFlags outlierFlags = OutlierFlags.None,
         Guid? apiKeyId = null,
         string? parentContinuationHash = null,
-        bool supportsAutomaticGrouping = true);
+        bool supportsAutomaticGrouping = true,
+        Guid? scopeId = null);
 
     /// <summary>
     /// Factory delegate for creating a new existing instance.
@@ -124,5 +133,6 @@ public interface IAgentCall : IDomainEntity<IAgentCall>, ISearchable
         OutlierFlags outlierFlags = OutlierFlags.None,
         Guid? apiKeyId = null,
         string? parentContinuationHash = null,
-        bool supportsAutomaticGrouping = true);
+        bool supportsAutomaticGrouping = true,
+        Guid? scopeId = null);
 }

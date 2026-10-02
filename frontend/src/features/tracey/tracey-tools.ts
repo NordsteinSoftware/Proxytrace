@@ -8,6 +8,7 @@ import { createEvaluatorTools } from './tools/evaluators';
 import { createStatsTools } from './tools/stats';
 import { createProviderTools } from './tools/providers';
 import { createTraceTools } from './tools/traces';
+import { createScopeTools } from './tools/scopes';
 import { createDisplayTools } from './tools/display';
 import { createAwaitTools } from './tools/await';
 
@@ -32,6 +33,7 @@ export function createTraceyTools(ctx: TraceyToolContext): Record<string, Tracey
     ...createStatsTools(ctx, store),
     ...createProviderTools(ctx, store),
     ...createTraceTools(ctx, store),
+    ...createScopeTools(ctx, store),
     ...createDisplayTools(ctx, store),
     ...createAwaitTools(ctx, store),
   };
@@ -64,7 +66,8 @@ export const TRACEY_TOOLS_META: { name: string; description: string }[] = [
   { name: 'get_proposal', description: 'Get one proposal by id.' },
   { name: 'list_theories', description: 'List past optimization theories and their A/B outcomes.' },
   { name: 'get_provider', description: 'Get one model provider by id.' },
-  { name: 'find_traces', description: 'Search captured traces (agent, text, status).' },
+  { name: 'find_traces', description: 'Search captured traces (agent, scope, text, status).' },
+  { name: 'list_scopes', description: "List the project's scopes (use-case groups of agents)." },
   { name: 'get_trace', description: 'Get one captured trace by id (verbose: the whole conversation).' },
   { name: 'get_agent_anomalies', description: "Recent anomaly-flagged (outlier) calls of an agent." },
   { name: 'list_evaluators', description: "List the project's evaluators." },

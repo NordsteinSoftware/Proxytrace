@@ -1,4 +1,5 @@
 using Proxytrace.Domain.Project;
+using Proxytrace.Domain.Scope;
 using Proxytrace.Domain.Session;
 
 namespace Proxytrace.Domain.AgentCall;
@@ -118,6 +119,17 @@ public interface IAgentCallRepository : IRepository<IAgentCall>
     /// window), never O(rows). Calls with no session are excluded.
     /// </summary>
     Task<IReadOnlyList<SessionTraceRemoval>> GetSessionRemovalsOlderThanAsync(
+        DateTimeOffset cutoffDate,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Per (scope, agent version), the trace count and total tokens of the scoped calls created at or
+    /// before the cutoff — the deltas retention hands to <c>IScopeRepository.RecordTraceRemovalsAsync</c>
+    /// so the scope membership counters stay honest. Must be read *before* the delete. Aggregated in
+    /// the database like <see cref="GetSessionRemovalsOlderThanAsync"/>: O(memberships in the window)
+    /// crosses the wire, never O(rows). Unscoped calls are excluded.
+    /// </summary>
+    Task<IReadOnlyList<ScopeTraceRemoval>> GetScopeRemovalsOlderThanAsync(
         DateTimeOffset cutoffDate,
         CancellationToken cancellationToken = default);
 

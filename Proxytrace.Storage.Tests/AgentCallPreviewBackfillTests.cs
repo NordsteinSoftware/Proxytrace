@@ -1,3 +1,4 @@
+using Nordstein.Core.Common.Serialization;
 using Autofac.Features.OwnedInstances;
 using AwesomeAssertions;
 using Microsoft.EntityFrameworkCore;
@@ -69,7 +70,7 @@ public sealed class AgentCallPreviewBackfillTests : BaseTest<Module>
         // Shape a pre-column row whose request can never yield a preview: a system-only conversation
         // with a null preview. Build() returns null for it, so the backfill must mark it rather than
         // leave it null — otherwise the IS NULL candidate set never empties and the pass loops forever.
-        await ReplaceRequestAndClearPreview(contextFactory, call.Id, new Conversation([Message.CreateSystemMessage("system only")]));
+        await ReplaceRequestAndClearPreview(services.GetRequiredService<ISerializer>(), contextFactory, call.Id, new Conversation([Message.CreateSystemMessage("system only")]));
 
         var backfill = services.GetRequiredService<AgentCallPreviewBackfillService>();
 
@@ -100,7 +101,7 @@ public sealed class AgentCallPreviewBackfillTests : BaseTest<Module>
         // batchSize 2 over 5 null rows = three iterations (2, 2, 1): exercises the pagination loop and
         // the "final partial batch" termination that a single-batch (0/1-row) test never reaches.
         var backfill = new AgentCallPreviewBackfillService(
-            ownedContextFactory, NullLogger<AgentCallPreviewBackfillService>.Instance, batchSize: 2);
+            ownedContextFactory, NullLogger<AgentCallPreviewBackfillService>.Instance, GetServices().GetRequiredService<ISerializer>(), batchSize: 2);
 
         (await backfill.BackfillAsync(CancellationToken)).Should().Be(rowCount);
 
@@ -117,18 +118,18 @@ public sealed class AgentCallPreviewBackfillTests : BaseTest<Module>
         // break host startup. A context factory that always throws drives every retry to failure.
         Func<Owned<StorageDbContext>> throwingFactory = () => throw new InvalidOperationException("database unavailable");
         var backfill = new AgentCallPreviewBackfillService(
-            throwingFactory, NullLogger<AgentCallPreviewBackfillService>.Instance, retryDelay: TimeSpan.Zero);
+            throwingFactory, NullLogger<AgentCallPreviewBackfillService>.Instance, GetServices().GetRequiredService<ISerializer>(), retryDelay: TimeSpan.Zero);
 
         var act = async () => await backfill.StartAsync(CancellationToken);
 
         await act.Should().NotThrowAsync();
     }
 
-    private static async Task ReplaceRequestAndClearPreview(Func<StorageDbContext> contextFactory, Guid id, Conversation request)
+    private static async Task ReplaceRequestAndClearPreview(ISerializer serializer, Func<StorageDbContext> contextFactory, Guid id, Conversation request)
     {
         var db = contextFactory();
         var row = await db.Set<AgentCallEntity>().FirstAsync(e => e.Id == id);
-        db.Entry(row).CurrentValues.SetValues(row with { Request = request, RequestPreview = null });
+        db.Entry(row).CurrentValues.SetValues(row with { Request = serializer.Serialize(request), RequestPreview = null });
         await db.SaveChangesAsync();
     }
 

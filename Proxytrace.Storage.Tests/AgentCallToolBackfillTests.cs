@@ -1,3 +1,4 @@
+using Nordstein.Core.Common.Serialization;
 using System.Net;
 using Autofac.Features.OwnedInstances;
 using AwesomeAssertions;
@@ -66,7 +67,7 @@ public sealed class AgentCallToolBackfillTests : BaseTest<Module>
         // Corrupt-ish shape: the denormalised count says "has tools" but the stored response yields
         // none. The backfill must take the row out of the candidate set anyway (empty marker), or
         // the pass would re-scan it forever.
-        await ReplaceResponse(contextFactory, call.Id, new AssistantMessage([Content.FromText("ok")], []));
+        await ReplaceResponse(services.GetRequiredService<ISerializer>(), contextFactory, call.Id, new AssistantMessage([Content.FromText("ok")], []));
 
         var backfill = services.GetRequiredService<AgentCallToolBackfillService>();
 
@@ -87,7 +88,7 @@ public sealed class AgentCallToolBackfillTests : BaseTest<Module>
 
         var call = await SeedCallWithToolsAsync(services, agent, ["web_search"]);
         await DeleteToolRows(contextFactory, call.Id);
-        await ReplaceResponse(contextFactory, call.Id, new AssistantMessage([Content.FromText("ok")], []));
+        await ReplaceResponse(services.GetRequiredService<ISerializer>(), contextFactory, call.Id, new AssistantMessage([Content.FromText("ok")], []));
         await services.GetRequiredService<AgentCallToolBackfillService>().BackfillAsync(CancellationToken);
 
         (await repo.GetToolNamesAsync(agent.Project.Id, cancellationToken: CancellationToken)).Should().BeEmpty();
@@ -113,7 +114,7 @@ public sealed class AgentCallToolBackfillTests : BaseTest<Module>
         // batchSize 2 over 5 candidate rows = three iterations (2, 2, 1): exercises the batch loop
         // and the "final partial batch" termination a single-batch test never reaches.
         var backfill = new AgentCallToolBackfillService(
-            ownedContextFactory, NullLogger<AgentCallToolBackfillService>.Instance, batchSize: 2);
+            ownedContextFactory, NullLogger<AgentCallToolBackfillService>.Instance, GetServices().GetRequiredService<ISerializer>(), batchSize: 2);
 
         (await backfill.BackfillAsync(CancellationToken)).Should().Be(rowCount);
 
@@ -130,7 +131,7 @@ public sealed class AgentCallToolBackfillTests : BaseTest<Module>
         // or it would break host startup.
         Func<Owned<StorageDbContext>> throwingFactory = () => throw new InvalidOperationException("database unavailable");
         var backfill = new AgentCallToolBackfillService(
-            throwingFactory, NullLogger<AgentCallToolBackfillService>.Instance, retryDelay: TimeSpan.Zero);
+            throwingFactory, NullLogger<AgentCallToolBackfillService>.Instance, GetServices().GetRequiredService<ISerializer>(), retryDelay: TimeSpan.Zero);
 
         var act = async () => await backfill.StartAsync(CancellationToken);
 
@@ -151,11 +152,11 @@ public sealed class AgentCallToolBackfillTests : BaseTest<Module>
         return await db.Set<AgentCallToolEntity>().AsNoTracking().Where(t => t.AgentCallId == callId).ToListAsync();
     }
 
-    private static async Task ReplaceResponse(Func<StorageDbContext> contextFactory, Guid id, AssistantMessage response)
+    private static async Task ReplaceResponse(ISerializer serializer, Func<StorageDbContext> contextFactory, Guid id, AssistantMessage response)
     {
         var db = contextFactory();
         var row = await db.Set<AgentCallEntity>().FirstAsync(e => e.Id == id);
-        db.Entry(row).CurrentValues.SetValues(row with { Response = response });
+        db.Entry(row).CurrentValues.SetValues(row with { Response = serializer.Serialize(response) });
         await db.SaveChangesAsync();
     }
 

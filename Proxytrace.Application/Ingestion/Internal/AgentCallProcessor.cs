@@ -14,6 +14,7 @@ using Nordstein.Core.AI.Messages;
 using Nordstein.Core.Domain.Exceptions;
 using Nordstein.Core.AI.Prompts;
 using Proxytrace.Domain.Prompt;
+using Proxytrace.Domain.Scope;
 using Proxytrace.Domain.Session;
 using Proxytrace.Licensing;
 
@@ -36,6 +37,8 @@ internal sealed class AgentCallProcessor : IAgentCallProcessor
     private readonly ICustomAnomalyReviewQueue anomalyReviewQueue;
     private readonly IBlockedCallRecorder blockedCallRecorder;
     private readonly ISessionRepository sessionRepository;
+    private readonly IScopeRepository scopeRepository;
+    private readonly ScopeAdmission scopeAdmission;
     private readonly ILogger<AgentCallProcessor> logger;
 
     /// <summary>
@@ -55,6 +58,8 @@ internal sealed class AgentCallProcessor : IAgentCallProcessor
         ICustomAnomalyReviewQueue anomalyReviewQueue,
         IBlockedCallRecorder blockedCallRecorder,
         ISessionRepository sessionRepository,
+        IScopeRepository scopeRepository,
+        ScopeAdmission scopeAdmission,
         ILogger<AgentCallProcessor> logger)
     {
         this.agentCallRepository = agentCallRepository;
@@ -70,6 +75,8 @@ internal sealed class AgentCallProcessor : IAgentCallProcessor
         this.anomalyReviewQueue = anomalyReviewQueue;
         this.blockedCallRecorder = blockedCallRecorder;
         this.sessionRepository = sessionRepository;
+        this.scopeRepository = scopeRepository;
+        this.scopeAdmission = scopeAdmission;
         this.logger = logger;
     }
 
@@ -163,6 +170,8 @@ internal sealed class AgentCallProcessor : IAgentCallProcessor
                 session = (SessionIdDerivation.Derive(job.Project.Id, key), key);
             }
 
+            var scopeId = await AdmitScopeAsync(job, cancellationToken);
+
             var call = createNewCall(
                 agent: agent,
                 version: version,
@@ -178,7 +187,8 @@ internal sealed class AgentCallProcessor : IAgentCallProcessor
                 outlierFlags: outlierFlags,
                 apiKeyId: job.ApiKeyId,
                 parentContinuationHash: parentContinuationHash,
-                supportsAutomaticGrouping: parsed.SupportsAutomaticGrouping);
+                supportsAutomaticGrouping: parsed.SupportsAutomaticGrouping,
+                scopeId: scopeId);
 
             call = await agentCallRepository.AddAsync(call, cancellationToken);
 
@@ -194,17 +204,14 @@ internal sealed class AgentCallProcessor : IAgentCallProcessor
 
             // Upsert the session AFTER the call persists: the trace is the source of truth, so this is
             // best-effort — a failure here logs and is swallowed, never failing or duplicating ingestion
-            // (the call row already exists). TotalTokens mirrors the value AgentCallConfig denormalizes
+            // (the call row already exists). CountedTokens is the value AgentCallConfig denormalizes
             // onto AgentCallEntity.TotalTokens.
             if (session is { } s)
             {
                 try
                 {
-                    var totalTokens = call.Response?.Usage is { } u
-                        ? (long)(u.InputTokenCount + u.OutputTokenCount)
-                        : 0;
                     await sessionRepository.RecordActivityAsync(
-                        s.Id, s.Key, job.Project.Id, totalTokens, call.CreatedAt, cancellationToken);
+                        s.Id, s.Key, job.Project.Id, call.CountedTokens(), call.CreatedAt, cancellationToken);
                 }
                 catch (Exception e)
                 {
@@ -213,6 +220,21 @@ internal sealed class AgentCallProcessor : IAgentCallProcessor
                     // ingest post-persist and make a redelivering transport ingest the trace a second
                     // time. The session counters are best-effort; the trace is not.
                     logger.LogWarning(e, "Session activity upsert failed for session {SessionId}", s.Id);
+                }
+            }
+
+            // Scope membership, same contract as the session upsert above: after the call persists,
+            // best-effort, and nothing escapes — including cancellation.
+            if (scopeId is { } scoped)
+            {
+                try
+                {
+                    await scopeRepository.RecordActivityAsync(
+                        scoped, version.Id, call.CountedTokens(), call.CreatedAt, cancellationToken);
+                }
+                catch (Exception e)
+                {
+                    logger.LogWarning(e, "Scope membership upsert failed for scope {ScopeId}", scoped);
                 }
             }
 
@@ -302,6 +324,28 @@ internal sealed class AgentCallProcessor : IAgentCallProcessor
             }
         }
         return false;
+    }
+
+    // Resolves the job's scope key to a scope id, creating the scope on first sight. Runs BEFORE the
+    // call persists (the id is stamped onto the row), so a storage failure here must not lose the
+    // trace: it falls back to the derived id — deterministic, so the scope row that the next call
+    // admits under the same key matches what this trace was stamped with. Cancellation still
+    // propagates: nothing has been persisted yet, so a redelivery is harmless.
+    private async Task<Guid?> AdmitScopeAsync(IngestJob job, CancellationToken cancellationToken)
+    {
+        var key = ScopeKey.Normalize(job.ScopeKey);
+        if (key is null)
+            return null;
+
+        try
+        {
+            return await scopeAdmission.AdmitAsync(job.Project.Id, key, cancellationToken);
+        }
+        catch (Exception e) when (e is not OperationCanceledException)
+        {
+            logger.LogWarning(e, "Scope admission failed for key {ScopeKey} in project {ProjectId}", key, job.Project.Id);
+            return ScopeIdDerivation.Derive(job.Project.Id, key);
+        }
     }
 
     /// <summary>

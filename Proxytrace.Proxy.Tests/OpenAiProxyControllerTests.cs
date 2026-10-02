@@ -22,7 +22,7 @@ public sealed class OpenAiProxyControllerTests
         var controller = BuildController(Substitute.For<IIngestionStream>(), NoKeyResolver());
         controller.ControllerContext = BuildContext(authHeader: "");
 
-        await controller.Proxy("chat/completions", project: null, CancellationToken.None);
+        await controller.Proxy("chat/completions", project: null, scope: null, CancellationToken.None);
 
         controller.Response.StatusCode.Should().Be(StatusCodes.Status401Unauthorized);
     }
@@ -33,7 +33,7 @@ public sealed class OpenAiProxyControllerTests
         var controller = BuildController(Substitute.For<IIngestionStream>(), NoKeyResolver());
         controller.ControllerContext = BuildContext("Bearer not-a-real-key");
 
-        await controller.Proxy("chat/completions", project: null, CancellationToken.None);
+        await controller.Proxy("chat/completions", project: null, scope: null, CancellationToken.None);
 
         controller.Response.StatusCode.Should().Be(StatusCodes.Status401Unauthorized);
     }
@@ -49,7 +49,7 @@ public sealed class OpenAiProxyControllerTests
         var controller = BuildController(Substitute.For<IIngestionStream>(), ResolverFor(ApiKey()));
         controller.ControllerContext = BuildContext("Bearer valid");
 
-        await controller.Proxy(path, project: null, CancellationToken.None);
+        await controller.Proxy(path, project: null, scope: null, CancellationToken.None);
 
         controller.Response.StatusCode.Should().Be(StatusCodes.Status400BadRequest);
     }
@@ -66,7 +66,7 @@ public sealed class OpenAiProxyControllerTests
             "Bearer valid",
             body: """{"model":"gpt-4o","messages":[{"role":"user","content":"hi"}]}""");
 
-        await controller.Proxy("chat/completions", project: null, CancellationToken.None);
+        await controller.Proxy("chat/completions", project: null, scope: null, CancellationToken.None);
 
         controller.Response.StatusCode.Should().Be((int)HttpStatusCode.OK);
         await stream.Received(1).PublishAsync(Arg.Any<IngestMessage>(), Arg.Any<CancellationToken>());
@@ -81,7 +81,7 @@ public sealed class OpenAiProxyControllerTests
             new ThrowingHttpClientFactory());
         controller.ControllerContext = BuildContext("Bearer valid", body: "{}");
 
-        await controller.Proxy("chat/completions", project: null, CancellationToken.None);
+        await controller.Proxy("chat/completions", project: null, scope: null, CancellationToken.None);
 
         controller.Response.StatusCode.Should().Be(StatusCodes.Status502BadGateway);
     }
@@ -99,7 +99,7 @@ public sealed class OpenAiProxyControllerTests
             new FakeHttpClientFactory(FakeHttpMessageHandler.BuildOpenAiResponse("ok")));
         controller.ControllerContext = BuildContext("Bearer valid", body: "{}");
 
-        await controller.Proxy("chat/completions", project: null, CancellationToken.None);
+        await controller.Proxy("chat/completions", project: null, scope: null, CancellationToken.None);
 
         controller.Response.StatusCode.Should().Be((int)HttpStatusCode.OK);
     }
@@ -114,7 +114,7 @@ public sealed class OpenAiProxyControllerTests
             new SingleHandlerClientFactory(capture));
         controller.ControllerContext = BuildContext("Bearer valid", body: "", method: "GET");
 
-        await controller.Proxy("models", project: null, CancellationToken.None);
+        await controller.Proxy("models", project: null, scope: null, CancellationToken.None);
 
         capture.LastMethod.Should().Be(HttpMethod.Get);
         capture.LastHadContent.Should().BeFalse("a bodyless GET must not be forwarded with a request body");
@@ -130,7 +130,7 @@ public sealed class OpenAiProxyControllerTests
             new SingleHandlerClientFactory(capture));
         controller.ControllerContext = BuildContext("Bearer valid", body: """{"model":"gpt-4o","messages":[]}""");
 
-        await controller.Proxy("chat/completions", project: null, CancellationToken.None);
+        await controller.Proxy("chat/completions", project: null, scope: null, CancellationToken.None);
 
         capture.LastHadContent.Should().BeTrue();
         Encoding.UTF8.GetString(capture.LastBody).Should().Be("""{"model":"gpt-4o","messages":[]}""");
@@ -149,7 +149,7 @@ public sealed class OpenAiProxyControllerTests
             body: """{"model":"gpt-4o","messages":[]}""",
             contentType: "garbage;;");
 
-        await controller.Proxy("chat/completions", project: null, CancellationToken.None);
+        await controller.Proxy("chat/completions", project: null, scope: null, CancellationToken.None);
 
         controller.Response.StatusCode.Should().Be((int)HttpStatusCode.OK);
         capture.LastContentType.Should().Be("garbage;;", "an unparseable Content-Type is forwarded raw, not dropped or fatal");
@@ -171,7 +171,7 @@ public sealed class OpenAiProxyControllerTests
         controller.ControllerContext.HttpContext.Request.Headers["Idempotency-Key"] = "idem-42";
         controller.ControllerContext.HttpContext.Request.Headers["x-custom-trace"] = "abc";
 
-        await controller.Proxy("chat/completions", project: null, CancellationToken.None);
+        await controller.Proxy("chat/completions", project: null, scope: null, CancellationToken.None);
 
         capture.LastHeaders.Should().Contain("openai-beta", "assistants=v2");
         capture.LastHeaders.Should().Contain("openai-organization", "org-123");
@@ -190,8 +190,9 @@ public sealed class OpenAiProxyControllerTests
         controller.ControllerContext = BuildContext("Bearer valid", body: """{"model":"gpt-4o","messages":[]}""");
         controller.ControllerContext.HttpContext.Request.Headers["x-proxytrace-agent"] = "billing agent";
         controller.ControllerContext.HttpContext.Request.Headers["x-proxytrace-session-id"] = "sess-1";
+        controller.ControllerContext.HttpContext.Request.Headers["x-proxytrace-scope"] = "support";
 
-        await controller.Proxy("chat/completions", project: null, CancellationToken.None);
+        await controller.Proxy("chat/completions", project: null, scope: null, CancellationToken.None);
 
         capture.LastHeaders.Keys.Should().NotContain(
             key => key.StartsWith("x-proxytrace-"),
@@ -214,7 +215,7 @@ public sealed class OpenAiProxyControllerTests
         headers["x-hop-extension"] = "per-connection";
         headers["Transfer-Encoding"] = "chunked";
 
-        await controller.Proxy("chat/completions", project: null, CancellationToken.None);
+        await controller.Proxy("chat/completions", project: null, scope: null, CancellationToken.None);
 
         capture.LastHeaders.Keys.Should().NotContain("host", "the upstream host is set by the forward URI");
         capture.LastHeaders.Keys.Should().NotContain("accept-encoding", "the capture pipeline needs an uncompressed body");
@@ -237,7 +238,7 @@ public sealed class OpenAiProxyControllerTests
         controller.ControllerContext = BuildContext("Bearer valid", body: """{"model":"gpt-4o","messages":[]}""");
         controller.ControllerContext.HttpContext.Request.Headers["api-key"] = "proxytrace-minted-token";
 
-        await controller.Proxy("chat/completions", project: null, CancellationToken.None);
+        await controller.Proxy("chat/completions", project: null, scope: null, CancellationToken.None);
 
         capture.LastHeaders.Should().Contain("api-key", "sk-upstream");
         capture.LastAuthorization.Should().Be("Bearer sk-upstream");
@@ -254,7 +255,7 @@ public sealed class OpenAiProxyControllerTests
         controller.ControllerContext = BuildContext("Bearer valid", body: """{"model":"gpt-4o","messages":[]}""");
         controller.ControllerContext.HttpContext.Request.Headers["api-key"] = "proxytrace-minted-token";
 
-        await controller.Proxy("chat/completions", project: null, CancellationToken.None);
+        await controller.Proxy("chat/completions", project: null, scope: null, CancellationToken.None);
 
         capture.LastHeaders.Keys.Should().NotContain("api-key",
             "the client's api-key may carry their Proxytrace key and must never leak upstream");
@@ -277,7 +278,7 @@ public sealed class OpenAiProxyControllerTests
                 })));
         controller.ControllerContext = BuildContext("Bearer valid", body: """{"model":"gpt-4o","messages":[]}""");
 
-        await controller.Proxy("chat/completions", project: null, CancellationToken.None);
+        await controller.Proxy("chat/completions", project: null, scope: null, CancellationToken.None);
 
         controller.Response.Headers["x-request-id"].ToString().Should().Be("req-1");
         controller.Response.Headers["x-upstream-custom"].ToString().Should().Be("value");
@@ -299,7 +300,7 @@ public sealed class OpenAiProxyControllerTests
             new FakeHttpClientFactory(FakeHttpMessageHandler.BuildOpenAiResponse("hello")));
         controller.ControllerContext = BuildContext("Bearer valid", body: """{"model":"gpt-4o","messages":[]}""");
 
-        await controller.Proxy("chat/completions", project: null, cts.Token);
+        await controller.Proxy("chat/completions", project: null, scope: null, cts.Token);
 
         await stream.Received(1).PublishAsync(Arg.Any<IngestMessage>(), CancellationToken.None);
     }
@@ -326,7 +327,7 @@ public sealed class OpenAiProxyControllerTests
         controller.ControllerContext = BuildContext("Bearer valid", body: """{"model":"gpt-4o","messages":[]}""");
         controller.ControllerContext.HttpContext.Response.Body = responseBody;
 
-        await controller.Proxy("chat/completions", project: null, CancellationToken.None);
+        await controller.Proxy("chat/completions", project: null, scope: null, CancellationToken.None);
 
         controller.Response.StatusCode.Should().Be((int)HttpStatusCode.OK);
         responseBody.ToArray().Should().Equal(bodyBytes, "the forwarded body must be byte-for-byte identical across all chunks");
@@ -358,7 +359,7 @@ public sealed class OpenAiProxyControllerTests
         controller.ControllerContext = BuildContext("Bearer valid", body: """{"model":"gpt-4o","messages":[]}""");
         controller.ControllerContext.HttpContext.Response.Body = responseBody;
 
-        await controller.Proxy("chat/completions", project: null, CancellationToken.None);
+        await controller.Proxy("chat/completions", project: null, scope: null, CancellationToken.None);
 
         controller.Response.StatusCode.Should().Be((int)HttpStatusCode.OK);
         responseBody.Length.Should().Be(oversized.Length, "the forwarded response body must never be truncated");
@@ -388,7 +389,7 @@ public sealed class OpenAiProxyControllerTests
         controller.ControllerContext = BuildContext("Bearer valid", body: """{"model":"gpt-4o","messages":[]}""");
         controller.ControllerContext.HttpContext.Response.Body = responseBody;
 
-        await controller.Proxy("chat/completions", project: null, CancellationToken.None);
+        await controller.Proxy("chat/completions", project: null, scope: null, CancellationToken.None);
 
         responseBody.ToArray().Should().Equal(bodyBytes, "the forwarded bytes must be untouched regardless of chunking");
         captured.Should().NotBeNull();
@@ -408,7 +409,7 @@ public sealed class OpenAiProxyControllerTests
         controller.ControllerContext.HttpContext.Response.Body = new ThrowOnWriteStream();
 
         await FluentActions
-            .Awaiting(() => controller.Proxy("chat/completions", project: null, CancellationToken.None))
+            .Awaiting(() => controller.Proxy("chat/completions", project: null, scope: null, CancellationToken.None))
             .Should().ThrowAsync<IOException>();
 
         // The accumulated transcript is published despite the client disconnect.
@@ -433,7 +434,7 @@ public sealed class OpenAiProxyControllerTests
         // chunked upload arrives.
         controller.ControllerContext.HttpContext.Request.Body = body;
 
-        await controller.Proxy("chat/completions", project: null, CancellationToken.None);
+        await controller.Proxy("chat/completions", project: null, scope: null, CancellationToken.None);
 
         controller.Response.StatusCode.Should().Be(StatusCodes.Status413PayloadTooLarge);
         body.BytesRead.Should().BeLessThan(
@@ -465,7 +466,7 @@ public sealed class OpenAiProxyControllerTests
             "Bearer valid", body: """{"model":"gpt-4o","stream":true,"messages":[]}""");
         controller.ControllerContext.HttpContext.Response.Body = responseBody;
 
-        await controller.Proxy("chat/completions", project: null, CancellationToken.None);
+        await controller.Proxy("chat/completions", project: null, scope: null, CancellationToken.None);
 
         Encoding.UTF8.GetString(responseBody.Written).Should().Be(
             line + "\n", "the forwarded body must be byte-for-byte upstream's, plus the line terminator");
@@ -498,7 +499,7 @@ public sealed class OpenAiProxyControllerTests
             "Bearer valid", body: """{"model":"gpt-4o","stream":true,"messages":[]}""");
         controller.ControllerContext.HttpContext.Response.Body = responseBody;
 
-        await controller.Proxy("chat/completions", project: null, CancellationToken.None);
+        await controller.Proxy("chat/completions", project: null, scope: null, CancellationToken.None);
 
         Encoding.UTF8.GetString(responseBody.ToArray()).Should().Be(expected);
         captured.Should().NotBeNull();
@@ -530,7 +531,7 @@ public sealed class OpenAiProxyControllerTests
             "Bearer valid", body: """{"model":"gpt-4o","stream":true,"messages":[]}""");
         controller.ControllerContext.HttpContext.Response.Body = responseBody;
 
-        await controller.Proxy("chat/completions", project: null, CancellationToken.None);
+        await controller.Proxy("chat/completions", project: null, scope: null, CancellationToken.None);
 
         Encoding.UTF8.GetString(responseBody.Written).Should().Be(
             expected, "a lone CR terminates a line and is normalized to LF, exactly as ReadLine did");
@@ -559,7 +560,7 @@ public sealed class OpenAiProxyControllerTests
             "Bearer valid", body: """{"model":"gpt-4o","stream":true,"messages":[]}""");
         controller.ControllerContext.HttpContext.Response.Body = responseBody;
 
-        await controller.Proxy("chat/completions", project: null, CancellationToken.None);
+        await controller.Proxy("chat/completions", project: null, scope: null, CancellationToken.None);
 
         Encoding.UTF8.GetString(responseBody.Written).Should().Be(expected);
         responseBody.WriteCount.Should().Be(
@@ -586,7 +587,7 @@ public sealed class OpenAiProxyControllerTests
             new StallingBodyHttpClientFactory(TimeSpan.FromSeconds(1)));
         controller.ControllerContext = BuildContext("Bearer valid", body: """{"model":"gpt-4o","messages":[]}""");
 
-        await controller.Proxy("chat/completions", project: null, CancellationToken.None);
+        await controller.Proxy("chat/completions", project: null, scope: null, CancellationToken.None);
 
         controller.Response.StatusCode.Should().Be(
             StatusCodes.Status504GatewayTimeout, "a stalled upstream body is a gateway timeout, not a hang");
@@ -617,7 +618,7 @@ public sealed class OpenAiProxyControllerTests
         controller.ControllerContext = BuildContext("Bearer valid", body: """{"model":"gpt-4o","messages":[]}""");
 
         await FluentActions
-            .Awaiting(() => controller.Proxy("chat/completions", project: null, clientGoneAway.Token))
+            .Awaiting(() => controller.Proxy("chat/completions", project: null, scope: null, clientGoneAway.Token))
             .Should().ThrowAsync<OperationCanceledException>();
 
         controller.Response.StatusCode.Should().Be(

@@ -32,6 +32,7 @@ export default defineConfig({
             { text: 'Proxy Setup', link: '/guide/proxy-setup' },
             { text: 'Capturing Traces', link: '/guide/capturing-traces' },
             { text: 'Sessions', link: '/guide/sessions' },
+            { text: 'Scopes', link: '/guide/scopes' },
             { text: 'Finding Outliers', link: '/guide/outliers' },
             { text: 'Anomaly Dashboard', link: '/guide/anomaly-dashboard' },
             { text: 'Costs & Budgets', link: '/guide/costs' },

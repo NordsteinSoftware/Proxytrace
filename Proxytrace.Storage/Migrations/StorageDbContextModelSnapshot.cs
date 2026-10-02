@@ -148,6 +148,9 @@ namespace Proxytrace.Storage.Migrations
                     b.Property<int>("ResponseToolRequestCount")
                         .HasColumnType("integer");
 
+                    b.Property<Guid?>("ScopeId")
+                        .HasColumnType("uuid");
+
                     b.Property<Guid?>("SessionId")
                         .HasColumnType("uuid");
 
@@ -182,6 +185,11 @@ namespace Proxytrace.Storage.Migrations
                     b.HasIndex("TotalTokens");
 
                     b.HasIndex("AgentVersionId", "CreatedAt");
+
+                    b.HasIndex("ScopeId", "CreatedAt")
+                        .HasFilter("\"ScopeId\" IS NOT NULL");
+
+                    NpgsqlIndexBuilderExtensions.IncludeProperties(b.HasIndex("ScopeId", "CreatedAt"), new[] { "AgentVersionId", "HttpStatus" });
 
                     b.HasIndex("SessionId", "CreatedAt");
 
@@ -1320,6 +1328,70 @@ namespace Proxytrace.Storage.Migrations
                     b.ToTable("ProjectSearchSettingsEntity");
                 });
 
+            modelBuilder.Entity("Proxytrace.Storage.Internal.Entities.Scope.ScopeAgentVersionEntity", b =>
+                {
+                    b.Property<Guid>("ScopeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AgentVersionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("FirstSeenAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset>("LastSeenAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<long>("TotalTokens")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("TraceCount")
+                        .HasColumnType("integer");
+
+                    b.HasKey("ScopeId", "AgentVersionId");
+
+                    b.HasIndex("AgentVersionId");
+
+                    b.ToTable("ScopeAgentVersionEntity");
+                });
+
+            modelBuilder.Entity("Proxytrace.Storage.Internal.Entities.Scope.ScopeEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<string>("DisplayName")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("ExternalKey")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<Guid>("ProjectId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .IsConcurrencyToken()
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProjectId", "ExternalKey")
+                        .IsUnique();
+
+                    b.ToTable("ScopeEntity");
+                });
+
             modelBuilder.Entity("Proxytrace.Storage.Internal.Entities.Session.SessionEntity", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2102,6 +2174,30 @@ namespace Proxytrace.Storage.Migrations
                     b.HasOne("Proxytrace.Storage.Internal.Entities.Project.ProjectEntity", null)
                         .WithMany()
                         .HasForeignKey("Project")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Proxytrace.Storage.Internal.Entities.Scope.ScopeAgentVersionEntity", b =>
+                {
+                    b.HasOne("Proxytrace.Storage.Internal.Entities.AgentVersion.AgentVersionEntity", null)
+                        .WithMany()
+                        .HasForeignKey("AgentVersionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Proxytrace.Storage.Internal.Entities.Scope.ScopeEntity", null)
+                        .WithMany()
+                        .HasForeignKey("ScopeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Proxytrace.Storage.Internal.Entities.Scope.ScopeEntity", b =>
+                {
+                    b.HasOne("Proxytrace.Storage.Internal.Entities.Project.ProjectEntity", null)
+                        .WithMany()
+                        .HasForeignKey("ProjectId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

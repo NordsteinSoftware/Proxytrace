@@ -15,7 +15,8 @@ public record TraceCreatedEvent(
     string Provider,
     DateTimeOffset CreatedAt,
     Guid? ConversationId,
-    Guid? SessionId)
+    Guid? SessionId,
+    Guid? ScopeId = null)
 {
     /// <summary>
     /// Creates.
@@ -30,7 +31,8 @@ public record TraceCreatedEvent(
             call.Endpoint.Provider.Name,
             call.CreatedAt,
             call.ConversationId,
-            call.SessionId);
+            call.SessionId,
+            call.ScopeId);
 }
 
 /// <summary>

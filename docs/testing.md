@@ -86,7 +86,11 @@ await FluentActions
 A handful of backend tests talk to a **real** service in a throwaway container
 (Testcontainers) instead of a mock. Today that is
 `Proxytrace.Messaging.Tests/RedisIngestionStreamIntegrationTests.cs`, which round-trips the
-Redis Streams ingestion transport through an actual `redis:7-alpine`.
+Redis Streams ingestion transport through an actual `redis:7-alpine`, and
+`Proxytrace.Storage.Tests/ScopeRepositoryPostgresTests.cs`, which runs the scope repository's
+relational-only paths — a raw-SQL `UPDATE … FROM unnest(…)`, `ExecuteDelete`, an FK cascade — on an
+actual `postgres:16-alpine` (migrated with `MigrateAsync`), since the in-memory provider the rest of
+the storage suite uses cannot execute any of them.
 
 Reach for one only where mocking the client library defeats the purpose of the test. A
 substituted `IDatabase` asserts how we *call* a driver and never how the server *replies*, so

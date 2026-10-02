@@ -69,6 +69,11 @@ export function projectColor(id: string): string {
   return AGENT_PALETTE[hashStr(id) % AGENT_PALETTE.length];
 }
 
+/** Stable per-scope color (scope tags on trace rows, scope rail selection). */
+export function scopeColor(id: string): string {
+  return AGENT_PALETTE[hashStr(id) % AGENT_PALETTE.length];
+}
+
 /** Stable per-detector color for custom anomaly detectors (rail selection, accents). */
 export function detectorColor(id: string): string {
   return AGENT_PALETTE[hashStr(id) % AGENT_PALETTE.length];

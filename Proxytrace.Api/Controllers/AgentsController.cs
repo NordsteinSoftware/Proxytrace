@@ -11,6 +11,7 @@ using Proxytrace.Domain.Agent;
 using Proxytrace.Domain.AgentCall;
 using Proxytrace.Domain.AgentVersion;
 using Proxytrace.Domain.AuditLog;
+using Proxytrace.Domain.Scope;
 using Nordstein.Core.AI.Completions;
 using Proxytrace.Domain.ModelEndpoint;
 using Nordstein.Core.Domain.Paging;
@@ -34,6 +35,7 @@ public class AgentsController : ControllerBase
     private readonly IRepository<IModelEndpoint> endpoints;
     private readonly IRepository<IProject> projects;
     private readonly IAgentCallRepository agentCallRepository;
+    private readonly IScopeRepository scopeRepository;
     private readonly IAgentVersionRepository agentVersionRepository;
     private readonly IProposalBroadcaster proposalBroadcaster;
     private readonly ITheoryBroadcaster theoryBroadcaster;
@@ -52,6 +54,7 @@ public class AgentsController : ControllerBase
         IRepository<IModelEndpoint> endpoints,
         IRepository<IProject> projects,
         IAgentCallRepository agentCallRepository,
+        IScopeRepository scopeRepository,
         IAgentVersionRepository agentVersionRepository,
         IProposalBroadcaster proposalBroadcaster,
         ITheoryBroadcaster theoryBroadcaster,
@@ -66,6 +69,7 @@ public class AgentsController : ControllerBase
         this.endpoints = endpoints;
         this.projects = projects;
         this.agentCallRepository = agentCallRepository;
+        this.scopeRepository = scopeRepository;
         this.agentVersionRepository = agentVersionRepository;
         this.proposalBroadcaster = proposalBroadcaster;
         this.theoryBroadcaster = theoryBroadcaster;
@@ -85,21 +89,29 @@ public class AgentsController : ControllerBase
     [HttpGet]
     public async Task<PagedResult<AgentListItemDto>> GetAll(
         [FromQuery] Guid? projectId = null,
+        [FromQuery] Guid? scopeId = null,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 50,
         CancellationToken cancellationToken = default)
     {
-        var scope = await accessGuard.ResolveListScopeAsync(projectId, cancellationToken);
-        if (scope is { Count: 0 })
+        var access = await accessGuard.ResolveListScopeAsync(projectId, cancellationToken);
+        if (access is { Count: 0 })
             return new PagedResult<AgentListItemDto>([], 0, page, pageSize);
+
+        // Optional scope narrowing: only the agents that served the scope (its derived membership).
+        IReadOnlySet<Guid>? scopeMembers = scopeId is { } scoped
+            ? await scopeRepository.GetAgentIdsAsync(scoped, cancellationToken)
+            : null;
 
         // Archived (soft-deleted) agents are hidden from the listing — they keep resolving by id for
         // history, but must not appear here (mirrors EvaluatorsController, which lists via the
         // archive-filtered GetAllAsync/GetByProjectAsync). EnumerateAsync streams the full set.
         var all = repository.EnumerateAsync(cancellationToken).Where(a => !a.IsArchived);
-        var filtered = scope is null
+        var filtered = access is null
             ? all
-            : all.Where(a => scope.Contains(a.Project.Id));
+            : all.Where(a => access.Contains(a.Project.Id));
+        if (scopeMembers is not null)
+            filtered = filtered.Where(a => scopeMembers.Contains(a.Id));
 
         var lastCallTimes = await agentCallRepository.GetLastCallTimesAsync(cancellationToken);
 

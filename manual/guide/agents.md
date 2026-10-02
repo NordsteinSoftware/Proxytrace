@@ -137,6 +137,14 @@ same prompt-and-tools combination is observed in traffic again later, the agent 
 - **Act on proposals** that target an agent — see
   [Optimization Proposals](/guide/optimization-proposals).
 
+## Agents and scopes
+
+When the project uses [scopes](/guide/scopes), the agent list gets a **scope selector** in its
+filter band: show every agent, only one scope's agents, or only agents that aren't in any scope.
+With **All scopes** selected, turn on **Group by scope** to split the list into one section per
+scope. An agent that serves several use cases appears in each of its scopes — membership comes
+from where its traces were sent, not from a fixed assignment.
+
 ## System agents
 
 Some agents are **system agents** (flagged `IsSystemAgent`). These are built-in agents

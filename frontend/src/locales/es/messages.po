@@ -57,6 +57,7 @@ msgid "(You)"
 msgstr "(Usted)"
 
 #. placeholder {0}: agents.length
+#. placeholder {0}: scope.agentIds.length
 msgid "{0, plural, one {# agent} other {# agents}}"
 msgstr "{0, plural, one {# agent} other {# agents}}"
 
@@ -127,6 +128,7 @@ msgid "{0, plural, one {# tool} other {# tools}}"
 msgstr "{0, plural, one {# Tool} other {# Tools}}"
 
 #. placeholder {0}: hoverBucket.total
+#. placeholder {0}: scope.traceCount
 msgid "{0, plural, one {# trace} other {# traces}}"
 msgstr "{0, plural, one {# Trace} other {# Traces}}"
 
@@ -728,9 +730,6 @@ msgstr "Código de 6 dígitos"
 msgid "95th percentile latency"
 msgstr "Latencia del percentil 95"
 
-msgid "A budget's scope is fixed. To retarget it, delete this budget and create a new one."
-msgstr "El alcance de un presupuesto es fijo. Para reorientarlo, elimina este presupuesto y crea uno nuevo."
-
 msgid "A call is flagged when a metric is this many standard deviations from the agent's recent mean. Lower is more sensitive."
 msgstr "Se marca una llamada cuando una métrica está a tantas desviaciones estándar de la media reciente del Agent. Cuanto menor, más sensible."
 
@@ -751,6 +750,9 @@ msgstr "Una métrica solo se evalúa cuando el Agent tiene al menos tantas llama
 
 msgid "A reviewer chose not to apply this change."
 msgstr "Un reviewer decidió no aplicar este cambio."
+
+msgid "A scope groups the agents of one use case. It is created automatically by the first trace that names it — pick a name and point a client at its URL."
+msgstr "Un Scope agrupa los Agents de un caso de uso. Se crea automáticamente con el primer Trace que lo nombra: elige un nombre y apunta un cliente a su URL."
 
 msgid "a suite"
 msgstr "un suite"
@@ -1002,6 +1004,9 @@ msgstr "Todas las proposals"
 msgid "All runs"
 msgstr "Todos los Runs"
 
+msgid "All scopes"
+msgstr "Todos los Scopes"
+
 msgid "All suites"
 msgstr "Todos los Suites"
 
@@ -1085,6 +1090,9 @@ msgstr "URL de la app (para enlaces en emails)"
 
 msgid "Application errors and critical failures will appear here as they occur."
 msgstr "Los errores de la aplicación y los fallos críticos aparecerán aquí a medida que ocurran."
+
+msgid "Applies to"
+msgstr "Se aplica a"
 
 msgid "Apply"
 msgstr "Aplicar"
@@ -1420,6 +1428,9 @@ msgstr "Borra la búsqueda para ver todos los detectors."
 msgid "Clear the search to see all evaluators."
 msgstr "Borra la búsqueda para ver todos los evaluators."
 
+msgid "Clear the search to see all scopes."
+msgstr "Borra la búsqueda para ver todos los Scopes."
+
 msgid "Clear the search to see all suites."
 msgstr "Borra la búsqueda para ver todos los suites."
 
@@ -1539,6 +1550,9 @@ msgstr "Copiar respuesta"
 
 msgid "Copy result"
 msgstr "Copiar resultado"
+
+msgid "Copy scope key"
+msgstr "Copiar la clave del Scope"
 
 msgid "Copy system prompt"
 msgstr "Copiar system prompt"
@@ -1847,6 +1861,12 @@ msgstr "Modelo predeterminado"
 msgid "Default parameters (none specified)"
 msgstr "Parámetros predeterminados (no se especificó ninguno)"
 
+msgid "Default upstream provider"
+msgstr "Proveedor de origen predeterminado"
+
+msgid "Default Upstream Provider Changed"
+msgstr "Proveedor de origen predeterminado cambiado"
+
 msgid "Definition"
 msgstr "Definición"
 
@@ -1906,6 +1926,9 @@ msgstr "Eliminar Suite"
 #. placeholder {0}: deleting.agentName ?? deleting.apiKeyName ?? projectScopeLabel
 msgid "Delete the budget for \"{0}\"?"
 msgstr "¿Eliminar el presupuesto para \"{0}\"?"
+
+msgid "Delete the scope \"{name}\"?"
+msgstr "¿Eliminar el scope \"{name}\"?"
 
 msgid "Delete this conversation?"
 msgstr "¿Eliminar esta conversación?"
@@ -1990,6 +2013,9 @@ msgstr "Descartado"
 msgid "Dismissed — a reviewer chose not to apply this change."
 msgstr "Descartado — un revisor decidió no aplicar este cambio."
 
+msgid "Display name"
+msgstr "Nombre visible"
+
 msgid "Divergent"
 msgstr "Divergente"
 
@@ -2038,6 +2064,9 @@ msgstr "p. ej. production-agent"
 msgid "e.g. Refund promise watcher"
 msgstr "p. ej., Vigilante de promesas de reembolso"
 
+msgid "e.g. support-agents"
+msgstr "p. ej. support-agents"
+
 msgid "e.g. test that issue_refund is called with order_id=91"
 msgstr "p. ej., prueba que se llama a issue_refund con order_id=91"
 
@@ -2050,6 +2079,9 @@ msgstr "Editar"
 #. placeholder {0}: META[editTarget.kind] ? i18n._(META[editTarget.kind].label) : 'Evaluator'
 msgid "Edit {0}"
 msgstr "Editar {0}"
+
+msgid "Edit default upstream provider"
+msgstr "Editar proveedor de origen predeterminado"
 
 msgid "Edit detector"
 msgstr "Editar detector"
@@ -2071,6 +2103,9 @@ msgstr "Editar precios"
 
 msgid "Edit schedule"
 msgstr "Editar programación"
+
+msgid "Edit scope"
+msgstr "Editar Scope"
 
 msgid "editable"
 msgstr "editable"
@@ -2237,11 +2272,11 @@ msgstr "Cada API key en este proyecto ya tiene un presupuesto. Mejor edita uno."
 msgid "Every proxied call authenticates with a key, so this block cannot be bypassed — except by callers using the provider's own key, which the project budget holds. A key's spend also counts toward the project budget."
 msgstr "Cada llamada proxy se autentica con una clave, por lo que este bloque no se puede eludir, excepto por los llamadores que usan la clave propia del proveedor, la cual retiene el presupuesto del proyecto. El gasto de una clave también cuenta para el presupuesto del proyecto."
 
-msgid "Every scope already has a budget — edit or delete one to change it."
-msgstr "Cada alcance ya tiene un presupuesto: edita o elimina uno para cambiarlo."
-
 msgid "Every trigger needs a pattern."
 msgstr "Cada disparador necesita un patrón."
+
+msgid "Everything a budget can apply to already has one — edit or delete a budget to change it."
+msgstr "Todo aquello a lo que se puede aplicar un presupuesto ya tiene uno: edita o elimina un presupuesto para cambiarlo."
 
 msgid "Evidence"
 msgstr "Evidencia"
@@ -2485,6 +2520,9 @@ msgstr "VERDE"
 msgid "Grok models via xAI’s OpenAI-compatible API."
 msgstr "Modelos Grok a través de la API compatible con OpenAI de xAI."
 
+msgid "Group by scope"
+msgstr "Agrupar por Scope"
+
 msgid "Hard limit"
 msgstr "Límite estricto"
 
@@ -2545,8 +2583,8 @@ msgstr "¿Cómo puedo ayudarte?"
 msgid "How many of the agent's most recent successful calls form the baseline."
 msgstr "Cuántas de las llamadas exitosas más recientes del Agent forman la base."
 
-msgid "How this scope is enforced"
-msgstr "Cómo se aplica este ámbito"
+msgid "How this budget is enforced"
+msgstr "Cómo se aplica este presupuesto"
 
 msgid "HTTP status"
 msgstr "Estado HTTP"
@@ -2625,6 +2663,9 @@ msgstr "Entrada"
 
 msgid "Input / 1M €"
 msgstr "Entrada / 1M €"
+
+msgid "Input + output"
+msgstr "Entrada + salida"
 
 msgid "Input conversation"
 msgstr "Conversación de entrada"
@@ -2791,6 +2832,9 @@ msgstr "Última ejecución"
 msgid "last run {0}"
 msgstr "última ejecución {0}"
 
+msgid "Last seen"
+msgstr "Visto por última vez"
+
 msgid "Last used"
 msgstr "Último usado"
 
@@ -2931,6 +2975,9 @@ msgstr "Cargando Run…"
 msgid "Loading runs…"
 msgstr "Cargando Runs…"
 
+msgid "Loading scope…"
+msgstr "Cargando Scope…"
+
 msgid "Loading suite…"
 msgstr "Cargando Suite…"
 
@@ -3067,6 +3114,9 @@ msgstr "Member eliminado"
 
 msgid "Members"
 msgstr "Members"
+
+msgid "Membership follows the traces: an agent can serve several scopes."
+msgstr "La pertenencia sigue a los Traces: un Agent puede servir a varios Scopes."
 
 msgid "Message"
 msgstr "Mensaje"
@@ -3270,6 +3320,9 @@ msgstr "Nuevo proyecto"
 msgid "New schedule"
 msgstr "Nuevo horario"
 
+msgid "New scope"
+msgstr "Nuevo Scope"
+
 msgid "New suite"
 msgstr "Nuevo suite"
 
@@ -3318,6 +3371,9 @@ msgstr "No hay detalles adicionales para este evento."
 
 msgid "No agent"
 msgstr "Sin Agent"
+
+msgid "No agent has sent traces in this scope within retention."
+msgstr "Ningún Agent ha enviado Traces en este Scope dentro del periodo de retención."
 
 msgid "No agents available"
 msgstr "No hay Agents disponibles"
@@ -3539,6 +3595,12 @@ msgstr "No hay Runs programados"
 msgid "No schedules"
 msgstr "No hay programaciones"
 
+msgid "No scope"
+msgstr "Sin Scope"
+
+msgid "No scopes yet"
+msgstr "Aún no hay Scopes"
+
 msgid "No scores yet"
 msgstr "No hay puntuaciones aún"
 
@@ -3599,6 +3661,9 @@ msgstr "No hay Tools definidas"
 msgid "No tools were invoked in this trace."
 msgstr "No se invocaron Tools en este Trace."
 
+msgid "no traces"
+msgstr "sin Traces"
+
 msgid "No traces in this range"
 msgstr "No hay Traces en este rango"
 
@@ -3610,6 +3675,9 @@ msgstr "No hay Traces que coincidan con tus filtros."
 
 msgid "No traces matched."
 msgstr "No se encontraron Traces."
+
+msgid "No traces within retention"
+msgstr "Sin Traces dentro del periodo de retención"
 
 msgid "No traces yet"
 msgstr "Aún no hay Traces"
@@ -3649,6 +3717,9 @@ msgstr "Datos que no son del modelo eliminados"
 
 msgid "None"
 msgstr "Ninguna"
+
+msgid "None — anonymous forwarding disabled"
+msgstr "Ninguno — reenvío anónimo desactivado"
 
 msgid "Not attached to any suite yet."
 msgstr "Aún no está adjunto a ninguna Suite."
@@ -3769,6 +3840,9 @@ msgstr "Abrir proposals"
 msgid "Open run"
 msgstr "Abrir run"
 
+msgid "Open scope"
+msgstr "Abrir Scope"
+
 msgid "Open session"
 msgstr "Abrir sesión"
 
@@ -3814,6 +3888,9 @@ msgstr "Optimizador"
 
 msgid "Or enter this key manually"
 msgstr "O introduce esta clave manualmente"
+
+msgid "Or send the header with the project base_url"
+msgstr "O envía el header con la base_url del proyecto"
 
 msgid "Order"
 msgstr "Orden"
@@ -4443,6 +4520,9 @@ msgstr "Solicitud · {model}"
 msgid "Request a new link"
 msgstr "Solicitar un nuevo enlace"
 
+msgid "Requests without credentials outside /openai/v1 are forwarded to this provider without adding its API key. Choose None to disable."
+msgstr "Las solicitudes sin credenciales fuera de /openai/v1 se reenvían a este proveedor sin añadir su clave API. Seleccione Ninguno para desactivar."
+
 msgid "required"
 msgstr "obligatorio"
 
@@ -4663,6 +4743,9 @@ msgstr "Guardar"
 msgid "Save changes"
 msgstr "Guardar cambios"
 
+msgid "Save default upstream provider"
+msgstr "Guardar proveedor de origen predeterminado"
+
 msgid "Save endpoint"
 msgstr "Guardar Endpoint"
 
@@ -4721,10 +4804,28 @@ msgid "Schema is appended automatically — only describe what to grade and what
 msgstr "El esquema se agrega automáticamente — solo describe qué evaluar y qué significa cada puntuación."
 
 msgid "Scope"
-msgstr "Ámbito"
+msgstr "Scope"
+
+msgid "Scope Deleted"
+msgstr "Scope eliminado"
+
+msgid "Scope name"
+msgstr "Nombre del Scope"
+
+msgid "Scope Updated"
+msgstr "Scope actualizado"
 
 msgid "Scoped agents"
 msgstr "Agents en ámbito"
+
+msgid "Scoped OpenAI base_url"
+msgstr "base_url de OpenAI del Scope"
+
+msgid "Scopes"
+msgstr "Scopes"
+
+msgid "Scopes group the agents of one use case inside this project."
+msgstr "Los Scopes agrupan los Agents de un caso de uso dentro de este proyecto."
 
 msgid "Score"
 msgstr "Puntuación"
@@ -4808,6 +4909,9 @@ msgstr "Buscar models…"
 msgid "Search prompts and responses…"
 msgstr "Buscar prompts y respuestas…"
 
+msgid "Search scopes…"
+msgstr "Buscar Scopes…"
+
 msgid "Search settings saved"
 msgstr "Configuración de búsqueda guardada"
 
@@ -4852,6 +4956,9 @@ msgstr "Seed"
 
 msgid "Seed conversation from past trace or test case"
 msgstr "Sembrar conversación a partir de un Trace o case anterior"
+
+msgid "Seen in this scope"
+msgstr "Vistos en este Scope"
 
 msgid "select"
 msgstr "seleccionar"
@@ -4978,6 +5085,9 @@ msgstr "Enviar resultado"
 
 msgid "Send test email"
 msgstr "Enviar email de prueba"
+
+msgid "Send traffic to this scope"
+msgstr "Enviar tráfico a este Scope"
 
 msgid "Sensitivity (standard deviations)"
 msgstr "Sensibilidad (desviaciones estándar)"
@@ -5418,6 +5528,9 @@ msgstr "Esa API key ya no está disponible para un presupuesto. Elige otra."
 msgid "That key was rejected by the provider."
 msgstr "El proveedor rechazó esta API key."
 
+msgid "That name can't be used as a scope — try letters or digits."
+msgstr "Ese nombre no se puede usar como Scope: prueba con letras o dígitos."
+
 msgid "The A/B test could not run — the theory was not tested."
 msgstr "El A/B test no pudo ejecutarse — la Theory no fue probada."
 
@@ -5599,6 +5712,10 @@ msgstr "Esto elimina el presupuesto y levanta cualquier bloqueo que esté aplica
 
 msgid "This removes the detector and its review history. This can't be undone."
 msgstr "Esto elimina el detector y su historial de revisión. Esto no se puede deshacer."
+
+#. placeholder {0}: scope.key
+msgid "This removes the scope with its display name and description, and frees its place under the project's scope limit. Its traces are kept: if a client sends \"{0}\" again, the scope comes back with them."
+msgstr "Esto elimina el scope junto con su nombre visible y su descripción, y libera su lugar en el límite de scopes del proyecto. Sus Traces se conservan: si un cliente vuelve a enviar \"{0}\", el scope regresa con ellas."
 
 msgid "This reset link is invalid or has expired. Request a new one."
 msgstr "Este enlace de restablecimiento no es válido o ha caducado. Solicita uno nuevo."
@@ -5883,6 +6000,9 @@ msgstr "Sin atribuir"
 msgid "Unattributed spend came through the provider's own key, or was recorded before per-key tracking existed. A key budget cannot cap it — the project budget is what holds it."
 msgstr "El gasto sin atribuir provino de la propia key del proveedor, o se registró antes de que existiera el seguimiento por key. Un presupuesto de key no puede limitarlo; el presupuesto del proyecto es lo que lo contiene."
 
+msgid "Unavailable provider"
+msgstr "Proveedor no disponible"
+
 msgid "Undo"
 msgstr "Deshacer"
 
@@ -6157,6 +6277,12 @@ msgstr "Bienvenido"
 msgid "Welcome to <0>Proxytrace</0>"
 msgstr "Bienvenido a <0>Proxytrace</0>"
 
+msgid "What a budget applies to is fixed. To retarget it, delete this budget and create a new one."
+msgstr "A qué se aplica un presupuesto es fijo. Para cambiarlo, elimina este presupuesto y crea uno nuevo."
+
+msgid "What do the agents in this scope work on together?"
+msgstr "¿En qué trabajan juntos los Agents de este Scope?"
+
 msgid "What the agent should respond with…"
 msgstr "Qué debería responder el Agent…"
 
@@ -6211,6 +6337,9 @@ msgstr "Borra los datos de runtime/trace conservando la configuración. Esta acc
 msgid "Within budget"
 msgstr "Dentro del presupuesto"
 
+msgid "Within retention"
+msgstr "Dentro del periodo de retención"
+
 msgid "Working…"
 msgstr "Trabajando…"
 
@@ -6264,24 +6393,3 @@ msgstr "Tu rúbrica debe producir una de estas 5 puntuaciones; el reasoning es o
 
 msgid "Yourself (creator)"
 msgstr "Tú mismo (creador)"
-
-msgid "Default upstream provider"
-msgstr "Proveedor de origen predeterminado"
-
-msgid "None — anonymous forwarding disabled"
-msgstr "Ninguno — reenvío anónimo desactivado"
-
-msgid "Unavailable provider"
-msgstr "Proveedor no disponible"
-
-msgid "Requests without credentials outside /openai/v1 are forwarded to this provider without adding its API key. Choose None to disable."
-msgstr "Las solicitudes sin credenciales fuera de /openai/v1 se reenvían a este proveedor sin añadir su clave API. Seleccione Ninguno para desactivar."
-
-msgid "Default Upstream Provider Changed"
-msgstr "Proveedor de origen predeterminado cambiado"
-
-msgid "Edit default upstream provider"
-msgstr "Editar proveedor de origen predeterminado"
-
-msgid "Save default upstream provider"
-msgstr "Guardar proveedor de origen predeterminado"

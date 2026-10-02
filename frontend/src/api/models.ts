@@ -95,6 +95,8 @@ export interface AgentCallDto {
   updatedAt: string;
   conversationId: string | null;
   sessionId: string | null;
+  /** The scope (use-case group of agents) the call was sent under; null when unscoped. */
+  scopeId: string | null;
   /** Outlier characteristics flagged at ingestion (bitmask; 0 = not an outlier). See {@link lib/outliers}. */
   outlierFlags: number;
 }
@@ -126,6 +128,8 @@ export interface AgentCallListItemDto {
   updatedAt: string;
   conversationId: string | null;
   sessionId: string | null;
+  /** The scope (use-case group of agents) the call was sent under; null when unscoped. */
+  scopeId: string | null;
   /** Outlier characteristics flagged at ingestion (bitmask; 0 = not an outlier). See {@link lib/outliers}. */
   outlierFlags: number;
 }
@@ -183,6 +187,50 @@ export interface SessionDto {
   lastActivityAt: string;
   traceCount: number;
   totalTokens: number;
+}
+
+/* ── Scopes ── */
+/** A scope (use-case group of agents) in the project's scope list. */
+export interface ScopeListItemDto {
+  id: string;
+  projectId: string;
+  /** Canonical key — the `/{project}/{scope}/openai/v1` URL segment. Immutable. */
+  key: string;
+  displayName: string | null;
+  description: string | null;
+  createdAt: string;
+  lastActivityAt: string | null;
+  traceCount: number;
+  totalTokens: number;
+  agentIds: string[];
+}
+
+/** One member agent of a scope with its activity inside that scope. */
+export interface ScopeAgentDto {
+  agentId: string;
+  agentName: string;
+  traceCount: number;
+  totalTokens: number;
+  firstSeenAt: string;
+  lastSeenAt: string;
+}
+
+export interface ScopeDetailDto {
+  id: string;
+  projectId: string;
+  key: string;
+  displayName: string | null;
+  description: string | null;
+  createdAt: string;
+  lastActivityAt: string | null;
+  traceCount: number;
+  totalTokens: number;
+  agents: ScopeAgentDto[];
+}
+
+export interface UpdateScopeRequest {
+  displayName: string | null;
+  description: string | null;
 }
 
 /* ── Statistics ── */
@@ -1055,6 +1103,8 @@ export interface AgentCallFilter {
   q?: string;
   conversationId?: string;
   sessionId?: string;
+  /** Only calls sent under this scope. */
+  scopeId?: string;
   /** When true, return only calls flagged as outliers (any {@link AgentCallListItemDto.outlierFlags} bit set). */
   outlierOnly?: boolean;
   /** OutlierFlags bitmask; matches calls with ANY of the requested anomaly bits set. */
@@ -1256,6 +1306,8 @@ export interface TraceCreatedEvent {
   createdAt: string;
   conversationId: string | null;
   sessionId: string | null;
+  /** The scope the trace was sent under; null when unscoped. */
+  scopeId: string | null;
 }
 /** Emitted on `GET /api/anomalies/stream` when a custom detector flags a call (event `anomaly-flagged`). */
 export interface AnomalyFlaggedEvent {
@@ -1441,6 +1493,8 @@ export enum AuditAction {
   CostBudgetSoftLimitReached = 'CostBudgetSoftLimitReached',
   CostBudgetHardLimitReached = 'CostBudgetHardLimitReached',
   ProjectDefaultUpstreamProviderChanged = 'ProjectDefaultUpstreamProviderChanged',
+  ScopeUpdated = 'ScopeUpdated',
+  ScopeDeleted = 'ScopeDeleted',
 }
 
 export enum AuditActorType {

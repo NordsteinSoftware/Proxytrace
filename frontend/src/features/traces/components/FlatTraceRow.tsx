@@ -5,7 +5,7 @@ import { fmtRelative } from '../../../lib/format';
 import { cn } from '../../../lib/cn';
 import type { AgentCallListItemDto } from '../../../api/models';
 import { TRACE_GRID_CLS, toolCount } from '../tracesMeta';
-import { MessagePreviewCell, OutlierCell, TokenCell, CachedCell, ToolsCell, LatencyCell } from './TraceTableCells';
+import { AgentCell, MessagePreviewCell, OutlierCell, TokenCell, CachedCell, ToolsCell, LatencyCell } from './TraceTableCells';
 import { TraceSelectionCheckbox } from './TraceSelectionCheckbox';
 import type { TraceStatsSelection } from '../hooks/useTraceSelection';
 
@@ -39,9 +39,7 @@ export function FlatTraceRow({ trace, selected, fresh, onClick, statsSelection }
         {statsSelection && <TraceSelectionCheckbox traces={[trace]} selection={statsSelection} />}
         <MessagePreviewCell trace={trace} />
       </span>
-      <span className="text-body text-secondary overflow-hidden text-ellipsis whitespace-nowrap pr-3 @max-2xl:hidden">
-        {trace.agentName ?? <span className="text-muted">—</span>}
-      </span>
+      <AgentCell agentName={trace.agentName} scopeId={trace.scopeId} />
       <span className="min-w-0 overflow-hidden pr-3 @max-2xl:hidden">
         <Pill label={trace.model} color={modelColor(trace.model)} size="sm" />
       </span>

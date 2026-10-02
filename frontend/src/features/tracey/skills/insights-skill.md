@@ -1,13 +1,17 @@
 ---
 name: project-insights
 description: Project-wide dashboard statistics, model providers, and captured traces. Load when the user asks for overall stats/usage/cost, about a provider, or to find or inspect captured traces.
-tools: get_dashboard_stats, get_provider, find_traces, get_trace
+tools: get_dashboard_stats, get_provider, find_traces, get_trace, list_scopes
 ---
 
 # Skill: Project insights
 
 Cross-cutting reads that aren't tied to a single agent or suite.
 
+- `list_scopes` — the project's scopes: use-case groups of agents (e.g. `support-agents`), with
+  trace/token counts and member agent ids. When the user talks about a use case, a team of agents,
+  or names a scope, resolve it here and pass its `id` as `scopeId` to `get_dashboard_stats` or
+  `find_traces`. An agent can belong to several scopes.
 - `get_dashboard_stats` — aggregate project figures (calls, tokens, latency, cost, pass rate).
   Its digest also carries `byAgent` and `byModel` usage breakdowns (calls + tokens per agent /
   model) — chart usage comparisons straight from it (`show_chart` / `show_table`); do **not**

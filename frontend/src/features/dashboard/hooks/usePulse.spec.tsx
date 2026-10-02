@@ -23,7 +23,7 @@ import type { TraceCreatedEvent } from '../../../api/models';
 
 (globalThis as Record<string, unknown>).IS_REACT_ACT_ENVIRONMENT = true;
 
-const traceEvent = (projectId: string): TraceCreatedEvent => ({
+const traceEvent = (projectId: string, scopeId: string | null = null): TraceCreatedEvent => ({
   id: 't1',
   agentId: 'a1',
   projectId,
@@ -33,13 +33,14 @@ const traceEvent = (projectId: string): TraceCreatedEvent => ({
   createdAt: '2024-01-01T00:00:00Z',
   conversationId: null,
   sessionId: null,
+  scopeId,
 });
 
 // Test-harness escape hatch: the spec drives the hook imperatively, so the latest hook result is
 // captured into a module-level ref after each render (a spec-only pattern).
 const pulseRef: { current: ReturnType<typeof usePulse> | null } = { current: null };
-function Host({ serverPulse, projectId }: { serverPulse: number[] | undefined; projectId: string | undefined }) {
-  const state = usePulse(serverPulse, projectId);
+function Host({ serverPulse, projectId, scopeId }: { serverPulse: number[] | undefined; projectId: string | undefined; scopeId?: string }) {
+  const state = usePulse(serverPulse, projectId, scopeId);
   useEffect(() => { pulseRef.current = state; });
   return null;
 }
@@ -47,13 +48,14 @@ function Host({ serverPulse, projectId }: { serverPulse: number[] | undefined; p
 let root: Root;
 let container: HTMLDivElement;
 
-function render(serverPulse: number[] | undefined, projectId: string | undefined) {
-  act(() => { root.render(<Host serverPulse={serverPulse} projectId={projectId} />); });
+function render(serverPulse: number[] | undefined, projectId: string | undefined, scopeId?: string) {
+  act(() => { root.render(<Host serverPulse={serverPulse} projectId={projectId} scopeId={scopeId} />); });
 }
 
 const pulse = () => (pulseRef.current as ReturnType<typeof usePulse>).pulse;
 const lastBeat = () => (pulseRef.current as ReturnType<typeof usePulse>).lastBeat;
-const fireTrace = (projectId: string) => act(() => { (onTrace as (e: TraceCreatedEvent) => void)(traceEvent(projectId)); });
+const fireTrace = (projectId: string, scopeId: string | null = null) =>
+  act(() => { (onTrace as (e: TraceCreatedEvent) => void)(traceEvent(projectId, scopeId)); });
 
 beforeEach(() => {
   vi.useFakeTimers();
@@ -100,6 +102,15 @@ describe('usePulse', () => {
     fireTrace('other-project');
     expect(pulse()[PULSE_MINUTES - 1]).toBe(3);
     expect(lastBeat()).toBe(0);
+  });
+
+  it('counts only the selected scope\'s traces when a scope is selected', () => {
+    render([1, 2, 3], 'proj1', 'scope-a');
+    fireTrace('proj1', 'scope-b');
+    fireTrace('proj1', null);
+    expect(pulse()[PULSE_MINUTES - 1]).toBe(3);
+    fireTrace('proj1', 'scope-a');
+    expect(pulse()[PULSE_MINUTES - 1]).toBe(4);
   });
 
   it('counts traces from any project when no project is selected', () => {

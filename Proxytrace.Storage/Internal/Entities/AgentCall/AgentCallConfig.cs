@@ -77,6 +77,19 @@ internal class AgentCallConfig : AbstractEntityConfiguration<AgentCallEntity>, I
         // Composite (SessionId, CreatedAt): the session detail page pages one session's traces
         // chronologically; the leading column alone also serves the traces-list session filter.
         builder.HasIndex(e => new { e.SessionId, e.CreatedAt });
+
+        // Partial composite (ScopeId, CreatedAt): serves the scope filter of the traces list,
+        // histogram and statistics (WHERE ScopeId = @p implies NOT NULL, so the planner can use it).
+        // Partial because unscoped traffic — and every row ingested before scopes existed — would
+        // only bloat it; that also makes creating it on an existing install a near-empty build.
+        // Covering (INCLUDE AgentVersionId, HttpStatus): a scope's rows are scattered across the
+        // heap, and the scoped traces list always carries the project semi-join on AgentVersionId,
+        // so without these the list's total COUNT and the timeline histogram had to fetch every
+        // matching heap row — a bitmap heap scan measured at ~4 s cold for a 5% scope on a 1M-row
+        // seed. Covered, both run as index-only scans (~20 ms / ~200 ms) for ~30% more index.
+        builder.HasIndex(e => new { e.ScopeId, e.CreatedAt })
+            .HasFilter("\"ScopeId\" IS NOT NULL")
+            .IncludeProperties(e => new { e.AgentVersionId, e.HttpStatus });
         builder.HasIndex(e => e.LatencyMs);
         builder.HasIndex(e => e.TotalTokens);
         builder.HasIndex(e => e.ResponseToolRequestCount);
@@ -94,26 +107,13 @@ internal class AgentCallConfig : AbstractEntityConfiguration<AgentCallEntity>, I
         // (kiosk/tests) ignores indexes, so this is a no-op there.
         builder.HasIndex(e => e.OutlierFlags).HasFilter("\"OutlierFlags\" <> 0");
 
-        builder
-            .Property(e => e.Request)
-            .HasConversion(
-                v => serializer.Serialize(v),
-                v => serializer.DeserializeRequired<Conversation>(v)
-            );
-
-        builder
-            .Property(e => e.Response)
-            .HasConversion(
-                v => serializer.Serialize(v),
-                v => serializer.DeserializeRequired<AssistantMessage>(v)
-            );
-
-        builder
-            .Property(e => e.ModelParameters)
-            .HasConversion(
-                v => serializer.Serialize(v),
-                v => serializer.Deserialize<ModelParametersData>(v) ?? ModelParametersData.Empty
-            );
+        // Request/Response/ModelParameters are plain JSON text columns, (de)serialized by the mapper
+        // below — deliberately NOT EF value converters. The in-memory provider (kiosk demo, unit tests)
+        // has no key index, so every lookup, even a primary-key Find, enumerates the whole table, and
+        // it runs every column converter for every row it enumerates: with converters here one key
+        // lookup cost one JSON parse per stored trace. As strings, a scan compares ids and only the
+        // rows actually returned are deserialized. Relationally nothing changes — the columns were
+        // already text — and the mapper does exactly the work the converter used to.
 
         // Restrict, not Cascade: AgentCall is the product's highest-volume table (irreplaceable
         // telemetry). A Cascade here let a single hard delete of a ModelEndpoint — or, transitively,
@@ -139,16 +139,18 @@ internal class AgentCallConfig : AbstractEntityConfiguration<AgentCallEntity>, I
         var completion =
             stored.Response is not null
                 ? completionFactory(
-                    stored.Response,
+                    serializer.DeserializeRequired<AssistantMessage>(stored.Response),
                     usage: TokenUsage.Create(stored.InputTokens, stored.OutputTokens, stored.CachedInputTokens),
                     latency: TimeSpan.FromMilliseconds(stored.LatencyMs ?? 0))
                 : null;
-        var modelParameters = AgentConfig.ToDomain(stored.ModelParameters, modelParametersFactory);
+        var modelParameters = AgentConfig.ToDomain(
+            serializer.Deserialize<ModelParametersData>(stored.ModelParameters) ?? ModelParametersData.Empty,
+            modelParametersFactory);
         return factory(
             agent: agent,
             version: version,
             endpoint: endpoint,
-            request: stored.Request,
+            request: serializer.DeserializeRequired<Conversation>(stored.Request),
             response: completion,
             httpStatus: (HttpStatusCode)stored.HttpStatus,
             finishReason: stored.FinishReason,
@@ -160,7 +162,8 @@ internal class AgentCallConfig : AbstractEntityConfiguration<AgentCallEntity>, I
             outlierFlags: stored.OutlierFlags,
             apiKeyId: stored.ApiKeyId,
             parentContinuationHash: stored.ParentContinuationHash,
-            supportsAutomaticGrouping: stored.ContinuationHash is not null);
+            supportsAutomaticGrouping: stored.ContinuationHash is not null,
+            scopeId: stored.ScopeId);
     }
 
     /// <summary>
@@ -172,8 +175,8 @@ internal class AgentCallConfig : AbstractEntityConfiguration<AgentCallEntity>, I
             Id = domain.Id,
             AgentVersionId = domain.Version.Id,
             EndpointId = domain.Endpoint.Id,
-            Request = domain.Request,
-            Response = domain.Response?.Response,
+            Request = serializer.Serialize(domain.Request),
+            Response = domain.Response?.Response is { } responseMessage ? serializer.Serialize(responseMessage) : null,
             InputTokens = domain.Response?.Usage?.InputTokenCount,
             OutputTokens = domain.Response?.Usage?.OutputTokenCount,
             CachedInputTokens = domain.Response?.Usage?.CachedInputTokenCount,
@@ -181,7 +184,7 @@ internal class AgentCallConfig : AbstractEntityConfiguration<AgentCallEntity>, I
             HttpStatus = (int)domain.HttpStatus,
             FinishReason = domain.FinishReason,
             ErrorMessage = domain.ErrorMessage,
-            ModelParameters = AgentConfig.ToData(domain.ModelParameters),
+            ModelParameters = serializer.Serialize(AgentConfig.ToData(domain.ModelParameters)),
             ConversationId = domain.ConversationId,
             ContinuationHash = domain.SupportsAutomaticGrouping
                 ? ConversationFingerprint.Completed(domain.Request, domain.Response?.Response)
@@ -190,11 +193,12 @@ internal class AgentCallConfig : AbstractEntityConfiguration<AgentCallEntity>, I
             SessionId = domain.SessionId,
             OutlierFlags = domain.OutlierFlags,
             ApiKeyId = domain.ApiKeyId,
+            ScopeId = domain.ScopeId,
             RequestPreview = AgentCallPreview.Build(domain.Request),
             ResponseToolRequestCount = domain.Response?.Response is AssistantMessage assistant
                 ? assistant.ToolRequests.Count
                 : 0,
-            TotalTokens = domain.Response?.Usage is { } u ? u.InputTokenCount + u.OutputTokenCount : null,
+            TotalTokens = domain.TotalTokens(),
             CacheHitRate = domain.Response?.Usage is { InputTokenCount: > 0 } usage
                 ? (double)usage.CachedInputTokenCount / usage.InputTokenCount
                 : null,

@@ -16,6 +16,13 @@
           <PrivateAssets>all</PrivateAssets>
         </PackageReference>
         <PackageReference Include="MSTest" Version="4.4.1" />
+        <!-- Container-backed tests for the raw-SQL repository paths the in-memory provider cannot
+             run (see docs/testing.md#container-backed-tests). -->
+        <PackageReference Include="Testcontainers.PostgreSql" Version="4.15.0" />
+        <!-- Transitive-only pin, same reason and removal criterion as the one in
+             Proxytrace.Messaging.Tests.csproj: Testcontainers → Docker.DotNet resolves an SSH.NET with
+             CVE-2026-48798, which NU1903 + TreatWarningsAsErrors turns into a build error. -->
+        <PackageReference Include="SSH.NET" Version="2026.0.0" />
     </ItemGroup>
 
     <ItemGroup>

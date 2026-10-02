@@ -24,6 +24,17 @@ describe('parseStoredAdvancedFilters', () => {
     expect(parseStoredAdvancedFilters(JSON.stringify({ anomaly: 'bogus' }), null, null)).toEqual(EMPTY_ADVANCED_FILTERS);
   });
 
+  it('keeps a value stored before a slot existed, filling the new slot with its default', () => {
+    // A filter bar saved before scopes existed has no `scope` key; it must survive, not reset.
+    const preScope: Partial<typeof EMPTY_ADVANCED_FILTERS> = { ...EMPTY_ADVANCED_FILTERS, agent: 'agent-1', tool: 'web_search' };
+    delete preScope.scope;
+    expect(parseStoredAdvancedFilters(JSON.stringify(preScope), null, null)).toEqual({
+      ...EMPTY_ADVANCED_FILTERS,
+      agent: 'agent-1',
+      tool: 'web_search',
+    });
+  });
+
   it('seeds from the legacy agent-filter and outliers-only keys when no new value exists', () => {
     expect(parseStoredAdvancedFilters(null, 'agent-1', 'true')).toEqual({
       ...EMPTY_ADVANCED_FILTERS,

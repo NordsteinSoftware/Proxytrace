@@ -61,6 +61,22 @@ internal sealed class DemoSeedContext
     public IAgent? EmailTriageAgent { get; set; }
 
     /// <summary>
+    /// The demo scopes by key (see <c>DemoScopes</c>), created by <c>ScopeSeedScenario</c> right
+    /// after the project exists so later scenarios can stamp their calls at creation.
+    /// </summary>
+    public Dictionary<string, Guid> ScopeIds { get; } = new();
+
+    /// <summary>
+    /// The scope the <paramref name="sequence"/>-th interaction of <paramref name="agent"/> is sent
+    /// under, or null for an unscoped agent (or before the scopes are seeded).
+    /// </summary>
+    public Guid? ScopeFor(IAgent agent, long sequence)
+        => Internal.DemoScopes.For(agent.Name, sequence) is { } definition
+           && ScopeIds.TryGetValue(definition.Key, out var id)
+            ? id
+            : null;
+
+    /// <summary>
     /// Gets or sets the helpfulness.
     /// </summary>
     public IAgenticEvaluator? Helpfulness { get; set; }

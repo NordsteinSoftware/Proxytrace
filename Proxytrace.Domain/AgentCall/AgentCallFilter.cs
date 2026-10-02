@@ -25,4 +25,7 @@ public record AgentCallFilter(
     AgentCallSortField SortBy = AgentCallSortField.CreatedAt,
     bool SortDescending = true,
     Guid? SessionId = null,
-    IReadOnlyCollection<Guid>? ProjectIds = null);
+    IReadOnlyCollection<Guid>? ProjectIds = null,
+    // The scope (use-case group of agents) the calls were sent under — AgentCall.ScopeId, served by
+    // its partial (ScopeId, CreatedAt) index.
+    Guid? ScopeId = null);

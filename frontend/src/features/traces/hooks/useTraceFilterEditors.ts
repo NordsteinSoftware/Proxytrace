@@ -1,5 +1,7 @@
 import { useLingui } from '@lingui/react/macro';
 import { agentColor } from '../../../lib/colors';
+import { scopeLabel } from '../../../lib/scopes';
+import { useProjectScopes } from '../../../hooks/useProjectScopes';
 import type { AgentListItemDto } from '../../../api/models';
 import type { TraceAdvancedFilters } from '../tracesMeta';
 import { ANOMALY_OPTION_LABELS, rangeChipValue, type TraceFilterFieldKey } from '../traceFilterFields';
@@ -20,6 +22,8 @@ export function useTraceFilterEditors(agents: AgentListItemDto[], filters: Trace
   const toolNames = useTraceToolNames(filters.agent || undefined);
   // Recent sessions feed the session picker; the chip resolves an id back to its external key.
   const { sessions } = useRecentSessions();
+  // Every scope of the project feeds the scope picker; the chip resolves an id to its label.
+  const { scopes, byId: scopesById } = useProjectScopes();
 
   const editorSpec = (
     field: TraceFilterFieldKey,
@@ -32,6 +36,13 @@ export function useTraceFilterEditors(agents: AgentListItemDto[], filters: Trace
         emptyText: t`No agents yet`,
         options: agents.map(a => ({ key: a.id, label: a.name, accent: agentColor(a.id) })),
         onApply: key => apply({ agent: key }),
+      };
+      case 'scope': return {
+        kind: 'options',
+        value: filters.scope,
+        emptyText: t`No scopes yet`,
+        options: scopes.map(s => ({ key: s.id, label: scopeLabel(s) })),
+        onApply: key => apply({ scope: key }),
       };
       case 'session': return {
         kind: 'options',
@@ -87,6 +98,10 @@ export function useTraceFilterEditors(agents: AgentListItemDto[], filters: Trace
   const chipValue = (field: TraceFilterFieldKey): string => {
     switch (field) {
       case 'agent': return agents.find(a => a.id === filters.agent)?.name ?? filters.agent;
+      case 'scope': {
+        const scope = scopesById.get(filters.scope);
+        return scope ? scopeLabel(scope) : filters.scope;
+      }
       case 'session': return sessions.find(s => s.id === filters.session)?.externalKey ?? filters.session;
       case 'anomaly': return filters.anomaly === '' ? '' : i18n._(ANOMALY_OPTION_LABELS[filters.anomaly]);
       case 'tool': return filters.tool;

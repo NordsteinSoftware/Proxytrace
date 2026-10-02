@@ -65,6 +65,18 @@ schema is created from the EF model via `EnsureCreatedAsync`.
 > mode — e.g. the dashboard's ~11-query aggregation — offload each query with `Task.Run` to restore
 > concurrency; it is harmless on relational providers.
 
+> **Gotcha — no key index, and converters run per scanned row.** The in-memory provider keeps no
+> index, so *every* query — even a primary-key `Find` — enumerates the whole table, and while it
+> enumerates it runs each column's EF value converter for **every row**, not just the rows it
+> returns. A JSON column mapped with `HasConversion(serialize, deserialize)` on a large table therefore
+> makes one key lookup cost one deserialization per stored row. `AgentCallEntity` hit exactly this:
+> with its `Request`/`Response`/`ModelParameters` converter-mapped, opening one trace in the kiosk demo
+> (tens of thousands of seeded traces) parsed every trace's JSON, and a loop of updates looked like a
+> hang. Those columns are now plain `string` properties (still `text` relationally — the change was
+> migration-free) that the mapper (de)serializes for the rows it actually maps;
+> `AgentCallPayloadMappingTests` keeps them converter-free. Apply the same rule to any heavy column
+> on a table that grows: store the provider value, convert in the mapper.
+
 ## Configuration file location
 
 Set the connection string in:
@@ -227,6 +239,20 @@ dotnet ef database update --project Proxytrace.Storage --startup-project Proxytr
 
 To regenerate the consolidated history from scratch, delete `Proxytrace.Storage/Migrations/*.cs`
 and run `dotnet ef migrations add Initial` with the env-var connection string above.
+
+The `AddScopes` migration adds the `ScopeEntity` table (unique `(ProjectId, ExternalKey)`, cascades
+with its project), the storage-only membership junction `ScopeAgentVersionEntity` (PK
+`(ScopeId, AgentVersionId)`, cascading from both its scope and its agent version — membership is derived
+data that retention rebuilds from traces, so it must never block a delete), and the **nullable, FK-free**
+`AgentCallEntity.ScopeId` column — metadata-only in PostgreSQL, no table rewrite. Its index
+`(ScopeId, CreatedAt)` is **partial** (`WHERE "ScopeId" IS NOT NULL`): every pre-existing row is
+unscoped, so the index builds near-empty on an existing install and only ever holds scoped traffic.
+It is also **covering** (`INCLUDE ("AgentVersionId", "HttpStatus")`): a scope's rows are scattered
+across the heap and the scoped traces list always carries the project semi-join, so without the
+included columns the list's total `COUNT` and the timeline histogram fetched every matching heap
+row (bitmap heap scan, ~4 s cold for a 5% scope at 1M rows); covered they are index-only scans
+(~20 ms count, ~200 ms histogram) for ~30% more index size. No
+backfill — historical traces stay unscoped. See [domain-concepts](domain-concepts.md) (Scope).
 
 The `AddUserLanguage` migration adds a non-nullable `UserEntity.Language` column with a SQL default
 of `'en'` (configured via `HasDefaultValue("en")` in `UserConfig`), which backfills existing rows to

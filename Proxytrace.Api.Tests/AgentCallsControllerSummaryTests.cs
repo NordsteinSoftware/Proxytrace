@@ -163,6 +163,8 @@ public sealed class AgentCallsControllerSummaryTests : BaseTest<Module>
             repo,
             Substitute.For<IAgentRepository>(),
             Substitute.For<ISessionRepository>(),
+            Substitute.For<Proxytrace.Domain.Scope.IScopeRepository>(),
+            new Proxytrace.Application.Ingestion.ScopeOptions(),
             Substitute.For<IDashboardStatistics>(),
             Substitute.For<ITraceBroadcaster>(),
             new AgentCallDtoMapper(toolDtoMapper),

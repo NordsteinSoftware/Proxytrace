@@ -10,6 +10,7 @@ using Proxytrace.Api.Auth.Licensing;
 using Proxytrace.Api.Dto.Agents;
 using Proxytrace.Api.Dto.Statistics;
 using Proxytrace.Api.Dto.TestCases;
+using Proxytrace.Application.Ingestion;
 using Proxytrace.Application.Statistics;
 using Proxytrace.Application.TestCase;
 using Proxytrace.Domain.TestSuite;
@@ -21,6 +22,7 @@ using Proxytrace.Domain.AuditLog;
 using Nordstein.Core.AI.Completions;
 using Nordstein.Core.AI.Messages;
 using Nordstein.Core.Domain.Paging;
+using Proxytrace.Domain.Scope;
 using Proxytrace.Domain.Session;
 
 namespace Proxytrace.Api.Controllers;
@@ -38,6 +40,8 @@ public class AgentCallsController : ControllerBase
     private readonly IAgentCallRepository repository;
     private readonly IAgentRepository agentRepository;
     private readonly ISessionRepository sessionRepository;
+    private readonly IScopeRepository scopeRepository;
+    private readonly ScopeOptions scopeOptions;
     private readonly IDashboardStatistics statistics;
     private readonly ITraceBroadcaster traceBroadcaster;
     private readonly AgentCallDtoMapper agentCallDtoMapper;
@@ -57,6 +61,8 @@ public class AgentCallsController : ControllerBase
         IAgentCallRepository repository,
         IAgentRepository agentRepository,
         ISessionRepository sessionRepository,
+        IScopeRepository scopeRepository,
+        ScopeOptions scopeOptions,
         IDashboardStatistics statistics,
         ITraceBroadcaster traceBroadcaster,
         AgentCallDtoMapper agentCallDtoMapper,
@@ -75,6 +81,8 @@ public class AgentCallsController : ControllerBase
         this.repository = repository;
         this.agentRepository = agentRepository;
         this.sessionRepository = sessionRepository;
+        this.scopeRepository = scopeRepository;
+        this.scopeOptions = scopeOptions;
         this.statistics = statistics;
         this.traceBroadcaster = traceBroadcaster;
         this.agentCallDtoMapper = agentCallDtoMapper;
@@ -85,38 +93,53 @@ public class AgentCallsController : ControllerBase
         this.audit = audit;
     }
 
-    // Resolve the projects a list query may read. Admins (scope == null) may run any query;
-    // everyone else is confined to the projects they belong to, so no query can leak another
-    // tenant's rows (#193). An unfiltered request is scoped to the caller's own projects rather
-    // than answered with an empty page (#482). An agentId is authorized against the same scope —
-    // the query then filters by that agent, which is already confined to one project.
+    // Resolve the projects a list query may read (the caller's access set). Admins (null) may run
+    // any query; everyone else is confined to the projects they belong to, so no query can leak
+    // another tenant's rows (#193). An unfiltered request is confined to the caller's own projects
+    // rather than answered with an empty page (#482). An agentId is authorized against the same
+    // set — the query then filters by that agent, which is already confined to one project. (Not to
+    // be confused with a trace *scope* — the use-case group passed as scopeId: that one only ever
+    // narrows, and is always ANDed with this access set.)
     private async Task<IReadOnlyCollection<Guid>?> ListScopeAsync(
         Guid? projectId,
         Guid? agentId,
         CancellationToken cancellationToken)
     {
-        var scope = await accessGuard.ResolveListScopeAsync(projectId, cancellationToken);
-        if (scope is null || scope.IsEmpty() || agentId is not { } aid)
-            return scope;
+        var access = await accessGuard.ResolveListScopeAsync(projectId, cancellationToken);
+        if (access is null || access.IsEmpty() || agentId is not { } aid)
+            return access;
 
         var agent = await agentRepository.FindAsync(aid, cancellationToken);
-        return agent is not null && scope.Contains(agent.Project.Id) ? scope : [];
+        return agent is not null && access.Contains(agent.Project.Id) ? access : [];
     }
 
-    // The agents the overview lists: one project's when the scope names one (the indexed load),
-    // the union of the caller's projects when it spans several, and every agent for an unrestricted
-    // admin. Mirrors EvaluatorsController.ListScopedAsync — the agents table is small and bounded by
-    // the licensed agent limit, so narrowing a multi-project scope in memory is cheap.
+    // The agents the overview lists: one project's when the access set names one (the indexed
+    // load), the union of the caller's projects when it spans several, and every agent for an
+    // unrestricted admin — narrowed to a scope's members when one is selected. Mirrors
+    // EvaluatorsController.ListScopedAsync — the agents table is small and bounded by the licensed
+    // agent limit, so narrowing in memory is cheap.
     private async Task<IReadOnlyList<IAgent>> ScopedAgentsAsync(
-        IReadOnlyCollection<Guid>? scope,
+        IReadOnlyCollection<Guid>? access,
+        Guid? scopeId,
         CancellationToken cancellationToken)
     {
-        if (scope.IsEmpty())
+        if (access.IsEmpty())
             return [];
-        if (scope.SingleProject() is { } projectId)
-            return await agentRepository.GetByProjectAsync(projectId, cancellationToken);
-        var all = await agentRepository.GetAllAsync(cancellationToken);
-        return scope is null ? all : all.Where(a => scope.Contains(a.Project.Id)).ToArray();
+        IReadOnlyList<IAgent> agents;
+        if (access.SingleProject() is { } projectId)
+        {
+            agents = await agentRepository.GetByProjectAsync(projectId, cancellationToken);
+        }
+        else
+        {
+            var all = await agentRepository.GetAllAsync(cancellationToken);
+            agents = access is null ? all : all.Where(a => access.Contains(a.Project.Id)).ToArray();
+        }
+
+        if (scopeId is not { } scoped)
+            return agents;
+        var members = await scopeRepository.GetAgentIdsAsync(scoped, cancellationToken);
+        return agents.Where(a => members.Contains(a.Id)).ToArray();
     }
 
     // Truncate a caller-supplied session key and pair it with its derived id, so the seed endpoint
@@ -145,6 +168,7 @@ public class AgentCallsController : ControllerBase
         [FromQuery] string? q = null,
         [FromQuery] Guid? conversationId = null,
         [FromQuery] Guid? sessionId = null,
+        [FromQuery] Guid? scopeId = null,
         [FromQuery] bool outlierOnly = false,
         [FromQuery] OutlierFlags? anomalyFlags = null,
         [FromQuery] int? httpStatusClass = null,
@@ -160,10 +184,10 @@ public class AgentCallsController : ControllerBase
         CancellationToken cancellationToken = default)
     {
         (page, pageSize) = Paging.Clamp(page, pageSize);
-        var scope = await ListScopeAsync(projectId, agentId, cancellationToken);
-        if (scope.IsEmpty())
+        var access = await ListScopeAsync(projectId, agentId, cancellationToken);
+        if (access.IsEmpty())
             return new PagedResult<AgentCallListItemDto>([], 0, page, pageSize);
-        var (scopedProjectId, scopedProjectIds) = scope.ToFilterScope();
+        var (scopedProjectId, scopedProjectIds) = access.ToFilterScope();
         var filter = new AgentCallFilter(
             AgentId: agentId,
             ProjectId: scopedProjectId,
@@ -186,7 +210,8 @@ public class AgentCallsController : ControllerBase
             SortBy: sortBy,
             SortDescending: sortDesc,
             SessionId: sessionId,
-            ProjectIds: scopedProjectIds);
+            ProjectIds: scopedProjectIds,
+            ScopeId: scopeId);
         var (items, total) = await repository.GetFilteredListAsync(filter, page, pageSize, cancellationToken);
         return new PagedResult<AgentCallListItem>(items, total, page, pageSize).Map(agentCallDtoMapper.ToListItemDto);
     }
@@ -202,8 +227,8 @@ public class AgentCallsController : ControllerBase
         [FromQuery] Guid? agentId = null,
         CancellationToken cancellationToken = default)
     {
-        var scope = await ListScopeAsync(projectId, agentId, cancellationToken);
-        if (scope.IsEmpty())
+        var access = await ListScopeAsync(projectId, agentId, cancellationToken);
+        if (access.IsEmpty())
             return [];
         return await repository.GetToolNamesAsync(projectId, agentId, cancellationToken);
     }
@@ -227,16 +252,17 @@ public class AgentCallsController : ControllerBase
         [FromQuery] string? q = null,
         [FromQuery] Guid? conversationId = null,
         [FromQuery] Guid? sessionId = null,
+        [FromQuery] Guid? scopeId = null,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 50,
         CancellationToken cancellationToken = default)
     {
         (page, pageSize) = Paging.Clamp(page, pageSize);
-        var scope = await ListScopeAsync(projectId, agentId, cancellationToken);
-        if (scope.IsEmpty())
+        var access = await ListScopeAsync(projectId, agentId, cancellationToken);
+        if (access.IsEmpty())
             return new PagedResult<AgentCallDto>([], 0, page, pageSize);
-        var (scopedProjectId, scopedProjectIds) = scope.ToFilterScope();
-        var filter = new AgentCallFilter(agentId, scopedProjectId, endpointId, model, from, to, httpStatus, includeSystemAgents, q, conversationId, SessionId: sessionId, ProjectIds: scopedProjectIds);
+        var (scopedProjectId, scopedProjectIds) = access.ToFilterScope();
+        var filter = new AgentCallFilter(agentId, scopedProjectId, endpointId, model, from, to, httpStatus, includeSystemAgents, q, conversationId, SessionId: sessionId, ProjectIds: scopedProjectIds, ScopeId: scopeId);
         var (items, total) = await repository.GetFilteredAsync(filter, page, pageSize, cancellationToken);
         return new PagedResult<IAgentCall>(items, total, page, pageSize).Map(agentCallDtoMapper.ToDto);
     }
@@ -251,21 +277,22 @@ public class AgentCallsController : ControllerBase
         [FromQuery] Guid? projectId = null,
         [FromQuery] Guid? agentId = null,
         [FromQuery] DateTimeOffset? from = null,
+        [FromQuery] Guid? scopeId = null,
         CancellationToken cancellationToken = default)
     {
-        var scope = await ListScopeAsync(projectId, agentId, cancellationToken);
-        if (scope.IsEmpty())
+        var access = await ListScopeAsync(projectId, agentId, cancellationToken);
+        if (access.IsEmpty())
             return new TracesOverviewDto([], [], []);
 
-        // A scope naming exactly one project keeps the single-project filter, so the common case —
+        // An access set naming exactly one project keeps the single-project filter, so the common case —
         // the web UI, which always sends a projectId, and a REST API key, confined to one project —
         // runs the unchanged indexed by-one-project aggregate. A caller who may read several and
         // named none aggregates over that set instead of getting an empty overview (#483).
-        var (scopedProjectId, scopedProjectIds) = scope.ToFilterScope();
-        var latencyFilter = new StatisticsFilter(from, null, scopedProjectId, agentId, ProjectIds: scopedProjectIds);
-        var breakdownFilter = new StatisticsFilter(from, null, scopedProjectId, ProjectIds: scopedProjectIds);
+        var (scopedProjectId, scopedProjectIds) = access.ToFilterScope();
+        var latencyFilter = new StatisticsFilter(from, null, scopedProjectId, agentId, ProjectIds: scopedProjectIds, ScopeId: scopeId);
+        var breakdownFilter = new StatisticsFilter(from, null, scopedProjectId, ProjectIds: scopedProjectIds, ScopeId: scopeId);
 
-        Task<IReadOnlyList<IAgent>> agentsTask = ScopedAgentsAsync(scope, cancellationToken);
+        Task<IReadOnlyList<IAgent>> agentsTask = ScopedAgentsAsync(access, scopeId, cancellationToken);
         Task<IReadOnlyDictionary<Guid, DateTimeOffset>> lastCallTask = repository.GetLastCallTimesAsync(cancellationToken);
         Task<IReadOnlyList<AgentBreakdownStat>> breakdownTask = statistics.GetAgentBreakdownAsync(breakdownFilter, cancellationToken);
         Task<IReadOnlyList<LatencyStat>> latencyTask = statistics.GetLatencyAsync(latencyFilter, cancellationToken);
@@ -303,6 +330,7 @@ public class AgentCallsController : ControllerBase
         [FromQuery] string? q = null,
         [FromQuery] Guid? conversationId = null,
         [FromQuery] Guid? sessionId = null,
+        [FromQuery] Guid? scopeId = null,
         [FromQuery] bool outlierOnly = false,
         [FromQuery] OutlierFlags? anomalyFlags = null,
         [FromQuery] int? httpStatusClass = null,
@@ -315,10 +343,10 @@ public class AgentCallsController : ControllerBase
         CancellationToken cancellationToken = default)
     {
         buckets = Math.Clamp(buckets, 1, 240);
-        var scope = await ListScopeAsync(projectId, agentId, cancellationToken);
-        if (scope.IsEmpty())
+        var access = await ListScopeAsync(projectId, agentId, cancellationToken);
+        if (access.IsEmpty())
             return [];
-        var (scopedProjectId, scopedProjectIds) = scope.ToFilterScope();
+        var (scopedProjectId, scopedProjectIds) = access.ToFilterScope();
         // Same filter surface as GetAll (minus paging/sort — a histogram has neither), so the
         // timeline always reflects exactly the rows the filtered table shows.
         var filter = new AgentCallFilter(
@@ -341,7 +369,8 @@ public class AgentCallsController : ControllerBase
             MaxLatencyMs: maxLatencyMs,
             ToolName: toolName,
             SessionId: sessionId,
-            ProjectIds: scopedProjectIds);
+            ProjectIds: scopedProjectIds,
+            ScopeId: scopeId);
         var result = await repository.GetHistogramAsync(filter, buckets, cancellationToken);
         return result.Select(b => new TraceHistogramBucketDto(b.Start, b.Total, b.Errors)).ToList();
     }
@@ -365,6 +394,7 @@ public class AgentCallsController : ControllerBase
         [FromQuery] string? q = null,
         [FromQuery] Guid? conversationId = null,
         [FromQuery] Guid? sessionId = null,
+        [FromQuery] Guid? scopeId = null,
         [FromQuery] bool outlierOnly = false,
         [FromQuery] OutlierFlags? anomalyFlags = null,
         [FromQuery] int? httpStatusClass = null,
@@ -375,10 +405,10 @@ public class AgentCallsController : ControllerBase
         [FromQuery] string? toolName = null,
         CancellationToken cancellationToken = default)
     {
-        var scope = await ListScopeAsync(projectId, agentId, cancellationToken);
-        if (scope.IsEmpty())
+        var access = await ListScopeAsync(projectId, agentId, cancellationToken);
+        if (access.IsEmpty())
             return agentCallDtoMapper.ToSummaryDto(AgentCallSummary.Empty);
-        var (scopedProjectId, scopedProjectIds) = scope.ToFilterScope();
+        var (scopedProjectId, scopedProjectIds) = access.ToFilterScope();
 
         var filter = new AgentCallFilter(
             AgentId: agentId,
@@ -400,7 +430,8 @@ public class AgentCallsController : ControllerBase
             MaxLatencyMs: maxLatencyMs,
             ToolName: toolName,
             SessionId: sessionId,
-            ProjectIds: scopedProjectIds);
+            ProjectIds: scopedProjectIds,
+            ScopeId: scopeId);
 
         return agentCallDtoMapper.ToSummaryDto(await repository.GetSummaryAsync(filter, cancellationToken));
     }
@@ -505,6 +536,11 @@ public class AgentCallsController : ControllerBase
             ? null
             : DeriveSession(projectId, request.SessionKey);
 
+        // Likewise for the scope: admitted exactly as ingestion admits it (normalised key, cap).
+        Guid? scopeId = ScopeKey.Normalize(request.ScopeKey) is { } scopeKey
+            ? await scopeRepository.AdmitAsync(projectId, scopeKey, scopeOptions.MaxScopesPerProject, cancellationToken)
+            : null;
+
         IAgentCall call = await repository.AddAsync(
             createCall(
                 agent: agent,
@@ -518,7 +554,8 @@ public class AgentCallsController : ControllerBase
                 modelParameters: agent.ModelParameters,
                 conversationId: request.ConversationId,
                 sessionId: session?.Id,
-                outlierFlags: (OutlierFlags)(request.OutlierFlags ?? 0)),
+                outlierFlags: (OutlierFlags)(request.OutlierFlags ?? 0),
+                scopeId: scopeId),
             cancellationToken);
 
         if (session is { } stamped)
@@ -528,6 +565,12 @@ public class AgentCallsController : ControllerBase
                 totalTokens: request.InputTokens + request.OutputTokens,
                 lastActivityAt: call.CreatedAt,
                 cancellationToken);
+        }
+
+        if (scopeId is { } scoped)
+        {
+            await scopeRepository.RecordActivityAsync(
+                scoped, call.Version.Id, request.InputTokens + request.OutputTokens, call.CreatedAt, cancellationToken);
         }
 
         // Publish to the trace SSE broadcaster exactly as the ingestion pipeline does, so
@@ -595,6 +638,7 @@ public class AgentCallsController : ControllerBase
                 projectId: call.Agent.Project.Id);
 
             await ReverseSessionActivityAsync(call, cancellationToken);
+            await ReverseScopeActivityAsync(call, cancellationToken);
         }
 
         return removed ? NoContent() : NotFound();
@@ -604,7 +648,8 @@ public class AgentCallsController : ControllerBase
     /// Gives back the counters this trace contributed to its session when it was ingested. Mirrors
     /// the bump in <c>AgentCallProcessor</c> — including its best-effort stance: the trace row is
     /// already gone, so a failure here must not turn a successful delete into an error response.
-    /// The token total is computed exactly as the denormalized column is, so the reversal is exact.
+    /// The token total is <see cref="AgentCallExtensions.CountedTokens"/>, the one the bump used, so the
+    /// reversal is exact.
     /// </summary>
     private async Task ReverseSessionActivityAsync(IAgentCall call, CancellationToken cancellationToken)
     {
@@ -613,16 +658,34 @@ public class AgentCallsController : ControllerBase
 
         try
         {
-            long totalTokens = call.Response?.Usage is { } usage
-                ? (long)(usage.InputTokenCount + usage.OutputTokenCount)
-                : 0;
             await sessionRepository.RecordTraceRemovalsAsync(
-                [new SessionTraceRemoval(sessionId, TraceCount: 1, TotalTokens: totalTokens)],
+                [new SessionTraceRemoval(sessionId, TraceCount: 1, TotalTokens: call.CountedTokens())],
                 cancellationToken);
         }
         catch (Exception ex)
         {
             audit.LogWarning(ex, "Session counter reversal failed for session {SessionId}", sessionId);
+        }
+    }
+
+    /// <summary>
+    /// Gives back the counters this trace contributed to its scope membership — the scope
+    /// counterpart of <see cref="ReverseSessionActivityAsync"/>, with the same best-effort stance.
+    /// </summary>
+    private async Task ReverseScopeActivityAsync(IAgentCall call, CancellationToken cancellationToken)
+    {
+        if (call.ScopeId is not { } scopeId)
+            return;
+
+        try
+        {
+            await scopeRepository.RecordTraceRemovalsAsync(
+                [new ScopeTraceRemoval(scopeId, call.Version.Id, TraceCount: 1, TotalTokens: call.CountedTokens())],
+                cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            audit.LogWarning(ex, "Scope counter reversal failed for scope {ScopeId}", scopeId);
         }
     }
 }

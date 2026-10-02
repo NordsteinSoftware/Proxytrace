@@ -12,14 +12,16 @@ interface DashboardQueryOptions {
   /** Lower time bound, or `undefined` for the all-time bucket. */
   from: string | undefined;
   projectId: string | undefined;
+  /** Narrows every aggregate to one scope (use-case group of agents); undefined = all scopes. */
+  scopeId: string | undefined;
   enabled: boolean;
 }
 
 /** The entire dashboard payload (summary, telemetry, trends, breakdowns, recent traces, agents) in one request. */
-export function useDashboardView({ from, projectId, enabled }: DashboardQueryOptions) {
+export function useDashboardView({ from, projectId, scopeId, enabled }: DashboardQueryOptions) {
   return useQuery({
-    queryKey: QUERY_KEYS.statisticsDashboard(from, projectId),
-    queryFn: () => statisticsApi.dashboard({ from, projectId, recentTraceCount: DASHBOARD_RECENT_TRACES }),
+    queryKey: QUERY_KEYS.statisticsDashboard(from, projectId, scopeId),
+    queryFn: () => statisticsApi.dashboard({ from, projectId, scopeId, recentTraceCount: DASHBOARD_RECENT_TRACES }),
     refetchInterval: REFETCH_INTERVAL_FAST,
     enabled,
   });

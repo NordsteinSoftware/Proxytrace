@@ -23,6 +23,7 @@ function trace(id: string): AgentCallListItemDto {
     updatedAt: '2026-07-26T10:00:00Z',
     conversationId: null,
     sessionId: null,
+    scopeId: null,
     outlierFlags: 0,
   };
 }

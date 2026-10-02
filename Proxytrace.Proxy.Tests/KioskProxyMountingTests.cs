@@ -29,16 +29,18 @@ namespace Proxytrace.Proxy.Tests;
 public sealed class KioskProxyMountingTests
 {
     [TestMethod]
-    [DataRow(true, true, false, DisplayName = "kiosk + live endpoint -> route mounted (401, not 404)")]
-    [DataRow(true, false, true, DisplayName = "kiosk without endpoint -> route absent (404)")]
-    [DataRow(false, false, true, DisplayName = "non-kiosk (production) -> route absent (404)")]
+    [DataRow(true, true, false, "/openai/v1/chat/completions", DisplayName = "kiosk + live endpoint -> route mounted (401, not 404)")]
+    [DataRow(true, false, true, "/openai/v1/chat/completions", DisplayName = "kiosk without endpoint -> route absent (404)")]
+    [DataRow(false, false, true, "/openai/v1/chat/completions", DisplayName = "non-kiosk (production) -> route absent (404)")]
+    [DataRow(true, true, false, "/demo/support/openai/v1/chat/completions", DisplayName = "kiosk + live endpoint -> scoped route mounted (401, not 404)")]
+    [DataRow(false, false, true, "/demo/support/openai/v1/chat/completions", DisplayName = "non-kiosk (production) -> scoped route absent (404)")]
     public async Task ProxyRoute_IsMounted_OnlyForKioskWithLiveEndpoint(
-        bool kioskEnabled, bool endpointConfigured, bool expectRouteAbsent)
+        bool kioskEnabled, bool endpointConfigured, bool expectRouteAbsent, string url)
     {
         await using var app = await StartHostAsync(kioskEnabled, endpointConfigured);
         using var client = app.GetTestClient();
 
-        using var request = new HttpRequestMessage(HttpMethod.Post, "/openai/v1/chat/completions")
+        using var request = new HttpRequestMessage(HttpMethod.Post, url)
         {
             // No Authorization header on purpose: a mounted route rejects with 401, an absent one 404s.
             Content = new StringContent("""{"model":"gpt-4o","messages":[]}""", Encoding.UTF8, "application/json"),

@@ -47,7 +47,8 @@ public sealed class AgentCallDtoMapper
         c.UpdatedAt,
         c.ConversationId,
         c.SessionId,
-        (int)c.OutlierFlags);
+        (int)c.OutlierFlags,
+        c.ScopeId);
 
     /// <summary>
     /// Maps the storage-projected <see cref="AgentCallListItem"/> (traces table list path) straight
@@ -73,7 +74,8 @@ public sealed class AgentCallDtoMapper
         c.UpdatedAt,
         c.ConversationId,
         c.SessionId,
-        (int)c.OutlierFlags);
+        (int)c.OutlierFlags,
+        c.ScopeId);
 
     /// <summary>
     /// Lightweight projection for the dashboard recent-traces strip (a small fixed count) from a
@@ -100,7 +102,8 @@ public sealed class AgentCallDtoMapper
         c.UpdatedAt,
         c.ConversationId,
         c.SessionId,
-        (int)c.OutlierFlags);
+        (int)c.OutlierFlags,
+        c.ScopeId);
 
     /// <summary>First user message in the request with collapsed whitespace; null when none/empty.
     /// Mirrors the frontend's old <c>firstUserMessage</c> so the list row reads a ready-made preview.</summary>

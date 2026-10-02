@@ -73,6 +73,10 @@ internal record AgentCall : DomainEntity<IAgentCall>, IAgentCall
     /// </summary>
     public Guid? ApiKeyId { get; }
     /// <summary>
+    /// Gets the scope id.
+    /// </summary>
+    public Guid? ScopeId { get; }
+    /// <summary>
     /// Gets the project.
     /// </summary>
     public IProject Project => Agent.Project;
@@ -96,6 +100,7 @@ internal record AgentCall : DomainEntity<IAgentCall>, IAgentCall
         Guid? apiKeyId,
         string? parentContinuationHash,
         bool supportsAutomaticGrouping,
+        Guid? scopeId,
         IRepository<IAgentCall> repository) : base(repository)
     {
         Agent = agent;
@@ -113,6 +118,7 @@ internal record AgentCall : DomainEntity<IAgentCall>, IAgentCall
         SessionId = sessionId;
         OutlierFlags = outlierFlags;
         ApiKeyId = apiKeyId;
+        ScopeId = scopeId;
     }
 
     /// <summary>
@@ -135,6 +141,7 @@ internal record AgentCall : DomainEntity<IAgentCall>, IAgentCall
         Guid? apiKeyId,
         string? parentContinuationHash,
         bool supportsAutomaticGrouping,
+        Guid? scopeId,
         IRepository<IAgentCall> repository) : base(existing, repository)
     {
         Agent = agent;
@@ -152,6 +159,7 @@ internal record AgentCall : DomainEntity<IAgentCall>, IAgentCall
         SessionId = sessionId;
         OutlierFlags = outlierFlags;
         ApiKeyId = apiKeyId;
+        ScopeId = scopeId;
     }
 
     /// <summary>

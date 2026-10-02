@@ -28,7 +28,8 @@ public record AgentCallDto(
     DateTimeOffset UpdatedAt,
     Guid? ConversationId,
     Guid? SessionId,
-    int OutlierFlags);
+    int OutlierFlags,
+    Guid? ScopeId);
 
 /// <summary>
 /// Data transfer object representing a agent call message.
@@ -67,4 +68,5 @@ public record AgentCallListItemDto(
     DateTimeOffset UpdatedAt,
     Guid? ConversationId,
     Guid? SessionId,
-    int OutlierFlags);
+    int OutlierFlags,
+    Guid? ScopeId);

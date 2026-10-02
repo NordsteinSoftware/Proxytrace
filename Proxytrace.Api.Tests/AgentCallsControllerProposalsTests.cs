@@ -157,6 +157,8 @@ public sealed class AgentCallsControllerProposalsTests : BaseTest<Module>
         services.GetRequiredService<IAgentCallRepository>(),
         services.GetRequiredService<IAgentRepository>(),
         services.GetRequiredService<Proxytrace.Domain.Session.ISessionRepository>(),
+        services.GetRequiredService<Proxytrace.Domain.Scope.IScopeRepository>(),
+        services.GetRequiredService<Proxytrace.Application.Ingestion.ScopeOptions>(),
         services.GetRequiredService<IDashboardStatistics>(),
         services.GetRequiredService<ITraceBroadcaster>(),
         services.GetRequiredService<AgentCallDtoMapper>(),

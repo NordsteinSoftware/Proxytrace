@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Trans, Plural, useLingui } from '@lingui/react/macro';
 import type { AgentListItemDto } from '../../api/models';
 import { agentColor } from '../../lib/colors';
@@ -8,29 +8,35 @@ import { fmtRelative } from '../../lib/format';
 import { ListRail } from '../../components/ui/ListRail';
 import { RowButton } from '../../components/ui/RowButton';
 import { EmptyState } from '../../components/ui/EmptyState';
-import { SwitchPill } from '../../components/ui/SwitchPill';
+import { EYEBROW_CLS } from '../../components/ui/classes';
+import { scopeLabel } from '../../lib/scopes';
+import type { AgentScopeGroup } from './agentScopes';
 
 interface Props {
   agents: AgentListItemDto[];
+  /** When set, the rail is sectioned by scope (an agent may appear in several sections). */
+  groups: AgentScopeGroup[] | null;
   selectedId: string | null;
   onSelect: (id: string) => void;
   isLoading: boolean;
-  showSystem: boolean;
-  onToggleSystem?: () => void;
+  /** The rail's filter band (system-agents toggle, scope controls). */
+  filter?: ReactNode;
 }
 
-export function AgentList({ agents, selectedId, onSelect, isLoading, showSystem, onToggleSystem }: Props) {
+function matches(a: AgentListItemDto, q: string): boolean {
+  return a.name.toLowerCase().includes(q)
+    || a.projectName.toLowerCase().includes(q)
+    || a.endpointName.toLowerCase().includes(q);
+}
+
+export function AgentList({ agents, groups, selectedId, onSelect, isLoading, filter }: Props) {
   const { t } = useLingui();
   const [search, setSearch] = useState('');
 
   const q = search.trim().toLowerCase();
-  const filtered = q
-    ? agents.filter(a =>
-        a.name.toLowerCase().includes(q)
-        || a.projectName.toLowerCase().includes(q)
-        || a.endpointName.toLowerCase().includes(q),
-      )
-    : agents;
+  const filtered = q ? agents.filter(a => matches(a, q)) : agents;
+  const sections = groups?.map(g => ({ ...g, agents: q ? g.agents.filter(a => matches(a, q)) : g.agents }))
+    .filter(g => g.agents.length > 0);
 
   return (
     <ListRail
@@ -38,28 +44,36 @@ export function AgentList({ agents, selectedId, onSelect, isLoading, showSystem,
       title={t`Agents`}
       count={agents.length}
       search={{ value: search, onChange: setSearch, placeholder: t`Search agents…` }}
-      filter={onToggleSystem ? (
-        <SwitchPill
-          checked={showSystem}
-          onChange={onToggleSystem}
-          title={showSystem ? t`Hide system agents` : t`Show system agents`}
-          label={<Trans>System Agents</Trans>}
-        />
-      ) : undefined}
+      filter={filter}
       loading={isLoading}
       isEmpty={filtered.length === 0}
       empty={<EmptyState title={search ? t`No matches` : t`No agents yet`} description={search ? t`Clear the search to see all agents.` : undefined} />}
     >
-      <div className="flex flex-col gap-1.5">
-        {filtered.map(a => (
-          <AgentRow
-            key={a.id}
-            agent={a}
-            selected={selectedId === a.id}
-            onClick={() => onSelect(a.id)}
-          />
-        ))}
-      </div>
+      {sections ? (
+        <div className="flex flex-col gap-3" data-testid="agent-scope-groups">
+          {sections.map(g => (
+            <section key={g.scope?.id ?? 'unscoped'} className="flex flex-col gap-1.5">
+              <h4 className={EYEBROW_CLS} data-testid={`agent-scope-group-${g.scope?.id ?? 'unscoped'}`}>
+                {g.scope ? scopeLabel(g.scope) : <Trans>No scope</Trans>}
+              </h4>
+              {g.agents.map(a => (
+                <AgentRow key={a.id} agent={a} selected={selectedId === a.id} onClick={() => onSelect(a.id)} />
+              ))}
+            </section>
+          ))}
+        </div>
+      ) : (
+        <div className="flex flex-col gap-1.5">
+          {filtered.map(a => (
+            <AgentRow
+              key={a.id}
+              agent={a}
+              selected={selectedId === a.id}
+              onClick={() => onSelect(a.id)}
+            />
+          ))}
+        </div>
+      )}
     </ListRail>
   );
 }

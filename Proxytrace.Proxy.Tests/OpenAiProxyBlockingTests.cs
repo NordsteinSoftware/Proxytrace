@@ -36,7 +36,7 @@ public sealed class OpenAiProxyBlockingTests
         controller.ControllerContext = BuildContext(
             body: """{"model":"gpt-4o","messages":[{"role":"user","content":"my password is hunter2"}]}""");
 
-        await controller.Proxy("chat/completions", project: null, CancellationToken.None);
+        await controller.Proxy("chat/completions", project: null, scope: null, CancellationToken.None);
 
         controller.Response.StatusCode.Should().Be(StatusCodes.Status403Forbidden);
         upstream.LastMethod.Should().BeNull("a blocked request must never reach the upstream provider");
@@ -50,7 +50,7 @@ public sealed class OpenAiProxyBlockingTests
             RulesFor(Rule("Secret guard", allAgents: true, Phrase("hunter2"))));
         controller.ControllerContext = BuildContext(body: """{"messages":[{"content":"hunter2"}]}""");
 
-        await controller.Proxy("chat/completions", project: null, CancellationToken.None);
+        await controller.Proxy("chat/completions", project: null, scope: null, CancellationToken.None);
 
         var json = ReadResponse(controller);
         using var doc = JsonDocument.Parse(json);
@@ -73,7 +73,7 @@ public sealed class OpenAiProxyBlockingTests
         var controller = BuildController(stream, RulesFor(rule));
         controller.ControllerContext = BuildContext(body: """{"messages":[{"content":"hunter2"}]}""");
 
-        await controller.Proxy("chat/completions", project: null, CancellationToken.None);
+        await controller.Proxy("chat/completions", project: null, scope: null, CancellationToken.None);
 
         captured.Should().NotBeNull();
         captured.BlockedByDetectorId.Should().Be(rule.DetectorId);
@@ -94,7 +94,7 @@ public sealed class OpenAiProxyBlockingTests
         controller.ControllerContext = BuildContext(
             body: """{"messages":[{"content":"use sk-abcdefghij0123456789x please"}]}""");
 
-        await controller.Proxy("chat/completions", project: null, CancellationToken.None);
+        await controller.Proxy("chat/completions", project: null, scope: null, CancellationToken.None);
 
         controller.Response.StatusCode.Should().Be(StatusCodes.Status403Forbidden);
     }
@@ -108,7 +108,7 @@ public sealed class OpenAiProxyBlockingTests
         controller.ControllerContext = BuildContext(body: """{"messages":[{"content":"hunter2"}]}""");
         controller.ControllerContext.HttpContext.Request.Headers["x-proxytrace-agent"] = "billing agent";
 
-        await controller.Proxy("chat/completions", project: null, CancellationToken.None);
+        await controller.Proxy("chat/completions", project: null, scope: null, CancellationToken.None);
 
         controller.Response.StatusCode.Should().Be(
             StatusCodes.Status403Forbidden, "the agent-name header matches a scoped agent case-insensitively");
@@ -124,7 +124,7 @@ public sealed class OpenAiProxyBlockingTests
             new SingleHandlerClientFactory(upstream));
         controller.ControllerContext = BuildContext(body: """{"messages":[{"content":"hunter2"}]}""");
 
-        await controller.Proxy("chat/completions", project: null, CancellationToken.None);
+        await controller.Proxy("chat/completions", project: null, scope: null, CancellationToken.None);
 
         // No pre-upstream attribution signal -> the proxy cannot tell whether the scoped agent is
         // calling, so it forwards; the post-ingestion review pipeline still flags the call.
@@ -143,7 +143,7 @@ public sealed class OpenAiProxyBlockingTests
         controller.ControllerContext = BuildContext(
             body: """{"model":"gpt-4o","stream":true,"messages":[{"content":"hunter2"}]}""");
 
-        await controller.Proxy("chat/completions", project: null, CancellationToken.None);
+        await controller.Proxy("chat/completions", project: null, scope: null, CancellationToken.None);
 
         controller.Response.StatusCode.Should().Be(StatusCodes.Status403Forbidden);
         upstream.LastMethod.Should().BeNull("the body is fully buffered, so streaming blocks identically");
@@ -159,7 +159,7 @@ public sealed class OpenAiProxyBlockingTests
             new FakeHttpClientFactory(FakeHttpMessageHandler.BuildOpenAiResponse("hello")));
         controller.ControllerContext = BuildContext(body: """{"messages":[{"content":"all good"}]}""");
 
-        await controller.Proxy("chat/completions", project: null, CancellationToken.None);
+        await controller.Proxy("chat/completions", project: null, scope: null, CancellationToken.None);
 
         controller.Response.StatusCode.Should().Be(StatusCodes.Status200OK);
         await stream.Received(1).PublishAsync(
@@ -175,7 +175,7 @@ public sealed class OpenAiProxyBlockingTests
             new FakeHttpClientFactory(FakeHttpMessageHandler.BuildOpenAiResponse("hello")));
         controller.ControllerContext = BuildContext(body: """{"messages":[{"content":"hunter2"}]}""");
 
-        await controller.Proxy("chat/completions", project: null, CancellationToken.None);
+        await controller.Proxy("chat/completions", project: null, scope: null, CancellationToken.None);
 
         controller.Response.StatusCode.Should().Be(StatusCodes.Status200OK);
     }

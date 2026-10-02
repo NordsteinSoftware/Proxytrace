@@ -301,6 +301,16 @@ public sealed class Module : Autofac.Module
             .SingleInstance()
             .IfNotRegistered(typeof(AgentVersioningOptions));
 
+        builder.Register(_ => new ScopeOptions())
+            .As<ScopeOptions>()
+            .SingleInstance()
+            .IfNotRegistered(typeof(ScopeOptions));
+
+        // Singleton on purpose: it holds the per-process memo of projects at their scope cap.
+        builder.RegisterType<Ingestion.Internal.ScopeAdmission>()
+            .AsSelf()
+            .SingleInstance();
+
         // Ingestion transport. A host running the proxy/app split registers the Redis-backed
         // Messaging module itself (and sets this key) before this module loads; otherwise fall
         // back to the in-process stream used by the test suite and single-process runs.

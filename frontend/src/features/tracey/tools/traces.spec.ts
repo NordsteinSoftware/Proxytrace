@@ -70,6 +70,17 @@ describe('find_traces digest', () => {
   });
 });
 
+describe('find_traces scope filter', () => {
+  it('passes the scope id through to the trace list', async () => {
+    agentCallsApi.list.mockResolvedValue({ items: [] });
+
+    const c = ctx();
+    await run(createTraceTools(c, store).find_traces, { scopeId: 'scope-1' }, c);
+
+    expect(agentCallsApi.list).toHaveBeenCalledWith(expect.objectContaining({ projectId: 'p1', scopeId: 'scope-1' }));
+  });
+});
+
 describe('get_agent_anomalies digest', () => {
   it('carries the conversation id so one flagged tool loop is not read as several incidents', async () => {
     agentCallsApi.list.mockResolvedValue({ items: [call('t1'), call('t2')] });
