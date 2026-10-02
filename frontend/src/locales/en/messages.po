@@ -730,9 +730,6 @@ msgstr "6-digit code"
 msgid "95th percentile latency"
 msgstr "95th percentile latency"
 
-msgid "A budget's scope is fixed. To retarget it, delete this budget and create a new one."
-msgstr "A budget's scope is fixed. To retarget it, delete this budget and create a new one."
-
 msgid "A call is flagged when a metric is this many standard deviations from the agent's recent mean. Lower is more sensitive."
 msgstr "A call is flagged when a metric is this many standard deviations from the agent's recent mean. Lower is more sensitive."
 
@@ -1093,6 +1090,9 @@ msgstr "App URL (for links in emails)"
 
 msgid "Application errors and critical failures will appear here as they occur."
 msgstr "Application errors and critical failures will appear here as they occur."
+
+msgid "Applies to"
+msgstr "Applies to"
 
 msgid "Apply"
 msgstr "Apply"
@@ -2269,11 +2269,11 @@ msgstr "Every API key in this project already has a budget. Edit one instead."
 msgid "Every proxied call authenticates with a key, so this block cannot be bypassed — except by callers using the provider's own key, which the project budget holds. A key's spend also counts toward the project budget."
 msgstr "Every proxied call authenticates with a key, so this block cannot be bypassed — except by callers using the provider's own key, which the project budget holds. A key's spend also counts toward the project budget."
 
-msgid "Every scope already has a budget — edit or delete one to change it."
-msgstr "Every scope already has a budget — edit or delete one to change it."
-
 msgid "Every trigger needs a pattern."
 msgstr "Every trigger needs a pattern."
+
+msgid "Everything a budget can apply to already has one — edit or delete a budget to change it."
+msgstr "Everything a budget can apply to already has one — edit or delete a budget to change it."
 
 msgid "Evidence"
 msgstr "Evidence"
@@ -2580,8 +2580,8 @@ msgstr "How can I help?"
 msgid "How many of the agent's most recent successful calls form the baseline."
 msgstr "How many of the agent's most recent successful calls form the baseline."
 
-msgid "How this scope is enforced"
-msgstr "How this scope is enforced"
+msgid "How this budget is enforced"
+msgstr "How this budget is enforced"
 
 msgid "HTTP status"
 msgstr "HTTP status"
@@ -4803,10 +4803,6 @@ msgstr "Schema is appended automatically — only describe what to grade and wha
 msgid "Scope"
 msgstr "Scope"
 
-msgctxt "use-case group of agents"
-msgid "Scope"
-msgstr "Scope"
-
 msgid "Scope name"
 msgstr "Scope name"
 
@@ -6270,6 +6266,9 @@ msgstr "Welcome"
 
 msgid "Welcome to <0>Proxytrace</0>"
 msgstr "Welcome to <0>Proxytrace</0>"
+
+msgid "What a budget applies to is fixed. To retarget it, delete this budget and create a new one."
+msgstr "What a budget applies to is fixed. To retarget it, delete this budget and create a new one."
 
 msgid "What do the agents in this scope work on together?"
 msgstr "What do the agents in this scope work on together?"

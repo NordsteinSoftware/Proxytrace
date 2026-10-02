@@ -58,7 +58,7 @@ export function BudgetActionButton({
     return canCreate || isLoading
       ? button
       : (
-        <Tooltip content={t`Every scope already has a budget — edit or delete one to change it.`}>
+        <Tooltip content={t`Everything a budget can apply to already has one — edit or delete a budget to change it.`}>
           <span>{button}</span>
         </Tooltip>
       );

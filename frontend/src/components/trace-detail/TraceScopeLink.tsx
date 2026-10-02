@@ -31,7 +31,7 @@ export function TraceScopeLink({ scopeId, onClose }: Props) {
         leftIcon={<LayersIcon size={12} />}
         className="text-body-sm shrink-0 max-w-[160px] truncate"
       >
-        {scope ? scopeLabel(scope) : t({ message: 'Scope', context: 'use-case group of agents' })}
+        {scope ? scopeLabel(scope) : t`Scope`}
       </Button>
     </>
   );

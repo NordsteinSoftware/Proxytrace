@@ -730,9 +730,6 @@ msgstr "Código de 6 dígitos"
 msgid "95th percentile latency"
 msgstr "Latencia del percentil 95"
 
-msgid "A budget's scope is fixed. To retarget it, delete this budget and create a new one."
-msgstr "El alcance de un presupuesto es fijo. Para reorientarlo, elimina este presupuesto y crea uno nuevo."
-
 msgid "A call is flagged when a metric is this many standard deviations from the agent's recent mean. Lower is more sensitive."
 msgstr "Se marca una llamada cuando una métrica está a tantas desviaciones estándar de la media reciente del Agent. Cuanto menor, más sensible."
 
@@ -1093,6 +1090,9 @@ msgstr "URL de la app (para enlaces en emails)"
 
 msgid "Application errors and critical failures will appear here as they occur."
 msgstr "Los errores de la aplicación y los fallos críticos aparecerán aquí a medida que ocurran."
+
+msgid "Applies to"
+msgstr "Se aplica a"
 
 msgid "Apply"
 msgstr "Aplicar"
@@ -2269,11 +2269,11 @@ msgstr "Cada API key en este proyecto ya tiene un presupuesto. Mejor edita uno."
 msgid "Every proxied call authenticates with a key, so this block cannot be bypassed — except by callers using the provider's own key, which the project budget holds. A key's spend also counts toward the project budget."
 msgstr "Cada llamada proxy se autentica con una clave, por lo que este bloque no se puede eludir, excepto por los llamadores que usan la clave propia del proveedor, la cual retiene el presupuesto del proyecto. El gasto de una clave también cuenta para el presupuesto del proyecto."
 
-msgid "Every scope already has a budget — edit or delete one to change it."
-msgstr "Cada alcance ya tiene un presupuesto: edita o elimina uno para cambiarlo."
-
 msgid "Every trigger needs a pattern."
 msgstr "Cada disparador necesita un patrón."
+
+msgid "Everything a budget can apply to already has one — edit or delete a budget to change it."
+msgstr "Todo aquello a lo que se puede aplicar un presupuesto ya tiene uno: edita o elimina un presupuesto para cambiarlo."
 
 msgid "Evidence"
 msgstr "Evidencia"
@@ -2580,8 +2580,8 @@ msgstr "¿Cómo puedo ayudarte?"
 msgid "How many of the agent's most recent successful calls form the baseline."
 msgstr "Cuántas de las llamadas exitosas más recientes del Agent forman la base."
 
-msgid "How this scope is enforced"
-msgstr "Cómo se aplica este ámbito"
+msgid "How this budget is enforced"
+msgstr "Cómo se aplica este presupuesto"
 
 msgid "HTTP status"
 msgstr "Estado HTTP"
@@ -4801,10 +4801,6 @@ msgid "Schema is appended automatically — only describe what to grade and what
 msgstr "El esquema se agrega automáticamente — solo describe qué evaluar y qué significa cada puntuación."
 
 msgid "Scope"
-msgstr "Ámbito"
-
-msgctxt "use-case group of agents"
-msgid "Scope"
 msgstr "Scope"
 
 msgid "Scope name"
@@ -6270,6 +6266,9 @@ msgstr "Bienvenido"
 
 msgid "Welcome to <0>Proxytrace</0>"
 msgstr "Bienvenido a <0>Proxytrace</0>"
+
+msgid "What a budget applies to is fixed. To retarget it, delete this budget and create a new one."
+msgstr "A qué se aplica un presupuesto es fijo. Para cambiarlo, elimina este presupuesto y crea uno nuevo."
 
 msgid "What do the agents in this scope work on together?"
 msgstr "¿En qué trabajan juntos los Agents de este Scope?"

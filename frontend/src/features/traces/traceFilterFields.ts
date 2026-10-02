@@ -9,10 +9,7 @@ export type TraceFilterFieldKey = 'agent' | 'scope' | 'session' | 'anomaly' | 't
 
 export const TRACE_FILTER_FIELDS: readonly { key: TraceFilterFieldKey; label: MessageDescriptor }[] = [
   { key: 'agent', label: msg`Agent` },
-  // Own Lingui context: the bare "Scope" msgid is the cost-budget field, translated as a generic
-  // word; this is the product term (a use-case group of agents), which stays English. Every
-  // product-term "Scope" label uses this same literal context so they share one catalog entry.
-  { key: 'scope', label: msg({ message: 'Scope', context: 'use-case group of agents' }) },
+  { key: 'scope', label: msg`Scope` },
   { key: 'session', label: msg`Session` },
   { key: 'anomaly', label: msg`Anomaly` },
   { key: 'tool', label: msg`Tool` },

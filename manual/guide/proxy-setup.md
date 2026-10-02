@@ -166,7 +166,7 @@ is `proxytrace_blocked`. The blocked call still appears as a flagged trace.
 
 A second, separate reason a request can be refused before it reaches the provider is an exhausted
 [monthly cost budget](/guide/costs) — HTTP `403` with `code` `proxytrace_budget_exceeded`. Note
-that **agent-scoped** budgets can only match traffic that sends the `x-proxytrace-agent` header
+that **agent** budgets can only match traffic that sends the `x-proxytrace-agent` header
 above; a project-wide budget applies to every call regardless.
 :::
 

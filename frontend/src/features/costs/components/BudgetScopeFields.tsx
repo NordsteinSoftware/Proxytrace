@@ -43,7 +43,7 @@ export function BudgetScopeFields({ editing, scope, availability, onChange }: Bu
 
     return (
       <>
-        <FormField label={t`Scope`}>
+        <FormField label={t`Applies to`}>
           <div className={readonlyFieldCls} data-testid="budget-scope-locked-kind">
             {kindLabel[savedKind]}
           </div>
@@ -60,7 +60,7 @@ export function BudgetScopeFields({ editing, scope, availability, onChange }: Bu
         )}
 
         <p className="text-body-sm text-muted">
-          <Trans>A budget's scope is fixed. To retarget it, delete this budget and create a new one.</Trans>
+          <Trans>What a budget applies to is fixed. To retarget it, delete this budget and create a new one.</Trans>
         </p>
       </>
     );
@@ -79,7 +79,7 @@ export function BudgetScopeFields({ editing, scope, availability, onChange }: Bu
 
   return (
     <>
-      <FormField label={t`Scope`} htmlFor="budget-scope-kind">
+      <FormField label={t`Applies to`} htmlFor="budget-scope-kind">
         <Select
           id="budget-scope-kind"
           value={scope.kind}

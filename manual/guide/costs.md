@@ -93,23 +93,23 @@ A budget sets up to two EUR amounts for one calendar month:
 | Threshold | What happens when spend reaches it |
 |---|---|
 | **Soft limit** | A **warning** [notification](/guide/notifications). Nothing is blocked. |
-| **Hard limit** | A **critical** notification, **and** Proxytrace starts rejecting proxied LLM calls for that scope until the month resets or you raise the limit. |
+| **Hard limit** | A **critical** notification, **and** Proxytrace starts rejecting proxied LLM calls for what it applies to until the month resets or you raise the limit. |
 
 Both are optional — a soft-limit-only budget is a pure early-warning system that never interrupts
 anything, which is a good way to start.
 
-### Choosing a scope
+### Choosing what a budget applies to
 
 A budget covers exactly one of three things:
 
-| Scope | Covers | Best for |
+| Applies to | Covers | Best for |
 |---|---|---|
 | **Whole project** | Every call in the project. | The backstop. Always set one. |
 | **One agent** | Calls that identify themselves as that agent. | Capping a specific workload. |
 | **One API key** | Calls authenticated with that key. | Capping one application, environment or customer. |
 
 An agent's or key's spend counts toward *both* its own budget and the project budget, so the
-project figure is always the complete picture. A budget cannot be scoped to an agent *and* a key at
+project figure is always the complete picture. A budget cannot apply to an agent *and* a key at
 once — pick the one that matches how you want to divide the money up.
 
 ::: warning Agent budgets need the agent header
@@ -125,7 +125,7 @@ budget enforcement matters to you, always set one.
 ::: tip API key budgets cannot be bypassed
 A key budget does not have that weakness. **Every** proxied call has to authenticate with a key, so
 there is no header a client can omit to slip past it. If you need a cap that genuinely holds for one
-application, scope it to that application's key.
+application, apply it to that application's key.
 
 The one gap: callers who authenticate with the **provider's own** API key instead of a
 Proxytrace-issued one carry no key of yours to match against. That traffic is caught by the project
@@ -143,25 +143,26 @@ meantime.
 ### Setting a budget
 
 1. Open **Costs** and click **New budget**, top right of the **Monthly budgets** card.
-2. Pick the **scope** — *Whole project*, *Agent* or *API key*. The dialog opens on a scope that is
-   still free.
+2. Pick what it **applies to** — *Whole project*, *Agent* or *API key*. The dialog opens on a
+   choice that is still free.
 3. For an agent or key budget, pick **which one** in the second field. It is searchable, so type a
    few letters rather than scrolling a long list.
 4. Enter a **soft limit**, a **hard limit**, or both, in EUR. If you set both, the soft limit must
    not be above the hard one (it could never fire — the hard limit would block first).
 5. Leave **Enabled** on and save.
 
-Each scope holds **at most one** budget. If you pick a scope that is already spoken for, the dialog
-says so and Save stays disabled — edit the existing budget instead of adding a second one. The same
-line tells you when a scope has nothing to point at yet, e.g. a project with no agents.
+The project, each agent and each key hold **at most one** budget. If you pick one that is already
+spoken for, the dialog says so and Save stays disabled — edit the existing budget instead of adding a
+second one. The same line tells you when a choice has nothing to point at yet, e.g. a project with
+no agents.
 
 Each budget renders as a **consumption meter**: a bar filled against the hard limit (or the soft
 one, if that is all you set), a tick marking where the soft threshold sits, the exact spend so far,
 and how much is left this month. A budget you have just created shows **Measuring spend** until the
 next reading of this month's figures arrives — a moment later, not a sign anything is wrong.
 
-A budget's **scope is fixed** once created. To point a budget at a different agent or key, delete it
-and create a new one; the editor shows the scope read-only.
+What a budget **applies to is fixed** once created. To point a budget at a different agent or key,
+delete it and create a new one; the editor shows it read-only.
 
 Editing a budget **clears its alert state**, so the next check re-evaluates against your new
 numbers. That is what makes raising a hard limit actually unblock things — and it also means a
@@ -173,7 +174,7 @@ thing without losing the configuration.
 
 ## What a blocked call looks like
 
-Once a hard limit is reached, Proxytrace rejects further proxied calls for that scope with an
+Once a hard limit is reached, Proxytrace rejects further proxied calls for what the budget applies to with an
 HTTP **403** and an OpenAI-shaped error body:
 
 ```json
@@ -204,7 +205,7 @@ block list briefly. In practice:
 - A limit can be **overshot by a few minutes' worth of traffic** before calls actually stop. Set
   the hard limit slightly below the number you truly cannot exceed.
 - **Raising a limit, disabling a budget, or deleting one** takes effect within about half a minute.
-- **Renaming an agent** propagates to agent-scoped blocking within about half a minute too.
+- **Renaming an agent** propagates to agent-budget blocking within about half a minute too.
 
 One more thing worth knowing about per-key figures: they start from the day this feature was
 installed. Spend captured before then is real and counts toward your project totals, but Proxytrace

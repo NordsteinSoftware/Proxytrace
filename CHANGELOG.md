@@ -25,6 +25,12 @@ follow [Semantic Versioning](https://semver.org). Ongoing work is collected unde
   `list_scopes` and a `scope` argument on `list_traces` / `get_dashboard`; Tracey can list scopes
   and narrow traces and dashboard stats to one.
 
+### Changed
+
+- **Budgets: the "Scope" field is now "Applies to".** The budget editor's choice between the whole
+  project, one agent or one API key is labelled **Applies to**, so it no longer shares a name with
+  the new scopes (use-case groups of agents).
+
 ## [1.14.0] - 2026-09-22
 
 ### Added

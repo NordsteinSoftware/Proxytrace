@@ -21,7 +21,7 @@ export function AgentScopeFilter({ scopes, filter, onFilterChange, grouped, onGr
   const { t } = useLingui();
   return (
     <div className="flex flex-col gap-2" data-testid="agent-scope-filter">
-      <label htmlFor="agent-scope-select" className="sr-only">{t({ message: 'Scope', context: 'use-case group of agents' })}</label>
+      <label htmlFor="agent-scope-select" className="sr-only">{t`Scope`}</label>
       <Select
         id="agent-scope-select"
         inputSize="sm"

@@ -16,7 +16,7 @@ export function DashboardScopeSelect({ scopes, scopeId, onChange }: Props) {
   if (scopes.length === 0) return null;
   return (
     <div className="w-[200px]">
-      <label htmlFor="dashboard-scope-select" className="sr-only">{t({ message: 'Scope', context: 'use-case group of agents' })}</label>
+      <label htmlFor="dashboard-scope-select" className="sr-only">{t`Scope`}</label>
       <Select
         id="dashboard-scope-select"
         inputSize="sm"
