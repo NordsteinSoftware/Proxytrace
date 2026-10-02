@@ -12,7 +12,7 @@ using Proxytrace.Storage;
 namespace Proxytrace.Storage.Migrations
 {
     [DbContext(typeof(StorageDbContext))]
-    [Migration("20261001175648_AddScopes")]
+    [Migration("20261002103817_AddScopes")]
     partial class AddScopes
     {
         /// <inheritdoc />
@@ -191,6 +191,8 @@ namespace Proxytrace.Storage.Migrations
 
                     b.HasIndex("ScopeId", "CreatedAt")
                         .HasFilter("\"ScopeId\" IS NOT NULL");
+
+                    NpgsqlIndexBuilderExtensions.IncludeProperties(b.HasIndex("ScopeId", "CreatedAt"), new[] { "AgentVersionId", "HttpStatus" });
 
                     b.HasIndex("SessionId", "CreatedAt");
 

@@ -189,6 +189,8 @@ namespace Proxytrace.Storage.Migrations
                     b.HasIndex("ScopeId", "CreatedAt")
                         .HasFilter("\"ScopeId\" IS NOT NULL");
 
+                    NpgsqlIndexBuilderExtensions.IncludeProperties(b.HasIndex("ScopeId", "CreatedAt"), new[] { "AgentVersionId", "HttpStatus" });
+
                     b.HasIndex("SessionId", "CreatedAt");
 
                     b.ToTable("AgentCallEntity");

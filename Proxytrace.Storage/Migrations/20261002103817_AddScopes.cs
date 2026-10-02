@@ -72,7 +72,8 @@ namespace Proxytrace.Storage.Migrations
                 name: "IX_AgentCallEntity_ScopeId_CreatedAt",
                 table: "AgentCallEntity",
                 columns: new[] { "ScopeId", "CreatedAt" },
-                filter: "\"ScopeId\" IS NOT NULL");
+                filter: "\"ScopeId\" IS NOT NULL")
+                .Annotation("Npgsql:IndexInclude", new[] { "AgentVersionId", "HttpStatus" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_ScopeAgentVersionEntity_AgentVersionId",

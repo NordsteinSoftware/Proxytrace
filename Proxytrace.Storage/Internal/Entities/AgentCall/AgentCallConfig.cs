@@ -82,7 +82,14 @@ internal class AgentCallConfig : AbstractEntityConfiguration<AgentCallEntity>, I
         // histogram and statistics (WHERE ScopeId = @p implies NOT NULL, so the planner can use it).
         // Partial because unscoped traffic — and every row ingested before scopes existed — would
         // only bloat it; that also makes creating it on an existing install a near-empty build.
-        builder.HasIndex(e => new { e.ScopeId, e.CreatedAt }).HasFilter("\"ScopeId\" IS NOT NULL");
+        // Covering (INCLUDE AgentVersionId, HttpStatus): a scope's rows are scattered across the
+        // heap, and the scoped traces list always carries the project semi-join on AgentVersionId,
+        // so without these the list's total COUNT and the timeline histogram had to fetch every
+        // matching heap row — a bitmap heap scan measured at ~4 s cold for a 5% scope on a 1M-row
+        // seed. Covered, both run as index-only scans (~20 ms / ~200 ms) for ~30% more index.
+        builder.HasIndex(e => new { e.ScopeId, e.CreatedAt })
+            .HasFilter("\"ScopeId\" IS NOT NULL")
+            .IncludeProperties(e => new { e.AgentVersionId, e.HttpStatus });
         builder.HasIndex(e => e.LatencyMs);
         builder.HasIndex(e => e.TotalTokens);
         builder.HasIndex(e => e.ResponseToolRequestCount);

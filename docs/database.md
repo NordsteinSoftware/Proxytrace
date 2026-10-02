@@ -246,7 +246,12 @@ with its project), the storage-only membership junction `ScopeAgentVersionEntity
 data that retention rebuilds from traces, so it must never block a delete), and the **nullable, FK-free**
 `AgentCallEntity.ScopeId` column — metadata-only in PostgreSQL, no table rewrite. Its index
 `(ScopeId, CreatedAt)` is **partial** (`WHERE "ScopeId" IS NOT NULL`): every pre-existing row is
-unscoped, so the index builds near-empty on an existing install and only ever holds scoped traffic. No
+unscoped, so the index builds near-empty on an existing install and only ever holds scoped traffic.
+It is also **covering** (`INCLUDE ("AgentVersionId", "HttpStatus")`): a scope's rows are scattered
+across the heap and the scoped traces list always carries the project semi-join, so without the
+included columns the list's total `COUNT` and the timeline histogram fetched every matching heap
+row (bitmap heap scan, ~4 s cold for a 5% scope at 1M rows); covered they are index-only scans
+(~20 ms count, ~200 ms histogram) for ~30% more index size. No
 backfill — historical traces stay unscoped. See [domain-concepts](domain-concepts.md) (Scope).
 
 The `AddUserLanguage` migration adds a non-nullable `UserEntity.Language` column with a SQL default
