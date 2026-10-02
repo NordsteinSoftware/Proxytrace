@@ -23,3 +23,18 @@ export function useUpdateScope(projectId: string | null) {
     },
   });
 }
+
+/**
+ * Deletes a scope (its traces stay), then drops its detail and refreshes the list — the page then
+ * falls back to the first remaining scope, since the deleted id is no longer in the list.
+ */
+export function useDeleteScope(projectId: string | null) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => scopesApi.delete(id),
+    onSuccess: (_, id) => {
+      qc.removeQueries({ queryKey: QUERY_KEYS.scope(id) });
+      if (projectId) qc.invalidateQueries({ queryKey: QUERY_KEYS.scopes(projectId) });
+    },
+  });
+}

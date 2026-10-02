@@ -79,6 +79,9 @@ it has, and when its last trace arrived. Select one to see:
 - **View traces** — opens Traces filtered to the scope.
 - **Edit** — give the scope a friendlier **display name** and a **description**. The key itself
   can't change, because it is what your clients send.
+- **Delete** — removes the scope (with its display name and description) and frees its place
+  under the [limit](#limits). Its traces are kept. If a client sends the same key again, the
+  scope is created again and its traces belong to it again.
 
 **New scope** opens a small helper: type a name and it shows the key Proxytrace will use and the
 URL to point a client at. Nothing is saved — the scope appears in the list with its first trace.
@@ -101,3 +104,8 @@ scope ages out of trace retention (see [Licensing](/admin/licensing)), it drops 
 A project can hold up to **200 scopes**. A call that names a new scope beyond that is still
 recorded, just without a scope. If you hit the limit, you are most likely putting a per-user or
 per-run value into the scope — use a [session](/guide/sessions) for that instead.
+
+Scopes don't hold their place forever. Once a scope has no agents left — all its traces have aged
+out of trace retention — it is removed automatically, unless you gave it a display name or a
+description. To free a place right away, **Delete** the scope on the Scopes page. After a scope
+is removed, it can take up to a minute before a new scope is accepted again.

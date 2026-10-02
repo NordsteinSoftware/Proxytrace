@@ -144,21 +144,15 @@ internal static class IngestionThroughputScenario
                     // so it belongs inside the timed section.
                     if (session is { } s)
                     {
-                        long totalTokens = call.Response?.Usage is { } u
-                            ? (long)(u.InputTokenCount + u.OutputTokenCount)
-                            : 0;
                         var sessionRepository = scope.Resolve<ISessionRepository>();
                         await sessionRepository.RecordActivityAsync(
-                            s.Id, s.ExternalKey, graph.ProjectId, totalTokens, call.CreatedAt, cancellationToken);
+                            s.Id, s.ExternalKey, graph.ProjectId, call.CountedTokens(), call.CreatedAt, cancellationToken);
                     }
 
                     if (scopeId is { } scoped)
                     {
-                        long scopedTokens = call.Response?.Usage is { } su
-                            ? (long)(su.InputTokenCount + su.OutputTokenCount)
-                            : 0;
                         await scopeRepository.RecordActivityAsync(
-                            scoped, call.Version.Id, scopedTokens, call.CreatedAt, cancellationToken);
+                            scoped, call.Version.Id, call.CountedTokens(), call.CreatedAt, cancellationToken);
                     }
                 });
             }

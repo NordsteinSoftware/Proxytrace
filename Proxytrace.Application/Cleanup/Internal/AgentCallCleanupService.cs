@@ -74,13 +74,18 @@ internal sealed class AgentCallCleanupService : BackgroundService
             var sessionsRemoved = await sessionRepository.RemoveOlderThanAsync(cutoffDate, cancellationToken);
 
             // Scope memberships likewise: a membership's last-seen time is its newest scoped trace, so
-            // the same cutoff drops exactly the agents that no longer have a trace in the scope. The
-            // scope rows stay — their display name and description are user-curated.
+            // the same cutoff drops exactly the agents that no longer have a trace in the scope.
             var membershipsRemoved = await scopeRepository.RemoveMembershipsOlderThanAsync(cutoffDate, cancellationToken);
 
+            // Then the scopes left with no member at all — otherwise every scope ever admitted would
+            // hold a slot under the per-project cap forever, and a client that once sent per-user
+            // keys would lock the project out of new scopes for good. A scope someone named or
+            // described is kept: that curation is the user's, not derived from traces.
+            var scopesRemoved = await scopeRepository.RemoveIdleOlderThanAsync(cutoffDate, cancellationToken);
+
             logger.LogInformation(
-                "Removed {numRemoved} AgentCalls, {sessionsRemoved} Sessions and {membershipsRemoved} scope memberships older than {retentionDuration} days ({adjustedSessions} session / {adjustedMemberships} scope membership counter(s) adjusted)",
-                numRemoved, sessionsRemoved, membershipsRemoved, retentionDuration.TotalDays, sessionRemovals.Count, scopeRemovals.Count);
+                "Removed {numRemoved} AgentCalls, {sessionsRemoved} Sessions, {membershipsRemoved} scope memberships and {scopesRemoved} idle scopes older than {retentionDuration} days ({adjustedSessions} session / {adjustedMemberships} scope membership counter(s) adjusted)",
+                numRemoved, sessionsRemoved, membershipsRemoved, scopesRemoved, retentionDuration.TotalDays, sessionRemovals.Count, scopeRemovals.Count);
         }
         catch (Exception ex)
         {

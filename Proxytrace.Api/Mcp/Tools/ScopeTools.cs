@@ -43,7 +43,8 @@ internal sealed class ScopeTools
 /// <summary>
 /// Resolves the <c>scope</c> argument the MCP tools accept — a scope id or its key — to an id in the
 /// current project. A key is canonicalised exactly as ingestion does, so <c>"Support Agents"</c>
-/// finds <c>support-agents</c>.
+/// finds <c>support-agents</c>, and looked up by key exactly as ingestion admits it — never by
+/// re-deriving the id, which would miss a scope stored under any other id.
 /// </summary>
 internal static class McpScopeArgument
 {
@@ -57,14 +58,20 @@ internal static class McpScopeArgument
         if (string.IsNullOrWhiteSpace(scope))
             return null;
 
-        Guid? candidate = Guid.TryParse(scope, out var id)
-            ? id
-            : ScopeKey.Normalize(scope) is { } key ? ScopeIdDerivation.Derive(projectId, key) : null;
+        Guid? found;
+        if (Guid.TryParse(scope, out var id))
+        {
+            var byId = await scopes.FindAsync(id, cancellationToken);
+            found = byId?.ProjectId == projectId ? byId.Id : null;
+        }
+        else
+        {
+            found = ScopeKey.Normalize(scope) is { } key
+                ? await scopes.FindIdByKeyAsync(projectId, key, cancellationToken)
+                : null;
+        }
 
-        var found = candidate is { } c ? await scopes.FindAsync(c, cancellationToken) : null;
-        if (found is null || found.ProjectId != projectId)
-            throw new McpException($"Scope '{scope}' was not found in this project. Use list_scopes to see the available scopes.");
-
-        return found.Id;
+        return found
+               ?? throw new McpException($"Scope '{scope}' was not found in this project. Use list_scopes to see the available scopes.");
     }
 }

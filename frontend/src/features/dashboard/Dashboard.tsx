@@ -50,8 +50,8 @@ export default function Dashboard() {
   const from = useMemo(() => rangeFromOpt(range), [range]);
   const { currentProjectId, currentProject } = useCurrentProject();
   const projectId = currentProjectId ?? undefined;
-  const enabled = currentProjectId !== null;
-  const { scopes, scopeId, setScopeId } = useDashboardScope(projectId);
+  const { scopes, scopeId, isResolved: scopeResolved, setScopeId } = useDashboardScope(projectId);
+  const enabled = currentProjectId !== null && scopeResolved;
 
   const clock = useLiveClock();
 
@@ -59,7 +59,9 @@ export default function Dashboard() {
 
   const queryOpts = { from, projectId, scopeId, enabled };
 
-  const { data: dashboard, isLoading: dashboardLoading } = useDashboardView(queryOpts);
+  const { data: dashboard, isLoading: dashboardFetching } = useDashboardView(queryOpts);
+  // A request held back for the remembered scope is still loading, not "no data".
+  const dashboardLoading = dashboardFetching || !scopeResolved;
   const { pulse, lastBeat } = usePulse(dashboard?.pulse, projectId, scopeId);
   const proposalCount = useDraftProposalCount();
 

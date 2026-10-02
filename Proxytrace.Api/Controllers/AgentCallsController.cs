@@ -648,7 +648,8 @@ public class AgentCallsController : ControllerBase
     /// Gives back the counters this trace contributed to its session when it was ingested. Mirrors
     /// the bump in <c>AgentCallProcessor</c> — including its best-effort stance: the trace row is
     /// already gone, so a failure here must not turn a successful delete into an error response.
-    /// The token total is computed exactly as the denormalized column is, so the reversal is exact.
+    /// The token total is <see cref="AgentCallExtensions.CountedTokens"/>, the one the bump used, so the
+    /// reversal is exact.
     /// </summary>
     private async Task ReverseSessionActivityAsync(IAgentCall call, CancellationToken cancellationToken)
     {
@@ -657,11 +658,8 @@ public class AgentCallsController : ControllerBase
 
         try
         {
-            long totalTokens = call.Response?.Usage is { } usage
-                ? (long)(usage.InputTokenCount + usage.OutputTokenCount)
-                : 0;
             await sessionRepository.RecordTraceRemovalsAsync(
-                [new SessionTraceRemoval(sessionId, TraceCount: 1, TotalTokens: totalTokens)],
+                [new SessionTraceRemoval(sessionId, TraceCount: 1, TotalTokens: call.CountedTokens())],
                 cancellationToken);
         }
         catch (Exception ex)
@@ -681,11 +679,8 @@ public class AgentCallsController : ControllerBase
 
         try
         {
-            long totalTokens = call.Response?.Usage is { } usage
-                ? (long)(usage.InputTokenCount + usage.OutputTokenCount)
-                : 0;
             await scopeRepository.RecordTraceRemovalsAsync(
-                [new ScopeTraceRemoval(scopeId, call.Version.Id, TraceCount: 1, TotalTokens: totalTokens)],
+                [new ScopeTraceRemoval(scopeId, call.Version.Id, TraceCount: 1, TotalTokens: call.CountedTokens())],
                 cancellationToken);
         }
         catch (Exception ex)

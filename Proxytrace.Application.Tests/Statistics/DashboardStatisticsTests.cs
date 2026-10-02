@@ -280,6 +280,28 @@ public sealed class DashboardStatisticsTests : BaseTest<Module>
     }
 
     [TestMethod]
+    public async Task GetDashboardViewAsync_WithScopeFilter_ResolvesTheScopedAgentsOnce()
+    {
+        // The agents list, the summary's pass rate and the trends' sparkline all need the scope's
+        // agent set; resolving it per consumer repeated the agent load and membership join 3×.
+        var scopes = Substitute.For<IScopeRepository>();
+        var svc = Build(out var runStats, out var callStats, out var agents, scopes: scopes);
+        StubEmptyView(runStats, callStats);
+        var projectId = Guid.NewGuid();
+        var scopeId = Guid.NewGuid();
+        agents.GetByProjectAsync(projectId, Arg.Any<CancellationToken>()).Returns([]);
+        scopes.GetAgentIdsAsync(scopeId, Arg.Any<CancellationToken>()).Returns(new HashSet<Guid>());
+
+        await svc.GetDashboardViewAsync(
+            new StatisticsFilter(ProjectId: projectId, ScopeId: scopeId), recentTraceCount: 5, agentLimit: 5, CancellationToken);
+
+        await agents.Received(1).GetByProjectAsync(projectId, Arg.Any<CancellationToken>());
+        await scopes.Received(1).GetAgentIdsAsync(scopeId, Arg.Any<CancellationToken>());
+        await runStats.Received(1).GetPassTotalsAsync(Arg.Any<TestRunStats.Filter>(), Arg.Any<CancellationToken>());
+        await runStats.Received(1).GetRecentCohortsAsync(Arg.Any<TestRunStats.Filter>(), Arg.Any<int>(), Arg.Any<CancellationToken>());
+    }
+
+    [TestMethod]
     public async Task GetDashboardViewAsync_RequestsPulse_TrailingHourInMinuteBuckets()
     {
         var svc = Build(out var runStats, out var callStats, out var agents);

@@ -64,6 +64,21 @@ public sealed class ScopeToolsTests : BaseTest<Module>
     }
 
     [TestMethod]
+    public async Task ScopeArgument_ByKey_ResolvesScopeStoredUnderAnyId()
+    {
+        // Ingestion admits by key, so a row whose id is not the derived one still takes traffic —
+        // the MCP argument must find it the same way rather than by re-deriving the id.
+        IServiceProvider services = GetServices();
+        var project = await services.GetRequiredService<IDomainEntityGenerator<IProject>>().CreateAsync(CancellationToken);
+        var existing = await services.GetRequiredService<IScope.CreateNew>()("support", project.Id).AddAsync(CancellationToken);
+        var repo = services.GetRequiredService<IScopeRepository>();
+
+        var resolved = await McpScopeArgument.ResolveAsync(repo, project.Id, "support", CancellationToken);
+
+        resolved.Should().Be(existing.Id);
+    }
+
+    [TestMethod]
     public async Task ScopeArgument_ScopeOfAnotherProject_Throws()
     {
         IServiceProvider services = GetServices();

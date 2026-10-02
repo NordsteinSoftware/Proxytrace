@@ -198,7 +198,7 @@ internal class AgentCallConfig : AbstractEntityConfiguration<AgentCallEntity>, I
             ResponseToolRequestCount = domain.Response?.Response is AssistantMessage assistant
                 ? assistant.ToolRequests.Count
                 : 0,
-            TotalTokens = domain.Response?.Usage is { } u ? u.InputTokenCount + u.OutputTokenCount : null,
+            TotalTokens = domain.TotalTokens(),
             CacheHitRate = domain.Response?.Usage is { InputTokenCount: > 0 } usage
                 ? (double)usage.CachedInputTokenCount / usage.InputTokenCount
                 : null,

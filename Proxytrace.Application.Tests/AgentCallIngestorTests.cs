@@ -1797,6 +1797,32 @@ public sealed class AgentCallIngestorTests : BaseTest<Module>
     }
 
     [TestMethod]
+    public async Task IngestAsync_ProjectAtScopeCap_RemembersItIsFullAndStillAdmitsKnownScopes()
+    {
+        // Over the cap, a client minting fresh keys must not pay the admission COUNT (and a warning)
+        // on every call: the full project is remembered, and only the key probe runs.
+        var scopes = Substitute.For<IScopeRepository>();
+        Guid? known = null;
+        scopes.AdmitAsync(Arg.Any<Guid>(), Arg.Any<string>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<Guid?>(null));
+        scopes.FindIdByKeyAsync(Arg.Any<Guid>(), "known", Arg.Any<CancellationToken>())
+            .Returns(call => Task.FromResult(known = ScopeIdDerivation.Derive(call.ArgAt<Guid>(0), "known")));
+        var services = GetServices(builder => builder.RegisterInstance(scopes).As<IScopeRepository>());
+        var (provider, project) = await GetProviderAndProjectAsync(services);
+        var processor = services.GetRequiredService<AgentCallProcessor>();
+
+        await processor.IngestAsync(NewJob(provider, project, scopeKey: "user-1"), CancellationToken);
+        await processor.IngestAsync(NewJob(provider, project, scopeKey: "user-2"), CancellationToken);
+        await processor.IngestAsync(NewJob(provider, project, scopeKey: "known"), CancellationToken);
+
+        await scopes.Received(1).AdmitAsync(project.Id, "user-1", Arg.Any<int>(), Arg.Any<CancellationToken>());
+        await scopes.DidNotReceive().AdmitAsync(project.Id, "user-2", Arg.Any<int>(), Arg.Any<CancellationToken>());
+        var calls = (await services.GetRequiredService<IAgentCallRepository>()
+            .GetFilteredAsync(new AgentCallFilter { ProjectId = project.Id }, 1, 10, CancellationToken)).Items;
+        calls.Select(c => c.ScopeId).Should().BeEquivalentTo([null, null, known]);
+    }
+
+    [TestMethod]
     public async Task IngestAsync_ScopeAdmissionFails_StillPersistsCallWithDerivedScopeId()
     {
         var scopes = Substitute.For<IScopeRepository>();

@@ -144,6 +144,37 @@ public sealed class AgentCallCleanupServiceTests : BaseTest<Module>
     }
 
     [TestMethod]
+    public async Task CleanOnce_SweepsIdleScopesWithTheSameCutoff_AfterTheirMemberships()
+    {
+        // Without this sweep every scope ever admitted would hold a slot under the per-project cap
+        // forever. It must run after the membership sweep, which is what makes a scope idle.
+        const int retentionDurationDays = 2;
+        var expectedCutoff = DateTimeOffset.UtcNow - TimeSpan.FromDays(retentionDurationDays);
+        var scopeRepository = Substitute.For<IScopeRepository>();
+
+        var services = GetServices(builder =>
+        {
+            builder.RegisterStub<IAgentCallRepository>();
+            builder.RegisterInstance(scopeRepository).As<IScopeRepository>();
+            builder.RegisterInstance(new AgentCallCleanupConfiguration
+            {
+                CleanupIntervalHours = 1,
+                RetentionDurationDays = retentionDurationDays,
+            });
+        });
+
+        await services.GetRequiredService<AgentCallCleanupService>().CleanOnceAsync(CancellationToken);
+
+        var tolerance = TimeSpan.FromSeconds(10);
+        Received.InOrder(() =>
+        {
+            scopeRepository.RemoveMembershipsOlderThanAsync(Arg.Any<DateTimeOffset>(), Arg.Any<CancellationToken>());
+            scopeRepository.RemoveIdleOlderThanAsync(
+                Arg.Is<DateTimeOffset>(x => (expectedCutoff - x).Duration() < tolerance), Arg.Any<CancellationToken>());
+        });
+    }
+
+    [TestMethod]
     public async Task CleanOnce_ReconcilesSessionCountersAndSweepsSessionsWithTheSameCutoff()
     {
         // Retention deleted traces without touching the sessions that grouped them, so a session

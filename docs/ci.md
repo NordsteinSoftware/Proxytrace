@@ -58,7 +58,7 @@ rewrite the gates and skip its own verification in the same run.
 
 `backend` sets `PROXYTRACE_REQUIRE_DOCKER_TESTS=true` on its `dotnet test` step. A few backend tests
 start a throwaway container (Testcontainers) to exercise a real service — currently the Redis
-ingestion transport. Those tests **skip themselves** when no container runtime is reachable, so
+ingestion transport and the scope repository's PostgreSQL-only SQL. Those tests **skip themselves** when no container runtime is reachable, so
 `dotnet test` never becomes a hard Docker dependency for a local run; the variable flips that skip
 into a hard failure. GitHub-hosted runners always have Docker, so the only thing it can catch is a
 runner that lost it — which would otherwise silently drop the coverage rather than report it. See

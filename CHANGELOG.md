@@ -17,9 +17,12 @@ follow [Semantic Versioning](https://semver.org). Ongoing work is collected unde
   (the header wins when both are sent). Scopes are created automatically on first use, names are
   normalised like project slugs (`Support Agents` and `support-agents` are one scope), and a name
   that can't be used never fails the call — the trace is just recorded unscoped. Agents that serve
-  several use cases appear in each of their scopes. A project holds up to 200 scopes.
+  several use cases appear in each of their scopes. A project holds up to 200 scopes; a scope
+  whose traces have all aged out of retention frees its place automatically unless you named or
+  described it.
   A new **Scopes** page lists each scope with its traces, tokens and member agents, shows the
-  scoped base URL to copy, and lets you give it a display name and description. Traces gain a
+  scoped base URL to copy, and lets you give it a display name and description, or delete it
+  (its traces are kept). Traces gain a
   **Scope** filter (plus a scope tag on each row and a link in the trace detail), the Dashboard a
   scope selector, and the Agents list a scope filter with **Group by scope**. MCP clients get
   `list_scopes` and a `scope` argument on `list_traces` / `get_dashboard`; Tracey can list scopes
@@ -27,6 +30,10 @@ follow [Semantic Versioning](https://semver.org). Ongoing work is collected unde
 
 ### Changed
 
+- **`/{project}/{name}/openai/v1/…` is now a traced call, not a pass-through.** That path shape
+  names a scope, so it is captured and sent to the provider's configured endpoint. It used to be
+  forwarded untraced to `/{name}/openai/v1/…` on the provider's host; every other path under
+  `/{project}/…` is still passed through as before.
 - **Budgets: the "Scope" field is now "Applies to".** The budget editor's choice between the whole
   project, one agent or one API key is labelled **Applies to**, so it no longer shares a name with
   the new scopes (use-case groups of agents).

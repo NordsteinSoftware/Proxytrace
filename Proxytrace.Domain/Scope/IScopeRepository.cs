@@ -33,11 +33,20 @@ public sealed record ScopeOverview(
 public interface IScopeRepository : IRepository<IScope>
 {
     /// <summary>
-    /// Ingestion-hot-path admission: returns the id of the project's scope with the canonical
+    /// The id of the project's scope with the canonical <paramref name="externalKey"/>, or
+    /// <see langword="null"/> when the project has none. One unique-index probe — the steady-state
+    /// cost of every scoped ingest, and how a client-facing key (an MCP argument) resolves to its
+    /// scope whatever id the row was created under.
+    /// </summary>
+    Task<Guid?> FindIdByKeyAsync(Guid projectId, string externalKey, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Ingestion admission: returns the id of the project's scope with the canonical
     /// <paramref name="externalKey"/>, creating it on first sight. Returns <see langword="null"/>
     /// when the scope does not exist yet and the project already holds
     /// <paramref name="maxScopesPerProject"/> scopes — the call is then ingested unscoped rather than
-    /// letting a client that mints a key per user grow the table without bound. Safe under
+    /// letting a client that mints a key per user grow the table without bound. Silent on that
+    /// outcome: the caller decides how often a full project is worth a warning. Safe under
     /// concurrent ingestion; must NOT run inside an ambient transaction (same reason as
     /// <c>ISessionRepository.RecordActivityAsync</c>).
     /// </summary>
@@ -74,8 +83,10 @@ public interface IScopeRepository : IRepository<IScope>
         CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Reverses the counter bumps of <see cref="RecordActivityAsync"/> for deleted traces. Both
-    /// counters are clamped at zero, mirroring <c>ISessionRepository.RecordTraceRemovalsAsync</c>.
+    /// Reverses the counter bumps of <see cref="RecordActivityAsync"/> for deleted traces, in one
+    /// round trip however many removals there are. Both counters are clamped at zero, mirroring
+    /// <c>ISessionRepository.RecordTraceRemovalsAsync</c>, and a membership left with no traces is
+    /// removed — the agent no longer served the scope, so it must stop counting as a member.
     /// </summary>
     Task RecordTraceRemovalsAsync(
         IReadOnlyCollection<ScopeTraceRemoval> removals,
@@ -88,12 +99,24 @@ public interface IScopeRepository : IRepository<IScope>
     /// </summary>
     Task<int> RemoveMembershipsOlderThanAsync(DateTimeOffset cutoff, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Removes the scopes created at or before <paramref name="cutoff"/> that have no member left and
+    /// nothing user-curated (no display name, no description) — run by trace retention after
+    /// <see cref="RemoveMembershipsOlderThanAsync"/>, so a scope whose every trace aged out frees its
+    /// slot under the per-project cap instead of holding it forever. A scope someone named or
+    /// described is kept; it is removed only by deleting it explicitly.
+    /// </summary>
+    Task<int> RemoveIdleOlderThanAsync(DateTimeOffset cutoff, CancellationToken cancellationToken = default);
+
     /// <summary>All scopes of a project with their activity, most recently active first.</summary>
     Task<IReadOnlyList<ScopeOverview>> GetOverviewsAsync(Guid projectId, CancellationToken cancellationToken = default);
 
     /// <summary>One scope with its activity, or <see langword="null"/> when it does not exist.</summary>
     Task<ScopeOverview?> GetOverviewAsync(Guid scopeId, CancellationToken cancellationToken = default);
 
-    /// <summary>The agents that have served <paramref name="scopeId"/> within retention.</summary>
+    /// <summary>
+    /// The agents that have served <paramref name="scopeId"/> within retention — every agent with a
+    /// membership, which by construction still has at least one trace there.
+    /// </summary>
     Task<IReadOnlySet<Guid>> GetAgentIdsAsync(Guid scopeId, CancellationToken cancellationToken = default);
 }

@@ -192,7 +192,7 @@ internal sealed class StatisticsBackfillScenario : IDemoScenario
             .GroupBy(c => (ScopeId: c.ScopeId ?? Guid.Empty, VersionId: c.Version.Id));
         foreach (var group in memberships)
         {
-            long tokens = group.Sum(c => c.Response?.Usage is { } u ? (long)(u.InputTokenCount + u.OutputTokenCount) : 0);
+            long tokens = group.Sum(c => c.CountedTokens());
             await scopes.RecordActivitiesAsync(
                 group.Key.ScopeId,
                 group.Key.VersionId,

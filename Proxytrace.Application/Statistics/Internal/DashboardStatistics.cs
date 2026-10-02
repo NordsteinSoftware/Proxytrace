@@ -163,9 +163,14 @@ internal class DashboardStatistics : IDashboardStatistics
         // into a ~600ms one. Offloading each query to the thread pool restores the intended
         // concurrency there; on relational the extra hop is negligible. The reads run on fresh
         // per-call DbContexts (no ambient transaction on this path), so parallel execution is safe.
-        Task<StatisticsSummary> summaryTask = Task.Run(() => GetSummaryAsync(filter, cancellationToken), cancellationToken);
+        //
+        // The filter's agent set is resolved once and shared: the agents list needs it, and so does
+        // the test-run filter of both the summary and the trends — resolving it per consumer would
+        // repeat the agent load (and, for a scope, the membership join) three times per miss.
+        Task<IReadOnlyList<IAgent>> agentsTask = Task.Run(() => GetScopedAgentsAsync(filter, cancellationToken), cancellationToken);
+        Task<StatisticsSummary> summaryTask = Task.Run(() => GetSummaryAsync(filter, () => agentsTask, cancellationToken), cancellationToken);
         Task<LiveTelemetry> telemetryTask = Task.Run(() => GetLiveTelemetryAsync(filter, cancellationToken), cancellationToken);
-        Task<DashboardTrends> trendsTask = Task.Run(() => GetDashboardTrendsAsync(filter, cancellationToken), cancellationToken);
+        Task<DashboardTrends> trendsTask = Task.Run(() => GetDashboardTrendsAsync(filter, () => agentsTask, cancellationToken), cancellationToken);
         Task<IReadOnlyList<AgentBreakdownStat>> agentBreakdownTask = Task.Run(() => GetAgentBreakdownAsync(filter, cancellationToken), cancellationToken);
         Task<IReadOnlyList<LatencyStat>> latencyTask = Task.Run(() => GetLatencyAsync(filter, cancellationToken), cancellationToken);
         Task<IReadOnlyList<ModelBreakdownStat>> modelBreakdownTask = Task.Run(() => GetModelBreakdownAsync(filter, cancellationToken), cancellationToken);
@@ -186,9 +191,6 @@ internal class DashboardStatistics : IDashboardStatistics
             page: 1,
             pageSize: recentTraceCount,
             cancellationToken), cancellationToken);
-        // Scope the agent load to the filter's projects, instead of loading every agent and
-        // discarding the rest in memory. The unfiltered (global) dashboard still needs all agents.
-        Task<IReadOnlyList<IAgent>> agentsTask = Task.Run(() => GetScopedAgentsAsync(filter, cancellationToken), cancellationToken);
         Task<IReadOnlyDictionary<Guid, DateTimeOffset>> lastCallTimesTask = Task.Run(() => agentCalls.GetLastCallTimesAsync(cancellationToken), cancellationToken);
         Task<IReadOnlyList<int>> pulseTask = Task.Run(() => GetPulseAsync(filter, cancellationToken), cancellationToken);
 
@@ -243,10 +245,14 @@ internal class DashboardStatistics : IDashboardStatistics
     public Task<IReadOnlyList<AgentAnomalyStat>> GetAnomalyCountsByAgentAsync(StatisticsFilter filter, StatisticsBucket bucket, CancellationToken cancellationToken = default)
         => callStats.GetAnomalyCountsByAgentAsync(filter, bucket, cancellationToken);
 
-    internal async Task<StatisticsSummary> GetSummaryAsync(StatisticsFilter filter, CancellationToken cancellationToken = default)
+    internal Task<StatisticsSummary> GetSummaryAsync(StatisticsFilter filter, CancellationToken cancellationToken = default)
+        => GetSummaryAsync(filter, () => GetScopedAgentsAsync(filter, cancellationToken), cancellationToken);
+
+    private async Task<StatisticsSummary> GetSummaryAsync(
+        StatisticsFilter filter, Func<Task<IReadOnlyList<IAgent>>> scopedAgents, CancellationToken cancellationToken)
     {
         StatisticsSummary callSummary = await callStats.GetSummaryAsync(filter, cancellationToken);
-        TestRunStats.Filter runFilter = await ToRunFilterAsync(filter, cancellationToken);
+        TestRunStats.Filter runFilter = await ToRunFilterAsync(filter, scopedAgents);
         // Totals aggregate server-side; the table has no retention, so materializing every run's
         // stats row just to sum two columns would degrade linearly with total history.
         TestRunPassTotals totals = await runStats.GetPassTotalsAsync(runFilter, cancellationToken);
@@ -295,7 +301,11 @@ internal class DashboardStatistics : IDashboardStatistics
         };
     }
 
-    internal async Task<DashboardTrends> GetDashboardTrendsAsync(StatisticsFilter filter, CancellationToken cancellationToken = default)
+    internal Task<DashboardTrends> GetDashboardTrendsAsync(StatisticsFilter filter, CancellationToken cancellationToken = default)
+        => GetDashboardTrendsAsync(filter, () => GetScopedAgentsAsync(filter, cancellationToken), cancellationToken);
+
+    private async Task<DashboardTrends> GetDashboardTrendsAsync(
+        StatisticsFilter filter, Func<Task<IReadOnlyList<IAgent>>> scopedAgents, CancellationToken cancellationToken)
     {
         const int buckets = 20;
         DateTimeOffset to = filter.To ?? DateTimeOffset.UtcNow;
@@ -303,7 +313,7 @@ internal class DashboardStatistics : IDashboardStatistics
 
         CallTrends trends = await callStats.GetCallTrendsAsync(filter, buckets, from, to, cancellationToken);
 
-        TestRunStats.Filter runFilter = await ToRunFilterAsync(filter, cancellationToken);
+        TestRunStats.Filter runFilter = await ToRunFilterAsync(filter, scopedAgents);
         // One sparkline point per (group, endpoint) cohort so sampled runs don't cluster N points.
         // The cohorts aggregate server-side and are capped to the most recent SparklineCohortLimit,
         // so the payload stays bounded regardless of accumulated test-run history.
@@ -352,13 +362,15 @@ internal class DashboardStatistics : IDashboardStatistics
         return inProjects.Where(a => members.Contains(a.Id)).ToArray();
     }
 
-    private async Task<TestRunStats.Filter> ToRunFilterAsync(StatisticsFilter filter, CancellationToken cancellationToken)
+    // Unscoped (the global dashboard) runs over every agent's runs, so it needs no agent id list —
+    // and must not wait for the agent load to build one.
+    private static async Task<TestRunStats.Filter> ToRunFilterAsync(
+        StatisticsFilter filter, Func<Task<IReadOnlyList<IAgent>>> scopedAgents)
     {
         IReadOnlyCollection<Guid>? agentIds = null;
         if (filter.ProjectId is not null || filter.ProjectIds is { Count: > 0 } || filter.ScopeId is not null)
         {
-            IReadOnlyList<IAgent> scopedAgents = await GetScopedAgentsAsync(filter, cancellationToken);
-            agentIds = scopedAgents.Select(a => a.Id).ToArray();
+            agentIds = (await scopedAgents()).Select(a => a.Id).ToArray();
         }
 
         return new TestRunStats.Filter(

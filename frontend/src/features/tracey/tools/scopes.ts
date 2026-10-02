@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { scopesApi } from '../../../api/scopes';
+import { scopeLabel } from '../../../lib/scopes';
 import { type ToolFactory, tool } from './shared';
 
 export const createScopeTools: ToolFactory = (ctx) => ({
@@ -20,7 +21,7 @@ export const createScopeTools: ToolFactory = (ctx) => ({
         items: scopes.map((s) => ({
           id: s.id,
           key: s.key,
-          name: s.displayName ?? s.key,
+          name: scopeLabel(s),
           traces: s.traceCount,
           tokens: s.totalTokens,
           agentIds: s.agentIds,

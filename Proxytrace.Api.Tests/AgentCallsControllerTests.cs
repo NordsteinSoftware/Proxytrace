@@ -416,6 +416,7 @@ public sealed class AgentCallsControllerTests : BaseTest<Module>
         ArgumentNullException.ThrowIfNull(afterDelete);
         afterDelete.TraceCount.Should().Be(0);
         afterDelete.TotalTokens.Should().Be(0);
+        afterDelete.Agents.Should().BeEmpty("an agent whose only scoped trace was deleted no longer serves the scope");
     }
 
     [TestMethod]

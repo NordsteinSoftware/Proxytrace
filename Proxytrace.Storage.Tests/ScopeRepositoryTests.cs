@@ -216,6 +216,134 @@ public sealed class ScopeRepositoryTests : BaseTest<Module>
     }
 
     [TestMethod]
+    public async Task RecordTraceRemovalsAsync_LastTraceRemoved_AgentLeavesTheScope()
+    {
+        // A membership at zero traces must not keep the agent a "member": the Agents and Dashboard
+        // scope filters read membership, and would keep listing an agent with nothing in the scope.
+        var services = GetServices();
+        var agent = await services.GetRequiredService<IDomainEntityGenerator<IAgent>>().CreateAsync(CancellationToken);
+        var repo = services.GetRequiredService<IScopeRepository>();
+        var scopeId = await AdmitAsync(repo, agent.Project.Id, "support");
+        await repo.RecordActivityAsync(scopeId, agent.CurrentVersion.Id, 40, DateTimeOffset.UtcNow, CancellationToken);
+
+        await repo.RecordTraceRemovalsAsync([new ScopeTraceRemoval(scopeId, agent.CurrentVersion.Id, 1, 40)], CancellationToken);
+
+        (await repo.GetAgentIdsAsync(scopeId, CancellationToken)).Should().BeEmpty();
+        var overview = await repo.GetOverviewAsync(scopeId, CancellationToken);
+        ArgumentNullException.ThrowIfNull(overview);
+        overview.Agents.Should().BeEmpty();
+    }
+
+    [TestMethod]
+    public async Task RecordTraceRemovalsAsync_SameMembershipTwiceInOneBatch_AppliesBothDeltas()
+    {
+        var services = GetServices();
+        var agent = await services.GetRequiredService<IDomainEntityGenerator<IAgent>>().CreateAsync(CancellationToken);
+        var repo = services.GetRequiredService<IScopeRepository>();
+        var scopeId = await AdmitAsync(repo, agent.Project.Id, "support");
+        await repo.RecordActivitiesAsync(scopeId, agent.CurrentVersion.Id, 5, 500, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, CancellationToken);
+
+        await repo.RecordTraceRemovalsAsync(
+            [
+                new ScopeTraceRemoval(scopeId, agent.CurrentVersion.Id, 1, 100),
+                new ScopeTraceRemoval(scopeId, agent.CurrentVersion.Id, 2, 200),
+            ],
+            CancellationToken);
+
+        var overview = await repo.GetOverviewAsync(scopeId, CancellationToken);
+        ArgumentNullException.ThrowIfNull(overview);
+        overview.TraceCount.Should().Be(2);
+        overview.TotalTokens.Should().Be(200);
+    }
+
+    [TestMethod]
+    public async Task FindIdByKeyAsync_ScopeWithForeignId_FindsItByKey()
+    {
+        var services = GetServices();
+        var project = await services.GetRequiredService<IDomainEntityGenerator<IProject>>().CreateAsync(CancellationToken);
+        var existing = await services.GetRequiredService<IScope.CreateNew>()("support", project.Id).AddAsync(CancellationToken);
+        var repo = services.GetRequiredService<IScopeRepository>();
+
+        var found = await repo.FindIdByKeyAsync(project.Id, "support", CancellationToken);
+        var missing = await repo.FindIdByKeyAsync(project.Id, "billing", CancellationToken);
+
+        found.Should().Be(existing.Id);
+        missing.Should().BeNull();
+    }
+
+    [TestMethod]
+    public async Task RemoveIdleOlderThanAsync_RemovesOnlyUncuratedScopesWithoutMembers()
+    {
+        var services = GetServices();
+        var agent = await services.GetRequiredService<IDomainEntityGenerator<IAgent>>().CreateAsync(CancellationToken);
+        var repo = services.GetRequiredService<IScopeRepository>();
+        var projectId = agent.Project.Id;
+        var idle = await AdmitAsync(repo, projectId, "per-user-123");
+        var named = await AdmitAsync(repo, projectId, "named");
+        var described = await AdmitAsync(repo, projectId, "described");
+        var active = await AdmitAsync(repo, projectId, "active");
+        await (await repo.GetAsync(named, CancellationToken)).ChangeDetails("Named", null, CancellationToken);
+        await (await repo.GetAsync(described, CancellationToken)).ChangeDetails(null, "Kept for its description", CancellationToken);
+        await repo.RecordActivityAsync(active, agent.CurrentVersion.Id, 10, DateTimeOffset.UtcNow, CancellationToken);
+
+        var removed = await repo.RemoveIdleOlderThanAsync(DateTimeOffset.UtcNow.AddMinutes(1), CancellationToken);
+
+        removed.Should().Be(1);
+        (await repo.GetOverviewsAsync(projectId, CancellationToken)).Select(o => o.Scope.Id)
+            .Should().BeEquivalentTo([named, described, active]);
+        (await repo.FindAsync(idle, CancellationToken)).Should().BeNull();
+    }
+
+    [TestMethod]
+    public async Task RemoveIdleOlderThanAsync_IdleScopeCreatedAfterCutoff_IsKept()
+    {
+        // A scope admitted moments ago has no member yet only because its first trace's membership
+        // bump is still in flight — the cutoff keeps the sweep away from it.
+        var services = GetServices();
+        var project = await services.GetRequiredService<IDomainEntityGenerator<IProject>>().CreateAsync(CancellationToken);
+        var repo = services.GetRequiredService<IScopeRepository>();
+        var fresh = await AdmitAsync(repo, project.Id, "fresh");
+
+        var removed = await repo.RemoveIdleOlderThanAsync(DateTimeOffset.UtcNow.AddDays(-30), CancellationToken);
+
+        removed.Should().Be(0);
+        (await repo.FindAsync(fresh, CancellationToken)).Should().NotBeNull();
+    }
+
+    [TestMethod]
+    public async Task RemoveIdleOlderThanAsync_ProjectAtCap_FreesSlotsForNewScopes()
+    {
+        var services = GetServices();
+        var project = await services.GetRequiredService<IDomainEntityGenerator<IProject>>().CreateAsync(CancellationToken);
+        var repo = services.GetRequiredService<IScopeRepository>();
+        await repo.AdmitAsync(project.Id, "user-1", 2, CancellationToken);
+        await repo.AdmitAsync(project.Id, "user-2", 2, CancellationToken);
+        var blocked = await repo.AdmitAsync(project.Id, "billing", 2, CancellationToken);
+
+        await repo.RemoveIdleOlderThanAsync(DateTimeOffset.UtcNow.AddMinutes(1), CancellationToken);
+        var admitted = await repo.AdmitAsync(project.Id, "billing", 2, CancellationToken);
+
+        blocked.Should().BeNull();
+        admitted.Should().Be(ScopeIdDerivation.Derive(project.Id, "billing"));
+    }
+
+    [TestMethod]
+    public async Task RemoveAsync_ScopeWithMembers_RemovesScopeAndItsMemberships()
+    {
+        var services = GetServices();
+        var agent = await services.GetRequiredService<IDomainEntityGenerator<IAgent>>().CreateAsync(CancellationToken);
+        var repo = services.GetRequiredService<IScopeRepository>();
+        var scopeId = await AdmitAsync(repo, agent.Project.Id, "support");
+        await repo.RecordActivityAsync(scopeId, agent.CurrentVersion.Id, 10, DateTimeOffset.UtcNow, CancellationToken);
+
+        var removed = await repo.RemoveAsync(scopeId, CancellationToken);
+
+        removed.Should().BeTrue();
+        (await repo.FindAsync(scopeId, CancellationToken)).Should().BeNull();
+        (await repo.GetAgentIdsAsync(scopeId, CancellationToken)).Should().BeEmpty();
+    }
+
+    [TestMethod]
     public async Task RemoveMembershipsOlderThanAsync_RemovesStaleMembershipsButKeepsScope()
     {
         var services = GetServices();

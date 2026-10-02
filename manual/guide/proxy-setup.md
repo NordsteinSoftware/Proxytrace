@@ -209,6 +209,9 @@ With a valid key, Proxytrace **transparently forwards any path under `/{project}
 `/v1/models`, and so on — no configuration needed.
 
 These pass-through calls are **not captured as traces** (only the `openai/v1` API is).
+One shape is never passed through: `/{project}/{name}/openai/v1/…` is the traced API with a
+[scope](/guide/scopes) named `{name}`, so it is captured and forwarded to your provider's configured
+endpoint like any other traced call — not to `/{name}/openai/v1/…` on the upstream host.
 Authenticated calls require a valid key for the project, exactly like a traced call. If the upstream
 answers with a redirect, Proxytrace relays the `3xx` (including its `Location`) back to your client verbatim
 rather than following it server-side — `Location` values are not rewritten to proxy URLs.

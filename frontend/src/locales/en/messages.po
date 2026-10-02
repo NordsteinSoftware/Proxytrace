@@ -1927,6 +1927,9 @@ msgstr "Delete suite"
 msgid "Delete the budget for \"{0}\"?"
 msgstr "Delete the budget for \"{0}\"?"
 
+msgid "Delete the scope \"{name}\"?"
+msgstr "Delete the scope \"{name}\"?"
+
 msgid "Delete this conversation?"
 msgstr "Delete this conversation?"
 
@@ -4803,6 +4806,9 @@ msgstr "Schema is appended automatically — only describe what to grade and wha
 msgid "Scope"
 msgstr "Scope"
 
+msgid "Scope Deleted"
+msgstr "Scope Deleted"
+
 msgid "Scope name"
 msgstr "Scope name"
 
@@ -5706,6 +5712,10 @@ msgstr "This removes the budget and lifts any block it is applying. Spend keeps 
 
 msgid "This removes the detector and its review history. This can't be undone."
 msgstr "This removes the detector and its review history. This can't be undone."
+
+#. placeholder {0}: scope.key
+msgid "This removes the scope with its display name and description, and frees its place under the project's scope limit. Its traces are kept: if a client sends \"{0}\" again, the scope comes back with them."
+msgstr "This removes the scope with its display name and description, and frees its place under the project's scope limit. Its traces are kept: if a client sends \"{0}\" again, the scope comes back with them."
 
 msgid "This reset link is invalid or has expired. Request a new one."
 msgstr "This reset link is invalid or has expired. Request a new one."

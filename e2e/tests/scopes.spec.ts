@@ -74,6 +74,20 @@ test.describe('Scopes', () => {
       .toBe('Support crew');
   });
 
+  test('deleting a scope removes it from the list but keeps its traces', async ({ page }) => {
+    await page.goto(`/scopes?id=${scopeId}`, { waitUntil: 'load' });
+    await page.getByTestId('scope-delete-btn').click();
+    await page.locator('.modal-panel').getByRole('button', { name: 'Delete', exact: true }).click();
+
+    await expect(page.getByTestId(`scope-row-${scopeId}`)).toHaveCount(0);
+    expect((await api.listScopes(projectId)).map(s => s.key)).toEqual(['billing']);
+
+    await page.goto('/traces', { waitUntil: 'load' });
+    for (const id of scopedCallIds) {
+      await expect(page.getByTestId(`trace-row-${id}`)).toBeVisible();
+    }
+  });
+
   test('"View traces" opens the traces list filtered to the scope', async ({ page }) => {
     await page.goto(`/scopes?id=${scopeId}`, { waitUntil: 'load' });
     await page.getByTestId('scope-view-traces-btn').click();

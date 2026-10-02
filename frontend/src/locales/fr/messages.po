@@ -1927,6 +1927,9 @@ msgstr "Supprimer le Suite"
 msgid "Delete the budget for \"{0}\"?"
 msgstr "Supprimer le budget pour \"{0}\" ?"
 
+msgid "Delete the scope \"{name}\"?"
+msgstr "Supprimer le scope « {name} » ?"
+
 msgid "Delete this conversation?"
 msgstr "Supprimer cette conversation ?"
 
@@ -4803,6 +4806,9 @@ msgstr "Le schéma est ajouté automatiquement — décrivez uniquement ce qu’
 msgid "Scope"
 msgstr "Scope"
 
+msgid "Scope Deleted"
+msgstr "Scope supprimé"
+
 msgid "Scope name"
 msgstr "Nom du Scope"
 
@@ -5706,6 +5712,10 @@ msgstr "Cela supprime le budget et lève tout blocage qu'il applique. Les dépen
 
 msgid "This removes the detector and its review history. This can't be undone."
 msgstr "Cela supprime le détecteur et son historique de revue. Cette action est irréversible."
+
+#. placeholder {0}: scope.key
+msgid "This removes the scope with its display name and description, and frees its place under the project's scope limit. Its traces are kept: if a client sends \"{0}\" again, the scope comes back with them."
+msgstr "Cela supprime le scope avec son nom d'affichage et sa description, et libère sa place dans la limite de scopes du projet. Ses Traces sont conservées : si un client envoie à nouveau « {0} », le scope revient avec elles."
 
 msgid "This reset link is invalid or has expired. Request a new one."
 msgstr "Ce lien de réinitialisation est invalide ou a expiré. Demandez-en un nouveau."

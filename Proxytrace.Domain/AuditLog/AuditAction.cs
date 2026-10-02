@@ -135,7 +135,9 @@ public enum AuditAction
     CostBudgetHardLimitReached = 76,
     ProjectDefaultUpstreamProviderChanged = 77,
 
-    // A scope's user-curated display name / description was edited. Scopes themselves are
-    // auto-created by ingestion and are not audited.
+    // A scope's user-curated display name / description was edited, or a member deleted the scope.
+    // Scopes themselves are auto-created by ingestion (and idle ones swept by retention), which is
+    // not audited.
     ScopeUpdated = 78,
+    ScopeDeleted = 79,
 }

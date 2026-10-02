@@ -11,8 +11,8 @@ namespace Proxytrace.Api.Controllers;
 
 /// <summary>
 /// API controller for scopes — the use-case groups of agents inside a project. Scopes are created
-/// by ingestion (never through this API); members of the project can list them and edit their
-/// display name and description.
+/// by ingestion (never through this API); members of the project can list them, edit their display
+/// name and description, and delete them.
 /// </summary>
 [ApiController]
 [Authorize]
@@ -91,6 +91,28 @@ public class ScopesController : ControllerBase
 
         var overview = await repository.GetOverviewAsync(saved.Id, cancellationToken);
         return overview is null ? NotFound() : await ToDetailDtoAsync(overview, cancellationToken);
+    }
+
+    /// <summary>
+    /// Deletes a scope, freeing its slot under the per-project scope cap. Its traces are kept and keep
+    /// their scope id (the column is FK-free, like a session's): a client that sends the key again
+    /// re-creates the scope under the same derived id, and those traces belong to it again. 404 when
+    /// it does not exist or the caller cannot access its project.
+    /// </summary>
+    [HttpDelete("{id:guid}")]
+    public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
+    {
+        var scope = await repository.FindAsync(id, cancellationToken);
+        if (scope is null || !await accessGuard.CanAccessProjectAsync(scope.ProjectId, cancellationToken))
+            return NotFound();
+
+        if (!await repository.RemoveAsync(scope.Id, cancellationToken))
+            return NotFound();
+
+        audit.LogAudit(
+            AuditAction.ScopeDeleted, nameof(IScope), scope.Id, scope.DisplayName ?? scope.ExternalKey,
+            projectId: scope.ProjectId);
+        return NoContent();
     }
 
     private async Task<ScopeDetailDto> ToDetailDtoAsync(ScopeOverview overview, CancellationToken cancellationToken)

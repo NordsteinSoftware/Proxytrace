@@ -1494,6 +1494,7 @@ export enum AuditAction {
   CostBudgetHardLimitReached = 'CostBudgetHardLimitReached',
   ProjectDefaultUpstreamProviderChanged = 'ProjectDefaultUpstreamProviderChanged',
   ScopeUpdated = 'ScopeUpdated',
+  ScopeDeleted = 'ScopeDeleted',
 }
 
 export enum AuditActorType {

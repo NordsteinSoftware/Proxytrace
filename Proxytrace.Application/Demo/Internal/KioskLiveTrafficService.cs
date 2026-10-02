@@ -176,8 +176,7 @@ internal sealed class KioskLiveTrafficService : BackgroundService
             call = await callRepo.AddAsync(call, cancellationToken);
             if (scopeId is { } scoped)
             {
-                long tokens = call.Response?.Usage is { } u ? (long)(u.InputTokenCount + u.OutputTokenCount) : 0;
-                await scopes.RecordActivityAsync(scoped, call.Version.Id, tokens, call.CreatedAt, cancellationToken);
+                await scopes.RecordActivityAsync(scoped, call.Version.Id, call.CountedTokens(), call.CreatedAt, cancellationToken);
             }
             traceBroadcaster.Publish(TraceCreatedEvent.Create(call));
         }

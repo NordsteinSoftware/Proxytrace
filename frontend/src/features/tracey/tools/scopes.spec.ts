@@ -45,6 +45,18 @@ describe('list_scopes', () => {
     });
   });
 
+  it('labels a scope the way the UI does, so a blank display name falls back to the key', async () => {
+    scopesApi.list.mockResolvedValue([{
+      id: 's1', projectId: 'p1', key: 'support-agents', displayName: '   ', description: null,
+      createdAt: '2026-10-01T00:00:00Z', lastActivityAt: null, traceCount: 0, totalTokens: 0, agentIds: [],
+    }]);
+
+    const c = ctx();
+    const result = await run(createScopeTools(c, store).list_scopes, c);
+
+    expect(result).toMatchObject({ items: [{ name: 'support-agents' }] });
+  });
+
   it('returns nothing without a project instead of calling the API', async () => {
     const c = ctx({ projectId: undefined });
     expect(await run(createScopeTools(c, store).list_scopes, c)).toEqual({ count: 0, items: [] });

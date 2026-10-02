@@ -124,6 +124,47 @@ public sealed class ScopesControllerTests : BaseTest<Module>
         (await repo.GetAsync(scopeId, CancellationToken)).DisplayName.Should().BeNull();
     }
 
+    [TestMethod]
+    public async Task Delete_ExistingScope_RemovesItKeepsItsTracesAndAudits()
+    {
+        IServiceProvider services = GetServices();
+        var agent = await services.GetRequiredService<IDomainEntityGenerator<IAgent>>().CreateAsync(CancellationToken);
+        var repo = services.GetRequiredService<IScopeRepository>();
+        var scopeId = await AdmitAsync(repo, agent.Project.Id, "support");
+        await repo.RecordActivityAsync(scopeId, agent.CurrentVersion.Id, 40, DateTimeOffset.UtcNow, CancellationToken);
+        var audit = new RecordingAuditLogger();
+
+        var result = await ResolveController(services, audit: audit).Delete(scopeId, CancellationToken);
+
+        result.Should().BeOfType<NoContentResult>();
+        (await repo.FindAsync(scopeId, CancellationToken)).Should().BeNull();
+        (await repo.GetAgentIdsAsync(scopeId, CancellationToken)).Should().BeEmpty();
+        audit.Events.Should().ContainSingle().Which.Id.Should().Be((int)AuditAction.ScopeDeleted);
+    }
+
+    [TestMethod]
+    public async Task Delete_WhenCallerCannotAccessProject_ReturnsNotFoundAndKeepsScope()
+    {
+        IServiceProvider services = GetServices();
+        var repo = services.GetRequiredService<IScopeRepository>();
+        var scopeId = await AdmitAsync(repo, Guid.NewGuid(), "support");
+
+        var result = await ResolveController(services, DenyingGuard()).Delete(scopeId, CancellationToken);
+
+        result.Should().BeOfType<NotFoundResult>();
+        (await repo.FindAsync(scopeId, CancellationToken)).Should().NotBeNull();
+    }
+
+    [TestMethod]
+    public async Task Delete_Unknown_ReturnsNotFound()
+    {
+        IServiceProvider services = GetServices();
+
+        var result = await ResolveController(services).Delete(Guid.NewGuid(), CancellationToken);
+
+        result.Should().BeOfType<NotFoundResult>();
+    }
+
     private async Task<Guid> AdmitAsync(IScopeRepository repo, Guid projectId, string key)
     {
         var scopeId = await repo.AdmitAsync(projectId, key, 100, CancellationToken);

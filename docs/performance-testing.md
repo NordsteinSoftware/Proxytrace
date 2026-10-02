@@ -132,7 +132,7 @@ the Scopes page and reads only the scope and membership tables joined to `AgentV
 hundred rows; a climb means it started aggregating `AgentCallEntity`.
 
 On the write side, `ingestThroughput` sends ~90% of its probe calls to one of three scopes, so the
-timed loop pays scope admission (a primary-key probe) before each insert and the membership bump
+timed loop pays scope admission (one probe of the unique `(ProjectId, ExternalKey)` index) before each insert and the membership bump
 after it — on a *few hot rows* shared by all eight workers, the contention scopes add that sessions
 (many cold rows) do not. Measured on a 20k dev seed (2026-10): 331 calls/s with scopes vs 377 on
 master, ~12% — well inside the budget. If concurrency or replica count grows and this widens,

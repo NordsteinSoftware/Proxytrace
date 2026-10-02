@@ -38,7 +38,7 @@ internal sealed class AgentCallProcessor : IAgentCallProcessor
     private readonly IBlockedCallRecorder blockedCallRecorder;
     private readonly ISessionRepository sessionRepository;
     private readonly IScopeRepository scopeRepository;
-    private readonly ScopeOptions scopeOptions;
+    private readonly ScopeAdmission scopeAdmission;
     private readonly ILogger<AgentCallProcessor> logger;
 
     /// <summary>
@@ -59,7 +59,7 @@ internal sealed class AgentCallProcessor : IAgentCallProcessor
         IBlockedCallRecorder blockedCallRecorder,
         ISessionRepository sessionRepository,
         IScopeRepository scopeRepository,
-        ScopeOptions scopeOptions,
+        ScopeAdmission scopeAdmission,
         ILogger<AgentCallProcessor> logger)
     {
         this.agentCallRepository = agentCallRepository;
@@ -76,7 +76,7 @@ internal sealed class AgentCallProcessor : IAgentCallProcessor
         this.blockedCallRecorder = blockedCallRecorder;
         this.sessionRepository = sessionRepository;
         this.scopeRepository = scopeRepository;
-        this.scopeOptions = scopeOptions;
+        this.scopeAdmission = scopeAdmission;
         this.logger = logger;
     }
 
@@ -204,17 +204,14 @@ internal sealed class AgentCallProcessor : IAgentCallProcessor
 
             // Upsert the session AFTER the call persists: the trace is the source of truth, so this is
             // best-effort — a failure here logs and is swallowed, never failing or duplicating ingestion
-            // (the call row already exists). TotalTokens mirrors the value AgentCallConfig denormalizes
+            // (the call row already exists). CountedTokens is the value AgentCallConfig denormalizes
             // onto AgentCallEntity.TotalTokens.
             if (session is { } s)
             {
                 try
                 {
-                    var totalTokens = call.Response?.Usage is { } u
-                        ? (long)(u.InputTokenCount + u.OutputTokenCount)
-                        : 0;
                     await sessionRepository.RecordActivityAsync(
-                        s.Id, s.Key, job.Project.Id, totalTokens, call.CreatedAt, cancellationToken);
+                        s.Id, s.Key, job.Project.Id, call.CountedTokens(), call.CreatedAt, cancellationToken);
                 }
                 catch (Exception e)
                 {
@@ -232,11 +229,8 @@ internal sealed class AgentCallProcessor : IAgentCallProcessor
             {
                 try
                 {
-                    var totalTokens = call.Response?.Usage is { } u
-                        ? (long)(u.InputTokenCount + u.OutputTokenCount)
-                        : 0;
                     await scopeRepository.RecordActivityAsync(
-                        scoped, version.Id, totalTokens, call.CreatedAt, cancellationToken);
+                        scoped, version.Id, call.CountedTokens(), call.CreatedAt, cancellationToken);
                 }
                 catch (Exception e)
                 {
@@ -332,13 +326,6 @@ internal sealed class AgentCallProcessor : IAgentCallProcessor
         return false;
     }
 
-    /// <summary>
-    /// Resolves the version for a call whose owning agent was named explicitly. Bypasses the
-    /// similarity matcher: the named agent is looked up (created from the wire if it is the first
-    /// call for that name), and a version with an identical strict fingerprint is reused — otherwise
-    /// a new version is appended. The version content always comes from the actual request, so the
-    /// backend never has to mirror the client's tool schemas or system prompt.
-    /// </summary>
     // Resolves the job's scope key to a scope id, creating the scope on first sight. Runs BEFORE the
     // call persists (the id is stamped onto the row), so a storage failure here must not lose the
     // trace: it falls back to the derived id — deterministic, so the scope row that the next call
@@ -352,8 +339,7 @@ internal sealed class AgentCallProcessor : IAgentCallProcessor
 
         try
         {
-            return await scopeRepository.AdmitAsync(
-                job.Project.Id, key, scopeOptions.MaxScopesPerProject, cancellationToken);
+            return await scopeAdmission.AdmitAsync(job.Project.Id, key, cancellationToken);
         }
         catch (Exception e) when (e is not OperationCanceledException)
         {
@@ -362,6 +348,13 @@ internal sealed class AgentCallProcessor : IAgentCallProcessor
         }
     }
 
+    /// <summary>
+    /// Resolves the version for a call whose owning agent was named explicitly. Bypasses the
+    /// similarity matcher: the named agent is looked up (created from the wire if it is the first
+    /// call for that name), and a version with an identical strict fingerprint is reused — otherwise
+    /// a new version is appended. The version content always comes from the actual request, so the
+    /// backend never has to mirror the client's tool schemas or system prompt.
+    /// </summary>
     private async Task<IAgentVersion?> ResolveVersionForNamedAgentAsync(
         IngestJob job,
         string agentName,

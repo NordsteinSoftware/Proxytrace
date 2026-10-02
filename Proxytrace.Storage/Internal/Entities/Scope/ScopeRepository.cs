@@ -30,6 +30,12 @@ internal class ScopeRepository
     }
 
     /// <summary>
+    /// Finds the id of a project's scope by its canonical key.
+    /// </summary>
+    public Task<Guid?> FindIdByKeyAsync(Guid projectId, string externalKey, CancellationToken cancellationToken = default)
+        => FindIdByKeyAsync(contextFactory(), projectId, externalKey, cancellationToken);
+
+    /// <summary>
     /// Admit asynchronously.
     /// </summary>
     public async Task<Guid?> AdmitAsync(
@@ -38,27 +44,21 @@ internal class ScopeRepository
         int maxScopesPerProject,
         CancellationToken cancellationToken = default)
     {
-        var scopeId = ScopeIdDerivation.Derive(projectId, externalKey);
         var context = contextFactory();
 
-        // Steady state: one primary-key probe. No in-process cache on purpose — a cached id would
-        // outlive a deleted project or a test database and then stamp traces with a scope that has
-        // no row, which is exactly the drift this check exists to prevent.
-        if (await context.Set<ScopeEntity>().AnyAsync(e => e.Id == scopeId, cancellationToken))
-            return scopeId;
-
-        var existingKeyId = await FindIdByKeyAsync(context, projectId, externalKey, cancellationToken);
-        if (existingKeyId is not null)
-            return existingKeyId;
+        // Steady state: one probe of the unique (ProjectId, ExternalKey) index — by key, not by the
+        // derived id, so a row created under any other id is still found. No in-process cache on
+        // purpose — a cached id would outlive a deleted project, scope or test database and then
+        // stamp traces with a scope that has no row, which is exactly the drift this check exists to
+        // prevent.
+        var existingId = await FindIdByKeyAsync(context, projectId, externalKey, cancellationToken);
+        if (existingId is not null)
+            return existingId;
 
         if (await context.Set<ScopeEntity>().CountAsync(e => e.ProjectId == projectId, cancellationToken) >= maxScopesPerProject)
-        {
-            logger.LogWarning(
-                "Project {ProjectId} reached its limit of {MaxScopes} scopes; ingesting scope key {ScopeKey} unscoped",
-                projectId, maxScopesPerProject, externalKey);
             return null;
-        }
 
+        var scopeId = ScopeIdDerivation.Derive(projectId, externalKey);
         var now = DateTimeOffset.UtcNow;
         try
         {
@@ -170,34 +170,43 @@ internal class ScopeRepository
         if (removals.Count == 0)
             return;
 
-        var context = contextFactory();
-        foreach (var removal in removals)
-        {
-            // Clamped at zero: a counter can already be low (a bump that failed after its trace
-            // persisted — the upsert is best-effort by design).
-            if (context.Database.IsRelational())
-            {
-                await context.Set<ScopeAgentVersionEntity>()
-                    .Where(e => e.ScopeId == removal.ScopeId && e.AgentVersionId == removal.AgentVersionId)
-                    .ExecuteUpdateAsync(s => s
-                        .SetProperty(e => e.TraceCount, e => e.TraceCount > removal.TraceCount ? e.TraceCount - removal.TraceCount : 0)
-                        .SetProperty(e => e.TotalTokens, e => e.TotalTokens > removal.TotalTokens ? e.TotalTokens - removal.TotalTokens : 0),
-                        cancellationToken);
-                continue;
-            }
+        // One row per membership: the set-based UPDATE below joins each target row once, so two
+        // removals for the same (scope, version) would otherwise apply only one of their deltas.
+        var merged = removals
+            .GroupBy(r => (r.ScopeId, r.AgentVersionId))
+            .Select(g => new ScopeTraceRemoval(
+                g.Key.ScopeId, g.Key.AgentVersionId, g.Sum(r => r.TraceCount), g.Sum(r => r.TotalTokens)))
+            .ToArray();
 
+        var context = contextFactory();
+        if (context.Database.IsRelational())
+        {
+            await ApplyRemovalsAsync(context, merged, cancellationToken);
+            return;
+        }
+
+        // In-memory provider: no raw SQL, single-process — read-modify-write, as RecordActivitiesAsync.
+        foreach (var removal in merged)
+        {
             var existing = await context.Set<ScopeAgentVersionEntity>()
                 .FirstOrDefaultAsync(e => e.ScopeId == removal.ScopeId && e.AgentVersionId == removal.AgentVersionId, cancellationToken);
             if (existing is null)
                 continue;
 
+            var traceCount = Math.Max(0, existing.TraceCount - removal.TraceCount);
+            if (traceCount == 0)
+            {
+                context.Set<ScopeAgentVersionEntity>().Remove(existing);
+                continue;
+            }
+
             context.Entry(existing).CurrentValues.SetValues(new
             {
-                TraceCount = Math.Max(0, existing.TraceCount - removal.TraceCount),
+                TraceCount = traceCount,
                 TotalTokens = Math.Max(0, existing.TotalTokens - removal.TotalTokens),
             });
-            await context.SaveChangesAsync(cancellationToken);
         }
+        await context.SaveChangesAsync(cancellationToken);
     }
 
     /// <summary>
@@ -215,6 +224,66 @@ internal class ScopeRepository
         context.Set<ScopeAgentVersionEntity>().RemoveRange(toRemove);
         await context.SaveChangesAsync(cancellationToken);
         return toRemove.Count;
+    }
+
+    /// <summary>
+    /// Removes idle, uncurated scopes created at or before the cutoff.
+    /// </summary>
+    public async Task<int> RemoveIdleOlderThanAsync(DateTimeOffset cutoff, CancellationToken cancellationToken = default)
+    {
+        var context = contextFactory();
+        var memberships = context.Set<ScopeAgentVersionEntity>();
+        var query = context.Set<ScopeEntity>()
+            .Where(e => e.CreatedAt <= cutoff
+                        && e.DisplayName == null
+                        && e.Description == null
+                        && !memberships.Any(m => m.ScopeId == e.Id));
+
+        // Ids first, for the change notifications the scope pickers listen to — at most the
+        // per-project cap per project, so the read is small.
+        var ids = await query.Select(e => e.Id).ToListAsync(cancellationToken);
+        if (ids.Count == 0)
+            return 0;
+
+        int removed;
+        if (context.Database.IsRelational())
+        {
+            // Re-applies the idle predicate rather than deleting by id, so a scope that gained a
+            // member (or a name) since the read above survives.
+            removed = await query.Where(e => ids.Contains(e.Id)).ExecuteDeleteAsync(cancellationToken);
+        }
+        else
+        {
+            var toRemove = await context.Set<ScopeEntity>().Where(e => ids.Contains(e.Id)).ToListAsync(cancellationToken);
+            context.Set<ScopeEntity>().RemoveRange(toRemove);
+            await context.SaveChangesAsync(cancellationToken);
+            removed = toRemove.Count;
+        }
+
+        foreach (var id in ids)
+        {
+            InvalidateCacheEntry(id);
+            Notify(id, EntityChangeType.Removed);
+        }
+        return removed;
+    }
+
+    /// <summary>
+    /// Removes a scope. Its traces keep their <c>ScopeId</c> (traces are irreplaceable telemetry
+    /// and the column is FK-free); the memberships go with it.
+    /// </summary>
+    public override async Task<bool> RemoveAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        var removed = await base.RemoveAsync(id, cancellationToken);
+        var context = contextFactory();
+        if (removed && !context.Database.IsRelational())
+        {
+            // The FK cascades relationally; the in-memory provider only cascades tracked dependents.
+            var orphans = await context.Set<ScopeAgentVersionEntity>().Where(m => m.ScopeId == id).ToListAsync(cancellationToken);
+            context.Set<ScopeAgentVersionEntity>().RemoveRange(orphans);
+            await context.SaveChangesAsync(cancellationToken);
+        }
+        return removed;
     }
 
     /// <summary>
@@ -301,6 +370,32 @@ internal class ScopeRepository
             agents.Sum(a => a.TotalTokens),
             agents.Count > 0 ? agents.Max(a => a.LastSeenAt) : null,
             agents);
+    }
+
+    // One round trip for the whole batch: the deltas travel as parallel arrays and are joined in
+    // with unnest, then every membership the batch emptied is deleted. Clamped at zero: a counter
+    // can already be low (a bump that failed after its trace persisted — the upsert is best-effort
+    // by design), and the clamp then empties the membership early rather than leaving it negative.
+    private static Task ApplyRemovalsAsync(
+        DbContext context, IReadOnlyCollection<ScopeTraceRemoval> removals, CancellationToken cancellationToken)
+    {
+        var scopeIds = removals.Select(r => r.ScopeId).ToArray();
+        var versionIds = removals.Select(r => r.AgentVersionId).ToArray();
+        var traceCounts = removals.Select(r => r.TraceCount).ToArray();
+        var tokens = removals.Select(r => r.TotalTokens).ToArray();
+
+        return context.Database.ExecuteSqlAsync(
+            $"""
+             UPDATE "ScopeAgentVersionEntity" AS m
+             SET "TraceCount" = GREATEST(m."TraceCount" - r.trace_count, 0),
+                 "TotalTokens" = GREATEST(m."TotalTokens" - r.total_tokens, 0)
+             FROM unnest({scopeIds}, {versionIds}, {traceCounts}, {tokens}) AS r(scope_id, version_id, trace_count, total_tokens)
+             WHERE m."ScopeId" = r.scope_id AND m."AgentVersionId" = r.version_id;
+             DELETE FROM "ScopeAgentVersionEntity" AS m
+             USING unnest({scopeIds}, {versionIds}) AS r(scope_id, version_id)
+             WHERE m."ScopeId" = r.scope_id AND m."AgentVersionId" = r.version_id AND m."TraceCount" = 0;
+             """,
+            cancellationToken);
     }
 
     private static Task<Guid?> FindIdByKeyAsync(

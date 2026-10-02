@@ -169,5 +169,6 @@ Currently recorded ranges worth knowing about: **71–75** are the cost-budget a
 `CostBudgetSoftLimitReached`/`CostBudgetHardLimitReached` (System actor, from `CostBudgetGuard`).
 The two crossings are audited *in addition to* their notification, so the record survives
 notification acknowledgement and retention. See [`cost-controls.md`](cost-controls.md).
-**78** `ScopeUpdated` records an edit of a scope's display name/description (`ScopesController`,
-project-scoped). Scopes are auto-created by ingestion, so creation is deliberately not audited.
+**78** `ScopeUpdated` records an edit of a scope's display name/description and **79**
+`ScopeDeleted` a member deleting a scope (both `ScopesController`, project-scoped). Scopes are
+auto-created by ingestion, and idle ones swept by trace retention, so neither is audited.
