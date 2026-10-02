@@ -65,6 +65,8 @@ forwarded to your provider.
 
 ## The Scopes page
 
+![The Scopes page: the scope list on the left; on the right the selected "Customer care" scope with its trace, token and agent counts, its two member agents, and the scoped base URL and header to copy.](/screenshots/scopes/overview.png)
+
 Open **Scopes** (under **Build** in the sidebar) to see every scope of the current project,
 most recently active first. Each row shows the scope's name, its key, how many agents and traces
 it has, and when its last trace arrived. Select one to see:
@@ -80,6 +82,8 @@ it has, and when its last trace arrived. Select one to see:
 
 **New scope** opens a small helper: type a name and it shows the key Proxytrace will use and the
 URL to point a client at. Nothing is saved — the scope appears in the list with its first trace.
+
+![Traces filtered to the "Customer care" scope: the Scope chip under the toolbar, and each row showing the scope name beneath the agent.](/screenshots/scopes/traces-filter.png)
 
 Scopes also show up elsewhere: as a [filter on Traces](/guide/capturing-traces#filtering-search-and-scrolling),
 as a selector on the [Dashboard](/guide/dashboard), and as a filter and grouping on the

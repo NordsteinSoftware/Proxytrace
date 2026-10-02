@@ -57,7 +57,7 @@ Write a short temp capture script that imports the shared helpers and drives eac
 ```
 Template:
 ```js
-import { launch, goto, shot, waitForReady, outDir } from '../manual/screenshots/capture-lib.mjs';
+import { launch, goto, shot, waitForReady, outDir } from './capture-lib.mjs';
 import { join } from 'node:path';
 
 await waitForReady();

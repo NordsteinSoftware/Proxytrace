@@ -10,7 +10,6 @@ import { tracePreview } from '../../../lib/trace';
 import { OUTLIER_FLAG_LABEL, isOutlier, outlierFlagKeys } from '../../../lib/outliers';
 import type { AgentCallListItemDto } from '../../../api/models';
 import { Tooltip } from '../../../components/ui/Tooltip';
-import { Pill } from '../../../components/ui/Pill';
 import { AlertTriangleIcon } from '../../../components/icons';
 import { latencyBarPct } from '../tracesMeta';
 import { useTraceScope } from '../traceScopesContext';
@@ -45,20 +44,26 @@ export function MessagePreviewCell({ trace }: { trace: AgentCallListItemDto }) {
 }
 
 /**
- * Agent column: the agent name, plus a small tag naming the trace's scope (use-case group) when it
- * was sent under one. The label resolves from the scopes the list provides (`TraceScopesContext`),
- * so the row DTO only needs the id.
+ * Agent column: the agent name, with the trace's scope (use-case group) as a caption line beneath it
+ * when it was sent under one. Stacked rather than side by side so neither the name nor the scope has
+ * to share the column's width — side by side, both truncated to noise. The label resolves from the
+ * scopes the list provides (`TraceScopesContext`), so the row DTO only needs the id.
  */
 export function AgentCell({ agentName, scopeId }: { agentName: string | null; scopeId: string | null }) {
   const scope = useTraceScope(scopeId);
   return (
-    <span className="flex items-center gap-1.5 min-w-0 pr-3 @max-2xl:hidden">
-      <span className="text-body text-secondary overflow-hidden text-ellipsis whitespace-nowrap min-w-0">
+    <span className="flex flex-col justify-center min-w-0 pr-3 @max-2xl:hidden">
+      <span className="text-body text-secondary overflow-hidden text-ellipsis whitespace-nowrap">
         {agentName ?? <span className="text-muted">—</span>}
       </span>
       {scope && (
-        <span className="shrink min-w-0 max-w-[50%] overflow-hidden" data-testid={`trace-scope-tag-${scope.id}`}>
-          <Pill label={scopeLabel(scope)} color={scopeColor(scope.id)} size="sm" />
+        <span
+          className="flex items-center gap-1.5 min-w-0 text-caption text-secondary"
+          title={scopeLabel(scope)}
+          data-testid={`trace-scope-tag-${scope.id}`}
+        >
+          <span aria-hidden className="size-1.5 rounded-full shrink-0" style={{ background: scopeColor(scope.id) }} />
+          <span className="overflow-hidden text-ellipsis whitespace-nowrap">{scopeLabel(scope)}</span>
         </span>
       )}
     </span>

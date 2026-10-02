@@ -62,8 +62,8 @@ Typical things you can do:
   - **Agent** — focus on one agent. Only agents that actually have traces in the selected
     time range are listed.
   - **Scope** — only traces sent under one [scope](/guide/scopes) (a use-case group of agents).
-    Rows of scoped traces also carry a small tag with the scope's name next to the agent, and the
-    trace detail panel links to the scope.
+    Rows of scoped traces also show the scope's name beneath the agent, and the trace detail panel
+    links to the scope.
   - **Anomaly** — only flagged traces: **Any anomaly**, or a specific reason (high tokens,
     high latency, low cache hit, many tool calls, or a
     [custom detector](/guide/anomaly-dashboard#custom-anomaly-detectors) hit).
