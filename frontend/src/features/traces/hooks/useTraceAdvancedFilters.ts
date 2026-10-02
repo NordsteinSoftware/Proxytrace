@@ -37,7 +37,12 @@ export function parseStoredAdvancedFilters(
   if (raw !== null) {
     try {
       const parsed: unknown = JSON.parse(raw);
-      if (isValidAdvancedFilters(parsed)) return parsed;
+      // Fill slots added since the value was stored (e.g. `scope`) with their empty default
+      // before validating — otherwise every filter bar saved by an older version would fail the
+      // shape check and silently reset to all-empty.
+      const merged: unknown =
+        typeof parsed === 'object' && parsed !== null ? { ...EMPTY_ADVANCED_FILTERS, ...parsed } : parsed;
+      if (isValidAdvancedFilters(merged)) return merged;
     } catch {
       // fall through to the defaults — a corrupt value must not break the page
     }

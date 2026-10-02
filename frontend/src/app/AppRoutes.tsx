@@ -31,6 +31,7 @@ const AnomalyDashboard = lazy(() => import('../features/anomalies/AnomalyDashboa
 const Costs = lazy(() => import('../features/costs/Costs'));
 const TraceyAI = lazy(() => import('../features/tracey/TraceyAI'));
 const Agents = lazy(() => import('../features/agents/Agents'));
+const Scopes = lazy(() => import('../features/scopes/Scopes'));
 const Suites = lazy(() => import('../features/suites/Suites'));
 const Evaluators = lazy(() => import('../features/evaluators/Evaluators'));
 const Runs = lazy(() => import('../features/runs/Runs'));
@@ -122,6 +123,7 @@ export function AppRoutes() {
         <Route path="costs" element={wrap(<Costs />)} />
         <Route path="tracey-ai" element={wrap(<RequiresFeature feature="Tracey"><TraceyAI /></RequiresFeature>)} />
         <Route path="agents" element={wrap(<Agents />)} />
+        <Route path="scopes" element={wrap(<Scopes />)} />
         <Route path="suites" element={wrap(<Suites />)} />
         <Route path="evaluators" element={wrap(<Evaluators />)} />
         {/* Legacy/deep-link path form → canonical ?id= query selection. */}

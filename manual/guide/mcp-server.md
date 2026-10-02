@@ -74,11 +74,15 @@ All tools operate within the connecting key's project.
 |------|-------|
 | Agents | `list_agents`, `get_agent` |
 | Traces | `list_traces`, `get_trace` |
+| Scopes | `list_scopes` |
 | Test suites | `list_suites`, `get_suite`, `create_suite_from_traces`, `add_trace_to_suite` |
 | Test runs | `list_test_runs`, `get_test_run`, `start_test_run`, `cancel_test_run`, `get_run_failures`, `compare_runs` |
 | Proposals | `list_proposals`, `get_proposal`, `get_proposal_artifact`, `set_proposal_status` |
 | Theories | `list_theories`, `get_theory`, `submit_theory` |
 | Statistics | `get_dashboard`, `get_agent_overview` |
+
+`list_traces` and `get_dashboard` take an optional `scope` — a [scope](./scopes)'s id or its key
+(`support-agents`, or `Support Agents` — it is normalised the same way) — to look at one use case.
 
 `add_trace_to_suite` takes an optional `expectedOutput`. Leave it off to promote the trace as-is (the
 expected output is the response the agent actually gave). Provide it to record a **correction** — the

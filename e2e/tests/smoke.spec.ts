@@ -10,6 +10,7 @@ const ROUTES = [
   { path: '/anomalies', label: 'anomalies' },
   { path: '/costs', label: 'costs' },
   { path: '/agents', label: 'agents' },
+  { path: '/scopes', label: 'scopes' },
   { path: '/suites', label: 'suites' },
   { path: '/runs', label: 'runs' },
   { path: '/evaluators', label: 'evaluators' },

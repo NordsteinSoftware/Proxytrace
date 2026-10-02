@@ -127,7 +127,7 @@ and deliberately leaving `SessionId` null) is covered under "Per-response status
 | `tracey-chat-context.ts` | Shares the single `TraceyChat` (runtime + state) app-wide. `TraceyChatProvider` mounts in `TraceyHost` around the `Outlet`; `useTraceyChatContext()` reads it from the page. |
 | `tracey-runtime.ts` | `TraceyTransport` — the AI SDK `ChatTransport`. Wires `createOpenAI` at the same-origin base URL, injects the JWT + turn-correlation header per request, windows the history sent to the model (`windowMessages`, UI thread untouched), runs `streamText` with `prepareStep` (progressive tool disclosure) + `stopWhen: stepCountIs(MAX_TURN_STEPS)` (64 — a high infinite-loop **safety backstop**, not a user-facing turn limit), adapts our tools into the SDK `ToolSet` (threading the abort signal), and writes per-turn metadata on finish. |
 | `tracey-tools.ts` | **Composition root** for tools: `createTraceyTools(ctx)` wires every `tools/*` domain factory against a shared artifact store. `TRACEY_TOOLS_META` is the static name+description list for the slash menu (must list every tool). |
-| `tools/` | Per-domain tool factories: `navigation.ts` (navigate, search_docs, load_skill), `agents.ts`, `suites.ts`, `runs.ts`, `proposals.ts`, `stats.ts`, `providers.ts`, `traces.ts`, `display.ts` (show_*, ask_questions), `await.ts` (await_actions). `shared.ts` holds `TraceyToolContext`, the `tool()`/`empty`/`CANCELLED` helpers, and `makeStore`. `poll-until-terminal.ts` backs `await`; `run-analysis.ts` holds the pure comparison derivation behind `compare_runs` and the shared `clip`; `case-verdict.ts` holds the pure per-case verdicts behind `get_case_results` (both reuse `lib/runResults.ts`); `trace-transcript.ts` builds `get_trace`'s verbose whole-conversation digest. |
+| `tools/` | Per-domain tool factories: `navigation.ts` (navigate, search_docs, load_skill), `agents.ts`, `suites.ts`, `runs.ts`, `proposals.ts`, `stats.ts`, `providers.ts`, `traces.ts`, `scopes.ts` (list_scopes), `display.ts` (show_*, ask_questions), `await.ts` (await_actions). `shared.ts` holds `TraceyToolContext`, the `tool()`/`empty`/`CANCELLED` helpers, and `makeStore`. `poll-until-terminal.ts` backs `await`; `run-analysis.ts` holds the pure comparison derivation behind `compare_runs` and the shared `clip`; `case-verdict.ts` holds the pure per-case verdicts behind `get_case_results` (both reuse `lib/runResults.ts`); `trace-transcript.ts` builds `get_trace`'s verbose whole-conversation digest. |
 | `tool-access.ts` | **Progressive tool disclosure.** `CORE_TOOL_NAMES` (always active) + `activeToolNamesFor(loadedSkillIds)` (core ∪ the tool bundles of skills loaded this conversation). |
 | `tracey-prompt.ts` | `TRACEY_SYSTEM_PROMPT` — her system prompt (wire source of truth), with the skill catalog appended. |
 | `skills/` | On-demand **skills** — markdown playbooks loaded at runtime via `load_skill`. `registry.ts` parses front-matter (`name`, `description`, optional `tools:` bundle) from every `*.md` via `import.meta.glob`; `types.ts`; one file per skill. |
@@ -275,9 +275,10 @@ column is which bundle activates the tool (`core` = always available).
 | `list_proposals` / `get_proposal` | read | no | `review-proposals` | `ProposalListToolUI` / `ProposalCardToolUI` |
 | `set_proposal_status` | write | **yes** | `review-proposals` | `ToolCallCard` |
 | `list_theories` | read | no | `optimize-agent`, `diagnose-agent` | `TheoryListToolUI` |
-| `get_dashboard_stats` | read | no | `project-insights` | `DashboardStatsToolUI` |
+| `get_dashboard_stats` | read (optional `scopeId`) | no | `project-insights` | `DashboardStatsToolUI` |
 | `get_provider` | read | no | `project-insights` | `ProviderCardToolUI` |
-| `find_traces` | read (search) | no | `project-insights`, `optimize-agent`, `diagnose-agent` | `TraceListToolUI` |
+| `find_traces` | read (search; optional `scopeId`) | no | `project-insights`, `optimize-agent`, `diagnose-agent` | `TraceListToolUI` |
+| `list_scopes` | read | no | `project-insights` | `ToolCallCard` |
 | `get_trace` | read (`verbose` opt-in) | no | `project-insights`, `optimize-agent`, `diagnose-agent` | `TraceCardToolUI` |
 | `get_agent_anomalies` | read | no | `diagnose-agent` | `AnomalyListToolUI` |
 | `list_evaluators` | read | no | `diagnose-agent` | `EvaluatorListToolUI` |

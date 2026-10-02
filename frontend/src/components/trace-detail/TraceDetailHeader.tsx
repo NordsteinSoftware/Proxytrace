@@ -10,6 +10,7 @@ import { CopyButton } from '../ui/CopyButton';
 import { ColoredBadge } from '../ui/ColoredBadge';
 import { Button, IconButton } from '../ui/Button';
 import { AskTraceyButton } from '../tracey/AskTraceyButton';
+import { TraceScopeLink } from './TraceScopeLink';
 import { Trans, useLingui } from '@lingui/react/macro';
 
 export interface HeaderAction {
@@ -118,6 +119,7 @@ export function TraceDetailHeader({ trace, onClose, onPrev, onNext, onAskTracey,
             </Button>
           </>
         )}
+        {trace.scopeId && <TraceScopeLink scopeId={trace.scopeId} onClose={onClose} />}
         <span className="flex-1" />
         <div className="flex items-center gap-2 shrink-0">
           <AskTraceyButton

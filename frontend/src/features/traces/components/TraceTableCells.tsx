@@ -3,14 +3,17 @@
 
 import { useLingui } from '@lingui/react/macro';
 import { cn } from '../../../lib/cn';
-import { agentColor, modelColor } from '../../../lib/colors';
+import { agentColor, modelColor, scopeColor } from '../../../lib/colors';
+import { scopeLabel } from '../../../lib/scopes';
 import { fmtLatency, fmtTokens, cachedPct } from '../../../lib/format';
 import { tracePreview } from '../../../lib/trace';
 import { OUTLIER_FLAG_LABEL, isOutlier, outlierFlagKeys } from '../../../lib/outliers';
 import type { AgentCallListItemDto } from '../../../api/models';
 import { Tooltip } from '../../../components/ui/Tooltip';
+import { Pill } from '../../../components/ui/Pill';
 import { AlertTriangleIcon } from '../../../components/icons';
 import { latencyBarPct } from '../tracesMeta';
+import { useTraceScope } from '../traceScopesContext';
 
 // ── Latency bar ───────────────────────────────────────────────────────────────
 
@@ -37,6 +40,27 @@ export function MessagePreviewCell({ trace }: { trace: AgentCallListItemDto }) {
       <span className="text-body-sm text-secondary overflow-hidden text-ellipsis whitespace-nowrap">
         {preview ?? <span className="text-muted">—</span>}
       </span>
+    </span>
+  );
+}
+
+/**
+ * Agent column: the agent name, plus a small tag naming the trace's scope (use-case group) when it
+ * was sent under one. The label resolves from the scopes the list provides (`TraceScopesContext`),
+ * so the row DTO only needs the id.
+ */
+export function AgentCell({ agentName, scopeId }: { agentName: string | null; scopeId: string | null }) {
+  const scope = useTraceScope(scopeId);
+  return (
+    <span className="flex items-center gap-1.5 min-w-0 pr-3 @max-2xl:hidden">
+      <span className="text-body text-secondary overflow-hidden text-ellipsis whitespace-nowrap min-w-0">
+        {agentName ?? <span className="text-muted">—</span>}
+      </span>
+      {scope && (
+        <span className="shrink min-w-0 max-w-[50%] overflow-hidden" data-testid={`trace-scope-tag-${scope.id}`}>
+          <Pill label={scopeLabel(scope)} color={scopeColor(scope.id)} size="sm" />
+        </span>
+      )}
     </span>
   );
 }

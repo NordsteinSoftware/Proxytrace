@@ -20,7 +20,7 @@ const traces: AgentCallListItemDto[] = [100, 300, 500].map((durationMs, i) => ({
   cachedInputTokens: 20, durationMs, httpStatus: i === 1 ? 300 : 200,
   finishReason: null, errorMessage: null, costEur: i === 0 ? null : i === 1 ? 0 : 0.02,
   createdAt: '2026-09-18T10:00:00Z', updatedAt: '2026-09-18T10:00:00Z',
-  conversationId: i ? 'conversation' : null, sessionId: null, outlierFlags: 0,
+  conversationId: i ? 'conversation' : null, sessionId: null, scopeId: null, outlierFlags: 0,
 }));
 let container: HTMLDivElement;
 let root: Root;

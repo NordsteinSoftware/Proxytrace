@@ -28,7 +28,8 @@ export const QUERY_KEYS = {
   agentCallsForSuiteCreate: (agentId: string, from?: string) => ['agent-calls', 'suite-create', agentId, from ?? null] as const,
   agentCallsForSuiteEdit: (agentId?: string) => ['agent-calls', 'suite-edit', agentId] as const,
 
-  statisticsDashboard: (from: string | undefined, projectId?: string) => ['statistics-dashboard', from ?? null, projectId ?? null] as const,
+  statisticsDashboard: (from: string | undefined, projectId?: string, scopeId?: string) =>
+    ['statistics-dashboard', from ?? null, projectId ?? null, scopeId ?? null] as const,
   statisticsPassRates: (from?: string, agentId?: string, projectId?: string) => ['statistics-pass-rates', from, agentId, projectId ?? null] as const,
   statisticsErrorRates: (from?: string, agentId?: string, projectId?: string) => ['statistics-error-rates', from, agentId, projectId ?? null] as const,
   statisticsCostEstimate: (from?: string, agentId?: string, projectId?: string) => ['statistics-cost-estimate', from, agentId, projectId ?? null] as const,
@@ -120,6 +121,10 @@ export const QUERY_KEYS = {
   sessions: (projectId: string, page?: number, pageSize?: number) =>
     ['sessions', projectId, page ?? null, pageSize ?? null] as const,
   session: (id: string) => ['session', id] as const,
+
+  /** Every scope (use-case group of agents) of a project — unpaged, the API bounds it. */
+  scopes: (projectId: string) => ['scopes', projectId] as const,
+  scope: (id: string) => ['scope', id] as const,
 
   errorLog: (filter: object) => ['error-log', filter] as const,
   /** A single captured error by id (deep-link target from an error toast). */

@@ -12,6 +12,7 @@ import { useTraceSelection } from './hooks/useTraceSelection';
 import { useTraceSummary } from './hooks/useTraceSummary';
 import { useTraceFilters } from './hooks/useTraceFilters';
 import { useFocusTrace } from './hooks/useFocusTrace';
+import { useScopeDeepLink } from './hooks/useScopeDeepLink';
 import { useSelectedTrace } from '../../hooks/useSelectedTrace';
 import { useTraceSseStream } from './hooks/useTraceSseStream';
 import { spansMultipleDays, withDayDividers } from './traceDayDividers';
@@ -32,6 +33,7 @@ export default function Traces() {
   const { timeRange, setTimeRange, search, setSearch, showSystem, setShowSystem, sort, setSort, rangeWasRestored } =
     useTraceFilters();
   const { filters: advanced, setFilters: setAdvanced, clearAll: clearAdvanced } = useTraceAdvancedFilters(currentProjectId);
+  useScopeDeepLink(setAdvanced);
   // Previous windows pushed by each zoom-in; double-clicking the timeline pops one.
   const [zoomStack, setZoomStack] = useState<TimeRange[]>([]);
   const [expandedConvs, setExpandedConvs] = useState<Set<string>>(new Set());

@@ -11,13 +11,19 @@ export const createStatsTools: ToolFactory = (ctx, store) => {
         'headline summary plus per-agent and per-model usage breakdowns (calls, tokens) — use it ' +
         'to chart or compare usage across agents instead of fetching each agent individually. ' +
         'The full dashboard is rendered to the user as a card. All figures (totals, per-model, and ' +
-        'per-agent) exclude internal system agents (Tracey, evaluators) unless includeSystem is true.',
-      parameters: z.object({ present: presentArg, includeSystem: includeSystemArg }),
+        'per-agent) exclude internal system agents (Tracey, evaluators) unless includeSystem is true. ' +
+        'Pass scopeId (from `list_scopes`) to narrow every figure to one scope (use-case group of ' +
+        'agents); the pass rate then covers the test runs of that scope\'s agents.',
+      parameters: z.object({
+        present: presentArg,
+        includeSystem: includeSystemArg,
+        scopeId: z.string().optional().describe('Only this scope (an id from `list_scopes`).'),
+      }),
       confirm: false,
-      execute: async ({ includeSystem }) => {
+      execute: async ({ includeSystem, scopeId }) => {
         // System agents (Tracey, evaluators) make their own calls; exclude them server-side by
         // default so the summary, per-model, and per-agent figures are all about the user's agents.
-        const view = await statisticsApi.dashboard({ projectId, excludeSystemAgents: !includeSystem });
+        const view = await statisticsApi.dashboard({ projectId, scopeId, excludeSystemAgents: !includeSystem });
         // Per-agent tokens come from the bucketed series; fold it down to one row per agent so the
         // digest stays compact while still letting the model chart usage without N follow-up reads.
         const tokensByAgent = new Map<string, { inputTokens: number; outputTokens: number }>();

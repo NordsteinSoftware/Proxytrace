@@ -46,6 +46,7 @@ export default defineConfig({
         '**/traces-filters.spec.ts',
         '**/traces-grouping.spec.ts',
         '**/sessions.spec.ts',
+        '**/scopes.spec.ts',
         '**/outliers.spec.ts',
         '**/evaluators.spec.ts',
         '**/dashboard.spec.ts',

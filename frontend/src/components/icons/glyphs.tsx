@@ -9,6 +9,15 @@ export function GridIcon(props: IconProps) {
   );
 }
 
+/** Stacked layers — a scope (use-case group of agents). */
+export function LayersIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M12 2 2 7l10 5 10-5-10-5z"/><path d="m2 17 10 5 10-5"/><path d="m2 12 10 5 10-5"/>
+    </Svg>
+  );
+}
+
 export function SettingsIcon(props: IconProps) {
   return (
     <Svg {...props}>

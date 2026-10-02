@@ -22,6 +22,9 @@ export * from './trendDeltas';
 
 export const RANGES: RangeKey[] = ['1h', '24h', '7d', '30d', 'all'];
 
+/** Scope-select sentinel for "every scope" (Radix Select items cannot carry an empty value). */
+export const ALL_SCOPES = 'all';
+
 // ── Shared dashboard class recipes ───────────────────────────────────────────
 
 /** Section eyebrow label — the dashboard cards' shared mono-uppercase header treatment. */

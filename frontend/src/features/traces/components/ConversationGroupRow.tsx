@@ -7,7 +7,7 @@ import { tracePreview } from '../../../lib/trace';
 import type { AgentCallListItemDto } from '../../../api/models';
 import { TRACE_GRID_CLS, toolCount } from '../tracesMeta';
 import type { ConversationGroup } from '../tracesMeta';
-import { OutlierCell, TokenCell, CachedCell, ToolsCell, LatencyCell } from './TraceTableCells';
+import { AgentCell, OutlierCell, TokenCell, CachedCell, ToolsCell, LatencyCell } from './TraceTableCells';
 import { Trans, Plural } from '@lingui/react/macro';
 import { TraceSelectionCheckbox } from './TraceSelectionCheckbox';
 import type { TraceStatsSelection } from '../hooks/useTraceSelection';
@@ -77,9 +77,7 @@ export function ConversationGroupRow({ group, expanded, onToggle, selectedId, fr
           </span>
         </span>
 
-        <span className="text-body text-secondary overflow-hidden text-ellipsis whitespace-nowrap pr-3 @max-2xl:hidden">
-          {agentName ?? <span className="text-muted">—</span>}
-        </span>
+        <AgentCell agentName={agentName} scopeId={turns[0].scopeId} />
 
         <span className="min-w-0 overflow-hidden pr-3 @max-2xl:hidden">
           <Pill label={model} color={modelColor(model)} size="sm" />
@@ -134,9 +132,7 @@ export function ConversationGroupRow({ group, expanded, onToggle, selectedId, fr
               {tracePreview(turn) ?? <span className="text-muted">—</span>}
             </span>
           </span>
-          <span className="text-body text-secondary overflow-hidden text-ellipsis whitespace-nowrap pr-3 @max-2xl:hidden">
-            {turn.agentName ?? <span className="text-muted">—</span>}
-          </span>
+          <AgentCell agentName={turn.agentName} scopeId={turn.scopeId} />
           <span className="min-w-0 overflow-hidden pr-3 @max-2xl:hidden">
             <Pill label={turn.model} color={modelColor(turn.model)} size="sm" />
           </span>

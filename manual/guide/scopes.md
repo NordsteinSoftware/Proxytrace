@@ -63,6 +63,28 @@ forwarded to your provider.
 - **Keep `/openai/v1` at the end** of a scoped base URL. Only the traced OpenAI routes understand
   the scope segment; anything else under your project is forwarded to the provider unchanged.
 
+## The Scopes page
+
+Open **Scopes** (under **Build** in the sidebar) to see every scope of the current project,
+most recently active first. Each row shows the scope's name, its key, how many agents and traces
+it has, and when its last trace arrived. Select one to see:
+
+- **Activity** — traces, tokens, member agents, and last activity, counted within your trace
+  retention window.
+- **Agents** — every agent that has sent traces in the scope, with its traces, tokens, and when
+  it was last seen there. Click a row to open the agent.
+- **Send traffic to this scope** — the scoped base URL and the header alternative, ready to copy.
+- **View traces** — opens Traces filtered to the scope.
+- **Edit** — give the scope a friendlier **display name** and a **description**. The key itself
+  can't change, because it is what your clients send.
+
+**New scope** opens a small helper: type a name and it shows the key Proxytrace will use and the
+URL to point a client at. Nothing is saved — the scope appears in the list with its first trace.
+
+Scopes also show up elsewhere: as a [filter on Traces](/guide/capturing-traces#filtering-search-and-scrolling),
+as a selector on the [Dashboard](/guide/dashboard), and as a filter and grouping on the
+[Agents](/guide/agents#agents-and-scopes) page.
+
 ## Agents in several scopes
 
 Scopes don't change how agents are [detected](/guide/agents#how-agents-are-detected). An agent

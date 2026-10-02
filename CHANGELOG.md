@@ -18,6 +18,12 @@ follow [Semantic Versioning](https://semver.org). Ongoing work is collected unde
   normalised like project slugs (`Support Agents` and `support-agents` are one scope), and a name
   that can't be used never fails the call — the trace is just recorded unscoped. Agents that serve
   several use cases appear in each of their scopes. A project holds up to 200 scopes.
+  A new **Scopes** page lists each scope with its traces, tokens and member agents, shows the
+  scoped base URL to copy, and lets you give it a display name and description. Traces gain a
+  **Scope** filter (plus a scope tag on each row and a link in the trace detail), the Dashboard a
+  scope selector, and the Agents list a scope filter with **Group by scope**. MCP clients get
+  `list_scopes` and a `scope` argument on `list_traces` / `get_dashboard`; Tracey can list scopes
+  and narrow traces and dashboard stats to one.
 
 ## [1.14.0] - 2026-09-22
 

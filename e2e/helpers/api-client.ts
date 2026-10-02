@@ -653,7 +653,13 @@ export class ProxytraceApiClient {
      * `x-proxytrace-session-id`. Lets no-LLM specs exercise the sessions list / detail / filter.
      */
     sessionKey?: string;
-  }): Promise<{ id: string; agentId: string | null }> {
+    /**
+     * Raw client scope key. When set, the seed normalises and admits the scope exactly as the
+     * ingestion proxy does for `/{project}/{scope}/openai/v1` / `x-proxytrace-scope`, stamps it on
+     * the call and bumps the scope membership counters.
+     */
+    scopeKey?: string;
+  }): Promise<{ id: string; agentId: string | null; scopeId: string | null }> {
     const res = await this.request.post('/api/agent-calls/seed', {
       headers: this.headers(),
       data: {
@@ -669,9 +675,25 @@ export class ProxytraceApiClient {
         outlierFlags: opts.outlierFlags ?? null,
         toolNames: opts.toolNames ?? null,
         sessionKey: opts.sessionKey ?? null,
+        scopeKey: opts.scopeKey ?? null,
       },
     });
     if (!res.ok()) throw new Error(`seed agent-call failed: ${res.status()} ${await res.text()}`);
+    return res.json();
+  }
+
+  // ── Scopes ─────────────────────────────────────────────────────────────────
+  // GET /api/scopes?projectId= lists every scope (use-case group of agents) of a project — unpaged,
+  // most recently active first — with its within-retention counters and member agent ids.
+  async listScopes(projectId: string): Promise<Array<{
+    id: string;
+    key: string;
+    displayName: string | null;
+    traceCount: number;
+    agentIds: string[];
+  }>> {
+    const res = await this.request.get(`/api/scopes?projectId=${projectId}`, { headers: this.headers() });
+    if (!res.ok()) throw new Error(`list scopes failed: ${res.status()} ${await res.text()}`);
     return res.json();
   }
 

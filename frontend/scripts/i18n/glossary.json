@@ -34,6 +34,8 @@
     "API key",
     "Dashboard",
     "Member",
-    "Admin"
+    "Admin",
+    "Scope",
+    "Scopes"
   ]
 }

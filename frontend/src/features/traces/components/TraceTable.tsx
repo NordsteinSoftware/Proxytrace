@@ -15,6 +15,8 @@ import { useTraceVirtualizer } from '../hooks/useTraceVirtualizer';
 import { useScrollToTrace } from '../hooks/useScrollToTrace';
 import { useTraceColumnWidths } from '../hooks/useTraceColumnWidths';
 import type { TraceStatsSelection } from '../hooks/useTraceSelection';
+import { useProjectScopes } from '../../../hooks/useProjectScopes';
+import { TraceScopesContext } from '../traceScopesContext';
 
 /** Scroll offset under which the list counts as "at the top" for live-arrival purposes. */
 const AT_TOP_THRESHOLD_PX = 4;
@@ -115,6 +117,8 @@ export function TraceTable({
   const { style, resizeColumn } = useTraceColumnWidths();
   const { total, isFetching, isFetchingNextPage, hasNextPage, onLoadMore } = paging;
   const { freshIds, pendingRefresh, onAtTopChange } = live ?? NO_LIVE_ARRIVALS;
+  // One subscription for the whole list; rows read their scope tag from the context.
+  const { byId: scopesById } = useProjectScopes();
 
   const { virtualizer, virtualItems } = useTraceVirtualizer(scrollRef, items, {
     hasNextPage,
@@ -193,25 +197,27 @@ export function TraceTable({
           {view === 'empty-setup' && <TracesEmptyState />}
 
           {view === 'rows' && (
-            <div className="relative w-full" style={{ height: virtualizer.getTotalSize() }}>
-              {virtualItems.map(virtualItem => {
-                const item = items[virtualItem.index];
-                if (!item) return null;
-                return (
-                  <div
-                    key={listRowKey(item)}
-                    data-index={virtualItem.index}
-                    ref={virtualizer.measureElement}
-                    className="absolute top-0 left-0 w-full"
-                    style={{ transform: `translateY(${virtualItem.start}px)` }}
-                  >
-                    {item.kind === 'divider'
-                      ? <TraceDayDivider timestamp={item.timestamp} />
-                      : renderRow(item.row, selection, freshIds)}
-                  </div>
-                );
-              })}
-            </div>
+            <TraceScopesContext.Provider value={scopesById}>
+              <div className="relative w-full" style={{ height: virtualizer.getTotalSize() }}>
+                {virtualItems.map(virtualItem => {
+                  const item = items[virtualItem.index];
+                  if (!item) return null;
+                  return (
+                    <div
+                      key={listRowKey(item)}
+                      data-index={virtualItem.index}
+                      ref={virtualizer.measureElement}
+                      className="absolute top-0 left-0 w-full"
+                      style={{ transform: `translateY(${virtualItem.start}px)` }}
+                    >
+                      {item.kind === 'divider'
+                        ? <TraceDayDivider timestamp={item.timestamp} />
+                        : renderRow(item.row, selection, freshIds)}
+                    </div>
+                  );
+                })}
+              </div>
+            </TraceScopesContext.Provider>
           )}
 
           {view === 'rows' && (
