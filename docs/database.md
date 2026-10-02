@@ -65,6 +65,18 @@ schema is created from the EF model via `EnsureCreatedAsync`.
 > mode — e.g. the dashboard's ~11-query aggregation — offload each query with `Task.Run` to restore
 > concurrency; it is harmless on relational providers.
 
+> **Gotcha — no key index, and converters run per scanned row.** The in-memory provider keeps no
+> index, so *every* query — even a primary-key `Find` — enumerates the whole table, and while it
+> enumerates it runs each column's EF value converter for **every row**, not just the rows it
+> returns. A JSON column mapped with `HasConversion(serialize, deserialize)` on a large table therefore
+> makes one key lookup cost one deserialization per stored row. `AgentCallEntity` hit exactly this:
+> with its `Request`/`Response`/`ModelParameters` converter-mapped, opening one trace in the kiosk demo
+> (tens of thousands of seeded traces) parsed every trace's JSON, and a loop of updates looked like a
+> hang. Those columns are now plain `string` properties (still `text` relationally — the change was
+> migration-free) that the mapper (de)serializes for the rows it actually maps;
+> `AgentCallPayloadMappingTests` keeps them converter-free. Apply the same rule to any heavy column
+> on a table that grows: store the provider value, convert in the mapper.
+
 ## Configuration file location
 
 Set the connection string in:

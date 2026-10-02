@@ -20,13 +20,15 @@ internal record AgentCallEntity : Entity
     /// <summary>
     /// The full inbound conversation (system message plus user turns) serialized as JSON. This is the
     /// authoritative request payload; RequestPreview is a denormalized excerpt for list queries.
+    /// Plain JSON text — deserialized by the mapper, never by an EF value converter (see
+    /// AgentCallConfig: the in-memory provider would run a converter for every row of every scan).
     /// </summary>
-    public required Conversation Request { get; init; }
+    public required string Request { get; init; }
     /// <summary>
     /// The assistant response message serialized as JSON, or null when the call errored before
-    /// the provider returned a response.
+    /// the provider returned a response. Plain JSON text, like <see cref="Request"/>.
     /// </summary>
-    public required AssistantMessage? Response { get; init; }
+    public required string? Response { get; init; }
     /// <summary>
     /// Number of non-cached prompt tokens billed by the provider, or null when the provider did
     /// not return usage data (e.g. streaming errors).
@@ -63,9 +65,10 @@ internal record AgentCallEntity : Entity
     public required string? ErrorMessage { get; init; }
     /// <summary>
     /// JSON-serialized inference parameters (temperature, top-p, etc.) that were in effect for this
-    /// call, captured at ingestion time. Maps to the agent_calls.model_parameters column.
+    /// call, captured at ingestion time. Maps to the agent_calls.model_parameters column. Plain JSON
+    /// text, like <see cref="Request"/>.
     /// </summary>
-    public required ModelParametersData ModelParameters { get; init; }
+    public required string ModelParameters { get; init; }
     /// <summary>
     /// Groups this call with others in the same logical conversation thread. Nullable and FK-free —
     /// revocation of a conversation never cascades away telemetry.

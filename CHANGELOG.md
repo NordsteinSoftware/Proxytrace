@@ -31,6 +31,13 @@ follow [Semantic Versioning](https://semver.org). Ongoing work is collected unde
   project, one agent or one API key is labelled **Applies to**, so it no longer shares a name with
   the new scopes (use-case groups of agents).
 
+### Fixed
+
+- **The kiosk demo opens traces quickly again.** Looking up a single trace in the demo's in-memory
+  store used to parse the stored request and response of every trace in it, so opening a trace (or
+  any per-trace operation) slowed down as the demo accumulated traffic. Lookups now only read the
+  trace they return.
+
 ## [1.14.0] - 2026-09-22
 
 ### Added
