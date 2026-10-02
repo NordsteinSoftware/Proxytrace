@@ -134,4 +134,8 @@ public enum AuditAction
     CostBudgetSoftLimitReached = 75,
     CostBudgetHardLimitReached = 76,
     ProjectDefaultUpstreamProviderChanged = 77,
+
+    // A scope's user-curated display name / description was edited. Scopes themselves are
+    // auto-created by ingestion and are not audited.
+    ScopeUpdated = 78,
 }

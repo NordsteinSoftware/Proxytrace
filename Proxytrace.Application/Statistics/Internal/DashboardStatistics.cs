@@ -5,6 +5,7 @@ using Nordstein.Core.Common.Time;
 using Proxytrace.Domain;
 using Proxytrace.Domain.Agent;
 using Proxytrace.Domain.AgentCall;
+using Proxytrace.Domain.Scope;
 using Proxytrace.Messaging;
 
 namespace Proxytrace.Application.Statistics.Internal;
@@ -32,6 +33,7 @@ internal class DashboardStatistics : IDashboardStatistics
     private readonly IAgentCallStatsReader callStats;
     private readonly IAgentRepository agents;
     private readonly IAgentCallRepository agentCalls;
+    private readonly IScopeRepository scopes;
     private readonly IIngestionStream ingestionStream;
     private readonly ITransaction transaction;
     private readonly IClock clock;
@@ -51,6 +53,7 @@ internal class DashboardStatistics : IDashboardStatistics
         IAgentCallStatsReader callStats,
         IAgentRepository agents,
         IAgentCallRepository agentCalls,
+        IScopeRepository scopes,
         IIngestionStream ingestionStream,
         ITransaction transaction,
         IClock clock,
@@ -60,6 +63,7 @@ internal class DashboardStatistics : IDashboardStatistics
         this.callStats = callStats;
         this.agents = agents;
         this.agentCalls = agentCalls;
+        this.scopes = scopes;
         this.ingestionStream = ingestionStream;
         this.transaction = transaction;
         this.clock = clock;
@@ -177,7 +181,8 @@ internal class DashboardStatistics : IDashboardStatistics
                 ProjectId: filter.ProjectId,
                 From: filter.From,
                 IncludeSystemAgents: !filter.ExcludeSystemAgents,
-                ProjectIds: filter.ProjectIds),
+                ProjectIds: filter.ProjectIds,
+                ScopeId: filter.ScopeId),
             page: 1,
             pageSize: recentTraceCount,
             cancellationToken), cancellationToken);
@@ -323,21 +328,34 @@ internal class DashboardStatistics : IDashboardStatistics
     /// </remarks>
     private async Task<IReadOnlyList<IAgent>> GetScopedAgentsAsync(StatisticsFilter filter, CancellationToken cancellationToken)
     {
+        IReadOnlyList<IAgent> inProjects;
         if (filter.ProjectId is { } projectId)
         {
-            return await agents.GetByProjectAsync(projectId, cancellationToken);
+            inProjects = await agents.GetByProjectAsync(projectId, cancellationToken);
+        }
+        else
+        {
+            IReadOnlyList<IAgent> all = await agents.GetAllAsync(cancellationToken);
+            inProjects = filter.ProjectIds is { Count: > 0 } projectIds
+                ? all.Where(a => projectIds.Contains(a.Project.Id)).ToArray()
+                : all;
         }
 
-        IReadOnlyList<IAgent> all = await agents.GetAllAsync(cancellationToken);
-        return filter.ProjectIds is { Count: > 0 } projectIds
-            ? all.Where(a => projectIds.Contains(a.Project.Id)).ToArray()
-            : all;
+        // A scope narrows further to the agents that served it (its derived membership) — so the
+        // agents list, and the pass rate derived from their test runs, describe the scope.
+        if (filter.ScopeId is not { } scopeId)
+        {
+            return inProjects;
+        }
+
+        IReadOnlySet<Guid> members = await scopes.GetAgentIdsAsync(scopeId, cancellationToken);
+        return inProjects.Where(a => members.Contains(a.Id)).ToArray();
     }
 
     private async Task<TestRunStats.Filter> ToRunFilterAsync(StatisticsFilter filter, CancellationToken cancellationToken)
     {
         IReadOnlyCollection<Guid>? agentIds = null;
-        if (filter.ProjectId is not null || filter.ProjectIds is { Count: > 0 })
+        if (filter.ProjectId is not null || filter.ProjectIds is { Count: > 0 } || filter.ScopeId is not null)
         {
             IReadOnlyList<IAgent> scopedAgents = await GetScopedAgentsAsync(filter, cancellationToken);
             agentIds = scopedAgents.Select(a => a.Id).ToArray();

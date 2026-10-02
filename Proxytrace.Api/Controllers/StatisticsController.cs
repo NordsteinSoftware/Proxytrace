@@ -64,6 +64,7 @@ public class StatisticsController : ControllerBase
         [FromQuery] int? recentTraceCount = null,
         [FromQuery] int? agentLimit = null,
         [FromQuery] bool excludeSystemAgents = false,
+        [FromQuery] Guid? scopeId = null,
         CancellationToken cancellationToken = default)
     {
         if (from is not null && to is not null && from.Value >= to.Value)
@@ -86,7 +87,9 @@ public class StatisticsController : ControllerBase
             recentTraceCount ?? options.DefaultRecentTraceCount, 1, options.MaxRecentTraceCount);
         var resolvedAgentLimit = Math.Clamp(
             agentLimit ?? options.DefaultAgentLimit, 1, options.MaxAgentLimit);
-        var filter = new StatisticsFilter(from, to, projectId, ExcludeSystemAgents: excludeSystemAgents);
+        // A scope id is derived from its project, so it only ever narrows within the access checked
+        // above — it can never widen a caller's view to another tenant's traces.
+        var filter = new StatisticsFilter(from, to, projectId, ExcludeSystemAgents: excludeSystemAgents, ScopeId: scopeId);
         DashboardView view = await dashboard.GetDashboardViewAsync(filter, resolvedRecentTraceCount, resolvedAgentLimit, cancellationToken);
 
         return new DashboardViewDto(

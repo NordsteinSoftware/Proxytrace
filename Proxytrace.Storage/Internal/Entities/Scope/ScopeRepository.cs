@@ -96,27 +96,41 @@ internal class ScopeRepository
     /// <summary>
     /// Record activity asynchronously.
     /// </summary>
-    public async Task RecordActivityAsync(
+    public Task RecordActivityAsync(
         Guid scopeId,
         Guid agentVersionId,
         long totalTokens,
         DateTimeOffset at,
         CancellationToken cancellationToken = default)
+        => RecordActivitiesAsync(scopeId, agentVersionId, 1, totalTokens, at, at, cancellationToken);
+
+    /// <summary>
+    /// Record activities asynchronously.
+    /// </summary>
+    public async Task RecordActivitiesAsync(
+        Guid scopeId,
+        Guid agentVersionId,
+        int traceCount,
+        long totalTokens,
+        DateTimeOffset firstSeenAt,
+        DateTimeOffset lastSeenAt,
+        CancellationToken cancellationToken = default)
     {
+        var at = lastSeenAt;
         var context = contextFactory();
         if (context.Database.IsRelational())
         {
-            if (await TryBumpAsync(context, scopeId, agentVersionId, totalTokens, at, cancellationToken))
+            if (await TryBumpAsync(context, scopeId, agentVersionId, traceCount, totalTokens, at, cancellationToken))
                 return;
             try
             {
-                context.Set<ScopeAgentVersionEntity>().Add(NewMembership(scopeId, agentVersionId, totalTokens, at));
+                context.Set<ScopeAgentVersionEntity>().Add(NewMembership(scopeId, agentVersionId, traceCount, totalTokens, firstSeenAt, at));
                 await context.SaveChangesAsync(cancellationToken);
             }
             catch (DbUpdateException)
             {
                 // Lost the first-insert race (see AdmitAsync): bump on a fresh context instead.
-                if (!await TryBumpAsync(contextFactory(), scopeId, agentVersionId, totalTokens, at, cancellationToken))
+                if (!await TryBumpAsync(contextFactory(), scopeId, agentVersionId, traceCount, totalTokens, at, cancellationToken))
                 {
                     logger.LogWarning(
                         "Scope membership upsert lost the insert race but found no row for scope {ScopeId}, version {AgentVersionId}",
@@ -132,14 +146,14 @@ internal class ScopeRepository
             .FirstOrDefaultAsync(e => e.ScopeId == scopeId && e.AgentVersionId == agentVersionId, cancellationToken);
         if (existing is null)
         {
-            context.Set<ScopeAgentVersionEntity>().Add(NewMembership(scopeId, agentVersionId, totalTokens, at));
+            context.Set<ScopeAgentVersionEntity>().Add(NewMembership(scopeId, agentVersionId, traceCount, totalTokens, firstSeenAt, at));
         }
         else
         {
             context.Entry(existing).CurrentValues.SetValues(new
             {
                 LastSeenAt = at > existing.LastSeenAt ? at : existing.LastSeenAt,
-                TraceCount = existing.TraceCount + 1,
+                TraceCount = existing.TraceCount + traceCount,
                 TotalTokens = existing.TotalTokens + totalTokens,
             });
         }
@@ -303,6 +317,7 @@ internal class ScopeRepository
         DbContext context,
         Guid scopeId,
         Guid agentVersionId,
+        int traceCount,
         long totalTokens,
         DateTimeOffset at,
         CancellationToken cancellationToken)
@@ -310,17 +325,18 @@ internal class ScopeRepository
             .Where(e => e.ScopeId == scopeId && e.AgentVersionId == agentVersionId)
             .ExecuteUpdateAsync(s => s
                 .SetProperty(e => e.LastSeenAt, e => e.LastSeenAt > at ? e.LastSeenAt : at)
-                .SetProperty(e => e.TraceCount, e => e.TraceCount + 1)
+                .SetProperty(e => e.TraceCount, e => e.TraceCount + traceCount)
                 .SetProperty(e => e.TotalTokens, e => e.TotalTokens + totalTokens), cancellationToken) > 0;
 
-    private static ScopeAgentVersionEntity NewMembership(Guid scopeId, Guid agentVersionId, long totalTokens, DateTimeOffset at)
+    private static ScopeAgentVersionEntity NewMembership(
+        Guid scopeId, Guid agentVersionId, int traceCount, long totalTokens, DateTimeOffset firstSeenAt, DateTimeOffset lastSeenAt)
         => new()
         {
             ScopeId = scopeId,
             AgentVersionId = agentVersionId,
-            FirstSeenAt = at,
-            LastSeenAt = at,
-            TraceCount = 1,
+            FirstSeenAt = firstSeenAt,
+            LastSeenAt = lastSeenAt,
+            TraceCount = traceCount,
             TotalTokens = totalTokens,
         };
 

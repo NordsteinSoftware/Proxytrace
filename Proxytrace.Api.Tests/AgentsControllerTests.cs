@@ -163,11 +163,29 @@ public sealed class AgentsControllerTests : BaseTest<Module>
         reloaded.Endpoint.Id.Should().Be(newEndpoint.Id);
     }
 
+    [TestMethod]
+    public async Task GetAll_WithScopeId_ListsOnlyTheScopesMemberAgents()
+    {
+        IServiceProvider services = GetServices();
+        var agents = services.GetRequiredService<IDomainEntityGenerator<IAgent>>();
+        var member = await agents.CreateAsync(CancellationToken);
+        await agents.CreateAsync(CancellationToken);
+        var scopes = services.GetRequiredService<Proxytrace.Domain.Scope.IScopeRepository>();
+        var scopeId = await scopes.AdmitAsync(member.Project.Id, "support", 100, CancellationToken);
+        ArgumentNullException.ThrowIfNull(scopeId);
+        await scopes.RecordActivityAsync(scopeId.Value, member.CurrentVersion.Id, 10, DateTimeOffset.UtcNow, CancellationToken);
+
+        var result = await ResolveController(services).GetAll(scopeId: scopeId, cancellationToken: CancellationToken);
+
+        result.Items.Select(a => a.Id).Should().Equal(member.Id);
+    }
+
     private static AgentsController ResolveController(IServiceProvider services) => new(
         services.GetRequiredService<IAgentRepository>(),
         services.GetRequiredService<IRepository<IModelEndpoint>>(),
         services.GetRequiredService<IRepository<Proxytrace.Domain.Project.IProject>>(),
         services.GetRequiredService<IAgentCallRepository>(),
+        services.GetRequiredService<Proxytrace.Domain.Scope.IScopeRepository>(),
         services.GetRequiredService<Proxytrace.Domain.AgentVersion.IAgentVersionRepository>(),
         services.GetRequiredService<IProposalBroadcaster>(),
         services.GetRequiredService<ITheoryBroadcaster>(),

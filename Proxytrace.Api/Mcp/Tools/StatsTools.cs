@@ -5,6 +5,7 @@ using ModelContextProtocol.Server;
 using Proxytrace.Api.Dto.Statistics;
 using Proxytrace.Application.Statistics;
 using Proxytrace.Domain.Agent;
+using Proxytrace.Domain.Scope;
 
 namespace Proxytrace.Api.Mcp.Tools;
 
@@ -27,6 +28,7 @@ internal sealed class StatsTools
     private readonly IDashboardStatistics dashboard;
     private readonly IAgentStatistics agentStatistics;
     private readonly IAgentRepository agents;
+    private readonly IScopeRepository scopes;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="StatsTools"/> class.
@@ -35,27 +37,33 @@ internal sealed class StatsTools
         IMcpProjectAccessor project,
         IDashboardStatistics dashboard,
         IAgentStatistics agentStatistics,
-        IAgentRepository agents)
+        IAgentRepository agents,
+        IScopeRepository scopes)
     {
         this.project = project;
         this.dashboard = dashboard;
         this.agentStatistics = agentStatistics;
         this.agents = agents;
+        this.scopes = scopes;
     }
 
     [McpServerTool(Name = "get_dashboard")]
     [Description("Get project-wide usage statistics: total calls, token usage, average latency, overall " +
-                 "pass rate, and a per-model breakdown. Optionally bound the window with from/to (ISO-8601).")]
+                 "pass rate, and a per-model breakdown. Optionally bound the window with from/to (ISO-8601) and " +
+                 "narrow to one scope (use-case group of agents); with a scope, the pass rate covers the test runs " +
+                 "of the scope's agents.")]
     /// <summary>
     /// Gets the dashboard.
     /// </summary>
     public async Task<McpDashboardDto> GetDashboard(
         [Description("Optional start of the window (ISO-8601). Omit for all-time.")] DateTimeOffset? from = null,
         [Description("Optional end of the window (ISO-8601). Omit for all-time.")] DateTimeOffset? to = null,
+        [Description("Optional scope — its id (GUID) or key, as returned by list_scopes.")] string? scope = null,
         CancellationToken cancellationToken = default)
     {
         var p = await project.GetProjectAsync(cancellationToken);
-        var filter = new StatisticsFilter(from, to, p.Id);
+        var scopeId = await McpScopeArgument.ResolveAsync(scopes, p.Id, scope, cancellationToken);
+        var filter = new StatisticsFilter(from, to, p.Id, ScopeId: scopeId);
         var view = await dashboard.GetDashboardViewAsync(filter, RecentTraceCount, AgentLimit, cancellationToken);
 
         var summary = new SummaryDto(

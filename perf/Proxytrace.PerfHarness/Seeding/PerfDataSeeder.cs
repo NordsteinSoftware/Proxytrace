@@ -197,10 +197,8 @@ internal sealed class PerfDataSeeder
     /// <summary>
     /// Inserts one Scope row per seeded scope (through the real <see cref="IScopeRepository"/>, with
     /// the derived ids already stamped on the traces) and one membership row per (scope, version)
-    /// that received calls. Memberships go in through the ingestion upsert itself — a few hundred
-    /// rows — carrying the accumulated tokens and newest call time; their TraceCount is therefore 1
-    /// rather than exact, which is irrelevant to the read-latency probes (what matters is realistic
-    /// membership cardinality).
+    /// that received calls, with the exact counters accumulated during the call loop — written
+    /// through the repository's batch upsert (a few hundred rows).
     /// </summary>
     private async Task SeedScopesAsync(SeedGraph graph, ScopeSeeding scopes, CancellationToken cancellationToken)
     {
@@ -223,8 +221,9 @@ internal sealed class PerfDataSeeder
 
             foreach (var ((scopeIndex, versionId), acc) in scopes.Memberships)
             {
-                await repository.RecordActivityAsync(
-                    scopes.Ids[scopeIndex], versionId, acc.TotalTokens, acc.LastSeenAt, cancellationToken);
+                await repository.RecordActivitiesAsync(
+                    scopes.Ids[scopeIndex], versionId, acc.TraceCount, acc.TotalTokens, acc.FirstSeenAt, acc.LastSeenAt,
+                    cancellationToken);
             }
         });
     }
@@ -417,7 +416,12 @@ internal sealed class PerfDataSeeder
         {
             var key = (sx, version.Id);
             scopes.Memberships.TryGetValue(key, out MembershipAccumulator membership);
+            membership.TraceCount++;
             membership.TotalTokens += callTokens;
+            if (membership.TraceCount == 1 || createdAt < membership.FirstSeenAt)
+            {
+                membership.FirstSeenAt = createdAt;
+            }
             if (createdAt > membership.LastSeenAt)
             {
                 membership.LastSeenAt = createdAt;
@@ -615,7 +619,9 @@ internal sealed class PerfDataSeeder
     /// <summary>Membership activity accumulated for one (scope, version) as calls are assigned to it.</summary>
     private struct MembershipAccumulator
     {
+        public int TraceCount;
         public long TotalTokens;
+        public DateTimeOffset FirstSeenAt;
         public DateTimeOffset LastSeenAt;
     }
 

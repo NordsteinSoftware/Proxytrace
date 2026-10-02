@@ -10,6 +10,7 @@ using Proxytrace.Domain;
 using Proxytrace.Domain.Agent;
 using Proxytrace.Domain.AgentCall;
 using Proxytrace.Domain.ModelEndpoint;
+using Proxytrace.Domain.Scope;
 
 namespace Proxytrace.Application.Demo.Internal;
 
@@ -47,6 +48,10 @@ internal sealed class KioskLiveTrafficService : BackgroundService
     private readonly IRandom random;
     private readonly IClock clock;
     private readonly ILogger<KioskLiveTrafficService> logger;
+
+    // Interaction counter feeding DemoScopes.For, so live traffic splits across scopes the same way
+    // the backfill does (e.g. every third triage email goes to Engineering).
+    private long interactions;
 
     public KioskLiveTrafficService(
         IServiceProvider rootServices,
@@ -142,6 +147,8 @@ internal sealed class KioskLiveTrafficService : BackgroundService
 
         var plan = planner.Plan(traffic);
         Guid? conversationId = plan.SharesConversation ? Guid.NewGuid() : null;
+        Guid? scopeId = ctx.ScopeFor(agent, Interlocked.Increment(ref interactions));
+        var scopes = services.GetRequiredService<IScopeRepository>();
 
         foreach (var planned in plan.Calls)
         {
@@ -163,9 +170,15 @@ internal sealed class KioskLiveTrafficService : BackgroundService
                 errorMessage: planned.ErrorMessage,
                 modelParameters: paramsFactory(temperature: 0.3),
                 conversationId: conversationId,
-                outlierFlags: planned.OutlierFlags);
+                outlierFlags: planned.OutlierFlags,
+                scopeId: scopeId);
 
             call = await callRepo.AddAsync(call, cancellationToken);
+            if (scopeId is { } scoped)
+            {
+                long tokens = call.Response?.Usage is { } u ? (long)(u.InputTokenCount + u.OutputTokenCount) : 0;
+                await scopes.RecordActivityAsync(scoped, call.Version.Id, tokens, call.CreatedAt, cancellationToken);
+            }
             traceBroadcaster.Publish(TraceCreatedEvent.Create(call));
         }
     }

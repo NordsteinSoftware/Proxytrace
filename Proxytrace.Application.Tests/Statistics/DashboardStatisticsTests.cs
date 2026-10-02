@@ -8,6 +8,7 @@ using Nordstein.Core.Common.Time;
 using Proxytrace.Domain;
 using Proxytrace.Domain.Agent;
 using Proxytrace.Domain.AgentCall;
+using Proxytrace.Domain.Scope;
 using Proxytrace.Messaging;
 using Nordstein.Core.Testing;
 
@@ -21,7 +22,8 @@ public sealed class DashboardStatisticsTests : BaseTest<Module>
         out IAgentCallStatsReader callStats,
         out IAgentRepository agents,
         DashboardCacheOptions? cacheOptions = null,
-        IClock? clock = null)
+        IClock? clock = null,
+        IScopeRepository? scopes = null)
     {
         runStats = Substitute.For<ITestRunStatsReader>();
         callStats = Substitute.For<IAgentCallStatsReader>();
@@ -39,7 +41,7 @@ public sealed class DashboardStatisticsTests : BaseTest<Module>
         // Caching is opt-in per test (Ttl 0 disables it) so the behavioral tests below observe every
         // underlying call; the cache-specific tests pass an explicit TTL.
         return new DashboardStatistics(
-            runStats, callStats, agents, agentCalls, ingestionStream, transaction,
+            runStats, callStats, agents, agentCalls, scopes ?? Substitute.For<IScopeRepository>(), ingestionStream, transaction,
             clock, cacheOptions ?? new DashboardCacheOptions { TtlSeconds = 0d });
     }
 
@@ -127,6 +129,35 @@ public sealed class DashboardStatisticsTests : BaseTest<Module>
         await runStats.Received(1).GetPassTotalsAsync(
             Arg.Is<TestRunStats.Filter>(f =>
                 f != null && f.AgentIds != null && f.AgentIds.Count == 1 && f.AgentIds.Single() == matchingAgent.Id),
+            Arg.Any<CancellationToken>());
+    }
+
+    [TestMethod]
+    public async Task GetSummaryAsync_WithScopeFilter_PassesOnlyTheScopesMemberAgents()
+    {
+        var scopes = Substitute.For<IScopeRepository>();
+        var svc = Build(out var runStats, out var callStats, out var agents, scopes: scopes);
+        callStats.GetSummaryAsync(Arg.Any<StatisticsFilter>(), Arg.Any<CancellationToken>())
+            .Returns(new StatisticsSummary(0, 0, 0, 0, 0, 0));
+        runStats.GetPassTotalsAsync(Arg.Any<TestRunStats.Filter>(), Arg.Any<CancellationToken>())
+            .Returns(new TestRunPassTotals(0, 0));
+
+        var projectId = Guid.NewGuid();
+        var scopeId = Guid.NewGuid();
+        var memberId = Guid.NewGuid();
+        var member = Substitute.For<IAgent>();
+        member.Id.Returns(memberId);
+        var outsider = Substitute.For<IAgent>();
+        outsider.Id.Returns(Guid.NewGuid());
+        IReadOnlySet<Guid> members = new HashSet<Guid> { memberId };
+        agents.GetByProjectAsync(projectId, Arg.Any<CancellationToken>()).Returns([member, outsider]);
+        scopes.GetAgentIdsAsync(scopeId, Arg.Any<CancellationToken>()).Returns(members);
+
+        await svc.GetSummaryAsync(new StatisticsFilter(ProjectId: projectId, ScopeId: scopeId), CancellationToken);
+
+        await runStats.Received(1).GetPassTotalsAsync(
+            Arg.Is<TestRunStats.Filter>(f =>
+                f != null && f.AgentIds != null && f.AgentIds.Count == 1 && f.AgentIds.Single() == memberId),
             Arg.Any<CancellationToken>());
     }
 

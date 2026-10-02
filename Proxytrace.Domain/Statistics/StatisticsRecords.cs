@@ -27,7 +27,11 @@ public record StatisticsFilter(
     // Note it participates in this record's value equality by identity (collections compare by
     // reference), so a multi-project filter misses the dashboard view cache rather than aliasing
     // another caller's entry — a miss, never a false hit.
-    IReadOnlyCollection<Guid>? ProjectIds = null);
+    IReadOnlyCollection<Guid>? ProjectIds = null,
+    // Restricts every aggregate to the calls of one scope (AgentCall.ScopeId). A plain column
+    // predicate — no AgentVersion semi-join — handled by both the LINQ chokepoint and the raw-SQL
+    // percentile paths (StatisticsFilterParityTests enforces the pair).
+    Guid? ScopeId = null);
 
 /// <summary>
 /// Represents a statistics summary.

@@ -60,6 +60,20 @@ public interface IScopeRepository : IRepository<IScope>
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// The batch form of <see cref="RecordActivityAsync"/> for a producer that pre-aggregated its
+    /// calls (demo seeding): records <paramref name="traceCount"/> traces seen between
+    /// <paramref name="firstSeenAt"/> and <paramref name="lastSeenAt"/> in one write.
+    /// </summary>
+    Task RecordActivitiesAsync(
+        Guid scopeId,
+        Guid agentVersionId,
+        int traceCount,
+        long totalTokens,
+        DateTimeOffset firstSeenAt,
+        DateTimeOffset lastSeenAt,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Reverses the counter bumps of <see cref="RecordActivityAsync"/> for deleted traces. Both
     /// counters are clamped at zero, mirroring <c>ISessionRepository.RecordTraceRemovalsAsync</c>.
     /// </summary>

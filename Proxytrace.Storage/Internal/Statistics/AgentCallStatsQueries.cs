@@ -266,6 +266,11 @@ internal class AgentCallStatsQueries : IAgentCallStatsReader
             clauses.Add("\"EndpointId\" = @endpointId");
             parameters.Add(("@endpointId", endpointId));
         }
+        if (filter.ScopeId is { } scopeId)
+        {
+            clauses.Add("\"ScopeId\" = @scopeId");
+            parameters.Add(("@scopeId", scopeId));
+        }
         if (filter.From is { } from)
         {
             clauses.Add("\"CreatedAt\" >= @from");
@@ -1185,6 +1190,10 @@ internal class AgentCallStatsQueries : IAgentCallStatsReader
                 .Where(v => projectIds.Contains(v.Project))
                 .Select(v => v.Id);
             query = query.Where(c => versionIdsForProjects.Contains(c.AgentVersionId));
+        }
+        if (filter.ScopeId is { } scopeId)
+        {
+            query = query.Where(c => c.ScopeId == scopeId);
         }
         if (filter.From is { } from)
         {

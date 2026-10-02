@@ -121,7 +121,10 @@ class in that folder — `WithToolsFromAssembly` discovers it; the type is regis
 reflection scan in `Module.cs`. Current surface: agents, traces, suites (+curation — **`add_trace_to_suite`
 takes an optional `expectedOutput` to record a human *correction*, not just promote a trace as-is**),
 runs (+start/cancel, **`get_run_failures`**, **`compare_runs`**), proposals (+status, gated), theories
-(gated, read **+ `submit_theory`**), statistics (**+ `get_agent_overview`**). See
+(gated, read **+ `submit_theory`**), statistics (**+ `get_agent_overview`**), scopes (**`list_scopes`**;
+`list_traces` and `get_dashboard` take an optional `scope` — an id or a key, canonicalised like
+ingestion does — resolved by `McpScopeArgument`, which reports a scope of another project as not
+found). See
 `manual/guide/mcp-server.md` for the full tool list.
 
 The correction seam (`add_trace_to_suite` with `expectedOutput`) maps onto the same `ITestCase`

@@ -38,6 +38,9 @@ public sealed class StatisticsFilterParityTests : BaseTest<Module>
         // AgentVersion(Project); BuildLatencyWhere() as "= ANY(@projectIds)" over one uuid[]
         // parameter — see StatisticsFilterWhereTests.
         nameof(StatisticsFilter.ProjectIds),
+        // Scopes: a plain column predicate on AgentCall.ScopeId in both paths — see
+        // StatisticsFilterWhereTests.
+        nameof(StatisticsFilter.ScopeId),
     ];
 
     [TestMethod]

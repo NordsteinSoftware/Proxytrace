@@ -122,7 +122,8 @@ internal class AgentCallRepository : AbstractRepository<IAgentCall, AgentCallEnt
                 e.UpdatedAt,
                 e.ConversationId,
                 e.SessionId,
-                e.OutlierFlags))
+                e.OutlierFlags,
+                e.ScopeId))
             .ToListAsync(cancellationToken);
 
         // Resolve the agent/endpoint metadata the list shows from the cached entity repositories
@@ -173,7 +174,8 @@ internal class AgentCallRepository : AbstractRepository<IAgentCall, AgentCallEnt
                 UpdatedAt: r.UpdatedAt,
                 ConversationId: r.ConversationId,
                 SessionId: r.SessionId,
-                OutlierFlags: r.OutlierFlags);
+                OutlierFlags: r.OutlierFlags,
+                ScopeId: r.ScopeId);
         }).ToArray();
 
         return (items, total);
@@ -196,7 +198,8 @@ internal class AgentCallRepository : AbstractRepository<IAgentCall, AgentCallEnt
         DateTimeOffset UpdatedAt,
         Guid? ConversationId,
         Guid? SessionId,
-        OutlierFlags OutlierFlags);
+        OutlierFlags OutlierFlags,
+        Guid? ScopeId);
 
     /// <summary>
     /// Returns a time-bucketed histogram of call counts and error counts for the given filter window.
@@ -393,6 +396,11 @@ internal class AgentCallRepository : AbstractRepository<IAgentCall, AgentCallEnt
         if (filter.SessionId is { } sessionId)
         {
             query = query.Where(e => e.SessionId == sessionId);
+        }
+
+        if (filter.ScopeId is { } scopeId)
+        {
+            query = query.Where(e => e.ScopeId == scopeId);
         }
 
         if (!string.IsNullOrWhiteSpace(filter.Model))

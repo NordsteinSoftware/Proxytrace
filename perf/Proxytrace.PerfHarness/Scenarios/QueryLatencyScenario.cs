@@ -166,6 +166,34 @@ internal static class QueryLatencyScenario
         {
             await Measure("scopesOverview",
                 () => scopeRepo.GetOverviewsAsync(scopesProject, cancellationToken));
+
+            // Scope-filtered reads, as the UI sends them (project + scope). Measured on the broadest
+            // seeded scope (~40% of rows — the worst selectivity for the partial (ScopeId, CreatedAt)
+            // index) and, for the list, also on the narrowest (~5%).
+            var seededScopes = (await scopeRepo.GetOverviewsAsync(scopesProject, cancellationToken))
+                .OrderByDescending(o => o.TraceCount)
+                .ToList();
+            if (seededScopes.Count > 0)
+            {
+                Guid broadScope = seededScopes[0].Scope.Id;
+                Guid narrowScope = seededScopes[^1].Scope.Id;
+                var scopedCalls = new AgentCallFilter(ProjectId: scopesProject, ScopeId: broadScope);
+                var scopedStats = filter with { ScopeId = broadScope };
+
+                await Measure("agentCallsListByScope",
+                    () => callRepo.GetFilteredListAsync(scopedCalls, 1, 50, cancellationToken));
+                await Measure("agentCallsListByNarrowScope",
+                    () => callRepo.GetFilteredListAsync(scopedCalls with { ScopeId = narrowScope }, 1, 50, cancellationToken));
+                await Measure("agentCallsSummaryByScope",
+                    () => callRepo.GetSummaryAsync(scopedCalls, cancellationToken));
+                await Measure("agentCallsHistogramByScope",
+                    () => callRepo.GetHistogramAsync(scopedCalls, 50, cancellationToken));
+                await Measure("statsSummaryByScope",
+                    () => statsReader.GetSummaryAsync(scopedStats, cancellationToken));
+                // The raw-SQL percentile path (BuildLatencyWhere), which the LINQ probes above miss.
+                await Measure("statsLatencyPercentilesByScope",
+                    () => statsReader.GetLatencyAsync(scopedStats, cancellationToken));
+            }
         }
 
         // Dashboard statistics aggregations.

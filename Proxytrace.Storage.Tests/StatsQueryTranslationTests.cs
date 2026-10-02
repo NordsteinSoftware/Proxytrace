@@ -10,6 +10,7 @@ using Proxytrace.Domain.ModelProvider;
 using Proxytrace.Domain.Security;
 using Proxytrace.Storage.Internal.Entities.AgentCall;
 using Proxytrace.Storage.Internal.Entities.AgentVersion;
+using Proxytrace.Storage.Internal.Entities.Scope;
 using Proxytrace.Storage.Internal.Entities.Session;
 using Proxytrace.Storage.Internal.Entities.Statistics;
 using Nordstein.Core.Testing;
@@ -394,5 +395,58 @@ public sealed class StatsQueryTranslationTests
             .ToQueryString();
 
         sql.Should().Contain("DISTINCT");
+    }
+
+    [TestMethod]
+    public void ScopeMembershipAggregate_FoldedPerAgent_TranslatesToServerSideGroupBy()
+    {
+        using IContainer container = BuildPostgresContainer();
+        var context = container.Resolve<StorageDbContext>();
+        Guid[] scopeIds = [Guid.NewGuid()];
+
+        // The ScopeRepository overview shape: per-version membership rows joined to their version and
+        // folded per (scope, agent) — it must aggregate in SQL over the small membership table and
+        // never touch AgentCallEntity.
+        string sql = context.Set<ScopeAgentVersionEntity>()
+            .AsNoTracking()
+            .Where(m => scopeIds.Contains(m.ScopeId))
+            .Join(context.Set<AgentVersionEntity>(), m => m.AgentVersionId, v => v.Id, (m, v) => new { m, v.AgentId })
+            .GroupBy(x => new { x.m.ScopeId, x.AgentId })
+            .Select(g => new
+            {
+                g.Key.ScopeId,
+                g.Key.AgentId,
+                TraceCount = g.Sum(x => x.m.TraceCount),
+                TotalTokens = g.Sum(x => x.m.TotalTokens),
+                FirstSeenAt = g.Min(x => x.m.FirstSeenAt),
+                LastSeenAt = g.Max(x => x.m.LastSeenAt),
+            })
+            .ToQueryString();
+
+        sql.Should().Contain("GROUP BY").And.NotContain("AgentCallEntity");
+    }
+
+    [TestMethod]
+    public void ScopeRemovalDeltas_GroupedByScopeAndVersion_TranslatesToServerSideGroupBy()
+    {
+        using IContainer container = BuildPostgresContainer();
+        var context = container.Resolve<StorageDbContext>();
+        var cutoff = DateTimeOffset.UtcNow;
+
+        // The GetScopeRemovalsOlderThanAsync shape.
+        string sql = context.Set<AgentCallEntity>()
+            .AsNoTracking()
+            .Where(e => e.CreatedAt <= cutoff && e.ScopeId != null)
+            .GroupBy(e => new { e.ScopeId, e.AgentVersionId })
+            .Select(g => new
+            {
+                g.Key.ScopeId,
+                g.Key.AgentVersionId,
+                TraceCount = g.Count(),
+                TotalTokens = g.Sum(e => (long)(e.TotalTokens ?? 0)),
+            })
+            .ToQueryString();
+
+        sql.Should().Contain("GROUP BY").And.Contain("\"ScopeId\" IS NOT NULL");
     }
 }

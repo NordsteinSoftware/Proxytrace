@@ -113,6 +113,24 @@ public sealed class ScopeRepositoryTests : BaseTest<Module>
     }
 
     [TestMethod]
+    public async Task RecordActivitiesAsync_Batch_RecordsCountTokensAndSeenWindow()
+    {
+        var services = GetServices();
+        var agent = await services.GetRequiredService<IDomainEntityGenerator<IAgent>>().CreateAsync(CancellationToken);
+        var repo = services.GetRequiredService<IScopeRepository>();
+        var scopeId = await AdmitAsync(repo, agent.Project.Id, "support");
+        var first = DateTimeOffset.UtcNow.AddDays(-3);
+        var last = DateTimeOffset.UtcNow;
+
+        await repo.RecordActivitiesAsync(scopeId, agent.CurrentVersion.Id, 12, 3400, first, last, CancellationToken);
+
+        var overview = await repo.GetOverviewAsync(scopeId, CancellationToken);
+        ArgumentNullException.ThrowIfNull(overview);
+        overview.Agents.Should().ContainSingle()
+            .Which.Should().BeEquivalentTo(new ScopeAgentStat(agent.Id, 12, 3400, first, last));
+    }
+
+    [TestMethod]
     public async Task GetOverviewsAsync_AgentsInSeveralScopes_ReportsMembershipPerScope()
     {
         var services = GetServices();

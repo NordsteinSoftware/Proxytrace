@@ -419,6 +419,30 @@ public sealed class AgentCallsControllerTests : BaseTest<Module>
     }
 
     [TestMethod]
+    public async Task GetAll_WithScopeId_ReturnsOnlyThatScopesTraces()
+    {
+        IServiceProvider services = GetServices();
+        var agent = await services.GetRequiredService<IDomainEntityGenerator<IAgent>>().CreateAsync(CancellationToken);
+        var controller = ResolveController(services);
+        foreach (var scopeKey in new[] { "support", "support", "billing", null })
+        {
+            await controller.Seed(
+                new SeedAgentCallRequest(
+                    AgentId: agent.Id, Model: "gpt-4o", UserContent: "hi", AssistantContent: "hello",
+                    SystemContent: null, InputTokens: 1, OutputTokens: 1, DurationMs: 10, ConversationId: null,
+                    ScopeKey: scopeKey),
+                CancellationToken);
+        }
+        var supportId = Proxytrace.Domain.Scope.ScopeIdDerivation.Derive(agent.Project.Id, "support");
+
+        var result = await controller.GetAll(
+            projectId: agent.Project.Id, scopeId: supportId, cancellationToken: CancellationToken);
+
+        result.Total.Should().Be(2);
+        result.Items.Should().OnlyContain(c => c.ScopeId == supportId);
+    }
+
+    [TestMethod]
     public async Task GetAll_AsNonAdminBySessionAndProject_ReturnsSessionTraces()
     {
         IServiceProvider services = GetServices();

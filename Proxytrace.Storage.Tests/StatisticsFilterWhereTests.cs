@@ -34,6 +34,24 @@ public sealed class StatisticsFilterWhereTests : BaseTest<Module>
     }
 
     [TestMethod]
+    public void BuildLatencyWhere_WithScope_FiltersTheScopeColumnByParameter()
+    {
+        IServiceProvider services = GetServices();
+        StorageDbContext context = services.GetRequiredService<Func<StorageDbContext>>()();
+        Guid scopeId = Guid.NewGuid();
+
+        var (where, parameters) = AgentCallStatsQueries.BuildLatencyWhere(
+            context, new StatisticsFilter(ScopeId: scopeId));
+
+        // A direct column predicate (served by the partial (ScopeId, CreatedAt) index) — no
+        // AgentVersion subquery, and the id travels as a parameter, never in the statement text.
+        where.Should().Contain("\"ScopeId\" = @scopeId").And.NotContain(scopeId.ToString());
+        var parameter = parameters.Should().ContainSingle().Subject;
+        parameter.Name.Should().Be("@scopeId");
+        parameter.Value.Should().Be(scopeId);
+    }
+
+    [TestMethod]
     public void BuildLatencyWhere_WithSeveralProjects_ComparesAgainstOneArrayParameter()
     {
         IServiceProvider services = GetServices();
