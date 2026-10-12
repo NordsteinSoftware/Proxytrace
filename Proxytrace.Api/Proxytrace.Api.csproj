@@ -20,7 +20,7 @@
          (GHSA-v5pm-xwqc-g5wc); 2.7.5 is the patched 2.x release. Drop when Swashbuckle updates. -->
     <PackageReference Include="Microsoft.OpenApi" Version="2.12.2" />
     <PackageReference Include="ModelContextProtocol.AspNetCore" Version="2.2.0" />
-    <PackageReference Include="Swashbuckle.AspNetCore" Version="10.2.3" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="10.3.0" />
   </ItemGroup>
 
   <ItemGroup>
