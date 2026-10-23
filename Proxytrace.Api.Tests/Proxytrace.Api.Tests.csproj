@@ -14,7 +14,7 @@
           <PrivateAssets>all</PrivateAssets>
         </PackageReference>
         <PackageReference Include="MSTest" Version="4.5.1" />
-        <PackageReference Include="Microsoft.AspNetCore.TestHost" Version="10.0.12" />
+        <PackageReference Include="Microsoft.AspNetCore.TestHost" Version="10.0.13" />
     </ItemGroup>
 
     <ItemGroup>

@@ -45,6 +45,15 @@ follow [Semantic Versioning](https://semver.org). Ongoing work is collected unde
   any per-trace operation) slowed down as the demo accumulated traffic. Lookups now only read the
   trace they return.
 
+### Security
+
+- **Patched .NET cryptography dependencies.** The server now ships
+  `System.Security.Cryptography.Pkcs` and `System.Security.Cryptography.Xml` 10.0.13, together
+  with the matching 10.0.13 ASP.NET Core, Entity Framework Core and `Microsoft.Extensions`
+  servicing packages. The previous versions (10.0.0–10.0.12) carry known moderate and
+  high-severity advisories (GHSA-2fmv-rv2c-59x7, GHSA-846f-f764-76mx, GHSA-7hqp-7c5m-4vq6,
+  GHSA-c399-9853-6jmj, GHSA-r955-8q5j-3h83).
+
 ## [1.14.0] - 2026-09-22
 
 ### Added
