@@ -10,12 +10,12 @@
 
     <ItemGroup>
         <PackageReference Include="Autofac" Version="9.3.4" />
-        <PackageReference Include="Microsoft.AspNetCore.DataProtection" Version="10.0.13" />
+        <PackageReference Include="Microsoft.AspNetCore.DataProtection" Version="10.0.14" />
         <PackageReference Include="coverlet.collector" Version="10.1.0">
           <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
           <PrivateAssets>all</PrivateAssets>
         </PackageReference>
-        <PackageReference Include="MSTest" Version="4.5.1" />
+        <PackageReference Include="MSTest" Version="4.5.2" />
         <!-- Container-backed tests for the raw-SQL repository paths the in-memory provider cannot
              run (see docs/testing.md#container-backed-tests). -->
         <PackageReference Include="Testcontainers.PostgreSql" Version="4.16.0" />
