@@ -40,6 +40,11 @@ follow [Semantic Versioning](https://semver.org). Ongoing work is collected unde
 
 ### Fixed
 
+- **Providers whose stored API key can't be decrypted no longer break the app.** When the Data
+  Protection key ring can't read a provider's key (for example after the key ring was lost), the
+  projects, dashboard, agents and other pages that show the provider used to fail with a 500. The
+  provider now loads without a key, and editing it asks you to enter the key again instead of
+  erasing the stored one.
 - **The kiosk demo opens traces quickly again.** Looking up a single trace in the demo's in-memory
   store used to parse the stored request and response of every trace in it, so opening a trace (or
   any per-trace operation) slowed down as the demo accumulated traffic. Lookups now only read the

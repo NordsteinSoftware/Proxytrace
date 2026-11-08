@@ -93,4 +93,57 @@ public sealed class ModelProviderSecretTests : BaseTest<Module>
 
         (await providers.FindByApiKeyAsync("sk-wrong", CancellationToken)).Should().BeNull();
     }
+
+    [TestMethod]
+    public async Task Find_WithAnUndecryptableStoredKey_LoadsTheProviderWithAnEmptyKey()
+    {
+        // A key ring that can't read the ciphertext (another process seeded it, or the ring was
+        // lost) must degrade to "no key", not fail every read that hydrates the provider.
+        IServiceProvider services = GetServices();
+        var providers = services.GetRequiredService<IModelProviderRepository>();
+        var saved = await AddWithUndecryptableKeyAsync(services, providers);
+
+        var loaded = await providers.FindAsync(saved.Id, CancellationToken);
+
+        loaded.Should().NotBeNull();
+        loaded?.ApiKey.Should().BeEmpty();
+    }
+
+    [TestMethod]
+    public async Task Update_OfAProviderWhoseKeyCouldNotBeRead_IsRefusedAndKeepsTheCiphertext()
+    {
+        // Persisting the degraded empty key would overwrite the only copy of the real ciphertext.
+        IServiceProvider services = GetServices();
+        var providers = services.GetRequiredService<IModelProviderRepository>();
+        var update = services.GetRequiredService<IModelProvider.CreateExisting>();
+        var saved = await AddWithUndecryptableKeyAsync(services, providers);
+        var loaded = await providers.FindAsync(saved.Id, CancellationToken);
+        Assert.IsNotNull(loaded);
+
+        var renamed = update("renamed", loaded.Endpoint, loaded.ApiKey, loaded.Kind, loaded, apiKeyUnavailable: true);
+        var act = () => providers.UpdateAsync(renamed, CancellationToken);
+
+        await act.Should().ThrowAsync<InvalidOperationException>();
+        var context = services.GetRequiredService<Func<StorageDbContext>>()();
+        var raw = await context.Set<ModelProviderEntity>().AsNoTracking().FirstAsync(e => e.Id == saved.Id, CancellationToken);
+        raw.ApiKey.Should().Be(UndecryptableCipher);
+        raw.Name.Should().Be("p");
+    }
+
+    private const string UndecryptableCipher = "not-a-valid-protected-payload";
+
+    private async Task<IModelProvider> AddWithUndecryptableKeyAsync(IServiceProvider services, IModelProviderRepository providers)
+    {
+        var create = services.GetRequiredService<IModelProvider.CreateNew>();
+        var saved = await providers.AddAsync(
+            create("p", new Uri("https://api.example.com/v1"), "sk-lost-ring", ModelProviderKind.OpenAiCompatible),
+            CancellationToken);
+
+        // Replace the ciphertext with one this key ring cannot unprotect, bypassing the mapper.
+        var context = services.GetRequiredService<Func<StorageDbContext>>()();
+        var raw = await context.Set<ModelProviderEntity>().FirstAsync(e => e.Id == saved.Id, CancellationToken);
+        context.Entry(raw).CurrentValues.SetValues(raw with { ApiKey = UndecryptableCipher });
+        await context.SaveChangesAsync(CancellationToken);
+        return saved;
+    }
 }

@@ -62,13 +62,26 @@ internal class ModelProviderConfig : AbstractEntityConfiguration<ModelProviderEn
     /// Maps.
     /// </summary>
     public Task<IModelProvider> Map(ModelProviderEntity stored, CancellationToken cancellationToken = default)
-        => factory(stored.Name, new Uri(stored.Endpoint), Decrypt(stored.ApiKey), stored.Kind, stored).ToTaskResult();
+    {
+        string? apiKey = Decrypt(stored.ApiKey);
+        return factory(stored.Name, new Uri(stored.Endpoint), apiKey ?? string.Empty, stored.Kind, stored, apiKeyUnavailable: apiKey is null)
+            .ToTaskResult();
+    }
 
     /// <summary>
     /// Maps.
     /// </summary>
     public Task<ModelProviderEntity> Map(IModelProvider domain, CancellationToken cancellationToken = default)
-        => new ModelProviderEntity
+    {
+        // Only a provider whose stored key could not be decrypted carries an empty key. Writing it
+        // would replace the real ciphertext with an encrypted empty string, so refuse instead.
+        if (string.IsNullOrWhiteSpace(domain.ApiKey))
+        {
+            throw new InvalidOperationException(
+                $"Model provider {domain.Id} has no readable upstream API key; enter the key again before saving.");
+        }
+
+        return new ModelProviderEntity
         {
             Id = domain.Id,
             Name = domain.Name,
@@ -80,15 +93,16 @@ internal class ModelProviderConfig : AbstractEntityConfiguration<ModelProviderEn
             CreatedAt = domain.CreatedAt,
             UpdatedAt = domain.UpdatedAt,
         }.ToTaskResult();
+    }
 
     /// <summary>
-    /// Decrypts the stored upstream key, degrading to an empty string (rather than throwing) when the
+    /// Decrypts the stored upstream key, degrading to <c>null</c> (rather than throwing) when the
     /// ciphertext can't be decrypted — e.g. an ephemeral Data Protection key ring after a restart
     /// without <c>PROXYTRACE_DATA_DIR</c>. Listing and the proxy resolver must never crash; the
     /// provider simply fails to authenticate upstream until an operator re-enters the key. Mirrors
     /// <c>EmailSettingsStore.DecryptPassword</c>.
     /// </summary>
-    private string Decrypt(string cipher)
+    private string? Decrypt(string cipher)
     {
         try
         {
@@ -97,7 +111,7 @@ internal class ModelProviderConfig : AbstractEntityConfiguration<ModelProviderEn
         catch (CryptographicException ex)
         {
             logger.LogWarning(ex, "Could not decrypt a stored provider API key; treating it as unset.");
-            return string.Empty;
+            return null;
         }
     }
 }
