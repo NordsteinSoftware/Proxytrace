@@ -8,6 +8,7 @@ namespace Proxytrace.Domain.ModelProvider.Internal;
 internal record ModelProvider : DomainEntity<IModelProvider>, IModelProvider
 {
     private readonly IProviderClient.Factory clientFactory;
+    private readonly bool apiKeyUnavailable;
     /// <summary>
     /// Gets the name.
     /// </summary>
@@ -47,21 +48,23 @@ internal record ModelProvider : DomainEntity<IModelProvider>, IModelProvider
     /// Initializes a new instance of the <see cref="ModelProvider"/> class.
     /// </summary>
     public ModelProvider(
-        string name, 
+        string name,
         Uri endpoint,
         string apiKey,
         ModelProviderKind kind,
         IDomainEntityData existing,
+        bool apiKeyUnavailable,
         IProviderClient.Factory clientFactory,
         IRepository<IModelProvider> repository) : base(existing, repository)
     {
         this.clientFactory = clientFactory;
+        this.apiKeyUnavailable = apiKeyUnavailable;
         Name = name;
         Endpoint = endpoint;
         ApiKey = apiKey;
         Kind = kind;
     }
-    
+
     /// <summary>
     /// Creates the client.
     /// </summary>
@@ -100,7 +103,9 @@ internal record ModelProvider : DomainEntity<IModelProvider>, IModelProvider
             yield return Validation.NotNullOrWhiteSpace(Name);
         }
 
-        if (string.IsNullOrWhiteSpace(ApiKey))
+        // A provider hydrated with an undecryptable key keeps loading (listings and the proxy must
+        // not crash); every other construction still needs a key.
+        if (!apiKeyUnavailable && string.IsNullOrWhiteSpace(ApiKey))
         {
             yield return Validation.NotNullOrWhiteSpace(ApiKey);
         }

@@ -195,6 +195,10 @@ public class ModelProvidersController : ControllerBase
         // A null key means "leave the credential alone" — the client no longer receives it, so an
         // edit that only renames the provider has nothing to send back.
         string apiKey = request.UpstreamApiKey ?? existing.ApiKey;
+        // An empty stored key means it could not be decrypted (e.g. a lost key ring); saving without
+        // a new one would overwrite the stored ciphertext, so the edit must supply the key.
+        if (string.IsNullOrWhiteSpace(apiKey))
+            return BadRequest("The stored upstream API key could not be read; enter it again to save this provider.");
 
         // Credential rotation is a security-relevant action of its own; compare against the stored
         // key before it is overwritten so the audit trail distinguishes a rotation from an

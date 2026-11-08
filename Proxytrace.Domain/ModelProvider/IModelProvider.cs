@@ -36,12 +36,18 @@ public interface IModelProvider : IDomainEntity, IArchivable
         ModelProviderKind kind);
 
     /// <summary>Factory delegate for reconstituting an existing model provider from persistence.</summary>
+    /// <param name="apiKeyUnavailable">
+    /// Set only by the storage mapper when the stored key could not be decrypted. The provider then
+    /// loads with an empty <see cref="ApiKey"/> instead of failing validation; it cannot authenticate
+    /// upstream until an operator enters the key again.
+    /// </param>
     public delegate IModelProvider CreateExisting(
         string name,
         Uri endpoint,
         string apiKey,
         ModelProviderKind kind,
-        IDomainEntityData existing);
+        IDomainEntityData existing,
+        bool apiKeyUnavailable = false);
 
     IProviderClient CreateClient();
 }

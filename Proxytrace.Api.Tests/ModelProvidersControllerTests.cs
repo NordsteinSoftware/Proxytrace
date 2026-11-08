@@ -179,6 +179,28 @@ public sealed class ModelProvidersControllerTests : BaseTest<Module>
     }
 
     [TestMethod]
+    public async Task Update_WithNullUpstreamKey_WhenTheStoredKeyCouldNotBeRead_ReturnsBadRequestAndSavesNothing()
+    {
+        // A provider whose ciphertext this key ring can't read loads with an empty key. Saving that
+        // would overwrite the stored ciphertext, so the edit has to supply the key again.
+        IServiceProvider services = GetServices();
+        var generated = await services.GetRequiredService<IDomainEntityGenerator<IModelProvider>>().CreateAsync(CancellationToken);
+        var unreadable = services.GetRequiredService<IModelProvider.CreateExisting>()(
+            generated.Name, generated.Endpoint, string.Empty, generated.Kind, generated, apiKeyUnavailable: true);
+        var providers = Substitute.For<IModelProviderRepository>();
+        providers.FindAsync(generated.Id, Arg.Any<CancellationToken>()).Returns(unreadable);
+        var controller = ResolveController(services, providers: providers);
+
+        var result = await controller.Update(
+            generated.Id,
+            new UpdateModelProviderRequest("Renamed", generated.Endpoint.ToString(), null, generated.Kind),
+            CancellationToken);
+
+        result.Result.Should().BeOfType<BadRequestObjectResult>();
+        await providers.DidNotReceive().UpdateAsync(Arg.Any<IModelProvider>(), Arg.Any<CancellationToken>());
+    }
+
+    [TestMethod]
     public async Task Update_WithNullUpstreamKey_DoesNotAuditAKeyRotation()
     {
         IServiceProvider services = GetServices();
@@ -658,8 +680,9 @@ public sealed class ModelProvidersControllerTests : BaseTest<Module>
 
     private static ModelProvidersController ResolveController(
         IServiceProvider services,
-        Microsoft.Extensions.Logging.ILogger<Audit>? audit = null) => new(
-        services.GetRequiredService<IModelProviderRepository>(),
+        Microsoft.Extensions.Logging.ILogger<Audit>? audit = null,
+        IModelProviderRepository? providers = null) => new(
+        providers ?? services.GetRequiredService<IModelProviderRepository>(),
         services.GetRequiredService<IApiKeyRepository>(),
         services.GetRequiredService<IProjectRepository>(),
         services.GetRequiredService<IModelEndpointRepository>(),
